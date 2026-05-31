@@ -1,0 +1,16 @@
+{
+  "name": "Orvenix",
+  "short_name": "Orvenix",
+  "description": "Plataforma SaaS todo-en-uno para negocios digitales.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#112540",
+  "theme_color": "#112540",
+  "icons": [
+    {
+      "src": "/img/logo-main.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

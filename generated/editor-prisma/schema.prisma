@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/editor-prisma"
+}
+
+datasource db {
+  provider     = "mysql"
+  relationMode = "prisma"
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique @db.VarChar(191)
+  name         String?         @db.VarChar(191)
+  password     String          @db.VarChar(255)
+  role         String          @default("CLIENT") @db.VarChar(32)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  sites        EditorWebsite[]
+  subscription Subscription?
+
+  @@map("users")
+}
+
+model Contact {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @db.VarChar(191)
+  email       String   @db.VarChar(191)
+  telefono    String   @default("") @db.VarChar(64)
+  servicio    String   @default("") @db.VarChar(128)
+  presupuesto String   @default("") @db.VarChar(128)
+  mensaje     String   @db.Text
+  archivo     String   @default("") @db.VarChar(255)
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("contacts")
+}
+
+model Plan {
+  id                 String         @id @db.VarChar(64)
+  name               String         @db.VarChar(64)
+  priceMonthMxn      Int
+  priceYearMxn       Int
+  mpPlanIdMonth      String?        @db.VarChar(128)
+  mpPlanIdYear       String?        @db.VarChar(128)
+  stripePriceIdMonth String?        @db.VarChar(128)
+  stripePriceIdYear  String?        @db.VarChar(128)
+  maxWebsites        Int
+  maxVisits          Int
+  hasEcommerce       Boolean        @default(false)
+  hasAI              Boolean        @default(true)
+  hasExport          Boolean        @default(false)
+  features           Json
+  isActive           Boolean        @default(true)
+  subscriptions      Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique @db.VarChar(191)
+  planId               String    @db.VarChar(64)
+  provider             String    @default("mercadopago") @db.VarChar(32)
+  mpSubscriptionId     String?   @unique @db.VarChar(191)
+  mpPayerId            String?   @db.VarChar(128)
+  stripeSubscriptionId String?   @unique @db.VarChar(191)
+  stripeCustomerId     String?   @db.VarChar(191)
+  interval             String    @default("month") @db.VarChar(16)
+  status               String    @default("pending") @db.VarChar(32)
+  currentPeriodEnd     DateTime?
+  canceledAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 Plan      @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([planId])
+  @@index([provider])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String    @db.VarChar(32)
+  eventId     String?   @db.VarChar(191)
+  eventType   String    @db.VarChar(191)
+  resourceId  String?   @db.VarChar(191)
+  status      String    @default("received") @db.VarChar(32)
+  error       String?   @db.Text
+  payload     Json?
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([provider])
+  @@index([eventId])
+  @@index([resourceId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("webhook_events")
+}
+
+model EditorWebsite {
+  id          String       @id @db.VarChar(64)
+  name        String       @db.VarChar(191)
+  description String       @default("") @db.Text
+  tree        Json
+  published   Boolean      @default(false)
+  userId      String?      @db.VarChar(191)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  collections Collection[]
+  products    Product[]
+  orders      Order[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([published])
+  @@map("editor_websites")
+}
+
+model Product {
+  id          String           @id @default(cuid())
+  siteId      String           @db.VarChar(64)
+  name        String           @db.VarChar(191)
+  description String           @default("") @db.Text
+  type        String           @default("physical") @db.VarChar(32)
+  status      String           @default("draft") @db.VarChar(32)
+  media       Json
+  metadata    Json
+  mpProductId String?          @db.VarChar(128)
+  site        EditorWebsite    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  variants    ProductVariant[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([siteId])
+  @@index([status])
+  @@map("products")
+}
+
+model ProductVariant {
+  id              String   @id @default(cuid())
+  productId       String
+  sku             String   @db.VarChar(128)
+  name            String   @db.VarChar(191)
+  priceMxn        Int
+  comparePriceMxn Int?
+  stock           Int      @default(0)
+  attributes      Json
+  mpPriceId       String?  @db.VarChar(128)
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  siteId        String        @db.VarChar(64)
+  customerEmail String        @db.VarChar(191)
+  customerName  String?       @db.VarChar(191)
+  status        String        @default("pending") @db.VarChar(32)
+  items         Json
+  totalMxn      Int
+  mpPaymentId   String?       @db.VarChar(128)
+  notes         String?       @db.Text
+  site          EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([siteId])
+  @@index([status])
+  @@index([customerEmail])
+  @@map("orders")
+}
+
+model Collection {
+  id        String        @id @default(cuid())
+  siteId    String        @db.VarChar(64)
+  name      String        @db.VarChar(128)
+  slug      String        @db.VarChar(128)
+  fields    Json
+  site      EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  records   Record[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+  @@map("collections")
+}
+
+model Record {
+  id           String     @id @default(cuid())
+  collectionId String
+  data         Json
+  publishedAt  DateTime?
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([collectionId])
+  @@index([publishedAt])
+  @@map("records")
+}

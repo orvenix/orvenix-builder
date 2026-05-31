@@ -1,0 +1,32 @@
+{
+  "rootId": "crm-root",
+  "nodes": {
+    "crm-root": {
+      "id": "crm-root",
+      "type": "section",
+      "props": { "maxWidth": "full", "paddingY": "md" },
+      "children": ["crm-title", "crm-intro", "pipeline"]
+    },
+    "crm-title": {
+      "id": "crm-title",
+      "type": "heading",
+      "props": { "text": "Gestión de Leads Enterprise", "level": 1, "size": "3xl", "weight": "bold" },
+      "children": []
+    },
+    "crm-intro": {
+      "id": "crm-intro",
+      "type": "text",
+      "props": { 
+        "content": "Visualiza el progreso de tus oportunidades comerciales y utiliza el Scoring por IA para priorizar cierres.",
+        "color": "#475569"
+      },
+      "children": []
+    },
+    "pipeline": {
+      "id": "pipeline",
+      "type": "crm-pipeline",
+      "props": { "stages": 5, "enableAiScoring": true },
+      "children": []
+    }
+  }
+}

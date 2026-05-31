@@ -1,0 +1,322 @@
+import {
+  Activity,
+  Car,
+  Compass,
+  Dumbbell,
+  FileText,
+  GraduationCap,
+  Home,
+  Hotel,
+  Layers,
+  Megaphone,
+  Scale,
+  Scissors,
+  Store,
+  TrendingUp,
+  Users,
+  UtensilsCrossed,
+  Wrench,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+
+export type WebCatalogItem = {
+  id: string
+  name: string
+  category: string
+  description: string
+  accent: string
+  gradient: string
+  href: string
+  features: string[]
+  Icon: LucideIcon
+  preview: string
+}
+
+export const WEB_CATALOG: WebCatalogItem[] = [
+  {
+    id: "vistamoda",
+    name: "VistaModa",
+    category: "Retail & Fashion",
+    description:
+      "Boutique online con hero editorial, categorias visuales, productos destacados, carrito y flujo de tienda listo para moda, accesorios y calzado.",
+    accent: "#ea580c",
+    gradient: "from-orange-500 to-stone-900",
+    href: "/webs/vistamoda",
+    features: ["Tienda multi-pagina", "Categorias y carrito", "Moda & accesorios", "Responsive"],
+    Icon: Scissors,
+    preview: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e",
+  },
+  {
+    id: "launchpro",
+    name: "LaunchPro",
+    category: "SaaS & Startups",
+    description:
+      "Landing SaaS con pricing, testimonios, FAQ y narrativa de conversion para productos digitales, software y emprendimientos de crecimiento.",
+    accent: "#7c3aed",
+    gradient: "from-violet-600 to-pink-900",
+    href: "/webs/launchpro",
+    features: ["Pricing completo", "FAQ y social proof", "Hero de conversion", "Multi-seccion"],
+    Icon: Megaphone,
+    preview: "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
+  },
+  {
+    id: "ferreteria",
+    name: "Ferreteria El Constructor",
+    category: "Retail & Local Commerce",
+    description:
+      "Sitio comercial para ferreteria con catalogo por categorias, productos destacados, servicios y CTAs directos para venta local y mayoreo.",
+    accent: "#dc2626",
+    gradient: "from-red-600 to-slate-900",
+    href: "/webs/ferreteria",
+    features: ["Catalogo por rubros", "Servicios y contacto", "Venta local", "Multi-pagina"],
+    Icon: Wrench,
+    preview: "https://images.unsplash.com/photo-1504148455328-c376907d081c",
+  },
+  {
+    id: "carniceria",
+    name: "La Res Premium",
+    category: "Food & Specialty Retail",
+    description:
+      "Web para carniceria artesanal con cortes premium, pedidos, galeria, narrativa de calidad y conversion enfocada en compra local.",
+    accent: "#8b1a1a",
+    gradient: "from-red-900 to-amber-800",
+    href: "/webs/carniceria",
+    features: ["Catalogo de cortes", "Pedidos y galeria", "Branding premium", "Multi-pagina"],
+    Icon: UtensilsCrossed,
+    preview: "https://images.unsplash.com/photo-1544025162-d76694265947",
+  },
+  {
+    id: "jugueteria",
+    name: "Mundo Magico",
+    category: "Retail & Family",
+    description:
+      "Jugueteria online con categorias por edad, productos destacados, fichas individuales y una identidad divertida pensada para familias.",
+    accent: "#2563eb",
+    gradient: "from-blue-600 to-pink-500",
+    href: "/webs/jugueteria",
+    features: ["Catalogo por edad", "Producto individual", "Visual playful", "Responsive"],
+    Icon: Store,
+    preview: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64",
+  },
+  {
+    id: "arquitectura",
+    name: "Estudio de Arquitectura",
+    category: "Servicios Profesionales",
+    description:
+      "Sitio premium para estudio de arquitectura y diseño de interiores: 6 especialidades, portafolio de proyectos filtrable, equipo con cédulas, proceso en 6 etapas, testimonios y formulario de consulta gratuita.",
+    accent: "#b45309",
+    gradient: "from-amber-700 to-stone-900",
+    href: "/webs/arquitectura",
+    features: ["Portafolio filtrable", "6 especialidades", "Equipo certificado", "Multi-página"],
+    Icon: Layers,
+    preview: "https://images.unsplash.com/photo-1487958449943-2429e8be8625",
+  },
+  {
+    id: "contabilidad",
+    name: "Despacho Contable & Fiscal",
+    category: "Servicios Profesionales",
+    description:
+      "Web profesional para despacho contable: 6 servicios con detalle, 3 planes de precios, equipo IMCP certificado, proceso de onboarding, testimonios y diagnóstico fiscal gratuito.",
+    accent: "#0d9488",
+    gradient: "from-teal-600 to-cyan-900",
+    href: "/webs/contabilidad",
+    features: ["Planes con precios", "6 servicios SAT/IMSS", "Equipo IMCP", "Multi-página"],
+    Icon: TrendingUp,
+    preview: "https://images.unsplash.com/photo-1554224155-6726b3ff858f",
+  },
+  {
+    id: "viajes",
+    name: "Agencia de Viajes Premium",
+    category: "Servicios Profesionales",
+    description:
+      "Agencia de viajes IATA certificada: 6 categorías de paquetes, 6 destinos destacados con precios, asesores especializados, proceso en 5 pasos, testimonios y cotizador personalizado.",
+    accent: "#ea580c",
+    gradient: "from-orange-600 to-rose-900",
+    href: "/webs/viajes",
+    features: ["6 categorías de viaje", "Destinos con precios", "IATA certificada", "Multi-página"],
+    Icon: Compass,
+    preview: "https://images.unsplash.com/photo-1488085061387-422e29b40080",
+  },
+  {
+    id: "notaria",
+    name: "Notaría Pública",
+    category: "Servicios Profesionales",
+    description:
+      "Portal notarial completo: 6 trámites detallados con plazos, tabla de tarifas orientativas, equipo jurídico con cédulas, proceso notarial en 6 pasos, testimonios y formulario de cita.",
+    accent: "#a16207",
+    gradient: "from-yellow-700 to-amber-950",
+    href: "/webs/notaria",
+    features: ["6 trámites notariales", "Tabla de tarifas", "Equipo con cédulas", "Multi-página"],
+    Icon: FileText,
+    preview: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f",
+  },
+  {
+    id: "rrhh",
+    name: "Consultora de RRHH",
+    category: "Servicios Profesionales",
+    description:
+      "Consultoría de recursos humanos: 6 servicios con KPIs, 4 casos de éxito con resultados medibles, metodología en 6 fases, equipo certificado SHRM/ICF y diagnóstico gratuito.",
+    accent: "#7c3aed",
+    gradient: "from-violet-600 to-purple-950",
+    href: "/webs/rrhh",
+    features: ["6 servicios con KPIs", "Casos de éxito reales", "Certificados SHRM", "Multi-página"],
+    Icon: Users,
+    preview: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d",
+  },
+  {
+    id: "tienda",
+    name: "Tienda Online Pro",
+    category: "Storefront & Checkout",
+    description:
+      "Tienda pública lista para vender con hero comercial, catálogo filtrable, carrito visual, beneficios y flujo de checkout preparado para integrarse a pagos.",
+    accent: "#d97706",
+    gradient: "from-amber-500 to-stone-900",
+    href: "/webs/tienda",
+    features: ["Catálogo filtrable", "Carrito visual", "Checkout listo", "Responsive"],
+    Icon: Store,
+    preview: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da",
+  },
+  {
+    id: "servicios-locales",
+    name: "Servicios Locales Pro",
+    category: "Local Services",
+    description:
+      "Página real para negocios de servicios locales con hero de conversión, tarjetas de servicio, cobertura por zonas, proceso, reseñas, FAQ y CTA a WhatsApp.",
+    accent: "#0e7490",
+    gradient: "from-cyan-600 to-slate-900",
+    href: "/webs/servicios-locales",
+    features: ["Agenda y WhatsApp", "Cobertura local", "Servicios y precios", "Reseñas y FAQ"],
+    Icon: Wrench,
+    preview: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e",
+  },
+  {
+    id: "restaurante",
+    name: "Restaurante Gourmet Pro",
+    category: "Gastronomía & Hospitality",
+    description:
+      "Sitio completo para restaurante de alta cocina: hero con reservaciones inline, menú por categorías con precios, historia del chef, galería, reseñas Google y footer con horarios.",
+    accent: "#d97706",
+    gradient: "from-amber-700 to-orange-950",
+    href: "/webs/restaurante",
+    features: ["Menú interactivo", "Reservaciones online", "Reseñas & ratings", "Historia del chef"],
+    Icon: UtensilsCrossed,
+    preview: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0",
+  },
+  {
+    id: "clinica",
+    name: "Clínica & Salud Digital",
+    category: "Healthcare & Wellness",
+    description:
+      "Web médica premium con 8 especialidades, directorio de doctores con ratings, proceso de atención en 4 pasos, formulario de cita, seguros aceptados y FAQ médico.",
+    accent: "#14b8a6",
+    gradient: "from-teal-600 to-cyan-900",
+    href: "/webs/clinica",
+    features: ["8 especialidades", "Directorio doctores", "Cita online", "Seguros & FAQ"],
+    Icon: Activity,
+    preview: "https://images.unsplash.com/photo-1576091160550-2173dba999ef",
+  },
+  {
+    id: "inmobiliaria",
+    name: "Inmobiliaria Premium",
+    category: "Real Estate & Proptech",
+    description:
+      "Portal inmobiliario de lujo con buscador de propiedades, grid filtrable con precios y características, agentes top, proceso de compra/venta, reporte de mercado y valoración gratuita.",
+    accent: "#f59e0b",
+    gradient: "from-amber-600 to-slate-900",
+    href: "/webs/inmobiliaria",
+    features: ["Grid propiedades", "Agentes & ratings", "Reporte mercado", "Valoración gratis"],
+    Icon: Home,
+    preview: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2",
+  },
+  {
+    id: "agencia",
+    name: "Agencia Digital 360",
+    category: "Marketing & Growth Agency",
+    description:
+      "Agencia digital full-service con 6 servicios detallados, 6 casos de éxito con métricas reales, proceso en 5 fases, equipo, precios transparentes, clientes y formulario de contacto.",
+    accent: "#7c3aed",
+    gradient: "from-violet-600 to-pink-900",
+    href: "/webs/agencia",
+    features: ["Portfolio con métricas", "Precios por plan", "Proceso 5 fases", "Consulta gratis"],
+    Icon: Megaphone,
+    preview: "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
+  },
+  {
+    id: "academia",
+    name: "Academia EdTech Pro",
+    category: "Educación & eLearning",
+    description:
+      "Plataforma educativa completa con 6 cursos, 8 categorías, 3 rutas de aprendizaje, 4 instructores verificados, precios freemium/pro/business, testimonios y CTA de conversión.",
+    accent: "#6366f1",
+    gradient: "from-indigo-600 to-violet-900",
+    href: "/webs/academia",
+    features: ["Catálogo de cursos", "Rutas de aprendizaje", "Instructores reales", "Pricing freemium"],
+    Icon: GraduationCap,
+    preview: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f",
+  },
+  {
+    id: "abogados",
+    name: "Despacho Jurídico Premium",
+    category: "Legal & Consultoría",
+    description:
+      "Sitio completo para despacho de abogados con 6 áreas de práctica, directorio de equipo con cédulas verificadas, proceso en 5 pasos, testimonios y formulario de consulta gratuita.",
+    accent: "#d97706",
+    gradient: "from-amber-700 to-stone-900",
+    href: "/webs/abogados",
+    features: ["6 áreas jurídicas", "Equipo certificado", "Proceso 5 pasos", "Consulta gratis"],
+    Icon: Scale,
+    preview: "https://images.unsplash.com/photo-1589391886645-d51941baf7fb",
+  },
+  {
+    id: "gimnasio",
+    name: "Gimnasio & Fitness Pro",
+    category: "Salud & Fitness",
+    description:
+      "Web premium para gimnasio con 6 clases, horario semanal interactivo, 3 membresías, directorio de entrenadores certificados, testimonios y formulario de prueba gratuita.",
+    accent: "#ea580c",
+    gradient: "from-orange-600 to-red-900",
+    href: "/webs/gimnasio",
+    features: ["Horario interactivo", "3 membresías", "Entrenadores NSCA", "Día de prueba gratis"],
+    Icon: Dumbbell,
+    preview: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
+  },
+  {
+    id: "hotel",
+    name: "Hotel Boutique Luxury",
+    category: "Hospitalidad & Turismo",
+    description:
+      "Portal hotelero de lujo con galería de habitaciones seleccionables, servicios y amenidades, galería visual, reseñas TripAdvisor y formulario de reserva directa con fechas.",
+    accent: "#78716c",
+    gradient: "from-stone-600 to-stone-900",
+    href: "/webs/hotel",
+    features: ["Habitaciones selectables", "Reserva con fechas", "Galería visual", "Reseñas verificadas"],
+    Icon: Hotel,
+    preview: "https://images.unsplash.com/photo-1571896349842-33c89424de2d",
+  },
+  {
+    id: "transporte",
+    name: "Transporte Ejecutivo",
+    category: "Transporte & Logística",
+    description:
+      "Sitio profesional para flota de transporte ejecutivo con flotilla filtrable, paquetes, zonas de cobertura, cotizador en línea, testimonios y proceso de reserva.",
+    accent: "#0284c7",
+    gradient: "from-sky-600 to-slate-900",
+    href: "/webs/transporte",
+    features: ["Flotilla filtrable", "Cotizador online", "Zonas de cobertura", "Reserva 24/7"],
+    Icon: Car,
+    preview: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d",
+  },
+  {
+    id: "barberia",
+    name: "Barbería & Grooming Pro",
+    category: "Belleza & Estética",
+    description:
+      "Sitio completo para barbería premium con catálogo de servicios filtrable por categoría, galería de trabajos, perfiles de barberos, reseñas y sistema de reserva de cita.",
+    accent: "#64748b",
+    gradient: "from-slate-600 to-zinc-900",
+    href: "/webs/barberia",
+    features: ["Catálogo filtrable", "Galería trabajos", "Perfiles barberos", "Reserva de cita"],
+    Icon: Scissors,
+    preview: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1",
+  },
+]

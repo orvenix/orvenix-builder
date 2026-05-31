@@ -1,0 +1,141 @@
+/* ============================================================
+   ORVENIX BRAND TOKENS
+   Extraidos del sitio principal: /css/variables.css
+   ============================================================ */
+
+:root {
+  /* — Fondos — */
+  --bg:   #112540;
+  --bg-2: #172f52;
+  --bg-3: #1e3a6a;
+
+  /* — Texto — */
+  --text:           #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted:     #6b7280;
+
+  /* — Acentos — */
+  --accent:          #00b5f6;
+  --accent-2:        #0083b3;
+  --accent-3:        #009cd4;
+  --accent-gradient: linear-gradient(135deg, #00bbff, #0083b3);
+
+  /* — Escala de azules — */
+  --blue-100: #00bbff;
+  --blue-200: #00b5f6;
+  --blue-300: #009cd4;
+  --blue-400: #0083b3;
+  --blue-500: #006a91;
+  --blue-600: #00516f;
+
+  /* — Glassmorphism — */
+  --glass:               rgba(255, 255, 255, 0.03);
+  --glass-border:        rgba(255, 255, 255, 0.08);
+  --glass-border-hover:  rgba(0, 181, 246, 0.30);
+  --border:              rgba(255, 255, 255, 0.10);
+  --glass-nav:           rgba(17, 37, 64, 0.85);
+  --glass-nav-scrolled:  rgba(23, 47, 82, 0.95);
+  --blur-nav:            12px;
+  --blur-dropdown:       24px;
+
+  /* — Estados semanticos — */
+  --success: #22c55e;
+  --error:   #ef4444;
+  --warning: #f59e0b;
+
+  /* — Radios de borde — */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   16px;
+  --radius-2xl:  20px;
+  --radius-3xl:  24px;
+  --radius-pill: 100px;
+
+  /* — Sombras — */
+  --shadow-sm:          0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-md:          0 8px 32px rgba(0, 0, 0, 0.30);
+  --shadow-lg:          0 25px 60px rgba(0, 0, 0, 0.50);
+  --shadow-nav:         0 8px 32px rgba(0, 0, 0, 0.30);
+  --glow-accent:        0 0 20px rgba(0, 181, 246, 0.40);
+  --glow-accent-sm:     0 0 12px rgba(0, 181, 246, 0.30);
+  --shadow-btn-primary: 0 10px 20px -10px rgba(0, 131, 179, 0.50);
+  --shadow-btn-hover:   0 20px 30px -10px rgba(0, 181, 246, 0.40);
+  --shadow-featured:    0 0 40px rgba(0, 181, 246, 0.15);
+
+  /* — Transiciones — */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:      cubic-bezier(0.2, 1, 0.3, 1);
+  --dur-fast:  0.22s;
+  --dur-base:  0.30s;
+  --dur-slow:  0.40s;
+  --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* — Tipografia — */
+  --font-display: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --font-mono:    "SFMono-Regular", "Cascadia Code", "Consolas", monospace;
+  --font-deco:    "Arial Black", "Segoe UI", sans-serif;
+
+  /* — Layout — */
+  --nav-height:         80px;
+  --nav-height-scrolled:70px;
+  --container-max:      1200px;
+
+  /* — Mouse glow (posición inicial fuera de pantalla) — */
+  --global-x: -600px;
+  --global-y: -600px;
+
+  /* — Aliases para Next/Tailwind SaaS — */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-muted: var(--text-muted);
+  --color-surface: var(--bg-2);
+  --color-surface-raised: var(--bg-3);
+  --color-accent: var(--accent);
+  --logo-full-width: 1558;
+  --logo-full-height: 500;
+  --logo-full-ratio: 3.116;
+  --logo-mark-width: 2480;
+  --logo-mark-height: 3507;
+  --logo-mark-ratio: 0.7072;
+}
+
+body.light-mode {
+  /* Fondos */
+  --bg:   #ffffff;
+  --bg-2: #f0f6ff;
+  --bg-3: #ddeeff;
+
+  /* Texto — alto contraste sobre blanco */
+  --text:           #0a1929;
+  --text-secondary: #2c4a6e;
+  --text-muted:     #4a6080;
+
+  /* Acentos — versiones más oscuras del cyan original */
+  --accent:          #0083b3;
+  --accent-2:        #00516f;
+  --accent-3:        #009cd4;
+  --accent-gradient: linear-gradient(135deg, #0083b3, #00516f);
+
+  /* Glassmorphism — tono cyan sobre blanco */
+  --glass:               rgba(0, 181, 246, 0.06);
+  --glass-border:        rgba(0, 181, 246, 0.20);
+  --glass-border-hover:  rgba(0, 181, 246, 0.40);
+  --border:              rgba(0, 131, 179, 0.18);
+
+  /* Nav */
+  --glass-nav:           rgba(240, 250, 255, 0.93);
+  --glass-nav-scrolled:  rgba(240, 250, 255, 0.98);
+
+  /* Sombras más suaves para fondos claros */
+  --shadow-sm:          0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-md:          0 8px 32px rgba(0, 0, 0, 0.10);
+  --shadow-btn-primary: 0 10px 20px -10px rgba(0, 131, 179, 0.40);
+  --shadow-btn-hover:   0 20px 30px -10px rgba(0, 181, 246, 0.30);
+  --glow-accent:        0 0 20px rgba(0, 181, 246, 0.30);
+  --glow-accent-sm:     0 0 12px rgba(0, 181, 246, 0.20);
+}
