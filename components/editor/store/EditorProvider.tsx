@@ -14,13 +14,15 @@ interface EditorProviderProps {
   availablePages?: SitePageListItem[];
 }
 
+const EMPTY_SITE_PAGES: SitePageListItem[] = [];
+
 export function EditorProvider({
   children,
   websiteId,
   initialTree,
   initialPageSlug = "home",
   initialPageName = "Inicio",
-  availablePages = [],
+  availablePages = EMPTY_SITE_PAGES,
 }: EditorProviderProps) {
   const initialize = useEditorStore((s) => s.initialize);
   const isReady = useEditorStore((s) => s.websiteId === websiteId);
