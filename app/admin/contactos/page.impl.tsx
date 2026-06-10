@@ -4,8 +4,18 @@ import { ContactsTable } from './ContactsTable';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminContactosPage() {
+interface Props {
+  searchParams?: Promise<{ q?: string; contactId?: string }>;
+}
+
+export default async function AdminContactosPage({ searchParams }: Props) {
   const contacts = await readContacts();
+  const rawSearchParams = await searchParams;
+  const initialQuery = (rawSearchParams?.q ?? '').trim();
+  const parsedContactId = Number(rawSearchParams?.contactId ?? '');
+  const initialExpandedId = Number.isInteger(parsedContactId)
+    ? contacts.find((contact) => contact.id === parsedContactId)?.id ?? null
+    : null;
 
   return (
     <div>
@@ -32,7 +42,11 @@ export default async function AdminContactosPage() {
         )}
       </div>
 
-      <ContactsTable initialContacts={contacts} />
+      <ContactsTable
+        initialContacts={contacts}
+        initialQuery={initialQuery}
+        initialExpandedId={initialExpandedId}
+      />
     </div>
   );
 }

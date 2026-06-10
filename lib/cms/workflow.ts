@@ -5,6 +5,20 @@ export type CmsWorkflowStatus = (typeof CMS_WORKFLOW_STATUSES)[number]
 
 type CmsWorkflowMeta = {
   workflowStatus?: CmsWorkflowStatus
+  approvals?: CmsApprovalEntry[]
+}
+
+type CmsWorkflowActor = {
+  id: string
+  name?: string | null
+  email?: string | null
+}
+
+export type CmsApprovalEntry = {
+  status: CmsWorkflowStatus
+  changedAt: string
+  changedBy?: CmsWorkflowActor
+  comment?: string
 }
 
 function toRecordData(value: unknown): Record<string, unknown> {
@@ -36,6 +50,53 @@ export function withCmsWorkflowStatus(data: unknown, status: CmsWorkflowStatus):
   source[CMS_WORKFLOW_META_KEY] = {
     ...meta,
     workflowStatus: status,
+  }
+
+  return source
+}
+
+export function getCmsApprovalHistory(data: unknown): CmsApprovalEntry[] {
+  const source = toRecordData(data)
+  const meta = toWorkflowMeta(source[CMS_WORKFLOW_META_KEY])
+  if (!Array.isArray(meta.approvals)) return []
+
+  return meta.approvals.filter((entry): entry is CmsApprovalEntry => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false
+    const candidate = entry as CmsApprovalEntry
+    return isCmsWorkflowStatus(candidate.status) && typeof candidate.changedAt === "string"
+  })
+}
+
+export function withCmsWorkflowStatusApproval(
+  data: unknown,
+  status: CmsWorkflowStatus,
+  user?: CmsWorkflowActor | null,
+  comment?: string | null
+): Record<string, unknown> {
+  const source = toRecordData(data)
+  const meta = toWorkflowMeta(source[CMS_WORKFLOW_META_KEY])
+  const approvals = getCmsApprovalHistory(source)
+  const entry: CmsApprovalEntry = {
+    status,
+    changedAt: new Date().toISOString(),
+  }
+
+  if (user?.id) {
+    entry.changedBy = {
+      id: user.id,
+      name: user.name ?? undefined,
+      email: user.email ?? undefined,
+    }
+  }
+
+  if (typeof comment === "string" && comment.trim()) {
+    entry.comment = comment.trim()
+  }
+
+  source[CMS_WORKFLOW_META_KEY] = {
+    ...meta,
+    workflowStatus: status,
+    approvals: [...approvals, entry].slice(-50),
   }
 
   return source

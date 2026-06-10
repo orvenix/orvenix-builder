@@ -1,4 +1,5 @@
 import { editorPrisma } from "@/lib/editor-db"
+import { appendOrderNote } from "@/lib/commerce/order-notes"
 import { getMpPayment, parseStoreExternalReference } from "@/lib/mercadopago"
 import { sendOrderConfirmationEmail } from "@/lib/email"
 import { serverDebug, serverError, serverWarn } from "@/lib/server-log"
@@ -29,7 +30,7 @@ export async function processStoreMercadoPagoPayment(paymentId: string): Promise
 
   const order = await editorPrisma.order.findFirst({
     where: { id: orderId, siteId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, notes: true },
   })
 
   if (!order) {
@@ -46,7 +47,7 @@ export async function processStoreMercadoPagoPayment(paymentId: string): Promise
     data: {
       status: "paid",
       mpPaymentId: String(payment.id ?? paymentId),
-      notes: `paid:${payment.id ?? paymentId}:${new Date().toISOString()}`,
+      notes: appendOrderNote(order.notes, `paid:${payment.id ?? paymentId}:${new Date().toISOString()}`),
     },
   })
 
