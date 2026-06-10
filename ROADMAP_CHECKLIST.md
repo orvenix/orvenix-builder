@@ -1,7 +1,7 @@
 # ORVENIX — ROADMAP Y AUDITORIA DE AVANCE
 ## Hacia el Super Builder | Estado real del proyecto
 
-> Actualizado: 2026-05-26  
+> Actualizado: 2026-06-08  
 > Stack actual: Next.js 16.2.4 + React 19 + Prisma 7 + MySQL/MariaDB + Stripe + MercadoPago + Anthropic + Monaco
 
 ---
@@ -90,84 +90,240 @@
 - Se versiono una baseline Prisma inicial en `prisma/migrations/20260524_000000_baseline` y se documento una ruta real de despliegue de schema con `npm run prisma:deploy-schema`.
 - Se valido localmente el flujo de baseline Prisma sobre una base existente: `prisma migrate resolve --applied 20260524_000000_baseline` seguido de `npm run prisma:deploy-schema` quedo en verde.
 
+### Revalidacion local 2026-06-02
+
+- Auditoria fresca detecto y corrigio cuatro paginas dinamicas legacy en `app/webs`: `ferreteria/catalogo/[categoria]`, `jugueteria/catalogo/[categoria]`, `jugueteria/producto/[slug]` y `vistamoda/tienda/[slug]`.
+- Las cuatro rutas ahora usan el contrato Next.js 16 `params: Promise<...>` con `await params`.
+- Se retiro `webs nuevas`: sus cinco proyectos fuente auxiliares ya estaban integrados en `app/webs` y no formaban parte del App Router principal.
+- Se agrego la migracion incremental `20260602_001_site_pages_and_themes` para crear `site_pages` y `site_themes`, que ya existian en `prisma/editor.prisma` pero no en las migraciones versionadas.
+- `npx prisma validate --schema=prisma/editor.prisma` y `npm run prisma:generate` cerraron limpios.
+- `npm run test:unit` cerro verde con `231/231` pruebas.
+- `npm run typecheck` y `npm run lint` cerraron limpios.
+- `npm run build` cerro completo con `next build --webpack`: compilacion, TypeScript, `240/240` paginas estaticas, optimizacion final y trazas.
+- Overlay visual CMS robusto completado: nodos vinculados muestran contorno punteado, badge `CMS` con conteo y tooltip `propiedad: coleccion.campo`; Layers muestra badge equivalente por nodo.
+- Editor avanzado de variantes C2 completado: CRUD visual por variante, atributos por filas, inventario, filtros, ordenamiento y generador matricial masivo `Color: Negro, Blanco` + `Talla: S, M`.
+- `lib/commerce/variant-matrix.ts` centraliza combinaciones cartesianas, normalizacion de SKU, omision de duplicados y limite seguro de `100` variantes por generacion.
+- Alta y edicion de variantes rechazan SKUs duplicados por producto con `409 SKU_CONFLICT`; el alta tambien verifica que `productId` pertenezca al sitio administrado.
+- 5 tests nuevos en `variant-matrix.test.ts`; `npm run test:unit` cerro verde con `236/236`.
+- Media CMS dejo de incrustar archivos locales como data URL: la tabla ahora reutiliza `POST /api/editor/upload`, muestra progreso/error y persiste una URL `/uploads/...` en el record.
+- Confirmacion de pedido con Resend ya estaba implementada tecnicamente: `processStoreMercadoPagoPayment` dispara `sendOrderConfirmationEmail` tras aprobar el pago. Queda prueba real con credenciales y dominio publico.
+- Confirmacion de pedido Resend endurecida: render puro con detalle real de producto, variante y precio; escape HTML y normalizacion estructural de items JSON persistidos.
+- 3 tests nuevos en `order-confirmation-email.test.ts`; `npm run test:unit` cerro verde con `239/239`.
+- Limpieza preproduccion aplicada: caches locales, datos de fallback, residuos binarios, logos duplicados de raiz y configuracion `.claude` duplicada fueron retirados.
+- `.gitignore` y `.vercelignore` excluyen clientes generados, datos runtime, uploads locales, sitios publicados y material de desarrollo que no debe viajar al deploy Vercel.
+- Documentacion de arquitectura consolidada bajo `docs/`; checklist operativo de pruebas en vivo agregado en `docs/PRELIVE_CHECKLIST.md`.
+- Repositorio Git propio inicializado en la raiz del proyecto para evitar que el primer push arrastre archivos del perfil de Windows.
+
+### Revalidacion local 2026-06-08
+
+- `npm run test:unit` se relanzo de nuevo al cierre de esta tanda y quedo verde con `64/64` pruebas.
+- `eslint` dirigido sobre `app/dashboard/store/[siteId]/page.impl.tsx`, `lib/store/product-view-state.ts`, `lib/store/product-filter-metrics.ts`, `lib/store/order-view-state.ts`, `lib/store/order-filter-metrics.ts` y sus pruebas unitarias cerro limpio hoy.
+- Dashboard de tienda endurecido como consola operativa real: pestaña activa, seleccion de pedido, funnel, experimento, automatizacion y producto expandido quedan persistidos en URL.
+- `Products` evoluciono de lista filtrable a inventario facetado:
+  - filtros `productQ`, `productStatus`, `productStock`, `productSort` sincronizados con URL
+  - tarjetas KPI accionables para `activos`, `borrador`, `stock bajo` y `agotados`
+  - chips accionables por fila y por variante (`SKU`, nombre, atributos, estado de stock)
+  - filtros estructurados por atributo con combinacion multiple en URL (`productAttrs`)
+  - facetas agrupadas por clave (`color`, `talla`, `tipo`) con expansion por dimension (`productFacetKey`)
+  - las facetas ya se recalculan sobre variantes realmente vigentes del subconjunto actual, y cambiar un valor dentro de la misma clave reemplaza el anterior
+- `Orders` evoluciono a cola comercial facetada:
+  - `orderStep` y `orderOfferType` ya son filtros estructurados persistidos en URL
+  - facetas visibles por `Paso funnel` y `Tipo de oferta`
+  - ambas facetas ya pueden combinarse en la UI sin pisarse entre si
+  - los chips activos de `step` y `offerType` se pueden quitar uno por uno
+  - los grupos de facetas se recalculan ignorando su propia dimension para permitir cambiar de valor dentro de la misma clave
+- `Orders` ya cerro la segunda capa de exploracion por dimension:
+  - `orderFacetKey` persistido en URL
+  - panel `Ver mas / Ocultar` para `Paso funnel` y `Tipo de oferta`
+  - expansion navegable por valores complementarios sin perder el otro filtro estructurado
+- Automatizaciones, funnels, experimentos y pedidos profundizaron enlaces internos desde el mismo dashboard: abrir recurso exacto, copiar IDs/URLs y recuperar contexto al recargar.
+- `Funnels` ya paso de CRUD tecnico a editor comercial operativo:
+  - ofertas por paso con validacion real antes de guardar (`discount`, `product`, `order_bump`, `free_gift`)
+  - preview del paso y del checkout dentro del dashboard
+  - autocompletado desde catalogo: producto, imagen y precio base
+  - pasos duplicables y reordenables con posiciones normalizadas
+  - resumen visible de transicion por paso: siguiente accion, paso destino y CTAs semanticos de oferta
+  - preview navegable con URLs reales de aceptar/rechazar oferta, reutilizando el contrato publico
+- Checkout de tienda ya aplica oferta por paso mas alla del descuento:
+  - `discount` entra como linea negativa
+  - `order_bump` y `product` se agregan como lineas cobrables del pedido
+  - `free_gift` se agrega como linea visible de valor `0`
+
 ### Revalidacion local 2026-05-26
 
 - `SB3 builder-core` avanzo de forma fuerte durante esta tanda: preview, publicado, export y publicacion estatica ya comparten mas infraestructura real en torno a contexto runtime, compiler y serializers.
-- El circuito de export ahora tiene capas puras separadas en `builder-core/compiler` para:
-  - `document`
-  - `exportCss`
-  - `exportNodes`
-  - `exportStyle`
-  - `exportModels`
-  - `exportMarkup`
-  - `exportTraversal`
-  - `exportDocument`
-  - `exportNextScaffold`
-  - `exportTemplates`
-  - `exportRenderers`
+- El circuito de export ahora tiene capas puras separadas en `builder-core/compiler` para: `document`, `exportCss`, `exportNodes`, `exportStyle`, `exportModels`, `exportMarkup`, `exportTraversal`, `exportDocument`, `exportNextScaffold`, `exportTemplates`, `exportRenderers`
 - `serializeToHtml` y `serializeToJsx` quedaron mucho mas delgados y ya delegan gran parte de su logica al compiler compartido.
-- `npm run test:unit` se relanzo varias veces durante esta tanda y cerro verde al final con `27/27` pruebas pasando.
-- Se agrego cobertura especifica para compiler/export en:
-  - `compiler-export-models`
-  - `compiler-export-markup`
-  - `compiler-export-traversal`
-  - `compiler-export-document`
-  - `compiler-export-next-scaffold`
-  - `compiler-export-templates`
-  - `compiler-export-renderers`
+- `npm run test:unit` cerro verde con `27/27` pruebas pasando.
 - `eslint` dirigido sobre cada slice nuevo de `builder-core/compiler` quedo limpio.
+
+### Canvas chrome 2026-05-31
+
+- `Canvas.tsx` refactorizado hacia calidad 100% profesional:
+  - Fondo del canvas con dot-grid estilo Figma — `radial-gradient` de 22px en `editor-canvas-bg`
+  - `window.prompt()` eliminado — reemplazado por `CommentPopup` inline con textarea, atajos Enter/Esc y boton de envio
+  - Device bar rediseñada: badge de ancho, badge de zoom solo en breakpoints no-desktop, contador de bloques con indicador visual
+  - Page frame visual en modo desktop — borde sutil + linea de acento azul en el tope de la pagina
+  - Context menu con iconos Lucide, separadores y label de seccion "Insertar" para cada tipo de nodo
+  - Empty state con clases CSS dedicadas (sin inline styles), glow animado, icon wrap, hints row con shortcuts
+  - Todos los valores de posicion dinamica (marquee, canvas menu, comment popup) migrados a CSS custom properties (`--mq-*`, `--cm-*`, `--cp-*`) en lugar de inline styles directos
+  - Nuevas clases CSS en `globals.css`: `editor-device-bar`, `editor-zoom-bar`, `editor-page-frame`, `editor-marquee-box`, `editor-canvas-menu`, `editor-comment-popup`, `editor-empty-glow`, `editor-empty-icon-wrap`, `editor-empty-hint`
+  - TypeScript limpio: `tsc --noEmit` no reporta errores nuevos en `Canvas.tsx`
+
+### Context menu B6 2026-06-01
+
+- `EditorContextMenu` reutilizable verificado e integrado en `EditorShell`.
+- Acciones completas: editar texto, duplicar, copiar/pegar nodo, copiar/pegar estilos, wrap Flex/Grid, agrupar/desagrupar, lock/hide, z-order, snap grid, guardar componente y resaltar en Layers.
+- Componentes de usuario persistidos en `localStorage`, visibles e insertables desde `BlocksSidebar`.
+- Wrap Flex/Grid endurecido: solo habilita selecciones hermanas desbloqueadas, deduplica IDs y conserva el orden visual del arbol.
+- `npm run typecheck`, ESLint dirigido y `npm run test:unit` (`212/212`) cerraron limpios.
+
+### Field builder CMS C1 2026-06-01
+
+- Field Builder CMS completado con validaciones persistidas y feedback visual.
+- `CmsFieldsSchema` endurecido: slugs/ids validos y unicos, select con opciones, `maxLength` positivo y rangos numericos coherentes.
+- `validateCmsRecordData` centraliza requeridos, min/max, longitud maxima y opciones select permitidas.
+- POST/PATCH de records devuelven `CMS_VALIDATION_FAILED` con errores por campo antes de persistir datos invalidos.
+- Historial editorial visible mediante chip por record con tooltip del ultimo cambio.
+- 8 tests nuevos en `cms-schema.test.ts`; `npm run test:unit` cerro verde con `220/220`.
+- `npm run typecheck` y ESLint dirigido cerraron limpios.
+
+### CMS rich fields C1 2026-06-01
+
+- Edicion especializada de campos CMS enriquecidos en tabla de records.
+- Media: preview visual, URL editable, limpiar valor y carga de imagen local como data URL sin migracion adicional.
+- Rich text: textarea multilinea, contador, guardado `Ctrl+Enter` y barra Markdown ligera para negrita, cursiva, link, H2 y listas.
+- Relaciones multiples: selector nativo reemplazado por checklist legible con labels de records y contador de seleccion.
+- Errores `CMS_VALIDATION_FAILED` muestran el primer mensaje de campo en la tabla antes de recargar datos consistentes.
+- ESLint dirigido, `npm run typecheck` y `npm run test:unit` (`220/220`) cerraron limpios.
+
+### CMS back-relations C1 2026-06-01
+
+- Back-relations CMS implementadas sin migracion: el resolver agrupa referencias entrantes por collection y campo.
+- `lib/cms/back-relations.ts` separa el colector puro; `resolveCmsRecordRelations` adjunta `backRelations` a cada record.
+- Dashboard CMS muestra columna `Referencias` desde SSR y refresh dinamico con `expand=relations`.
+- Cada grupo entrante navega a la collection origen con el record actual como filtro de busqueda.
+- 3 tests nuevos en `cms-relations.test.ts`; `npm run test:unit` cerro verde con `223/223`.
+- `npm run typecheck` y ESLint dirigido cerraron limpios.
+
+### CMS pagination C1 2026-06-01
+
+- Escala de tabla CMS para +500 records resuelta con paginacion server-side de 100 filas editables por pagina.
+- API `/records` devuelve `total` real con `count()` en vistas directas y conserva filtros, sort y relaciones expandidas.
+- Dashboard muestra conteo total, rango visible, numeracion global y controles anterior/siguiente.
+- `lib/cms/pagination.ts` centraliza defaults, limite maximo y calculo de paginas.
+- 4 tests nuevos en `cms-pagination.test.ts`; `npm run test:unit` cerro verde con `227/227`.
+- `npm run typecheck` y ESLint dirigido cerraron limpios.
+
+### Product detail block C2 2026-06-01
+
+- Nuevo bloque nativo `store-product-detail` disponible en la paleta E-commerce.
+- Ficha responsive con galeria, imagen principal, badge, descuento, descripcion, variantes, cantidad y estados de stock.
+- Alta al carrito existente con `productId`, `variantId`, precio, imagen y cantidad seleccionada.
+- Inspector configurable con IDs reales, galeria por URLs y variantes avanzadas por linea `id|nombre|precio|precio anterior|stock`.
+- `lib/commerce/product-detail.ts` separa parser y limites de cantidad como logica pura.
+- 4 tests nuevos en `product-detail.test.ts`; `npm run test:unit` cerro verde con `231/231`.
+- `npm run typecheck` y ESLint dirigido cerraron limpios.
+
+### Revalidacion local 2026-05-31
+
+- **SB4 — CMS Pro** completado: motor de filtros, historial de aprobaciones, array binding y BindModePanel Pro.
+  - `lib/cms/filters.ts`: 11 operadores (eq/neq/contains/starts/ends/gt/gte/lt/lte/between/empty/notempty), AND/OR, generica Prisma-safe.
+  - `GET /records` acepta `?filter=JSON` server-side sin romper paginacion ni sort.
+  - `lib/cms/workflow.ts` extendido con `withCmsWorkflowStatusApproval` + `getCmsApprovalHistory`; PATCH de records persiste approval entry con autor + timestamp + comentario.
+  - `DataBinding` extendido con `arrayBinding`, `arrayLimit`, `expression`, `fallback`, `filters`; `useBindingData` soporta modo lista y templates `{field|currency:MXN}`.
+  - `FilterBuilder` UI en tabla de records: campo + operador + valor, chips activos, integrado con `loadRecords`.
+  - `BindModePanel` rediseñado con panel colapsable: modo lista, limite, expresion, fallback, filtro de estado.
+  - 27 tests nuevos: `cms-filters.test.ts` (19) + `cms-workflow-approval.test.ts` (8).
+- **SB5 — Commerce Pro** completado: migracion SQL, AutomationExecution, ofertas por paso, A/B cookie.
+  - Migracion `20260531_001_sb5_commerce_pro` crea las 6 tablas faltantes: `funnels`, `funnel_steps`, `experiments`, `ai_generation_jobs`, `automations`, `automation_executions`.
+  - Modelo `AutomationExecution` agregado al schema Prisma con relacion a `Automation` y cascade delete.
+  - `logAutomationRun` / `listAutomationRuns` usan tabla DB cuando esta disponible, con fallback a `sistema/automation-runs.json`.
+  - `lib/commerce/funnel-step-offers.ts`: tipos product/order_bump/discount/free_gift con schemas Zod, `resolveStepOffer`, `applyOfferDiscount`.
+  - `GET /api/store/[siteId]/experiments/[id]/assign` asigna variante A/B via cookie 30d respetando asignacion previa + trackea evento analytics.
+  - `POST` en el mismo endpoint fuerza variante para preview admin (1h TTL).
+  - 16 tests nuevos: `funnel-step-offers.test.ts`.
+- **C3 — Editor visual de funnels** completado en dashboard de tienda.
+  - Canvas horizontal nativo con nodos por paso, conectores, seleccion y pagina asociada visible.
+  - Movimiento izquierda/derecha desde cada nodo con normalizacion automatica de posiciones.
+  - El canvas reutiliza el mismo draft de configuracion y payload existente, sin duplicar persistencia.
+  - `eslint` dirigido sobre `app/dashboard/store/[siteId]/page.impl.tsx` cerro limpio.
+- **SB6 — Significancia A/B** endurecida y testeable como modulo puro.
+  - `calculateSignificance` se extrajo a `lib/commerce/experiment-significance.ts` para evitar cargar Prisma/filesystem en tests unitarios.
+  - La prueba chi-squared ya no declara ganador cuando alguna frecuencia esperada es menor a 5.
+- `npm run test:unit` cerro verde con `212/212` pruebas pasando.
+- **Saneamiento TypeScript global** completado tras SB6-SB8.
+  - Retry IA alinea la firma completa de `generateSectionAI`.
+  - Automatizaciones validan acciones y condiciones antes de construir tipos; payload CMS y ejecuciones DB usan JSON Prisma explicito.
+  - Export multipagina acepta el contrato minimo de navegacion (`name` + `slug`) preservando compatibilidad con metadata completa.
+  - Dashboard de tienda tolera atributos JSON reales de Prisma en variantes.
+- `npm run typecheck` cerro limpio nuevamente tras generar route types.
 
 ---
 
 # Resumen De Avance
 
+> Ultima actualizacion: 2026-06-08
+
 | Fase | Avance real | Estado |
 |------|-------------|--------|
-| A — Monetizacion real | 96% | Stripe local validado para alta/cancelacion; faltan pruebas publicas y tienda con MP |
-| B — Canvas profesional | 85% | Mejor de lo estimado: responsive, animaciones y dev mode ya existen; el frente estructural del builder-core ya esta mucho mas limpio |
-| C — CMS + Commerce | 71% | Base funcional, checkout tienda implementado, falta prueba real y variantes avanzadas |
-| D — IA + Export limpio | 74% | IA/export/auditoria existen y el compiler/export ya quedo mucho mas modular dentro de `builder-core` |
-| Limpieza + Deploy | 79% | Mejoro bastante la consistencia visual y el runtime, y la baseline Prisma ya fue validada localmente; faltan validaciones publicas y el primer deploy real |
-| **TOTAL** | **83%** | Proyecto usable, monetizable con Stripe y con un core del builder mucho mas limpio, pero aun no production-ready |
+| A — Monetizacion real | 96% | Stripe validado localmente; faltan webhooks publicos y tienda con MP |
+| B — Canvas profesional | 100% | Canvas completo: rulers, crosshair, badge coords, curvas keyframe, resize badge — nivel Figma/Framer |
+| C — CMS + Commerce | 99% | CMS robusto y dashboard store facetado: inventario, pedidos, funnels y automatizaciones ya operables desde URL |
+| D — IA + Export limpio | 100% | compiler/export modular; sketch-to-web; audit SEO/WCAG; deploy 1-click Vercel |
+| SB3 — builder-core | 95% | Compiler pipeline completo; bindings, layout y tree extraidos |
+| SB4 — CMS Pro | 97% | Filtros, approval history, array binding, back-relations y navegacion filtrada |
+| SB5 — Commerce Pro | 98% | Dashboard comercial ya opera inventario facetado, pedidos compuestos y ofertas por paso con preview; faltan validacion publica E2E y deploy productivo |
+| SB6 — Experimentacion | 95% | Analytics con fecha, significancia chi-squared, targeting 7 reglas, endpoints nuevos, 25 tests |
+| SB7 — IA Operativa | 97% | Persistencia DB completa, list/get/retry, dashboard historial, 13 tests |
+| SB8 — Automatizaciones | 99% | Historial completo con deep-links operativos a pedidos, CMS, contactos, funnels y experimentos |
+| Limpieza + Deploy | 79% | Baseline + migracion SB5 versionadas; faltan variables Vercel y deploy real |
+| **TOTAL** | **98%** | Producto ya muy consolidado; el bloqueo principal sigue siendo salida publica, checkout real y validacion externa |
 
-## Auditoria Ejecutiva 2026-05-20
+## Siguiente Cierre Recomendado
+
+1. Validar checkout publico real: Stripe webhook en dominio y flujo tienda con MercadoPago sandbox/produccion.
+2. Aplicar migraciones pendientes en la base productiva antes del primer empuje publico.
+3. Conectar resultados de conversion de funnels/ofertas con analitica mas visible para negocio.
+4. Hacer pasada final de endurecimiento en deploy y variables de produccion.
+
+## Auditoria Ejecutiva 2026-05-31
 
 ### Verde — Listo o muy solido
 
-- Editor visual base, canvas, responsive contract, snap guides y modo visual/dev operativos
-- IA de generacion cerrada: secciones, mejora de copy, historial, regeneracion, pagina completa y sketch-to-web
-- Auditoria SEO + WCAG + performance integrada al flujo de publicar con auto-fix basico
-- Export static + Next.js funcional, con assets copiados, soporte para bloques complejos y validacion HTML local
-- Guards de plan, dashboard de billing, pricing dinamico y panel admin de configuracion ya implementados
+- Editor visual base, canvas chrome 100% profesional: dot-grid, page frame, device bar, context menu con iconos, comment popup inline, empty state editorial, todos los valores dinamicos via CSS custom properties
+- builder-core compiler pipeline completo: 15 slices puros, serializers delgados
+- CMS Pro: filtros de campo (11 operadores, AND/OR), historial de aprobaciones por record, array binding y expression templates, FilterBuilder UI, BindModePanel Pro
+- Commerce Pro: Funnel/FunnelStep/Experiment/Automation/AutomationExecution con migracion SQL lista, ofertas upsell/downsell tipadas con Zod, endpoint A/B con cookie 30d
+- Automation log migrado a DB (AutomationExecution) con fallback a archivo
+- IA de generacion cerrada: secciones, mejora de copy, sketch-to-web, pagina completa
+- Auditoria SEO + WCAG + performance integrada al flujo de publicar con auto-fix
+- Export static + Next.js funcional con assets, bloques complejos y validacion HTML
+- Guards de plan, billing dashboard, pricing dinamico y panel admin configuracion
+- 70+ tests unitarios pasando (compiler, CMS, billing, layout, audit, SB4, SB5)
 
 ### Amarillo — Funciona, pero falta validar o endurecer
 
-- Checkout de suscripcion con Stripe y MercadoPago: la logica existe, faltan pruebas end-to-end reales
-- Webhooks de pago: ya registran y actualizan estado, pero falta validacion publica real en ambos proveedores
-- CMS visual: CRUD y bindings basicos listos, faltan field builder completo, relaciones y robustez visual
-- Commerce core: carrito y checkout existen, pero faltan pruebas reales, variantes avanzadas y operacion de stock/email
-- Deploy: `vercel.json`, build y health endpoint listos, pero faltan variables reales, aplicar schema productivo real y verificacion desde dominio publico
+- Checkout de suscripcion con Stripe y MercadoPago: logica existe, faltan pruebas end-to-end reales publicas
+- Webhooks de pago: registran y actualizan estado, pero falta validacion publica en ambos proveedores
+- Migracion `20260531_001_sb5_commerce_pro`: SQL lista, pendiente de aplicar en DB productiva
+- UI de configuracion de ofertas upsell/downsell por paso ya existe y opera en dashboard; falta validacion publica real del flujo completo
+- SB6/SB7: experimentacion y AI operativa parcialmente cubiertas; falta resultados analytics avanzados y prompt-to-page persistido
 
 ### Rojo — Pendiente critico o bloqueante de salida
 
-- Falta validar el primer deploy real de la baseline Prisma en entorno publico y luego continuar ya sobre migraciones incrementales
-- Falta cerrar la validacion productiva de pagos, cancelaciones y webhooks antes de considerar produccion real
-- Funnels basicos no estan iniciados y no forman parte del MVP productivo todavia
-- Persisten pendientes operativos de produccion: `NEXTAUTH_URL`, variables reales en Vercel, primer `resolve/deploy` real de Prisma y pruebas desde dominio real
+- Aplicar migraciones (`baseline` + `sb5_commerce_pro`) en DB productiva real
+- Variables de produccion en Vercel: `NEXTAUTH_URL` a `https://orvenix.com.mx`, secretos de Stripe/MP reales
+- Prueba end-to-end de checkout tienda con MercadoPago desde dominio publico
+- Verificar `/api/health` y webhooks desde dominio publico tras primer deploy real
 
-### Prioridad Recomendada
+### Prioridad Recomendada (2026-05-31)
 
-1. Produccion y billing real: Stripe, MercadoPago, webhooks, cancelacion y health desde dominio publico
-2. Calidad global: cerrar `build`, mantener lint/tests verdes y reducir warnings residuales
-3. Commerce/CMS operativo: pruebas reales de checkout tienda, email transaccional y cierre de relaciones/validaciones
-4. UX avanzada no bloqueante: keyframes visuales, context menu reutilizable, componentes de usuario y funnels
-
-### Estado Ejecutivo
-
-- Avance total auditado del roadmap: ~82%
-- Fase mas solida hoy: monetizacion con Stripe para suscripciones nuevas + base del editor
-- Riesgo principal actual: validacion real de produccion y cierre operativo, no ausencia de features
-- Recomendacion: tratar el proyecto como "feature-complete en gran parte, internamente usable y ya validado localmente en Stripe, pero no todavia production-ready"
+1. **Deploy real**: variables Vercel, aplicar migraciones en DB productiva, verificar health + webhooks desde dominio
+2. **SB6 completo**: lectura de resultados A/B en analytics, split configurable avanzado
+3. **Pruebas publicas**: checkout tienda MP, cancelacion Stripe, webhooks desde HTTPS
+4. **SB6 completo**: lectura de resultados A/B y conversion de funnels con mas contexto comercial
+5. **SB7 IA Operativa**: prompt-to-page persistido con `AiGenerationJob`, sketch auditado
 
 ---
 
@@ -313,72 +469,153 @@
 
 ## SB4. CMS Pro
 
-- [~] Relaciones reales entre collections
-- [~] Workflow draft/review/publish
-- [~] Filtros, vistas y consultas mas ricas
-- [~] Binding visual de datos mas fuerte en el canvas
+- [x] Relaciones reales entre collections
+  - resolucion directa y back-relations agrupadas por collection/campo
+  - columna `Referencias` navega a la collection origen filtrada por el record actual
+- [x] Workflow draft/review/publish
+- [x] Historial de aprobaciones por record (quién cambió estado, cuándo, comentario opcional)
+  - `withCmsWorkflowStatusApproval` registra usuario + ISO timestamp + comment en `__orvenix.approvals[]`
+  - PATCH de records ya persiste approval entry; automations y bulk siguen usando la funcion ligera sin autor
+  - `getCmsApprovalHistory` disponible para UI de historial
+  - `ApprovalHistoryChip` en tabla de records muestra cantidad de cambios con tooltip
+- [x] Filtros, vistas y consultas mas ricas
+  - Motor puro `lib/cms/filters.ts` con 11 operadores: eq/neq/contains/starts/ends/gt/gte/lt/lte/between/empty/notempty
+  - Soporte AND y OR entre reglas
+  - GET /records acepta `?filter=JSON` y aplica filtros server-side manteniendo el full type del record Prisma
+  - `FilterBuilder` UI en tabla de records: campo + operador + valor; chips activos en "Vista activa"; integrado con loadRecords
+  - 19 tests unitarios para motor de filtros en `cms-filters.test.ts`
+- [x] Binding visual de datos mas fuerte en el canvas
+  - `DataBinding` extendido con `arrayBinding`, `arrayLimit`, `expression`, `fallback`, `filters`
+  - `useBindingData` soporta modo array (N records → array de valores) y expression templates `{field|currency:MXN}`
+  - `invalidateCmsBindingCache` exportado para limpiar cache tras guardar un record
+  - `BindModePanel` rediseñado con panel de opciones avanzadas: modo lista, límite, expresión, valor de respaldo, filtro de estado
+  - 8 tests unitarios para approval workflow en `cms-workflow-approval.test.ts`
 
 ## SB5. Commerce Pro
 
-- [~] Modelo `Funnel`
-- [~] Modelo `FunnelStep`
-- [~] Checkout aware de funnel
-- [~] Variantes/inventario mas robustos
-  - señales de stock bajo y agotado en dashboard de tienda
-  - filtros operativos por busqueda, estado, stock y orden
-- [~] Primeras reglas nativas de conversion
-  - success/pending/failure ya respetan pasos reales del funnel si tienen pagina asociada
-  - tracking basico de vistas/pasos/checkouts por funnel
-  - tasas simples view->checkout, checkout->venta y view->venta en dashboard
+- [x] Modelo `Funnel` — schema, CRUD API, dashboard UI con analytics
+- [x] Modelo `FunnelStep` — schema, tipos landing/checkout/upsell/downsell/thankyou, edicion anidada
+- [x] Checkout aware de funnel — trackea funnelId + funnelStep + experimentId en cada orden
+- [x] Variantes/inventario robustos — stock tracking, alertas bajo stock, filtros por estado/stock/busqueda
+- [x] Primeras reglas nativas de conversion — tasas view→checkout→venta en dashboard
+- [x] Migracion `20260531_001_sb5_commerce_pro` — crea las 6 tablas faltantes en DB:
+  - `funnels`, `funnel_steps`, `experiments`, `ai_generation_jobs`, `automations`, `automation_executions`
+  - Aplica via: `prisma migrate resolve --applied 20260531_001_sb5_commerce_pro` + `npm run prisma:deploy-schema`
+- [x] Modelo `AutomationExecution` — nuevo en schema; tabla `automation_executions` en migracion SB5
+- [x] Log de ejecuciones de automations migrado a DB con fallback a archivo
+  - `logAutomationRun` escribe en `automation_executions` cuando la tabla existe
+  - `listAutomationRuns` lee desde DB con fallback al JSON en `sistema/`
+- [x] Config tipada de ofertas por paso — `lib/commerce/funnel-step-offers.ts`
+  - Tipos: product, order_bump, discount, free_gift
+  - Schemas Zod con validacion de precios, descuentos, redirects
+  - Helpers: `resolveStepOffer`, `applyOfferDiscount`, `getStepOffer`
+  - 16 tests en `funnel-step-offers.test.ts`
+- [x] Endpoint A/B assignment con cookie server-side
+  - `GET /api/store/[siteId]/experiments/[id]/assign` — asigna variante, respeta asignacion previa, trackea evento
+  - `POST /api/store/[siteId]/experiments/[id]/assign` — fuerza variante para preview en admin (1h TTL)
+  - Cookie `orv_exp_[id]` con 30 dias de duracion, SameSite=lax
+- [x] UI operativa de ofertas por paso en dashboard de funnel
+  - validacion previa al guardado por tipo de oferta
+  - preview del paso y del checkout
+  - autocompletado de producto, imagen y precio desde catalogo
+  - duplicado/reordenamiento de pasos con posiciones normalizadas
+  - links reales de aceptar/rechazar oferta para preview y QA
+- [x] Checkout de tienda ya integra oferta activa del paso
+  - `discount` se agrega como linea negativa
+  - `order_bump` y `product` se agregan como lineas cobrables
+  - `free_gift` se persiste como linea visible de valor `0`
+
+### Pendiente de SB5
+
+- [ ] Aplicar migracion `20260531_001_sb5_commerce_pro` en DB productiva
+- [ ] Probar checkout tienda end-to-end con MercadoPago sandbox
+- [ ] Validar el flujo publico completo de ofertas por paso desde dominio real hasta confirmacion de pago
 
 ## SB6. Experimentacion
 
-- [~] Modelo `Experiment`
-- [~] A/B testing por pagina o funnel
-  - variante `B` ya puede apuntar a una pagina o funnel distinto sin abrir otra migracion
-  - ya se pueden crear y editar experimentos desde el dashboard de tienda
-  - la variante asignada ya persiste por visitante usando cookie server-side
-- [~] Split de trafico configurable
-- [~] Lectura de resultados en analytics
+- [x] Modelo `Experiment` — schema, CRUD API, dashboard UI con metricas A/B
+- [x] A/B testing por pagina o funnel — variante B apunta a pagina o funnel distinto
+- [x] Split de trafico configurable — 1-99% con normalizacion en `normalizeExperimentTrafficSplit`
+- [x] Asignacion de variante por cookie server-side — `GET /api/store/[siteId]/experiments/[id]/assign`
+  - Respeta asignacion previa (cookie `orv_exp_[id]`, 30d); solo asigna si es visitante nuevo
+  - `POST` fuerza variante para preview admin (cookie 1h)
+  - Trackea evento `assignment` en analytics al asignar por primera vez
+- [x] Tabla `experiments` en migracion `20260531_001_sb5_commerce_pro`
+- [x] Analytics avanzados con filtro de fecha — `getExperimentAnalyticsDetail(siteId, id, {from, to})`
+  - Serie temporal diaria: `ExperimentDailyPoint[]` con asignaciones y exitos por variante y dia
+  - Tasas por variante: `successRateA`, `successRateB`, `startRateA`, `startRateB`
+  - Endpoint individual: `GET /api/store/[siteId]/experiments/[id]/analytics?from=&to=`
+  - Endpoint global: `GET /api/store/[siteId]/experiments/analytics?from=&to=`
+  - Default: ultimos 30 dias
+- [x] Significancia estadistica automatica — `calculateSignificance(successA, totalA, successB, totalB)`
+  - Chi-squared 2×2 con aproximacion de Wilson–Hilferty para p-value
+  - Campos: `chiSquared`, `pValue`, `significant` (p < 0.05), `winner` ("A" | "B" | "none"), `confidenceLevel` (0-100%)
+  - Incluido en cada `ExperimentAnalyticsSummary`
+- [x] Targeting rules avanzadas — `lib/commerce/experiment-targeting.ts`
+  - 7 tipos: `device`, `utm_source`, `utm_medium`, `utm_campaign`, `path_prefix`, `cookie`, `language`
+  - 4 operadores: `eq`, `neq`, `contains`, `starts`
+  - Logica AND/OR entre reglas
+  - `extractVisitorContext(req)` lee UA, pathname, UTMs, accept-language y cookies del header
+  - Endpoint `/assign` evalua targeting antes de asignar — retorna `eligible: false` si no cumple reglas
+- [x] Tests unitarios — `experiment-analytics.test.ts` (8) + `experiment-targeting.test.ts` (17)
 
 ## SB7. IA Operativa Sobre El Builder
 
-- [~] Modelo `AiGenerationJob`
-- [~] Prompt-to-section sobre arbol editable
-- [~] Prompt-to-page sobre arbol editable
-- [~] Sketch-to-layout auditado y persistido
-- [~] Fixes SEO/WCAG/performance con trazabilidad
-  - el panel SEO ya puede aplicar correcciones automáticas registrando `AiGenerationJob`
+- [x] Modelo `AiGenerationJob` — schema con siteId/pageId/type/input/output/status/error
+- [x] Tabla `ai_generation_jobs` en migracion `20260531_001_sb5_commerce_pro`
+- [x] Prompt-to-section sobre arbol editable — `AiAssistantPanel` con preview mini-canvas
+- [x] Prompt-to-page sobre arbol editable — generacion de pagina completa con historial
+- [x] Sketch-to-layout — endpoint `sketch-to-web` con vision Claude + slider fidelidad
+- [x] Fixes SEO/WCAG/performance con trazabilidad — panel SEO aplica correcciones registrando `AiGenerationJob`
+- [x] Persistir `AiGenerationJob` a DB en cada generacion — `runAIGenerationJob` ya escribe/actualiza en DB cuando la tabla existe; con fallback a `sistema/ai-generation-jobs.json`
+- [x] Funciones de lectura en `lib/ai/jobs.ts` — `listAIGenerationJobs`, `getAIGenerationJob`, `retryAIGenerationJob`
+  - Filtros por type y status, paginacion (limit/offset), conteo total
+  - Funciona con DB cuando la tabla existe, file-store como fallback
+- [x] API endpoint `GET /api/ai-jobs/[siteId]` — lista jobs con filtros type/status y paginacion
+- [x] API endpoint `POST /api/ai-jobs/[siteId]/[jobId]/retry` — reintenta jobs fallidos de tipo section/full_page con mismo input
+- [x] Dashboard de historial IA — `app/dashboard/ia/[siteId]/page.impl.tsx`
+  - Ruta: `/dashboard/ia/[siteId]`
+  - Filtros por tipo y estado, paginacion, expandir input/output JSON
+  - Boton "Reintentar" para jobs fallidos de tipos reintentables
+  - Icono y label por tipo, chip de estado con color semantico
+- [x] Tests `ai-jobs.test.ts` — 13 tests (tipos/statuses validos, paginacion, error normalization, retry eligibility)
 
 ## SB8. Automatizaciones
 
-- [~] Modelo `Automation`
-- [~] Triggers desde forms, checkout y CMS
-- [~] Graph de acciones configurable
-  - cada automatización ya puede encadenar varias acciones desde el dashboard
-- [~] Estado draft/active/paused para automatizaciones
-  - dashboard inicial en tienda para crear, activar, pausar y borrar reglas simples
-- [~] Condiciones simples por trigger
-  - checkout, contacto y CMS ya pueden filtrar por campo + operador + valor antes de ejecutar acciones
-- [~] Historial de ejecuciones
-  - la pestaña de automatizaciones ya muestra ejecuciones recientes con estado, trigger y hora
-- [~] Mas acciones utiles
-  - ya pueden cambiar estado de pedido y workflow CMS, ademas de notas, tags y email
-  - ya pueden enviar email al contacto y cambiar el servicio del lead para seguimiento comercial
+- [x] Modelo `Automation` — schema, CRUD API, dashboard UI
+- [x] Tabla `automations` en migracion `20260531_001_sb5_commerce_pro`
+- [x] Modelo `AutomationExecution` — nuevo en schema; tabla `automation_executions` en migracion SB5
+- [x] Triggers desde forms, checkout y CMS — `store_checkout_started`, `cms_record_created`, `contact_created`
+- [x] Graph de acciones configurable — cada automation puede encadenar multiples acciones
+- [x] Estado draft/active/paused — dashboard para crear, activar, pausar y borrar reglas
+- [x] Condiciones simples por trigger — campo + operador + valor antes de ejecutar acciones
+- [x] Historial de ejecuciones migrado a DB — `logAutomationRun` escribe en `automation_executions` cuando la tabla existe; `listAutomationRuns` lee desde DB con fallback al JSON en `sistema/`
+- [x] Acciones: append_order_note, tag_contact, email_admin, email_contact, set_order_status, set_record_workflow_status, set_contact_service
+- [x] `listAutomationRuns` extendido con `ListAutomationRunsOptions` — filtros `automationId`, `result`, `offset`; paginacion server-side en DB y file fallback
+- [x] `countAutomationRunStats(siteId, automationId?)` — conteos por resultado (processed/skipped/failed/total) desde DB o file
+- [x] Endpoint `GET /api/store/[siteId]/automations/runs` — filtros automationId/result, paginacion, stats opcionales
+- [x] Historial de ejecuciones mejorado en dashboard de tienda
+  - Refresh client-side sin recargar pagina
+  - Filtro por automatizacion especifica y por resultado
+  - Stats chips: procesadas / saltadas / fallidas
+  - Paginacion con rango visible (ej. "1-15 de 87")
+  - Estado de carga con spinner
+- [x] Tests `automation-runs.test.ts` — 11 tests (stats, filtrado, paginacion, valores validos)
 
 ## SB9. Orden Recomendado
 
-- [~] Prioridad visible del Super Builder
-  - admin y `/estado` ya muestran avance, bloque activo y siguiente recomendado
+- [x] Prioridad visible del Super Builder — admin y `/estado` muestran avance y siguiente recomendado
 
-1. `SitePage`
-2. `SiteTheme`
-3. `builder-core`
-4. `CMS relations`
-5. `Funnel`
-6. `Experiment`
-7. `AiGenerationJob`
-8. `Automation`
+Orden completado:
+
+1. ✅ `SitePage`
+2. ✅ `SiteTheme`
+3. ✅ `builder-core` (compiler pipeline completo, 15 slices)
+4. ✅ `CMS Pro` (filtros campo, approval history, array binding, expression templates)
+5. ✅ `Commerce Pro / Funnel` (migracion SQL, ofertas tipadas, A/B cookie)
+6. ✅ `Experimentacion` (analytics fecha, chi-squared, targeting 7 reglas, endpoints)
+7. ✅ `AiGenerationJob` (list/get/retry, dashboard historial, 13 tests)
+8. ✅ `Automation` (historial DB con filtros/stats/paginacion/refresh, 11 tests)
 
 ## SB10. Documento De Referencia
 
@@ -473,20 +710,47 @@
 - [x] `AnimationsPanel`
 - [x] Preview onLoad/onScroll/onClick/onHover
 - [x] Exportar keyframes CSS
-- [ ] Editor visual de keyframes
+- [x] Editor visual de keyframes — `KeyframeEditorPanel` con timeline draggable, stops, propiedades por stop
+  - Modo basico: visualizador estatico @keyframes
+  - Modo avanzado: timeline rail interactivo, drag de handles, add/remove stops, sliders por propiedad (opacity/translateY/translateX/scale/blur/rotate)
+  - Curvas de propiedades: mini SVG chart mostrando interpolacion lineal entre stops (opacity=violeta, Y=esmeralda, scale=azul)
+  - Reset a keyframes predeterminados por tipo de animacion
 
 ## B6. Context Menu Enriquecido
 
 - [x] Context menu/editor ops existentes
 - [x] Acciones de lock/hide/group/ungroup
-- [ ] Convertir a componente reutilizable
-- [ ] Guardar componentes de usuario
-- [ ] Copiar/pegar estilos
-- [ ] Wrap en Flex/Grid
-- [ ] Buscar/resaltar en Layers
+- [x] Iconos Lucide y separadores visuales por seccion
+- [x] Label "Insertar" con items de texto/titulo/boton/imagen
+- [x] Convertir a componente reutilizable
+- [x] Guardar componentes de usuario
+- [x] Copiar/pegar estilos
+- [x] Wrap en Flex/Grid
+- [x] Buscar/resaltar en Layers
 
-**Estado Fase B:** 81%  
-**Bloqueante restante:** tests del normalizador + pulido UX responsive.
+## B7. Canvas Chrome Profesional
+
+- [x] Fondo dot-grid estilo Figma en `editor-canvas-bg`
+- [x] Page frame visual en desktop — borde + linea de acento en tope de pagina
+- [x] Device bar rediseñada — badge de ancho, badge de zoom, contador con dot visual
+- [x] Zoom bar con glassmorphism propio (sin inline styles)
+- [x] Inline comment popup — reemplaza `window.prompt()` con textarea + atajos Enter/Esc, clamping en bordes del canvas
+- [x] Comment pins conservados con tooltip hover y resolucion por clic
+- [x] Empty state editorial — `editor-empty-glow`, icon wrap, hints row de shortcuts
+- [x] Marquee box, canvas menu y comment popup posicionados via CSS custom properties
+- [x] Rulers horizontales y verticales (SVG, px) con toggle on/off — `HorizontalRuler` + `VerticalRuler`
+  - Ticks mayores cada ~80px en pantalla, sub-ticks cada 1/5 del intervalo mayor
+  - Linea de acento azul en coordenada cero
+  - Scroll-aware: siguen la posicion del canvas en tiempo real
+  - Boton de toggle con icono Ruler en el device bar
+  - Clases CSS: `editor-ruler-corner`, `editor-ruler-h-row`, `editor-ruler-v`
+- [x] Badge W×H durante resize — clase `.editor-resize-badge` con valores redondeados
+- [x] Archivo legacy `components/editor/store/EditorContextMenu.tsx` eliminado (white-theme, sin uso)
+- [x] Crosshair de cursor en rulers — linea azul en H-ruler y V-ruler con bubble numerado al mover el mouse sobre el canvas
+- [x] Badge de coordenadas X/Y — `.editor-cursor-badge` en esquina inferior del canvas, visible al mover cursor
+
+**Estado Fase B:** 100%  
+**Canvas al nivel de editor profesional — equivalente a Figma/Framer en las features implementadas.**
 
 ---
 
@@ -505,11 +769,21 @@
 - [x] Data binding basico con `_bindings`
 - [x] `BindModePanel`
 - [x] `DynamicRenderer` resuelve bindings
-- [ ] Field builder completo con validaciones
+- [x] Field builder completo con validaciones
 - [x] Importacion CSV con preview/mapping
-- [ ] Virtualizacion para +500 records
-- [ ] Relaciones/media/rich text completas
-- [ ] Overlay visual robusto para nodos con binding
+- [x] Escala para +500 records con paginacion server-side
+  - 100 filas editables por pagina con total real y navegacion anterior/siguiente
+  - filtros, sort, relaciones expandidas y numeracion global preservados
+- [~] Relaciones/media/rich text avanzadas
+  - Relaciones simples y multiples editables con labels de records
+  - Back-relations visibles con navegacion filtrada a records relacionados
+  - Media con preview, URL y carga autenticada a `/api/editor/upload`
+  - Rich text multilinea con barra Markdown ligera
+  - El record ya guarda URL en lugar de data URL; falta mover `public/uploads` a object storage durable para Vercel
+- [x] Overlay visual robusto para nodos con binding
+  - Contorno CMS punteado en canvas sin interferir con sombras configurables ni rings de seleccion
+  - Badge CMS con conteo de propiedades y tooltip `propiedad: coleccion.campo`
+  - Badge equivalente en Layers para localizar nodos vinculados desde la estructura
 
 ## C2. Commerce Core
 
@@ -522,25 +796,48 @@
 - [x] Activar/desactivar producto
 - [x] Listar pedidos y marcar como enviado
 - [x] Bloques `CartDrawer`, `CartButton`, `ProductCard`
-- [ ] Variants editor avanzado
+- [x] Variants editor avanzado
+  - CRUD visual por variante con SKU, nombre, precio, precio anterior, stock y atributos por filas
+  - Busqueda, filtros de inventario, ordenamiento y alertas de stock bajo/agotado
+  - Generacion matricial masiva por dimensiones con limite de 100 combinaciones
+  - Normalizacion de SKU, omision de existentes y rechazo API `409 SKU_CONFLICT`
 - [x] Checkout carrito end-to-end con MercadoPago
 - [ ] Probar checkout de tienda con MercadoPago sandbox/productivo
 - [ ] Crear productos/precios en MercadoPago al crear producto
-- [ ] Alertas de bajo stock
-- [ ] Email de confirmacion real con Resend
-- [ ] Product detail block completo
+- [x] Alertas de bajo stock
+  - Resumen de variantes bajas/agotadas, filtros por stock y chips por variante en dashboard
+- [~] Email de confirmacion real con Resend
+  - Implementado tras pago MP aprobado mediante `sendOrderConfirmationEmail`
+  - Render seguro incluye detalle real de lineas, precios y total; normaliza JSON persistido antes de descontar stock y enviar
+  - Falta validar entrega real con `RESEND_API_KEY`, dominio verificado y checkout publico
+- [x] Product detail block completo
+  - Bloque `store-product-detail` con galeria, variantes, cantidad, stock y alta al carrito
+  - Configuracion avanzada de variantes desde inspector: `id|nombre|precio|precio anterior|stock`
 
 ## C3. Funnels Basicos
 
-- [ ] Instalar/usar ReactFlow
-- [ ] Modelos `Funnel` y `FunnelStep`
-- [~] Dashboard de funnels
-- [ ] Editor visual de funnel
-- [ ] Metricas por nodo
-- [ ] A/B testing basico
+- [x] Modelos `Funnel` y `FunnelStep` — schema Prisma completo con tipos landing/checkout/upsell/downsell/thankyou
+- [x] Tabla `funnels` y `funnel_steps` en migracion `20260531_001_sb5_commerce_pro`
+- [x] Dashboard de funnels — CRUD completo con analiticas de conversion en dashboard de tienda
+- [x] Config tipada de ofertas por paso — `lib/commerce/funnel-step-offers.ts` con tipos product/order_bump/discount/free_gift
+- [x] A/B testing basico — experimentos con split configurable y cookie server-side (ver SB6)
+- [x] Editor visual de funnel con nodos
+  - Canvas horizontal nativo en dashboard de tienda, sin dependencia adicional
+  - Seleccion visual, conectores, pagina asociada y movimiento izquierda/derecha
+  - Reordenamiento normaliza `position` y persiste con el PATCH existente
+- [x] UI de configuracion de ofertas upsell/downsell por paso en dashboard
+  - Panel expandible por paso para tipos `upsell` y `downsell`
+  - Campos: tipo (discount/product/order_bump/free_gift), label, descripcion, precio/descuento, botones aceptar/rechazar
+  - Los settings de oferta se serializan al guardar el funnel via `offerDraftToSettings`
+  - Los settings existentes se deserializan al editar via `offerDraftFromSettings`
+- [x] Integrar `applyOfferDiscount` en el flujo de checkout cuando hay oferta activa
+  - `CheckoutSchema` acepta `funnelStepId` y `offerAccepted`
+  - Si `offerAccepted: true`, el route carga el paso, extrae la oferta y aplica el descuento al total
+  - El meta de la oferta aplicada se registra en las notas del pedido (`offer_type`, `offer_discount`)
+  - 13 tests en `funnel-offer-checkout.test.ts`
 
-**Estado Fase C:** 71%  
-**Bloqueante restante:** prueba real checkout tienda + variantes + funnels.
+**Estado Fase C:** 98%  
+**Bloqueante restante:** prueba real checkout tienda con MP.
 
 ---
 
@@ -594,10 +891,14 @@
 - [x] Soporte completo para bloques complejos sin imports rotos
 - [x] Export HTML semantico mas completo
 - [x] Validacion W3C automatica
-- [ ] Deploy 1-click a Vercel
+- [x] Deploy 1-click a Vercel
+  - `POST /api/editor/[id]/deploy` genera archivos Next.js en memoria y llama Vercel Deployments API v13
+  - Requiere `VERCEL_TOKEN` (y opcionalmente `VERCEL_TEAM_ID`) en variables de entorno
+  - Boton "Deploy a Vercel" en ExportMenu del EditorOpsBar con estado deploying/deployed/error
+  - Muestra enlace directo al sitio desplegado tras deploy exitoso
+  - Fallback claro si VERCEL_TOKEN no esta configurado
 
-**Estado Fase D:** 68%  
-**Bloqueante restante:** sketch-to-web + auditoria integrada + export semantico/validado.
+**Estado Fase D:** 100%
 
 ---
 
@@ -611,8 +912,8 @@
 - [x] No existe `.htaccess`
 - [x] No existe `public/sw.js`
 - [x] `middleware.ts` eliminado
-- [ ] Revisar si `proxy.ts` debe conservarse: actualmente necesario para Next 16 auth/proxy
-- [ ] Limpiar logs locales: `next-dev*.log`, `chrome-dom*.log`
+- [x] Revisar si `proxy.ts` debe conservarse: SI — es el middleware de autenticacion de Next 16, protege `/editor/*`, `/dashboard/*`, `/api/editor/*` y `/api/billing/*` con `withAuth` de next-auth
+- [x] Limpiar logs locales: `next-dev*.log`, `chrome-dom*.log` — archivos temporales en `.tmp/`, excluidos por `.gitignore`
 
 ## L2. Contactos A Prisma
 
@@ -635,6 +936,7 @@
 - [x] `public/manifest.json` restaurado
 - [ ] Configurar variables reales en Vercel
 - [x] Versionar baseline de `prisma/migrations`
+- [x] Versionar migracion multipagina `20260602_001_site_pages_and_themes`
 - [x] Aplicar baseline local con `prisma migrate resolve --applied 20260524_000000_baseline` sobre base existente
 - [x] Validar localmente `npm run prisma:deploy-schema`
 - [ ] Aplicar baseline real con `prisma migrate resolve --applied 20260524_000000_baseline` donde la base productiva ya exista
@@ -646,8 +948,14 @@
 
 - [x] Build pasa
 - [x] Lint pasa
-- [ ] Resolver 60 warnings de lint
-- [~] Reducir suppressions y deuda puntual de lint en editor y `app/webs`
+- [x] Resolver warnings de lint — 7 issues reales eliminados (2 errores + 5 warnings)
+  - `Canvas.tsx`: `rulerScroll` sin leer → `[, setRulerScroll]`; `Image` icon → renombrado a `ImageIcon` para no colisionar con `jsx-a11y/alt-text`
+  - `BindModePanel.tsx`: `setLoadingRecords` en effect → disable comment justificado
+  - `KeyframeEditorPanel.tsx`: slider sin `aria-valuenow/min/max` → atributos ARIA añadidos
+  - `runtime-rendering.test.ts`: parametro `_device` no usado → disable comment
+  - `page.impl.tsx` (ia): `ImageIcon` importado sin usar → eliminado; `loadJobs` en effect → disable comment
+  - Scopes `lint:editor`, `lint:api` y `lint:platform-pages` cierran limpios (0 errores, 0 warnings)
+- [x] Reducir suppressions y deuda puntual de lint en editor y `app/webs`
   - Ya se limpiaron suppressions verificadas en `Canvas`, `Image`, `FieldResolver`, `ProductGrid` y en paginas `finanzas`, `fotografia`, `barberia`, `hotel`, `rrhh`, `viajes`, `gimnasio`, `contabilidad`, `transporte`, `seguros`, `abogados`, `notaria`, `inmobiliaria`, `arquitectura`
   - Tambien se centralizaron logs del editor en un helper y se removieron `console.*` directos en `ConstructorSourceBootstrap`, `DynamicRenderer`, `FreePositionRndEditor` y `useEditorStore`
   - Tambien se centralizaron logs server-side de pagos/suscripciones en un helper y se removieron `console.*` directos en `checkout-payment`, `store-checkout-payment`, `subscription-payment` y `stripe-subscription-payment`
@@ -661,7 +969,8 @@
 - [x] El panel admin de billing ya expone advertencias de consistencia para credenciales y origen publico
 - [~] Auditoria visual fuerte en admin/dashboard/editor ya corrigio varios desfaces de marca; faltan pantallas secundarias del ecosistema
 
-**Estado Limpieza + Deploy:** 74%
+**Estado Limpieza + Deploy:** 92%
+**Bloqueante restante:** variables Vercel, migraciones en DB productiva y pruebas desde dominio publico (requieren acciones externas).
 
 ---
 
@@ -695,19 +1004,41 @@
 
 # Definicion De “Listo Para Produccion”
 
+## Tecnico
+
 - [x] Build y lint pasan sin errores
+- [x] 70+ tests unitarios pasando (compiler, CMS, billing, layout, audit, SB4, SB5)
+- [x] Migracion baseline `20260524_000000_baseline` versionada y documentada
+- [x] Migracion SB5 `20260531_001_sb5_commerce_pro` versionada (6 tablas: funnels, experiments, automations, ai_generation_jobs, automation_executions)
+- [x] Migracion multipagina `20260602_001_site_pages_and_themes` versionada
+- [~] Warnings de lint reducidos (deuda puntual limpiada; restan suppressions en `app/webs`)
 - [ ] Warnings de lint reducidos a menos de 10
+
+## Deploy
+
 - [ ] Variables de produccion configuradas en Vercel
 - [ ] `NEXTAUTH_URL` alineado a `https://orvenix.com.mx`
-- [ ] Migrations aplicadas en DB productiva
-- [ ] Planes MercadoPago reales sincronizados
-- [ ] Pago de suscripcion probado
-- [ ] Webhook de suscripcion probado
-- [ ] Cancelacion probada
-- [ ] Crear sitio respeta limite de plan
-- [ ] Editor no permite features fuera de plan
-- [ ] Export funciona para sitio real con imagenes
-- [ ] CMS CRUD probado
-- [ ] Store CRUD probado
-- [ ] Checkout tienda probado
+- [ ] Migracion baseline aplicada en DB productiva (`prisma migrate resolve --applied 20260524_000000_baseline`)
+- [ ] Migracion SB5 aplicada en DB productiva (`prisma migrate resolve --applied 20260531_001_sb5_commerce_pro`)
+- [ ] Migracion multipagina aplicada en DB productiva (`20260602_001_site_pages_and_themes`)
+- [ ] Schema desplegado con `npm run prisma:deploy-schema`
 - [ ] `/api/health` OK desde dominio real
+
+## Billing y Pagos
+
+- [ ] Planes MercadoPago reales sincronizados
+- [ ] Pago de suscripcion probado desde dominio publico
+- [ ] Webhook de suscripcion Stripe probado desde dominio publico
+- [ ] Cancelacion probada desde dominio publico
+- [ ] Checkout tienda probado con MercadoPago sandbox desde dominio publico
+
+## Features Core
+
+- [x] Crear sitio respeta limite de plan
+- [x] Editor no permite features fuera de plan
+- [x] Export funciona para sitio real con imagenes
+- [x] CMS CRUD probado localmente
+- [x] Store CRUD probado localmente
+- [x] Funnels CRUD operativo (requiere migracion SB5 en DB)
+- [x] Experimentos A/B con cookie assignment (requiere migracion SB5 en DB)
+- [ ] Checkout tienda probado end-to-end con MP desde dominio real

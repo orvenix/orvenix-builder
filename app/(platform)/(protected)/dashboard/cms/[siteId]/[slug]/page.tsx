@@ -8,7 +8,7 @@ import { isCmsWorkflowStatus, type CmsWorkflowStatus } from "@/lib/cms/workflow"
 
 interface Props {
   params: Promise<{ siteId: string; slug: string }>
-  searchParams?: Promise<{ status?: string; q?: string; sort?: string }>
+  searchParams?: Promise<{ status?: string; q?: string; sort?: string; recordId?: string }>
 }
 
 export const dynamic = "force-dynamic"
@@ -92,6 +92,7 @@ export default async function CmsRecordsPage({ params, searchParams }: Props) {
           initialRecords={records as Parameters<typeof CmsRecordsImpl>[0]["initialRecords"]}
           relationSources={relationSources}
           initialQuery={(rawSearchParams?.q ?? "").trim()}
+          initialRecordId={(rawSearchParams?.recordId ?? "").trim()}
           initialStatusFilter={parseInitialStatus(rawSearchParams?.status)}
           initialSort={parseInitialSort(rawSearchParams?.sort)}
         />

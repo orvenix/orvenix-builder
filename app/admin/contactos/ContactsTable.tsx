@@ -6,12 +6,14 @@ import type { Contact } from '@/lib/adminCsv';
 
 interface Props {
   initialContacts: Contact[];
+  initialQuery?: string;
+  initialExpandedId?: number | null;
 }
 
-export function ContactsTable({ initialContacts }: Props) {
+export function ContactsTable({ initialContacts, initialQuery = '', initialExpandedId = null }: Props) {
   const [contacts, setContacts] = useState(initialContacts);
-  const [query, setQuery] = useState('');
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [query, setQuery] = useState(initialQuery);
+  const [expanded, setExpanded] = useState<number | null>(initialExpandedId);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 

@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { getPublicCartOfferSummary } from "@/lib/commerce/funnel-offer-public";
 import { useCartStore } from "@/store/useCartStore";
 import { useEditorStore } from "@/store/useEditorStore";
 import { ShoppingCart, X, Minus, Plus, Trash2 } from "lucide-react";
@@ -26,9 +28,11 @@ export function CartDrawer({
   funnelId,
   funnelStep = "checkout",
 }: Props) {
+  const searchParams = useSearchParams();
   const isOpen    = useCartStore((s) => s.isOpen);
   const items     = useCartStore((s) => s.items);
   const close     = useCartStore((s) => s.close);
+  const open      = useCartStore((s) => s.open);
   const removeItem = useCartStore((s) => s.removeItem);
   const updateQty  = useCartStore((s) => s.updateQty);
   const clear      = useCartStore((s) => s.clear);
@@ -40,6 +44,42 @@ export function CartDrawer({
   const [customerName, setCustomerName] = useState("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [offerAccepted, setOfferAccepted] = useState(true);
+
+  const activeFunnelId = searchParams.get("funnelId")?.trim() || funnelId?.trim() || "";
+  const activeFunnelStepRaw = searchParams.get("funnelStep")?.trim() || funnelStep;
+  const activeFunnelStep = (
+    activeFunnelStepRaw === "landing"
+    || activeFunnelStepRaw === "checkout"
+    || activeFunnelStepRaw === "upsell"
+    || activeFunnelStepRaw === "downsell"
+    || activeFunnelStepRaw === "thankyou"
+  ) ? activeFunnelStepRaw : "checkout";
+  const activeFunnelStepId = searchParams.get("funnelStepId")?.trim() || "";
+  const cartRequested = searchParams.get("cart") === "open";
+  const canAcceptOffer = Boolean(
+    activeFunnelId
+    && activeFunnelStepId
+    && (activeFunnelStep === "checkout" || activeFunnelStep === "upsell" || activeFunnelStep === "downsell")
+  );
+  const activeOfferSummary = getPublicCartOfferSummary({
+    stepKind: canAcceptOffer ? activeFunnelStep : null,
+    offerAccepted,
+    offerType: searchParams.get("offerType")?.trim() || null,
+    offerLabel: searchParams.get("offerLabel")?.trim() || null,
+    offerValue: searchParams.get("offerValue")?.trim() || null,
+    offerDiscountPercent: searchParams.get("offerDiscountPercent")?.trim() || null,
+    offerDiscountFixed: searchParams.get("offerDiscountFixed")?.trim() || null,
+    offerPriceMxn: searchParams.get("offerPriceMxn")?.trim() || null,
+    totalMxn: totalMxn(),
+  });
+  const cartTotalMxn = totalMxn();
+
+  useEffect(() => {
+    if (cartRequested && !isOpen) {
+      open();
+    }
+  }, [cartRequested, isOpen, open]);
 
   const handleCheckout = async () => {
     if (items.length === 0 || isCheckingOut) return;
@@ -68,8 +108,10 @@ export function CartDrawer({
       body: JSON.stringify({
         customerEmail,
         customerName,
-        funnelId: funnelId?.trim() || undefined,
-        funnelStep: funnelId?.trim() ? funnelStep : undefined,
+        funnelId: activeFunnelId || undefined,
+        funnelStep: activeFunnelId ? activeFunnelStep : undefined,
+        funnelStepId: activeFunnelStepId || undefined,
+        offerAccepted: canAcceptOffer ? offerAccepted : undefined,
         experimentId,
         experimentVariant,
         items: items.map((i) => ({
@@ -203,11 +245,64 @@ export function CartDrawer({
                   {checkoutError}
                 </p>
               )}
+              {activeOfferSummary && (
+                <div className={`rounded-xl border px-3 py-3 text-xs ${
+                  activeOfferSummary.tone === "cyan"
+                    ? "border-cyan-400/20 bg-cyan-500/10 text-cyan-100"
+                    : activeOfferSummary.tone === "emerald"
+                      ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-100"
+                      : "border-amber-400/20 bg-amber-500/10 text-amber-100"
+                }`}>
+                  <p className="font-semibold">{activeOfferSummary.title}</p>
+                  <p className="mt-1 opacity-90">{activeOfferSummary.description}</p>
+                  {activeOfferSummary.estimatedLabel && activeOfferSummary.estimatedValue && (
+                    <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2 text-[11px] font-medium">
+                      <span className="opacity-80">{activeOfferSummary.estimatedLabel}</span>
+                      <span>{activeOfferSummary.estimatedValue}</span>
+                    </div>
+                  )}
+                  {activeOfferSummary.finePrint && (
+                    <p className="mt-2 text-[11px] opacity-75">
+                      {activeOfferSummary.finePrint}
+                    </p>
+                  )}
+                </div>
+              )}
+              {canAcceptOffer && (
+                <label className="flex items-start gap-2 rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
+                  <input
+                    type="checkbox"
+                    checked={offerAccepted}
+                    onChange={(event) => setOfferAccepted(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-white/10 bg-white/5"
+                  />
+                  <span>{activeOfferSummary?.checkboxLabel ?? "Aplicar la oferta activa de este paso al iniciar el pago."}</span>
+                </label>
+              )}
             </div>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-slate-400">Total</span>
-              <span className="text-xl font-extrabold text-white">{formatMxn(totalMxn())}</span>
-            </div>
+            {activeOfferSummary?.estimatedLabel && activeOfferSummary?.estimatedValue && activeOfferSummary?.estimatedTotalLabel && activeOfferSummary?.estimatedTotalValue ? (
+              <div className="mb-4 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                <div className="flex items-center justify-between text-sm text-slate-400">
+                  <span>Subtotal</span>
+                  <span>{formatMxn(cartTotalMxn)}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-slate-300">{activeOfferSummary.estimatedLabel}</span>
+                  <span className={activeOfferSummary.tone === "amber" ? "text-amber-300" : "text-emerald-300"}>
+                    {activeOfferSummary.tone === "amber" ? "+" : "-"}{activeOfferSummary.estimatedValue}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
+                  <span className="text-sm text-slate-300">{activeOfferSummary.estimatedTotalLabel}</span>
+                  <span className="text-xl font-extrabold text-white">{activeOfferSummary.estimatedTotalValue}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm text-slate-400">Total</span>
+                <span className="text-xl font-extrabold text-white">{formatMxn(cartTotalMxn)}</span>
+              </div>
+            )}
             <button type="button" onClick={handleCheckout} disabled={isCheckingOut}
               className="w-full h-11 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}>

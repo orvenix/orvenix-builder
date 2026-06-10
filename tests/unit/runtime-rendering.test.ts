@@ -87,6 +87,7 @@ test("runtime rendering helpers compute preview min-height using resolved free n
     },
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const passthrough = (props: NodeProps | undefined, _device: DeviceMode) => props ?? {}
   assert.equal(getRuntimePreviewMinHeight(tree, "desktop", passthrough), 948)
 })

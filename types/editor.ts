@@ -26,11 +26,28 @@ export type NodeProps = Record<string, unknown> & {
 
 export type ResponsiveContract = Partial<Record<Breakpoint, NodeProps>>;
 
+export interface DataBindingFilter {
+  field: string;
+  op: "eq" | "neq" | "contains" | "starts" | "ends" | "gt" | "gte" | "lt" | "lte" | "between" | "empty" | "notempty";
+  value?: string | number | boolean;
+  value2?: string | number;
+}
+
 export interface DataBinding {
   collectionSlug: string;
   fieldSlug: string;
   recordId?: string;
   recordStatus?: "all" | "draft" | "review" | "published";
+  // Array binding: fetch N records instead of one (for list/grid components)
+  arrayBinding?: boolean;
+  arrayLimit?: number;
+  // Expression: template string evaluated against the resolved field values
+  // e.g. "{firstName} {lastName}", "{price|currency:MXN}"
+  expression?: string;
+  // Fallback value shown if the bound field is empty
+  fallback?: unknown;
+  // Field-level pre-filters applied when fetching bound records
+  filters?: DataBindingFilter[];
   [key: string]: unknown;
 }
 

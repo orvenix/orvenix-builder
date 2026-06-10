@@ -1,0 +1,24 @@
+# Local tooling and documentation
+.agents/
+.claude/
+.vscode/
+docs/
+tests/
+ROADMAP_CHECKLIST.md
+
+# Alternative VPS deployment configuration
+apache/
+ecosystem.config.cjs
+ecosystem.staging.config.cjs
+nginx.conf
+PRODUCCION.md
+
+# Runtime and generated artifacts
+.next/
+.tmp/
+data/
+sistema/
+generated/
+public/published-sites/
+public/uploads/
+*.tsbuildinfo

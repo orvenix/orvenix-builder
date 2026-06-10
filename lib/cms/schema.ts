@@ -29,11 +29,19 @@ export const CmsFieldSchema = z.object({
   maxLength: z.number().optional(),
   relation: CmsRelationSchema.optional(),
 }).superRefine((field, ctx) => {
-  if (field.type === "select" && field.options && field.options.length === 0) {
+  if (field.type === "select" && (!field.options || field.options.length === 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["options"],
       message: "Los campos select deben tener al menos una opcion",
+    })
+  }
+
+  if (field.type === "number" && typeof field.min === "number" && typeof field.max === "number" && field.min > field.max) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["max"],
+      message: "El maximo no puede ser menor que el minimo",
     })
   }
 
@@ -54,11 +62,29 @@ export const CmsFieldSchema = z.object({
   }
 })
 
-export const CmsFieldsSchema = z.array(CmsFieldSchema)
+export const CmsFieldsSchema = z.array(CmsFieldSchema).superRefine((fields, ctx) => {
+  const seen = new Map<string, number>()
+  for (const [index, field] of fields.entries()) {
+    const existing = seen.get(field.slug)
+    if (typeof existing === "number") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [index, "slug"],
+        message: "Los slugs de campos deben ser unicos",
+      })
+      continue
+    }
+    seen.set(field.slug, index)
+  }
+})
 
 export type CmsFieldType = (typeof CMS_FIELD_TYPES)[number]
 export type CmsFieldDef = z.infer<typeof CmsFieldSchema>
 export type CmsRelationDef = z.infer<typeof CmsRelationSchema>
+export type CmsRecordValidationError = {
+  fieldSlug: string
+  message: string
+}
 
 export function parseCmsFields(input: unknown): CmsFieldDef[] {
   const parsed = CmsFieldsSchema.safeParse(input)
@@ -128,6 +154,79 @@ export function normalizeCmsRecordData(fields: CmsFieldDef[], input: unknown): R
     }
   }
   return source
+}
+
+export function validateCmsRecordData(
+  fields: CmsFieldDef[],
+  input: unknown
+): { valid: boolean; errors: CmsRecordValidationError[]; data: Record<string, unknown> } {
+  const data = normalizeCmsRecordData(fields, input)
+  const errors: CmsRecordValidationError[] = []
+
+  for (const field of fields) {
+    const value = data[field.slug]
+
+    if (field.required) {
+      const missing = (
+        value === null
+        || typeof value === "undefined"
+        || value === ""
+        || (Array.isArray(value) && value.length === 0)
+      )
+      if (missing) {
+        errors.push({
+          fieldSlug: field.slug,
+          message: `${field.name} es requerido`,
+        })
+        continue
+      }
+    }
+
+    if (value === null || typeof value === "undefined" || value === "") continue
+
+    if (field.type === "number") {
+      const numeric = typeof value === "number" ? value : Number(value)
+      if (!Number.isFinite(numeric)) {
+        errors.push({
+          fieldSlug: field.slug,
+          message: `${field.name} debe ser numerico`,
+        })
+        continue
+      }
+      if (typeof field.min === "number" && numeric < field.min) {
+        errors.push({
+          fieldSlug: field.slug,
+          message: `${field.name} debe ser mayor o igual a ${field.min}`,
+        })
+      }
+      if (typeof field.max === "number" && numeric > field.max) {
+        errors.push({
+          fieldSlug: field.slug,
+          message: `${field.name} debe ser menor o igual a ${field.max}`,
+        })
+      }
+    }
+
+    if (typeof field.maxLength === "number" && typeof value === "string" && value.length > field.maxLength) {
+      errors.push({
+        fieldSlug: field.slug,
+        message: `${field.name} supera la longitud maxima`,
+      })
+    }
+
+    if (field.type === "select" && field.options && !field.options.includes(String(value))) {
+      errors.push({
+        fieldSlug: field.slug,
+        message: `${field.name} tiene una opcion invalida`,
+      })
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    data,
+  }
 }
 
 export function getRelationIds(field: CmsFieldDef, value: unknown): string[] {

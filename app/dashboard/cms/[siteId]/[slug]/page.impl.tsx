@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   ArrowLeft, Check, ChevronDown, Database, Search,
   Plus, Settings2, Trash2, Upload, X, AlertCircle, CheckSquare2, Square,
@@ -23,6 +24,7 @@ import {
   removeBulkSelectedRecords,
   summarizeSelectedWorkflow,
 } from "@/lib/cms/bulk-actions"
+import { buildCmsRecordsViewQuery } from "@/lib/cms/view-state"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,6 +66,7 @@ interface Props {
   initialRecords: RecordRow[]
   relationSources: RelationSource[]
   initialQuery?: string
+  initialRecordId?: string
   initialStatusFilter?: "all" | CmsWorkflowStatus
   initialSort?: RecordsSortValue
 }
@@ -94,14 +97,6 @@ const WORKFLOW_STATUS_META: Record<CmsWorkflowStatus, { label: string; chip: str
     button: "border-emerald-500/20 text-emerald-400 hover:border-emerald-500/40 hover:bg-emerald-500/10",
   },
 }
-
-type RecordsSortValue =
-  | "createdAt_desc"
-  | "createdAt_asc"
-  | "updatedAt_desc"
-  | "updatedAt_asc"
-  | "status_asc"
-  | "status_desc"
 
 // ─── Cell ─────────────────────────────────────────────────────────────────────
 
@@ -599,9 +594,13 @@ export default function CmsRecordsImpl({
   initialRecords,
   relationSources,
   initialQuery = "",
+  initialRecordId = "",
   initialStatusFilter = "all",
   initialSort = "createdAt_desc",
 }: Props) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const fields = useMemo(() => parseCmsFields(collection.fields), [collection.fields])
   const [records, setRecords] = useState<RecordRow[]>(() =>
     initialRecords.map((record) => ({
@@ -616,6 +615,7 @@ export default function CmsRecordsImpl({
   const [importNotice, setImportNotice] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [query, setQuery] = useState(initialQuery)
+  const [recordIdFilter, setRecordIdFilter] = useState(initialRecordId)
   const [statusFilter, setStatusFilter] = useState<"all" | CmsWorkflowStatus>(initialStatusFilter)
   const [sort, setSort] = useState<RecordsSortValue>(initialSort)
   const [loadingRecords, setLoadingRecords] = useState(false)
@@ -639,6 +639,12 @@ export default function CmsRecordsImpl({
     [records, selectedIds]
   )
   const allVisibleSelected = records.length > 0 && visibleSelectedCount === records.length
+  const viewQuery = useMemo(() => buildCmsRecordsViewQuery({
+    q: query,
+    recordId: recordIdFilter,
+    status: statusFilter,
+    sort,
+  }), [query, recordIdFilter, statusFilter, sort])
 
   const loadRecords = useCallback(async (options?: { preserveNotice?: boolean }) => {
     setLoadingRecords(true)
@@ -647,6 +653,7 @@ export default function CmsRecordsImpl({
       sort,
     })
     if (query.trim()) params.set("q", query.trim())
+    if (recordIdFilter.trim()) params.set("recordId", recordIdFilter.trim())
     if (statusFilter !== "all") params.set("status", statusFilter)
 
     try {
@@ -660,7 +667,7 @@ export default function CmsRecordsImpl({
     } finally {
       setLoadingRecords(false)
     }
-  }, [collection.slug, hydrateRecords, query, siteId, sort, statusFilter])
+  }, [collection.slug, hydrateRecords, query, recordIdFilter, siteId, sort, statusFilter])
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -668,7 +675,13 @@ export default function CmsRecordsImpl({
     }, query.trim() ? 220 : 0)
 
     return () => window.clearTimeout(handle)
-  }, [loadRecords, query])
+  }, [loadRecords, query, recordIdFilter])
+
+  useEffect(() => {
+    const currentQuery = searchParams?.toString() ?? ""
+    if (currentQuery === viewQuery) return
+    router.replace(viewQuery ? `${pathname}?${viewQuery}` : pathname, { scroll: false })
+  }, [pathname, router, searchParams, viewQuery])
 
   const updateCell = useCallback(async (recordId: string, fieldSlug: string, value: unknown) => {
     const record = records.find((r) => r.id === recordId)
@@ -705,10 +718,10 @@ export default function CmsRecordsImpl({
       void loadRecords({ preserveNotice: true })
       return
     }
-    if (statusFilter !== "all" || query.trim() || sort !== "createdAt_desc") {
+    if (statusFilter !== "all" || query.trim() || recordIdFilter.trim() || sort !== "createdAt_desc") {
       void loadRecords({ preserveNotice: true })
     }
-  }, [siteId, collection.slug, statusFilter, query, sort, loadRecords])
+  }, [siteId, collection.slug, statusFilter, query, recordIdFilter, sort, loadRecords])
 
   const addRow = useCallback(async () => {
     setAddingRow(true)
@@ -721,7 +734,7 @@ export default function CmsRecordsImpl({
       body: JSON.stringify({ data: emptyData }),
     })
     const { record } = await res.json() as { record: RecordRow }
-    if (statusFilter === "all" && !query.trim() && sort === "createdAt_desc") {
+    if (statusFilter === "all" && !query.trim() && !recordIdFilter.trim() && sort === "createdAt_desc") {
       setRecords((prev) => [{
         ...record,
         workflowStatus: record.workflowStatus ?? getCmsWorkflowStatus(record.data, record.publishedAt),
@@ -730,18 +743,18 @@ export default function CmsRecordsImpl({
       void loadRecords({ preserveNotice: true })
     }
     setAddingRow(false)
-  }, [fields, siteId, collection.slug, statusFilter, query, sort, loadRecords])
+  }, [fields, siteId, collection.slug, statusFilter, query, recordIdFilter, sort, loadRecords])
 
   const deleteRow = useCallback(async (id: string) => {
     if (!confirm("¿Eliminar este registro?")) return
     setDeletingId(id)
     await fetch(`/api/cms/${siteId}/collections/${collection.slug}/records/${id}`, { method: "DELETE" })
     setRecords((prev) => prev.filter((r) => r.id !== id))
-    if (statusFilter !== "all" || query.trim() || sort !== "createdAt_desc") {
+    if (statusFilter !== "all" || query.trim() || recordIdFilter.trim() || sort !== "createdAt_desc") {
       void loadRecords({ preserveNotice: true })
     }
     setDeletingId(null)
-  }, [siteId, collection.slug, statusFilter, query, sort, loadRecords])
+  }, [siteId, collection.slug, statusFilter, query, recordIdFilter, sort, loadRecords])
 
   const toggleRecordSelection = useCallback((recordId: string) => {
     setSelectedIds((prev) => (
@@ -809,11 +822,11 @@ export default function CmsRecordsImpl({
       )
     } finally {
       setBulkBusy(false)
-      if (statusFilter !== "all" || query.trim() || sort !== "createdAt_desc" || action === "delete") {
+      if (statusFilter !== "all" || query.trim() || recordIdFilter.trim() || sort !== "createdAt_desc" || action === "delete") {
         void loadRecords({ preserveNotice: true })
       }
     }
-  }, [selectedIds, siteId, collection.slug, statusFilter, query, sort, loadRecords, records])
+  }, [selectedIds, siteId, collection.slug, statusFilter, query, recordIdFilter, sort, loadRecords, records])
 
   return (
     <div className="px-4 py-8">
@@ -871,7 +884,7 @@ export default function CmsRecordsImpl({
             <AlertCircle size={14} /> {actionError}
           </div>
         )}
-        {(statusFilter !== "all" || query.trim() || sort !== "createdAt_desc") && (
+        {(statusFilter !== "all" || query.trim() || recordIdFilter.trim() || sort !== "createdAt_desc") && (
           <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
             <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Vista activa</span>
             {statusFilter !== "all" && (
@@ -894,6 +907,16 @@ export default function CmsRecordsImpl({
                 <X size={11} />
               </button>
             )}
+            {recordIdFilter.trim() && (
+              <button
+                type="button"
+                onClick={() => setRecordIdFilter("")}
+                className="inline-flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-200"
+              >
+                Record ID: {recordIdFilter.trim()}
+                <X size={11} />
+              </button>
+            )}
             {sort !== "createdAt_desc" && (
               <button
                 type="button"
@@ -909,6 +932,7 @@ export default function CmsRecordsImpl({
               onClick={() => {
                 setStatusFilter("all")
                 setQuery("")
+                setRecordIdFilter("")
                 setSort("createdAt_desc")
               }}
               className="ml-auto h-8 rounded-lg border border-white/[0.08] px-3 text-xs text-slate-400 transition-colors hover:text-white"

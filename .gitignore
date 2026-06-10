@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.tmp/
 
 # next.js
 /.next/
@@ -35,9 +36,11 @@ yarn-error.log*
 # local runtime data
 editor-dev.db
 /data/*.json
+/sistema/*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -45,3 +48,8 @@ editor-dev.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated clients and public runtime artifacts
+/generated/
+/public/published-sites/
+/public/uploads/

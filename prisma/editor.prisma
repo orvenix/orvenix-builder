@@ -292,20 +292,39 @@ model AiGenerationJob {
 }
 
 model Automation {
-  id          String        @id @default(cuid())
-  siteId      String        @db.VarChar(64)
-  name        String        @db.VarChar(191)
-  triggerType String        @db.VarChar(64)
+  id          String               @id @default(cuid())
+  siteId      String               @db.VarChar(64)
+  name        String               @db.VarChar(191)
+  triggerType String               @db.VarChar(64)
   actionGraph Json
-  status      String        @default("draft") @db.VarChar(32)
-  site        EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  status      String               @default("draft") @db.VarChar(32)
+  site        EditorWebsite        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  executions  AutomationExecution[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
   @@index([siteId])
   @@index([siteId, status])
   @@index([triggerType])
   @@map("automations")
+}
+
+model AutomationExecution {
+  id           String    @id @default(cuid())
+  siteId       String    @db.VarChar(64)
+  automationId String
+  triggerType  String    @db.VarChar(64)
+  payload      Json?
+  result       String    @db.VarChar(32)
+  error        String?   @db.Text
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+
+  @@index([siteId])
+  @@index([automationId])
+  @@index([siteId, createdAt])
+  @@index([result])
+  @@map("automation_executions")
 }
 
 model Collection {
