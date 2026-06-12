@@ -7,14 +7,16 @@ export async function generateStaticParams() {
   return categorias.map(c => ({ categoria: c.slug }))
 }
 
-export async function generateMetadata({ params }: { params: { categoria: string } }): Promise<Metadata> {
-  const cat = categorias.find(c => c.slug === params.categoria)
+export async function generateMetadata({ params }: { params: Promise<{ categoria: string }> }): Promise<Metadata> {
+  const resolvedParams = await params
+  const cat = categorias.find(c => c.slug === resolvedParams.categoria)
   return { title: cat?.nombre ?? 'Categoría' }
 }
 
-export default function CategoriaPage({ params }: { params: { categoria: string } }) {
-  const cat = categorias.find(c => c.slug === params.categoria) ?? categorias[0]
-  const prods = productos.filter(p => p.cat === params.categoria)
+export default async function CategoriaPage({ params }: { params: Promise<{ categoria: string }> }) {
+  const resolvedParams = await params
+  const cat = categorias.find(c => c.slug === resolvedParams.categoria) ?? categorias[0]
+  const prods = productos.filter(p => p.cat === resolvedParams.categoria)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

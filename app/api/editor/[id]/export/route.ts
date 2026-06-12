@@ -24,8 +24,13 @@ type ZipArchiveCtor = new (options?: { zlib?: { level?: number } }) => {
 }
 
 type ExportPageEntry = {
+  id: string | null
+  siteId: string
   slug: string
   name: string
+  isHome: boolean
+  published: boolean
+  source: "site-page" | "legacy-site-tree"
   tree: EditorTree
 }
 
@@ -222,14 +227,28 @@ async function resolveExportPages(siteId: string, activePageSlug: string, export
   if (!exportAllPages) {
     const runtimeContext = await getResolvedSiteRuntimeContext(siteId, activePageSlug)
     return runtimeContext
-      ? [{ slug: runtimeContext.activePageSlug, name: runtimeContext.activePageName, tree: runtimeContext.tree }]
+      ? [{
+          id: runtimeContext.page.id,
+          siteId,
+          slug: runtimeContext.activePageSlug,
+          name: runtimeContext.activePageName,
+          isHome: runtimeContext.page.isHome,
+          published: runtimeContext.page.published,
+          source: runtimeContext.page.source,
+          tree: runtimeContext.tree,
+        }]
       : []
   }
 
   const pages = await listResolvedSiteRuntimePages(siteId)
   return pages.map((page) => ({
+    id: page.page.id,
+    siteId,
     slug: page.activePageSlug,
     name: page.activePageName,
+    isHome: page.page.isHome,
+    published: page.page.published,
+    source: page.page.source,
     tree: page.tree,
   }))
 }

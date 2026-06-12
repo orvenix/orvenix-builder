@@ -8,13 +8,15 @@ export async function generateStaticParams() {
   return juguetes.map(j => ({ slug: j.id }))
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const toy = juguetes.find(j => j.id === params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const resolvedParams = await params
+  const toy = juguetes.find(j => j.id === resolvedParams.slug)
   return { title: toy?.nombre ?? 'Juguete' }
 }
 
-export default function ProductoPage({ params }: { params: { slug: string } }) {
-  const toy = juguetes.find(j => j.id === params.slug) ?? juguetes[0]
+export default async function ProductoPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = await params
+  const toy = juguetes.find(j => j.id === resolvedParams.slug) ?? juguetes[0]
   const related = juguetes.filter(j => j.id !== toy.id).slice(0, 4)
 
   return (

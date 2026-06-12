@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
 import { randomUUID } from "crypto"
 import { join } from "path"
 import { editorPrisma } from "@/lib/editor-db"
+import type { Prisma } from "@/generated/editor-prisma"
 import { isFileStorageMode } from "@/lib/storage-mode"
 import { sendEmail } from "@/lib/email"
 import {
@@ -83,29 +84,44 @@ function saveAutomationLog(entries: AutomationRunRecord[]) {
   writeFileSync(AUTOMATION_LOG_FILE, JSON.stringify(entries, null, 2), "utf-8")
 }
 
+function isAutomationActionType(value: string): value is AutomationAction["type"] {
+  return AUTOMATION_ACTION_TYPES.includes(value as AutomationAction["type"])
+}
+
+function isAutomationConditionOperator(value: string): value is AutomationCondition["operator"] {
+  return AUTOMATION_CONDITION_OPERATORS.includes(value as AutomationCondition["operator"])
+}
+
 function parseActions(value: unknown): AutomationAction[] {
   if (!Array.isArray(value)) return []
   return value
     .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
-    .map((entry) => ({
-      type: String(entry.type ?? ""),
-      config: typeof entry.config === "object" && entry.config !== null ? entry.config as Record<string, unknown> : {},
-    }))
-    .filter((entry): entry is AutomationAction => AUTOMATION_ACTION_TYPES.includes(entry.type as AutomationAction["type"]))
+    .map((entry): AutomationAction | null => {
+      const type = String(entry.type ?? "")
+      if (!isAutomationActionType(type)) return null
+      return {
+        type,
+        config: typeof entry.config === "object" && entry.config !== null ? entry.config as Record<string, unknown> : {},
+      }
+    })
+    .filter((entry): entry is AutomationAction => entry !== null)
 }
 
 function parseConditions(value: unknown, triggerType: AutomationTriggerType): AutomationCondition[] {
   if (!Array.isArray(value)) return []
   return value
     .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
-    .map((entry) => ({
-      field: String(entry.field ?? "").trim(),
-      operator: String(entry.operator ?? ""),
-      value: String(entry.value ?? "").trim(),
-    }))
+    .map((entry) => {
+      const operator = String(entry.operator ?? "")
+      if (!isAutomationConditionOperator(operator)) return null
+      return {
+        field: String(entry.field ?? "").trim(),
+        operator,
+        value: String(entry.value ?? "").trim(),
+      } satisfies AutomationCondition
+    })
     .filter((entry): entry is AutomationCondition => {
-      if (!entry.field || !entry.value) return false
-      if (!AUTOMATION_CONDITION_OPERATORS.includes(entry.operator as AutomationCondition["operator"])) return false
+      if (!entry?.field || !entry.value) return false
       const fieldConfig = getAutomationTriggerFieldDefinition(triggerType, entry.field)
       return Boolean(fieldConfig && fieldConfig.operators.includes(entry.operator))
     })
@@ -228,7 +244,7 @@ async function setRecordWorkflowStatus(recordId: string, status: string) {
   await editorPrisma.record.update({
     where: { id: recordId },
     data: {
-      data: withCmsWorkflowStatus(record.data, status),
+      data: withCmsWorkflowStatus(record.data, status) as Prisma.InputJsonValue,
       publishedAt: getCmsWorkflowPublishedAt(status, record.publishedAt),
     },
   })

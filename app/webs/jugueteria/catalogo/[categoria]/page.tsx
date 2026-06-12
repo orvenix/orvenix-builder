@@ -8,14 +8,16 @@ export async function generateStaticParams() {
   return categorias.map(c => ({ categoria: c.slug }))
 }
 
-export async function generateMetadata({ params }: { params: { categoria: string } }): Promise<Metadata> {
-  const cat = categorias.find(c => c.slug === params.categoria)
+export async function generateMetadata({ params }: { params: Promise<{ categoria: string }> }): Promise<Metadata> {
+  const resolvedParams = await params
+  const cat = categorias.find(c => c.slug === resolvedParams.categoria)
   return { title: `${cat?.nombre ?? 'Categoría'} — Juguetes` }
 }
 
-export default function CategoriaPage({ params }: { params: { categoria: string } }) {
-  const cat = categorias.find(c => c.slug === params.categoria) ?? categorias[0]
-  const catJuguetes = juguetes.filter(j => j.cat === params.categoria)
+export default async function CategoriaPage({ params }: { params: Promise<{ categoria: string }> }) {
+  const resolvedParams = await params
+  const cat = categorias.find(c => c.slug === resolvedParams.categoria) ?? categorias[0]
+  const catJuguetes = juguetes.filter(j => j.cat === resolvedParams.categoria)
   const todos = catJuguetes.length ? catJuguetes : juguetes
 
   return (

@@ -140,7 +140,7 @@ export async function createExperiment(siteId: string, input: {
       name: input.name,
       status: input.status ?? "draft",
       targetType: input.targetType,
-      trafficSplit: normalizeExperimentTrafficSplit(input.trafficSplit ?? { a: 50, b: 50 }) as Prisma.InputJsonValue,
+      trafficSplit: normalizeExperimentTrafficSplit(input.trafficSplit ?? { a: 50, b: 50 }) as unknown as Prisma.InputJsonValue,
     },
   })
 }
@@ -176,7 +176,7 @@ export async function updateExperiment(
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.targetType !== undefined ? { targetType: input.targetType } : {}),
       ...(input.trafficSplit !== undefined
-        ? { trafficSplit: normalizeExperimentTrafficSplit(input.trafficSplit) as Prisma.InputJsonValue }
+        ? { trafficSplit: normalizeExperimentTrafficSplit(input.trafficSplit) as unknown as Prisma.InputJsonValue }
         : {}),
     },
   })

@@ -1,15 +1,57 @@
+import type { ReactNode } from "react"
 import { redirect, notFound } from "next/navigation"
 import { getAuthSession } from "@/lib/auth-session"
 import { getSiteForRole, type UserRole } from "@/lib/auth"
 import { editorPrisma } from "@/lib/editor-db"
 import { parseCmsFields } from "@/lib/cms/schema"
-import CmsRecordsImpl from "@/app/dashboard/cms/[siteId]/[slug]/page.impl"
+import CmsRecordsImplDefault from "@/app/dashboard/cms/[siteId]/[slug]/page.impl"
 import { isCmsWorkflowStatus, type CmsWorkflowStatus } from "@/lib/cms/workflow"
+import type { CmsFieldDef } from "@/lib/cms/schema"
+
+type CmsRecordsSortValue =
+  | "createdAt_desc"
+  | "createdAt_asc"
+  | "updatedAt_desc"
+  | "updatedAt_asc"
+  | "status_asc"
+  | "status_desc"
+
+type CmsPageSearchParams = { [key: string]: string | string[] | undefined }
 
 interface Props {
   params: Promise<{ siteId: string; slug: string }>
-  searchParams?: Promise<{ status?: string; q?: string; sort?: string }>
+  searchParams?: Promise<CmsPageSearchParams>
 }
+
+interface CmsRecordRow {
+  id: string
+  data: Record<string, unknown>
+  publishedAt: Date | string | null
+  createdAt: Date | string
+  workflowStatus?: CmsWorkflowStatus
+}
+
+interface CmsRelationSource {
+  id: string
+  name: string
+  slug: string
+  fields: CmsFieldDef[]
+  records: Array<{ id: string; data: Record<string, unknown> }>
+}
+
+interface CmsRecordsImplProps {
+  siteId: string
+  siteName: string
+  collection: { id: string; name: string; slug: string; fields: unknown; siteId: string }
+  initialRecords: CmsRecordRow[]
+  relationSources: CmsRelationSource[]
+  initialQuery?: string
+  initialRecordId?: string
+  initialStatusFilter?: "all" | CmsWorkflowStatus
+  initialSort?: CmsRecordsSortValue
+}
+
+const CmsRecordsImpl = CmsRecordsImplDefault as (props: CmsRecordsImplProps) => ReactNode
 
 export const dynamic = "force-dynamic"
 
@@ -18,11 +60,15 @@ export async function generateMetadata({ params }: Props) {
   return { title: `${slug} — CMS · Orvenix` }
 }
 
+function getSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? ""
+}
+
 function parseInitialStatus(value: string | undefined): "all" | CmsWorkflowStatus {
   return isCmsWorkflowStatus(value) ? value : "all"
 }
 
-function parseInitialSort(value: string | undefined): Parameters<typeof CmsRecordsImpl>[0]["initialSort"] {
+function parseInitialSort(value: string | undefined): CmsRecordsSortValue {
   switch (value) {
     case "createdAt_asc":
     case "updatedAt_desc":
@@ -89,11 +135,12 @@ export default async function CmsRecordsPage({ params, searchParams }: Props) {
           siteId={siteId}
           siteName={site.name}
           collection={collection}
-          initialRecords={records as Parameters<typeof CmsRecordsImpl>[0]["initialRecords"]}
+          initialRecords={records as CmsRecordRow[]}
           relationSources={relationSources}
-          initialQuery={(rawSearchParams?.q ?? "").trim()}
-          initialStatusFilter={parseInitialStatus(rawSearchParams?.status)}
-          initialSort={parseInitialSort(rawSearchParams?.sort)}
+          initialQuery={getSearchParam(rawSearchParams?.q).trim()}
+          initialRecordId={getSearchParam(rawSearchParams?.recordId).trim()}
+          initialStatusFilter={parseInitialStatus(getSearchParam(rawSearchParams?.status))}
+          initialSort={parseInitialSort(getSearchParam(rawSearchParams?.sort))}
         />
       </div>
     </div>
