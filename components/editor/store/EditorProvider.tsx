@@ -1,6 +1,7 @@
 "use client";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useEditorStore } from "./useEditorStore";
+import { EditorRuntimeBoundary } from "./EditorRuntimeBoundary";
 import { loadSavedTree } from "@/hooks/useAutosave";
 import type { EditorTree } from "@/types/editor";
 import type { SitePageListItem } from "@/lib/builder-core/tree/sitePages";
@@ -26,14 +27,35 @@ export function EditorProvider({
 }: EditorProviderProps) {
   const initialize = useEditorStore((s) => s.initialize);
   const isReady = useEditorStore((s) => s.websiteId === websiteId);
+  const [initializationIssue, setInitializationIssue] = useState<string | null>(null);
 
   useEffect(() => {
-    const savedTree = loadSavedTree(websiteId, initialPageSlug);
-    initialize(websiteId, savedTree ?? initialTree, null, {
+    const pageContext = {
       activePageSlug: initialPageSlug,
       activePageName: initialPageName,
       availablePages,
-    });
+    };
+
+    try {
+      const savedTree = loadSavedTree(websiteId, initialPageSlug);
+      initialize(websiteId, savedTree ?? initialTree, null, pageContext);
+      setInitializationIssue(null);
+    } catch (error) {
+      console.error("[EditorProvider] Constructor initialization failed", error);
+      try {
+        initialize(websiteId, initialTree, null, pageContext);
+        setInitializationIssue(
+          error instanceof Error ? error.message : "No se pudo cargar el borrador local"
+        );
+      } catch (fallbackError) {
+        console.error("[EditorProvider] Constructor fallback initialization failed", fallbackError);
+        setInitializationIssue(
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : "No se pudo abrir el constructor"
+        );
+      }
+    }
   }, [availablePages, initialPageName, initialPageSlug, initialTree, initialize, websiteId]);
 
   if (!isReady) {
@@ -77,12 +99,16 @@ export function EditorProvider({
           </div>
           <div className="flex items-center justify-center gap-2 border-t border-white/[0.06] bg-white/[0.025] px-4 py-3 text-xs font-semibold text-slate-400">
             <span className="h-2 w-2 rounded-full bg-indigo-400 editor-status-dot-live" />
-            Abriendo diseño en el editor...
+            {initializationIssue ?? "Abriendo diseño en el editor..."}
           </div>
         </div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  return (
+    <EditorRuntimeBoundary resetKey={websiteId}>
+      {children}
+    </EditorRuntimeBoundary>
+  );
 }
