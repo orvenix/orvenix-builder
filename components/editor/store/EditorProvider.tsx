@@ -1,5 +1,5 @@
 "use client";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useEditorStore } from "./useEditorStore";
 import { EditorRuntimeBoundary } from "./EditorRuntimeBoundary";
 import { loadSavedTree } from "@/hooks/useAutosave";
@@ -28,8 +28,13 @@ export function EditorProvider({
   const initialize = useEditorStore((s) => s.initialize);
   const isReady = useEditorStore((s) => s.websiteId === websiteId);
   const [initializationIssue, setInitializationIssue] = useState<string | null>(null);
+  const initializationKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    const initializationKey = websiteId + ":" + initialPageSlug;
+    if (initializationKeyRef.current === initializationKey) return;
+    initializationKeyRef.current = initializationKey;
+
     const pageContext = {
       activePageSlug: initialPageSlug,
       activePageName: initialPageName,
@@ -39,7 +44,7 @@ export function EditorProvider({
     try {
       const savedTree = loadSavedTree(websiteId, initialPageSlug);
       initialize(websiteId, savedTree ?? initialTree, null, pageContext);
-      setInitializationIssue(null);
+      setInitializationIssue((current) => (current === null ? current : null));
     } catch (error) {
       console.error("[EditorProvider] Constructor initialization failed", error);
       try {
