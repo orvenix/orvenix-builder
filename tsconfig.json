@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "page.tsx"
+    "page.tsx",
+    "webs nuevas"
   ]
 }
