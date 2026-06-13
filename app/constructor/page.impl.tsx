@@ -8,7 +8,7 @@ import { ResetDraftButton } from "@/components/editor/toolbar/ResetDraftButton";
 import { PreviewModeButton } from "@/components/editor/toolbar/PreviewModeButton";
 import { CheckoutActionButtons } from "@/components/editor/CheckoutActionButtons";
 import { ConstructorSyncButton } from "@/components/editor/toolbar/ConstructorSyncButton";
-import { OrvenixIcon } from "@/components/OrvenixLogo";
+import { OrvenixBrand } from "@/components/OrvenixLogo";
 import {
   getConstructorPresetPreviewHref,
   getConstructorPresetTree,
@@ -155,11 +155,10 @@ export default async function ConstructorPage({ searchParams }: ConstructorPageP
 
             {/* Left: brand + breadcrumb */}
             <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-2">
-              <div className="ov-topbar-sep flex items-center gap-2 pr-3">
-                <OrvenixIcon size={24} />
-                <span className="hidden text-xs font-bold tracking-tight text-white/90 sm:block">
-                  Orvenix
-                </span>
+              <div className="ov-topbar-sep flex shrink-0 items-center pr-3">
+                <Link href="/" aria-label="Orvenix - inicio" className="group relative flex items-center transition-opacity hover:opacity-90">
+                  <OrvenixBrand iconSize={24} textSize="sm" />
+                </Link>
               </div>
 
               {/* Badge + current site chip */}
