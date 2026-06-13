@@ -5,8 +5,10 @@ import { useEditorStore } from "./store/useEditorStore";
 import { MessageSquarePlus, CheckCircle2, Clock, X } from "lucide-react";
 import type { EditorComment } from "@/types/editor";
 
+const EMPTY_COMMENTS: EditorComment[] = [];
+
 export const CommentSidebar = () => {
-  const comments = useEditorStore((s) => s.tree.comments ?? []);
+  const comments = useEditorStore((s) => s.tree.comments ?? EMPTY_COMMENTS);
   const resolve = useEditorStore((s) => s.resolveComment);
   const isCommentMode = useEditorStore((s) => s.isCommentMode);
   const setCommentMode = useEditorStore((s) => s.setCommentMode);

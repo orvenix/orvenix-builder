@@ -18,6 +18,8 @@ import type { EditorTree, NodeId, EditorComment } from "@/types/editor";
 import { generateSectionAI } from "@/app/actions/ai";
 
 const ZOOM_STEPS = [50, 75, 100, 125, 150] as const;
+const EMPTY_COMMENTS: EditorComment[] = [];
+const EMPTY_CHILDREN: NodeId[] = [];
 
 const DEVICE_CONFIG: Record<string, { label: string; icon: string }> = {
   desktop: { label: "Escritorio",  icon: "🖥" },
@@ -54,9 +56,9 @@ export const Canvas = () => {
   const addComment    = useEditorStore((s) => s.addComment);
   const resolveComment = useEditorStore((s) => s.resolveComment);
   const setLastCanvasPoint = useEditorStore((s) => s.setLastCanvasPoint);
-  const comments      = useEditorStore((s) => s.tree.comments ?? {});
+  const comments      = useEditorStore((s) => s.tree.comments ?? EMPTY_COMMENTS);
   const tree          = useEditorStore((s) => s.tree);
-  const rootChildren  = useEditorStore((s) => s.tree.nodes[s.tree.rootId]?.children ?? []);
+  const rootChildren  = useEditorStore((s) => s.tree.nodes[s.tree.rootId]?.children ?? EMPTY_CHILDREN);
   const clipboardTree = useEditorStore((s) => s.clipboardTree);
   const pasteNodeAt = useEditorStore((s) => s.pasteNodeAt);
   const addNode = useEditorStore((s) => s.addNode);
