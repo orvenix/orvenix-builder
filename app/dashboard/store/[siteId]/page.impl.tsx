@@ -18,6 +18,7 @@ import {
 } from "@/lib/commerce/funnel-draft-steps"
 import { getFunnelDraftTransitionSummary } from "@/lib/commerce/funnel-draft-transitions"
 import { getFunnelOfferProductAutofill } from "@/lib/commerce/funnel-offer-product-defaults"
+import { generateVariantMatrix, parseVariantMatrixDimensions } from "@/lib/commerce/variant-matrix"
 import {
   getPublicCartOfferSummary,
   getPublicFunnelOfferCallout,
@@ -103,6 +104,14 @@ interface Variant {
   comparePriceMxn?: number | null
   stock: number
   attributes?: Record<string, string>
+}
+
+interface VariantMatrixDraft {
+  dimensionsText: string
+  skuPrefix: string
+  priceMxn: string
+  comparePriceMxn: string
+  stock: string
 }
 
 interface Product {
@@ -709,8 +718,10 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
   const [variantDrafts, setVariantDrafts] = useState<Record<string, Variant>>({})
   const [variantAttributeDrafts, setVariantAttributeDrafts] = useState<Record<string, string>>({})
   const [newVariantDrafts, setNewVariantDrafts] = useState<Record<string, NewVariantDraft>>({})
+  const [variantMatrixDrafts, setVariantMatrixDrafts] = useState<Record<string, VariantMatrixDraft>>({})
   const [savingVariantId, setSavingVariantId] = useState<string | null>(null)
   const [creatingVariantForProductId, setCreatingVariantForProductId] = useState<string | null>(null)
+  const [generatingMatrixForProductId, setGeneratingMatrixForProductId] = useState<string | null>(null)
   const [inventoryError, setInventoryError] = useState("")
   const [funnelName, setFunnelName] = useState("")
   const [creatingFunnel, setCreatingFunnel] = useState(false)
@@ -1870,6 +1881,17 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
         attributesText: "",
       },
     }))
+    const firstVariant = product.variants[0]
+    setVariantMatrixDrafts((prev) => ({
+      ...prev,
+      [product.id]: prev[product.id] ?? {
+        dimensionsText: "Color: Negro, Blanco\nTalla: S, M",
+        skuPrefix: product.name,
+        priceMxn: firstVariant ? String(firstVariant.priceMxn) : "",
+        comparePriceMxn: firstVariant?.comparePriceMxn ? String(firstVariant.comparePriceMxn) : "",
+        stock: "0",
+      },
+    }))
   }
 
   const updateVariantDraft = (variantId: string, patch: Partial<Variant>) => {
@@ -1957,6 +1979,22 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
     }))
   }
 
+  const updateVariantMatrixDraft = (productId: string, patch: Partial<VariantMatrixDraft>) => {
+    setVariantMatrixDrafts((prev) => ({
+      ...prev,
+      [productId]: {
+        ...(prev[productId] ?? {
+          dimensionsText: "Color: Negro, Blanco\nTalla: S, M",
+          skuPrefix: "",
+          priceMxn: "",
+          comparePriceMxn: "",
+          stock: "0",
+        }),
+        ...patch,
+      },
+    }))
+  }
+
   const updateVariantAttributeRow = (variantId: string, rowIndex: number, patch: Partial<AttributeEntry>) => {
     const entries = parseAttributeEntries(variantAttributeDrafts[variantId] ?? "")
     const next = entries.map((entry, index) => index === rowIndex ? { ...entry, ...patch } : entry)
@@ -2000,6 +2038,72 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
     updateNewVariantDraft(productId, {
       attributesText: serializeAttributeEntries(next.length > 0 ? next : [{ key: "", value: "" }]),
     })
+  }
+
+  const getVariantMatrixPreview = (product: Product) => {
+    const draft = variantMatrixDrafts[product.id]
+    if (!draft?.dimensionsText.trim() || !draft.skuPrefix.trim()) return { rows: [], error: "" }
+    try {
+      return {
+        rows: generateVariantMatrix({
+          dimensions: parseVariantMatrixDimensions(draft.dimensionsText),
+          skuPrefix: draft.skuPrefix,
+          existingSkus: product.variants.map((variant) => variant.sku),
+          limit: 50,
+        }),
+        error: "",
+      }
+    } catch (error) {
+      return { rows: [], error: error instanceof Error ? error.message : "No se pudo generar la matriz." }
+    }
+  }
+
+  const createVariantMatrix = async (product: Product) => {
+    const draft = variantMatrixDrafts[product.id]
+    if (!draft?.dimensionsText.trim() || !draft.skuPrefix.trim() || !draft.priceMxn.trim()) {
+      setInventoryError("La matriz necesita dimensiones, prefijo SKU y precio base.")
+      return
+    }
+
+    setGeneratingMatrixForProductId(product.id)
+    setInventoryError("")
+    try {
+      const res = await fetch(`/api/store/${siteId}/products/${product.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          _action: "generate_variant_matrix",
+          dimensionsText: draft.dimensionsText,
+          skuPrefix: draft.skuPrefix.trim(),
+          priceMxn: Number(draft.priceMxn) || 0,
+          comparePriceMxn: draft.comparePriceMxn.trim() ? Number(draft.comparePriceMxn) || 0 : undefined,
+          stock: Number(draft.stock) || 0,
+          limit: 50,
+        }),
+      })
+      const data = await res.json() as { variants?: Variant[]; error?: string; message?: string }
+      if (!res.ok || !data.variants) {
+        setInventoryError(data.message ?? data.error ?? "No se pudo generar la matriz.")
+        return
+      }
+
+      setProducts((prev) => prev.map((entry) => entry.id !== product.id ? entry : {
+        ...entry,
+        variants: [...entry.variants, ...data.variants!],
+      }))
+      setVariantDrafts((prev) => ({
+        ...prev,
+        ...Object.fromEntries(data.variants.map((variant) => [variant.id, variant])),
+      }))
+      setVariantAttributeDrafts((prev) => ({
+        ...prev,
+        ...Object.fromEntries(data.variants.map((variant) => [variant.id, formatAttributes(variant.attributes)])),
+      }))
+    } catch {
+      setInventoryError("No se pudo generar la matriz.")
+    } finally {
+      setGeneratingMatrixForProductId(null)
+    }
   }
 
   const createVariant = async (productId: string) => {
@@ -2332,6 +2436,8 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                 const totalStock = product.variants.reduce((s, v) => s + v.stock, 0)
                 const hasOutOfStock = product.variants.some((variant) => variant.stock <= 0)
                 const hasLowStock = product.variants.some((variant) => variant.stock > 0 && variant.stock <= LOW_STOCK_THRESHOLD)
+                const matrixDraft = variantMatrixDrafts[product.id]
+                const matrixPreview = getVariantMatrixPreview(product)
 
                 return (
                   <div key={product.id}
@@ -2590,6 +2696,101 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                             )
                           })}
                         </div>
+                        <div className="mt-4 rounded-xl border border-[#00b5f6]/20 bg-[#00b5f6]/[0.04] p-4">
+                          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <h5 className="text-sm font-semibold text-white">Matriz de variantes</h5>
+                              <p className="mt-1 text-xs text-slate-500">Genera combinaciones desde dimensiones como Color, Talla o Material.</p>
+                            </div>
+                            <span className="rounded-full border border-[#00b5f6]/20 bg-[#00b5f6]/10 px-2 py-1 text-[10px] font-semibold text-[#8be7ff]">
+                              {matrixPreview.rows.length} nueva{matrixPreview.rows.length !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+                            <div>
+                              <label className="mb-1.5 block text-[11px] text-slate-500">Dimensiones</label>
+                              <textarea
+                                value={matrixDraft?.dimensionsText ?? ""}
+                                onChange={(event) => updateVariantMatrixDraft(product.id, { dimensionsText: event.target.value })}
+                                rows={4}
+                                placeholder={"Color: Negro, Blanco\nTalla: S, M"}
+                                className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50"
+                              />
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div>
+                                <label className="mb-1.5 block text-[11px] text-slate-500">Prefijo SKU</label>
+                                <input
+                                  type="text"
+                                  value={matrixDraft?.skuPrefix ?? ""}
+                                  onChange={(event) => updateVariantMatrixDraft(product.id, { skuPrefix: event.target.value })}
+                                  className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white focus:outline-none focus:border-[#00b5f6]/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1.5 block text-[11px] text-slate-500">Precio base</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={100}
+                                  value={matrixDraft?.priceMxn ?? ""}
+                                  onChange={(event) => updateVariantMatrixDraft(product.id, { priceMxn: event.target.value })}
+                                  className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white focus:outline-none focus:border-[#00b5f6]/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1.5 block text-[11px] text-slate-500">Precio anterior</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={100}
+                                  value={matrixDraft?.comparePriceMxn ?? ""}
+                                  onChange={(event) => updateVariantMatrixDraft(product.id, { comparePriceMxn: event.target.value })}
+                                  className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white focus:outline-none focus:border-[#00b5f6]/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1.5 block text-[11px] text-slate-500">Stock inicial</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  value={matrixDraft?.stock ?? "0"}
+                                  onChange={(event) => updateVariantMatrixDraft(product.id, { stock: event.target.value })}
+                                  className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white focus:outline-none focus:border-[#00b5f6]/50"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          {matrixPreview.error && (
+                            <p className="mt-2 text-xs text-amber-300">{matrixPreview.error}</p>
+                          )}
+                          {matrixPreview.rows.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {matrixPreview.rows.slice(0, 8).map((row) => (
+                                <span key={row.sku} className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-slate-300">
+                                  {row.name} · {row.sku}
+                                </span>
+                              ))}
+                              {matrixPreview.rows.length > 8 && (
+                                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-slate-500">
+                                  +{matrixPreview.rows.length - 8} mas
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => createVariantMatrix(product)}
+                              disabled={generatingMatrixForProductId === product.id || matrixPreview.rows.length === 0}
+                              className="h-8 rounded-lg bg-[#00b5f6] px-3 text-xs font-bold text-[#112540] transition-colors hover:bg-[#00ceff] disabled:opacity-50"
+                            >
+                              {generatingMatrixForProductId === product.id ? "Generando..." : "Crear matriz"}
+                            </button>
+                          </div>
+                        </div>
+
                         <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-white/[0.02] p-4">
                           <h5 className="mb-3 text-sm font-semibold text-white">Nueva variante</h5>
                           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">

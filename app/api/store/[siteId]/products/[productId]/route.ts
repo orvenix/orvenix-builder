@@ -6,6 +6,7 @@ import type { UserRole } from "@/lib/auth"
 import { requireEcommercePlan } from "@/lib/plan-guard"
 import { z } from "zod"
 import type { Prisma } from "@/generated/editor-prisma"
+import { generateVariantMatrix, parseVariantMatrixDimensions } from "@/lib/commerce/variant-matrix"
 
 type Ctx = { params: Promise<{ siteId: string; productId: string }> }
 
@@ -25,6 +26,16 @@ const VariantSchema = z.object({
   comparePriceMxn: z.number().int().min(0).optional(),
   stock:           z.number().int().min(0).default(0),
   attributes:      z.record(z.string(), z.string()).default({}),
+})
+
+const VariantMatrixSchema = z.object({
+  _action: z.literal("generate_variant_matrix"),
+  dimensionsText: z.string().min(1),
+  skuPrefix: z.string().min(1).max(80),
+  priceMxn: z.number().int().min(0),
+  comparePriceMxn: z.number().int().min(0).optional(),
+  stock: z.number().int().min(0).default(0),
+  limit: z.number().int().min(1).max(100).default(50),
 })
 
 async function requireStoreAccess(siteId: string, user: { id: string; role?: string | null }) {
@@ -116,7 +127,63 @@ export async function PUT(req: Request, { params }: Ctx) {
   const accessError = await requireStoreAccess(siteId, session.user)
   if (accessError) return accessError
 
-  const body = VariantSchema.safeParse(await req.json())
+  const rawBody = await req.json()
+  const matrixBody = VariantMatrixSchema.safeParse(rawBody)
+  if (matrixBody.success) {
+    const product = await editorPrisma.product.findFirst({
+      where: { id: productId, siteId },
+      include: { variants: { select: { sku: true } } },
+    })
+    if (!product) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 })
+
+    const dimensions = parseVariantMatrixDimensions(matrixBody.data.dimensionsText)
+    if (dimensions.length === 0) {
+      return NextResponse.json(
+        { error: "INVALID_VARIANT_MATRIX", message: "Agrega al menos una dimension con valores." },
+        { status: 400 },
+      )
+    }
+
+    let rows
+    try {
+      rows = generateVariantMatrix({
+        dimensions,
+        skuPrefix: matrixBody.data.skuPrefix,
+        existingSkus: product.variants.map((variant) => variant.sku),
+        limit: matrixBody.data.limit,
+      })
+    } catch (error) {
+      return NextResponse.json(
+        { error: "INVALID_VARIANT_MATRIX", message: error instanceof Error ? error.message : "No se pudo generar la matriz." },
+        { status: 400 },
+      )
+    }
+
+    if (rows.length === 0) {
+      return NextResponse.json(
+        { error: "NO_NEW_VARIANTS", message: "Todas las combinaciones ya existen como SKU." },
+        { status: 409 },
+      )
+    }
+
+    const variants = await editorPrisma.$transaction(
+      rows.map((row) => editorPrisma.productVariant.create({
+        data: {
+          productId,
+          sku: row.sku,
+          name: row.name,
+          priceMxn: matrixBody.data.priceMxn,
+          comparePriceMxn: matrixBody.data.comparePriceMxn,
+          stock: matrixBody.data.stock,
+          attributes: row.attributes as Prisma.InputJsonValue,
+        },
+      })),
+    )
+
+    return NextResponse.json({ variants }, { status: 201 })
+  }
+
+  const body = VariantSchema.safeParse(rawBody)
   if (!body.success) return NextResponse.json({ error: body.error.flatten() }, { status: 400 })
 
   const variant = await editorPrisma.productVariant.create({
