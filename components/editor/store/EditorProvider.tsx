@@ -41,26 +41,31 @@ export function EditorProvider({
       availablePages,
     };
 
+    let nextInitializationIssue: string | null = null;
+
     try {
       const savedTree = loadSavedTree(websiteId, initialPageSlug);
       initialize(websiteId, savedTree ?? initialTree, null, pageContext);
-      setInitializationIssue((current) => (current === null ? current : null));
     } catch (error) {
       console.error("[EditorProvider] Constructor initialization failed", error);
       try {
         initialize(websiteId, initialTree, null, pageContext);
-        setInitializationIssue(
-          error instanceof Error ? error.message : "No se pudo cargar el borrador local"
-        );
+        nextInitializationIssue =
+          error instanceof Error ? error.message : "No se pudo cargar el borrador local";
       } catch (fallbackError) {
         console.error("[EditorProvider] Constructor fallback initialization failed", fallbackError);
-        setInitializationIssue(
+        nextInitializationIssue =
           fallbackError instanceof Error
             ? fallbackError.message
-            : "No se pudo abrir el constructor"
-        );
+            : "No se pudo abrir el constructor";
       }
     }
+
+    const timeoutId = window.setTimeout(() => {
+      setInitializationIssue(nextInitializationIssue);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [availablePages, initialPageName, initialPageSlug, initialTree, initialize, websiteId]);
 
   if (!isReady) {

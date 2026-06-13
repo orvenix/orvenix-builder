@@ -151,10 +151,10 @@ export default async function ConstructorPage({ searchParams }: ConstructorPageP
         <header className="ov-topbar z-20 shrink-0">
 
           {/* Row 1: Logo + controls */}
-          <div className="flex h-14 items-center gap-2 px-3 lg:px-4">
+          <div className="flex h-14 min-w-0 items-center gap-2 overflow-x-auto px-3 lg:px-4 scrollbar-none">
 
             {/* Left: brand + breadcrumb */}
-            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-2">
               <div className="ov-topbar-sep flex items-center gap-2 pr-3">
                 <OrvenixIcon size={24} />
                 <span className="hidden text-xs font-bold tracking-tight text-white/90 sm:block">
@@ -180,20 +180,28 @@ export default async function ConstructorPage({ searchParams }: ConstructorPageP
                 </Link>
               </div>
 
-              <HistoryControls />
+              <div className="hidden shrink-0 sm:block">
+                <HistoryControls />
+              </div>
             </div>
 
             {/* Center: device toggle */}
-            <div className="absolute left-1/2 hidden -translate-x-1/2 md:block">
+            <div className="absolute left-1/2 hidden -translate-x-1/2 2xl:block">
               <DeviceToggle />
             </div>
 
             {/* Right: actions */}
             <div className="flex shrink-0 items-center gap-1.5">
-              <SaveStatus />
-              <ConstructorSyncButton />
+              <div className="hidden sm:block">
+                <SaveStatus />
+              </div>
+              <div className="hidden md:block">
+                <ConstructorSyncButton />
+              </div>
               <PreviewModeButton />
-              <ResetDraftButton initialTree={initialTree} />
+              <div className="hidden sm:block">
+                <ResetDraftButton initialTree={initialTree} />
+              </div>
               <div className="ov-btn-sep hidden pl-2 lg:block">
                 <CheckoutActionButtons />
               </div>

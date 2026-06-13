@@ -218,7 +218,7 @@ export function EditorShell() {
       {!isPreviewMode && <MediaCenter />}
 
       {!isPreviewMode && (
-        <div className="flex min-h-0 shrink-0">
+        <div className="hidden min-h-0 shrink-0 lg:flex">
 
           {/* Icon rail */}
           <nav className="relative flex flex-col items-center gap-0.5 w-11 shrink-0 border-r border-white/[0.05] py-2"
@@ -347,7 +347,11 @@ export function EditorShell() {
       )}
 
       <Canvas />
-      {!isPreviewMode && <SettingsPanel />}
+      {!isPreviewMode && (
+        <div className="hidden min-h-0 shrink-0 2xl:block">
+          <SettingsPanel />
+        </div>
+      )}
       {!isPreviewMode && seoOpen && (
         <SEOPanel onClose={() => setSeoOpen(false)} />
       )}

@@ -154,11 +154,9 @@ export const Canvas = () => {
   const freeCanvasHeight = getFreeCanvasHeight(tree, currentDevice);
   const deviceWidth = DEVICE_WIDTHS[currentDevice];
   const usesStrictViewport = currentDevice !== "desktop";
-  const displayZoom = currentDevice === "desktop" ? 100 : zoom;
+  const displayZoom = zoom;
   const displayScale = displayZoom / 100;
-  const scaledWidth = currentDevice === "desktop"
-    ? "100%"
-    : `calc(${deviceWidth} * ${displayScale})`;
+  const scaledWidth = `calc(${deviceWidth} * ${displayScale})`;
 
   const dc = DEVICE_CONFIG[currentDevice] ?? DEVICE_CONFIG.desktop;
   const marqueeBox = marquee ? getMarqueeBox(marquee) : null;
@@ -311,7 +309,7 @@ export const Canvas = () => {
         )}
         onClick={isPreviewMode ? undefined : () => select(null)}
       >
-        <div className={cn("shrink-0", currentDevice === "desktop" && "w-full")} style={{ width: scaledWidth }}>
+        <div className="shrink-0" style={{ width: scaledWidth }}>
           <div style={{ transform: `scale(${displayScale})`, transformOrigin: "top center", width: deviceWidth }}>
 
             {/* Page shadow frame */}
