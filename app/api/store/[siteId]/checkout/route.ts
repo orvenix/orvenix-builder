@@ -7,6 +7,12 @@ import { getFunnel, isFunnelsReady, type FunnelStepKind } from "@/lib/commerce/f
 import { trackFunnelEvent } from "@/lib/commerce/funnel-analytics"
 import { getExperiment, isExperimentsReady } from "@/lib/commerce/experiments"
 import { trackExperimentEvent } from "@/lib/commerce/experiment-analytics"
+import {
+  appendCheckoutOfferLineItem,
+  buildStorePreferenceItemsFromOrder,
+  resolveCheckoutFunnelOffer,
+} from "@/lib/commerce/funnel-offer-checkout"
+import { getPublicFunnelOfferQuery } from "@/lib/commerce/funnel-offer-public"
 import { triggerAutomations } from "@/lib/automation/runtime"
 import { serverError } from "@/lib/server-log"
 import type { Prisma } from "@/generated/editor-prisma"
@@ -18,6 +24,8 @@ const CheckoutSchema = z.object({
   customerName: z.string().max(191).optional(),
   funnelId: z.string().min(1).max(191).optional(),
   funnelStep: z.enum(["landing", "checkout", "upsell", "downsell", "thankyou"]).optional(),
+  funnelStepId: z.string().min(1).max(191).optional(),
+  offerAccepted: z.boolean().optional(),
   experimentId: z.string().min(1).max(191).optional(),
   experimentVariant: z.enum(["A", "B"]).optional(),
   items: z.array(z.object({
@@ -29,15 +37,21 @@ const CheckoutSchema = z.object({
 function buildOrderNotes(
   funnelId?: string,
   funnelStep?: FunnelStepKind,
+  funnelStepId?: string,
   mpPreferenceId?: string,
   experimentId?: string,
-  experimentVariant?: "A" | "B"
+  experimentVariant?: "A" | "B",
+  offerType?: string,
+  offerDiscountMxn?: number
 ) {
   const parts = ["checkout_created"]
   if (funnelId) parts.push(`funnel:${funnelId}`)
   if (funnelStep) parts.push(`step:${funnelStep}`)
+  if (funnelStepId) parts.push(`step_id:${funnelStepId}`)
   if (experimentId) parts.push(`experiment:${experimentId}`)
   if (experimentVariant) parts.push(`variant:${experimentVariant}`)
+  if (offerType) parts.push(`offer_type:${offerType}`)
+  if (typeof offerDiscountMxn === "number" && offerDiscountMxn > 0) parts.push(`offer_discount:${offerDiscountMxn}`)
   if (mpPreferenceId) parts.push(`mp_preference:${mpPreferenceId}`)
   return parts.join("|")
 }
@@ -65,8 +79,11 @@ export async function POST(request: Request, { params }: Ctx) {
 
   const funnelId = parsed.data.funnelId?.trim() || undefined
   const funnelStep = funnelId ? (parsed.data.funnelStep ?? "checkout") : undefined
+  const funnelStepId = parsed.data.funnelStepId?.trim() || undefined
+  const offerAccepted = Boolean(parsed.data.offerAccepted)
   const experimentId = parsed.data.experimentId?.trim() || undefined
   const experimentVariant = experimentId ? parsed.data.experimentVariant : undefined
+  let funnel: Awaited<ReturnType<typeof getFunnel>> = null
   if (funnelId) {
     if (!isFunnelsReady()) {
       return NextResponse.json(
@@ -75,13 +92,19 @@ export async function POST(request: Request, { params }: Ctx) {
       )
     }
 
-    const funnel = await getFunnel(siteId, funnelId)
+    funnel = await getFunnel(siteId, funnelId)
     if (!funnel) {
       return NextResponse.json(
         { error: "INVALID_FUNNEL", message: "El funnel indicado ya no existe o no pertenece a este sitio." },
         { status: 400 }
       )
     }
+  }
+  if (offerAccepted && !funnelId) {
+    return NextResponse.json(
+      { error: "INVALID_FUNNEL", message: "La oferta de funnel requiere un funnel valido." },
+      { status: 400 }
+    )
   }
   if (experimentId) {
     if (!isExperimentsReady()) {
@@ -114,7 +137,7 @@ export async function POST(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: "INVALID_ITEMS", message: "Uno o mas productos ya no estan disponibles." }, { status: 400 })
   }
 
-  const items = variants.map((variant) => {
+  const baseItems = variants.map((variant) => {
     const quantity = requestedByVariant.get(variant.id) ?? 1
     return {
       variantId: variant.id,
@@ -127,7 +150,30 @@ export async function POST(request: Request, { params }: Ctx) {
       subtotalMxn: variant.priceMxn * quantity,
     }
   })
+  const baseTotalMxn = baseItems.reduce((sum, item) => sum + item.subtotalMxn, 0)
+
+  const offerResolution = resolveCheckoutFunnelOffer({
+    funnel,
+    funnelStepId,
+    funnelStep,
+    offerAccepted,
+    totalMxn: baseTotalMxn,
+  })
+  if (offerResolution.error === "FUNNEL_STEP_NOT_FOUND") {
+    return NextResponse.json(
+      { error: "INVALID_FUNNEL_STEP", message: "El paso de funnel indicado no existe o ya no pertenece al funnel." },
+      { status: 400 }
+    )
+  }
+
+  const items = appendCheckoutOfferLineItem(baseItems, offerResolution.appliedOffer)
   const totalMxn = items.reduce((sum, item) => sum + item.subtotalMxn, 0)
+  const activeFunnelStep = funnel?.steps?.find((entry) =>
+    funnelStepId ? entry.id === funnelStepId : (funnelStep ? entry.kind === funnelStep : false)
+  ) ?? null
+  const offerQuery = activeFunnelStep && offerAccepted
+    ? getPublicFunnelOfferQuery(activeFunnelStep.kind, activeFunnelStep.settings)
+    : null
 
   if (totalMxn <= 0) {
     return NextResponse.json({ error: "INVALID_TOTAL", message: "El total del pedido no es valido." }, { status: 400 })
@@ -141,7 +187,16 @@ export async function POST(request: Request, { params }: Ctx) {
       status: "pending",
       items: items as Prisma.InputJsonValue,
       totalMxn,
-      notes: buildOrderNotes(funnelId, funnelStep, undefined, experimentId, experimentVariant),
+      notes: buildOrderNotes(
+        funnelId,
+        funnelStep,
+        funnelStepId,
+        undefined,
+        experimentId,
+        experimentVariant,
+        offerResolution.appliedOffer?.type,
+        offerResolution.appliedOffer?.discountMxn
+      ),
     },
   })
 
@@ -186,17 +241,26 @@ export async function POST(request: Request, { params }: Ctx) {
         funnelStep,
         experimentId,
         experimentVariant,
-        items: items.map((item) => ({
-          id: item.variantId,
-          title: `${item.productName} - ${item.variantName}`,
-          quantity: item.quantity,
-          unitPriceMxn: item.priceMxn / 100,
-        })),
+        offerType: offerQuery?.offerType,
+        offerLabel: offerQuery?.offerLabel,
+        offerValue: offerQuery?.offerValue,
+        items: buildStorePreferenceItemsFromOrder(items),
       })
 
       await editorPrisma.order.update({
         where: { id: order.id },
-        data: { notes: buildOrderNotes(funnelId, funnelStep, mp.preferenceId, experimentId, experimentVariant) },
+        data: {
+          notes: buildOrderNotes(
+            funnelId,
+            funnelStep,
+            funnelStepId,
+            mp.preferenceId,
+            experimentId,
+            experimentVariant,
+            offerResolution.appliedOffer?.type,
+            offerResolution.appliedOffer?.discountMxn
+          ),
+        },
       })
 
       return NextResponse.json({
@@ -219,7 +283,7 @@ export async function POST(request: Request, { params }: Ctx) {
     orderId: order.id,
     siteId,
     totalMxn,
-    redirectUrl: `/api/store/checkout/pending?siteId=${encodeURIComponent(siteId)}&orderId=${encodeURIComponent(order.id)}${funnelId ? `&funnelId=${encodeURIComponent(funnelId)}&funnelStep=${encodeURIComponent(funnelStep ?? "checkout")}` : ""}${experimentId ? `&experimentId=${encodeURIComponent(experimentId)}&experimentVariant=${encodeURIComponent(experimentVariant ?? "A")}` : ""}`,
+    redirectUrl: `/api/store/checkout/pending?siteId=${encodeURIComponent(siteId)}&orderId=${encodeURIComponent(order.id)}${funnelId ? `&funnelId=${encodeURIComponent(funnelId)}&funnelStep=${encodeURIComponent(funnelStep ?? "checkout")}` : ""}${experimentId ? `&experimentId=${encodeURIComponent(experimentId)}&experimentVariant=${encodeURIComponent(experimentVariant ?? "A")}` : ""}${offerQuery?.offerType ? `&offerType=${encodeURIComponent(offerQuery.offerType)}` : ""}${offerQuery?.offerLabel ? `&offerLabel=${encodeURIComponent(offerQuery.offerLabel)}` : ""}${offerQuery?.offerValue ? `&offerValue=${encodeURIComponent(offerQuery.offerValue)}` : ""}`,
     mode: "manual",
   })
 }

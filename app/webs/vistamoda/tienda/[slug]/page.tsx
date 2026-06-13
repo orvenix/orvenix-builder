@@ -5,8 +5,9 @@ import { Star, Truck, Shield, Heart, Share2 } from 'lucide-react'
 import { products } from '@/app/webs/vistamoda/_site/lib/products'
 import ProductCard from '@/app/webs/vistamoda/_site/components/ProductCard'
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const product = products.find(p => p.slug === params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const product = products.find(p => p.slug === slug)
   return { title: product?.name ?? 'Producto' }
 }
 
@@ -14,8 +15,9 @@ export async function generateStaticParams() {
   return products.map(p => ({ slug: p.slug }))
 }
 
-export default function ProductPage({ params }: { params: { slug: string } }) {
-  const product = products.find(p => p.slug === params.slug) ?? products[0]
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const product = products.find(p => p.slug === slug) ?? products[0]
   const related = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4)
 
   return (

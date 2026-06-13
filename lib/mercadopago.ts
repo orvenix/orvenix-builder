@@ -75,6 +75,9 @@ export interface CreateStorePreferenceParams {
   funnelStep?: string
   experimentId?: string
   experimentVariant?: string
+  offerType?: string
+  offerLabel?: string
+  offerValue?: string
 }
 
 export async function createMpPreference(params: CreatePreferenceParams): Promise<MpPreferenceResult> {
@@ -148,6 +151,9 @@ export async function createStoreMpPreference(params: CreateStorePreferenceParam
   if (params.funnelStep) successUrl.searchParams.set("funnelStep", params.funnelStep)
   if (params.experimentId) successUrl.searchParams.set("experimentId", params.experimentId)
   if (params.experimentVariant) successUrl.searchParams.set("experimentVariant", params.experimentVariant)
+  if (params.offerType) successUrl.searchParams.set("offerType", params.offerType)
+  if (params.offerLabel) successUrl.searchParams.set("offerLabel", params.offerLabel)
+  if (params.offerValue) successUrl.searchParams.set("offerValue", params.offerValue)
 
   const failureUrl = new URL("/api/store/checkout/failure", appUrl)
   failureUrl.searchParams.set("siteId", params.siteId)
@@ -156,6 +162,9 @@ export async function createStoreMpPreference(params: CreateStorePreferenceParam
   if (params.funnelStep) failureUrl.searchParams.set("funnelStep", params.funnelStep)
   if (params.experimentId) failureUrl.searchParams.set("experimentId", params.experimentId)
   if (params.experimentVariant) failureUrl.searchParams.set("experimentVariant", params.experimentVariant)
+  if (params.offerType) failureUrl.searchParams.set("offerType", params.offerType)
+  if (params.offerLabel) failureUrl.searchParams.set("offerLabel", params.offerLabel)
+  if (params.offerValue) failureUrl.searchParams.set("offerValue", params.offerValue)
 
   const pendingUrl = new URL("/api/store/checkout/pending", appUrl)
   pendingUrl.searchParams.set("siteId", params.siteId)
@@ -164,6 +173,9 @@ export async function createStoreMpPreference(params: CreateStorePreferenceParam
   if (params.funnelStep) pendingUrl.searchParams.set("funnelStep", params.funnelStep)
   if (params.experimentId) pendingUrl.searchParams.set("experimentId", params.experimentId)
   if (params.experimentVariant) pendingUrl.searchParams.set("experimentVariant", params.experimentVariant)
+  if (params.offerType) pendingUrl.searchParams.set("offerType", params.offerType)
+  if (params.offerLabel) pendingUrl.searchParams.set("offerLabel", params.offerLabel)
+  if (params.offerValue) pendingUrl.searchParams.set("offerValue", params.offerValue)
 
   const result = await preference.create({
     body: {
@@ -196,6 +208,9 @@ export async function createStoreMpPreference(params: CreateStorePreferenceParam
         funnelStep: params.funnelStep ?? "",
         experimentId: params.experimentId ?? "",
         experimentVariant: params.experimentVariant ?? "",
+        offerType: params.offerType ?? "",
+        offerLabel: params.offerLabel ?? "",
+        offerValue: params.offerValue ?? "",
       },
     },
   })

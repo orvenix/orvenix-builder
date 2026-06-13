@@ -1,10 +1,35 @@
 "use client"
 
-import { useState } from "react"
+import { Fragment } from "react"
+import { useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import {
+  applyFunnelStepOfferDraft,
+  getFunnelStepOfferDraft,
+  getFunnelStepOfferSummary,
+  validateFunnelStepOfferDraft,
+  type FunnelStepOfferDraft,
+} from "@/lib/commerce/funnel-offer-draft"
+import {
+  duplicateFunnelDraftStep,
+  moveFunnelDraftStep,
+} from "@/lib/commerce/funnel-draft-steps"
+import { getFunnelDraftTransitionSummary } from "@/lib/commerce/funnel-draft-transitions"
+import { getFunnelOfferProductAutofill } from "@/lib/commerce/funnel-offer-product-defaults"
+import {
+  getPublicCartOfferSummary,
+  getPublicFunnelOfferCallout,
+} from "@/lib/commerce/funnel-offer-public"
+import { buildFunnelOfferPreviewLinks } from "@/lib/commerce/funnel-offer-preview-links"
+import {
+  getFunnelOfferApplyLabel,
+  getFunnelOfferSkipLabel,
+} from "@/lib/commerce/funnel-step-copy"
 import {
   AUTOMATION_ACTION_LABELS,
+  AUTOMATION_TRIGGER_TYPES,
   AUTOMATION_CMS_WORKFLOW_STATUSES,
   AUTOMATION_CONDITION_OPERATOR_LABELS,
   AUTOMATION_ORDER_STATUSES,
@@ -18,10 +43,55 @@ import {
   type AutomationStatus,
   type AutomationTriggerType,
 } from "@/lib/automation/config"
+import { getAutomationRunPayloadDetails } from "@/lib/automation/run-payload"
+import {
+  buildAutomationRunsViewQuery,
+  parseAutomationRunsViewState,
+  type AutomationRunResultFilter,
+} from "@/lib/automation/run-view-state"
 import {
   ArrowLeft, Package, Plus, Trash2, ShoppingCart,
   Tag, CheckCircle, Clock, XCircle, Eye, EyeOff, Workflow, Pencil, Save, ExternalLink, ChevronDown, ChevronUp, Zap,
 } from "lucide-react"
+import { getOrderNoteDetails, getOrderNoteSummary } from "@/lib/commerce/order-notes"
+import { normalizeStoredOrderConfirmationItems } from "@/lib/order-confirmation-email"
+import {
+  filterStoreOrders,
+  getStoreOrderFilterCounts,
+  getStoreOrderMetaFacetGroups,
+  getStoreOrderMetaFacetValues,
+  getStoreOrderSummaryMetrics,
+} from "@/lib/store/order-filter-metrics"
+import {
+  getStoreProductAttributeFacetGroups,
+  getStoreProductAttributeFacetValues,
+  filterStoreProducts,
+  getStoreProductFilterCounts,
+  getStoreProductSummaryMetrics,
+} from "@/lib/store/product-filter-metrics"
+import { mergeDashboardViewQuery } from "@/lib/store/dashboard-search"
+import {
+  buildStoreDashboardSelectionQuery,
+  parseStoreDashboardSelectionState,
+} from "@/lib/store/dashboard-selection-state"
+import {
+  buildStoreDashboardTabQuery,
+  parseStoreDashboardTab,
+  type StoreDashboardTab,
+} from "@/lib/store/dashboard-tab-state"
+import {
+  buildStoreOrdersViewQuery,
+  parseStoreOrdersViewState,
+  type StoreOrderContextFilter,
+  type StoreOrderStatusFilter,
+} from "@/lib/store/order-view-state"
+import {
+  buildStoreProductsViewQuery,
+  parseStoreProductsViewState,
+  type StoreProductSort,
+  type StoreProductStatusFilter,
+  type StoreProductStockFilter,
+} from "@/lib/store/product-view-state"
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -39,9 +109,9 @@ interface Product {
   id: string
   name: string
   description: string
-  type: string
+  type?: string
   status: string
-  media: unknown
+  media?: unknown
   variants: Variant[]
 }
 
@@ -52,6 +122,9 @@ interface Order {
   status: string
   totalMxn: number
   createdAt: string | Date
+  notes?: string | null
+  items?: unknown
+  mpPaymentId?: string | null
 }
 
 interface FunnelStep {
@@ -240,6 +313,22 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
   canceled:  { label: "Cancelado",  color: "text-red-400 bg-red-500/10" },
 }
 
+const ORDER_STATUS_FILTER_OPTIONS: Array<{ value: StoreOrderStatusFilter; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "pending", label: "Pendientes" },
+  { value: "paid", label: "Pagados" },
+  { value: "fulfilled", label: "Enviados" },
+  { value: "refunded", label: "Reembolsados" },
+  { value: "canceled", label: "Cancelados" },
+]
+
+const ORDER_CONTEXT_FILTER_OPTIONS: Array<{ value: StoreOrderContextFilter; label: string }> = [
+  { value: "all", label: "Todo el contexto" },
+  { value: "funnel", label: "Solo funnel" },
+  { value: "offer", label: "Solo ofertas" },
+  { value: "paid", label: "Solo pagos confirmados" },
+]
+
 const FUNNEL_STATUS: Record<string, { label: string; color: string }> = {
   draft: { label: "Borrador", color: "text-slate-500 bg-white/[0.04]" },
   active: { label: "Activo", color: "text-emerald-400 bg-emerald-500/10" },
@@ -253,6 +342,13 @@ const FUNNEL_STEP_LABEL: Record<FunnelStep["kind"], string> = {
   downsell: "Downsell",
   thankyou: "Thank you",
 }
+
+const FUNNEL_STEP_OFFER_TYPE_LABELS = {
+  product: "Producto extra",
+  order_bump: "Order bump",
+  discount: "Descuento",
+  free_gift: "Regalo",
+} as const
 
 const LOW_STOCK_THRESHOLD = 5
 
@@ -392,24 +488,6 @@ function formatAutomationRunTime(value: string) {
   })
 }
 
-function getAutomationPayloadSummary(payload: unknown) {
-  if (!payload || typeof payload !== "object") return "Sin contexto adicional"
-  const record = payload as Record<string, unknown>
-  if (typeof record.customerEmail === "string" && record.customerEmail) {
-    return `Cliente: ${record.customerEmail}`
-  }
-  if (typeof record.email === "string" && record.email) {
-    return `Contacto: ${record.email}`
-  }
-  if (typeof record.collectionSlug === "string" && record.collectionSlug) {
-    return `Colección: ${record.collectionSlug}`
-  }
-  if (typeof record.eventLabel === "string" && record.eventLabel) {
-    return `Evento: ${record.eventLabel}`
-  }
-  return "Ejecución registrada"
-}
-
 function formatAttributes(attributes?: Record<string, string>) {
   if (!attributes || Object.keys(attributes).length === 0) return ""
   return Object.entries(attributes)
@@ -457,14 +535,69 @@ function getPageForStep(step: FunnelStep | EditableFunnelStep, availablePages: S
   return availablePages.find((page) => page.id === step.pageId) ?? null
 }
 
-function getStepPublicPath(siteId: string, funnelId: string, step: FunnelStep["kind"], page: SitePageOption | null) {
+function supportsStepOffer(kind: FunnelStep["kind"]) {
+  return kind === "checkout" || kind === "upsell" || kind === "downsell"
+}
+
+function formatPreviewMxn(cents: number) {
+  return `$${(cents / 100).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`
+}
+
+function getStepPublicPath(
+  siteId: string,
+  funnelId: string,
+  step: FunnelStep["kind"],
+  page: SitePageOption | null,
+  stepId?: string | null
+) {
+  const search = new URLSearchParams({
+    funnelId,
+    funnelStep: step,
+  })
+  if (stepId) search.set("funnelStepId", stepId)
+
   if (page) {
     return page.slug === "home"
-      ? `/p/${encodeURIComponent(siteId)}?funnelId=${encodeURIComponent(funnelId)}&funnelStep=${encodeURIComponent(step)}`
-      : `/p/${encodeURIComponent(siteId)}/${encodeURIComponent(page.slug)}?funnelId=${encodeURIComponent(funnelId)}&funnelStep=${encodeURIComponent(step)}`
+      ? `/p/${encodeURIComponent(siteId)}?${search.toString()}`
+      : `/p/${encodeURIComponent(siteId)}/${encodeURIComponent(page.slug)}?${search.toString()}`
   }
 
-  return `/p/${encodeURIComponent(siteId)}/funnel/${encodeURIComponent(funnelId)}/${encodeURIComponent(step)}`
+  return `/p/${encodeURIComponent(siteId)}/funnel/${encodeURIComponent(funnelId)}/${encodeURIComponent(step)}?${search.toString()}`
+}
+
+function getEditorPagePath(pageId: string) {
+  return `/editor/${encodeURIComponent(pageId)}`
+}
+
+function getPrimaryFunnelStepPath(siteId: string, funnel: Funnel, availablePages: SitePageOption[]) {
+  const steps = Array.isArray(funnel.steps) ? [...funnel.steps].sort((a, b) => a.position - b.position) : []
+  const step = steps[0]
+  if (!step) return null
+
+  return getStepPublicPath(siteId, funnel.id, step.kind, getPageForStep(step, availablePages), step.id)
+}
+
+function getFunnelStepPathByKind(
+  siteId: string,
+  funnel: Funnel,
+  availablePages: SitePageOption[],
+  stepKind?: string | null
+) {
+  const steps = Array.isArray(funnel.steps) ? [...funnel.steps].sort((a, b) => a.position - b.position) : []
+  const exactStep = stepKind
+    ? steps.find((step) => step.kind === stepKind)
+    : null
+  const targetStep = exactStep ?? steps[0]
+
+  if (!targetStep) return null
+
+  return getStepPublicPath(
+    siteId,
+    funnel.id,
+    targetStep.kind,
+    getPageForStep(targetStep, availablePages),
+    targetStep.id
+  )
 }
 
 // ─── Formulario rápido de producto ───────────────────────────────────────────
@@ -556,19 +689,23 @@ function NewProductForm({ siteId, onCreated }: { siteId: string; onCreated: (p: 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function StoreImpl({ siteId, siteName, initialProducts, initialOrders, initialFunnels, initialExperiments, initialAutomations, initialAutomationRuns, funnelsReady: initialFunnelsReady, experimentsReady: initialExperimentsReady, automationsReady: initialAutomationsReady, funnelAnalytics, experimentAnalytics, availablePages }: Props) {
-  const [tab, setTab]           = useState<"products" | "orders" | "funnels" | "experiments" | "automations">("products")
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const initialSelectionView = useMemo(() => parseStoreDashboardSelectionState(searchParams), [searchParams])
   const [products, setProducts] = useState<Product[]>(initialProducts)
   const [orders, setOrders]     = useState<Order[]>(initialOrders)
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(initialSelectionView.selectedOrderId || null)
+  const [copiedOrderField, setCopiedOrderField] = useState<string | null>(null)
+  const [copiedFunnelField, setCopiedFunnelField] = useState<string | null>(null)
+  const [copiedExperimentField, setCopiedExperimentField] = useState<string | null>(null)
+  const [copiedProductField, setCopiedProductField] = useState<string | null>(null)
   const [funnels, setFunnels]   = useState<Funnel[]>(initialFunnels)
   const [experiments, setExperiments] = useState<Experiment[]>(initialExperiments)
   const [automations, setAutomations] = useState<Automation[]>(initialAutomations)
   const [showForm, setShowForm] = useState(false)
-  const [productQuery, setProductQuery] = useState("")
-  const [productStatusFilter, setProductStatusFilter] = useState<"all" | "draft" | "active" | "archived">("all")
-  const [productStockFilter, setProductStockFilter] = useState<"all" | "in_stock" | "low_stock" | "out_of_stock">("all")
-  const [productSort, setProductSort] = useState<"newest" | "name_asc" | "price_desc" | "stock_asc">("newest")
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null)
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(initialSelectionView.expandedProductId || null)
   const [variantDrafts, setVariantDrafts] = useState<Record<string, Variant>>({})
   const [variantAttributeDrafts, setVariantAttributeDrafts] = useState<Record<string, string>>({})
   const [newVariantDrafts, setNewVariantDrafts] = useState<Record<string, NewVariantDraft>>({})
@@ -600,16 +737,37 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
   const [automationError, setAutomationError] = useState("")
   const [creatingAutomation, setCreatingAutomation] = useState(false)
   const [automationsReady, setAutomationsReady] = useState(initialAutomationsReady)
-  const [editingAutomationId, setEditingAutomationId] = useState<string | null>(null)
+  const [editingAutomationId, setEditingAutomationId] = useState<string | null>(initialSelectionView.editAutomationId || null)
   const [automationDrafts, setAutomationDrafts] = useState<Record<string, AutomationDraft>>({})
   const [savingAutomationId, setSavingAutomationId] = useState<string | null>(null)
-  const [editingExperimentId, setEditingExperimentId] = useState<string | null>(null)
+  const [editingExperimentId, setEditingExperimentId] = useState<string | null>(initialSelectionView.editExperimentId || null)
   const [experimentDrafts, setExperimentDrafts] = useState<Record<string, ExperimentDraft>>({})
   const [savingExperimentId, setSavingExperimentId] = useState<string | null>(null)
-  const [editingFunnelId, setEditingFunnelId] = useState<string | null>(null)
+  const [editingFunnelId, setEditingFunnelId] = useState<string | null>(initialSelectionView.editFunnelId || null)
   const [funnelDrafts, setFunnelDrafts] = useState<Record<string, FunnelDraft>>({})
   const [savingFunnelId, setSavingFunnelId] = useState<string | null>(null)
+  const [copiedAutomationRunId, setCopiedAutomationRunId] = useState<string | null>(null)
   const automationNameMap = new Map(automations.map((automation) => [automation.id, automation.name]))
+  const productMap = new Map(products.map((product) => [product.id, product]))
+  const ordersView = useMemo(() => parseStoreOrdersViewState(searchParams), [searchParams])
+  const productsView = useMemo(() => parseStoreProductsViewState(searchParams), [searchParams])
+  const tab = useMemo(() => parseStoreDashboardTab(searchParams), [searchParams])
+  const orderQuery = ordersView.q
+  const orderStatusFilter = ordersView.status
+  const orderContextFilter = ordersView.context
+  const orderStepFilter = ordersView.step
+  const orderOfferTypeFilter = ordersView.offerType
+  const orderFacetKey = ordersView.facetKey
+  const productQuery = productsView.q
+  const productStatusFilter = productsView.status
+  const productStockFilter = productsView.stock
+  const productSort = productsView.sort
+  const productAttributes = productsView.attributes
+  const productFacetKey = productsView.facetKey
+  const automationRunsView = useMemo(() => parseAutomationRunsViewState(searchParams), [searchParams])
+  const automationRunFilterAutomationId = automationRunsView.automationId || "all"
+  const automationRunResultFilter = automationRunsView.result
+  const automationRunTriggerFilter = automationRunsView.trigger
 
   const deleteProduct = async (id: string) => {
     if (!confirm("¿Eliminar este producto y sus variantes?")) return
@@ -649,56 +807,261 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
     (sum, product) => sum + product.variants.filter((variant) => variant.stock <= 0).length,
     0
   )
-  const filteredProducts = products
-    .filter((product) => {
-      if (productStatusFilter !== "all" && product.status !== productStatusFilter) {
-        return false
-      }
-
-      const matchesQuery = productQuery.trim()
-        ? `${product.name} ${product.description} ${product.variants.map((variant) => `${variant.name} ${variant.sku}`).join(" ")}`
-            .toLowerCase()
-            .includes(productQuery.trim().toLowerCase())
-        : true
-
-      if (!matchesQuery) {
-        return false
-      }
-
-      const totalStock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
-      const hasLowStock = product.variants.some((variant) => variant.stock > 0 && variant.stock <= LOW_STOCK_THRESHOLD)
-      const hasOutOfStock = product.variants.some((variant) => variant.stock <= 0)
-
-      if (productStockFilter === "in_stock" && totalStock <= 0) return false
-      if (productStockFilter === "low_stock" && !hasLowStock) return false
-      if (productStockFilter === "out_of_stock" && !hasOutOfStock) return false
-
-      return true
+  const filteredProducts = useMemo<Product[]>(() => filterStoreProducts(products, productsView) as Product[], [products, productsView])
+  const productFilterCounts = useMemo(() => getStoreProductFilterCounts(products, productsView), [products, productsView])
+  const productSummaryMetrics = useMemo(() => getStoreProductSummaryMetrics(filteredProducts), [filteredProducts])
+  const productAttributeFacetGroups = useMemo(
+    () => getStoreProductAttributeFacetGroups(products, productsView),
+    [products, productsView]
+  )
+  const productExpandedFacetValues = useMemo(
+    () => getStoreProductAttributeFacetValues(products, productsView, productFacetKey),
+    [products, productsView, productFacetKey]
+  )
+  const updateOrdersView = (nextView: {
+    q?: string
+    status?: StoreOrderStatusFilter
+    context?: StoreOrderContextFilter
+    step?: string
+    offerType?: string
+    facetKey?: string
+  }) => {
+    const nextQuery = mergeDashboardViewQuery(
+      searchParams,
+      ["q", "status", "context", "orderStep", "orderOfferType", "orderFacetKey"],
+      buildStoreOrdersViewQuery({
+        q: nextView.q ?? orderQuery,
+        status: nextView.status ?? orderStatusFilter,
+        context: nextView.context ?? orderContextFilter,
+        step: nextView.step ?? orderStepFilter,
+        offerType: nextView.offerType ?? orderOfferTypeFilter,
+        facetKey: nextView.facetKey ?? orderFacetKey,
+      })
+    )
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
+  }
+  const updateProductsView = (nextView: {
+    q?: string
+    status?: StoreProductStatusFilter
+    stock?: StoreProductStockFilter
+    sort?: StoreProductSort
+    attributes?: typeof productAttributes
+    facetKey?: string
+  }) => {
+    const nextQuery = mergeDashboardViewQuery(
+      searchParams,
+      ["productQ", "productStatus", "productStock", "productSort", "productAttrs", "productFacetKey"],
+      buildStoreProductsViewQuery({
+        q: nextView.q ?? productQuery,
+        status: nextView.status ?? productStatusFilter,
+        stock: nextView.stock ?? productStockFilter,
+        sort: nextView.sort ?? productSort,
+        attributes: nextView.attributes ?? productAttributes,
+        facetKey: nextView.facetKey ?? productFacetKey,
+      })
+    )
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
+  }
+  const applyProductStatusFilter = (status: StoreProductStatusFilter) => {
+    updateProductsView({ status })
+  }
+  const applyProductStockFilter = (stock: StoreProductStockFilter) => {
+    updateProductsView({ stock })
+  }
+  const focusProductSku = (sku?: string | null) => {
+    const trimmedSku = sku?.trim()
+    if (!trimmedSku) return
+    updateProductsView({ q: trimmedSku, attributes: [], facetKey: "" })
+  }
+  const focusProductAttribute = (attributeKey?: string | null, attributeValue?: string | null) => {
+    const trimmedAttributeKey = attributeKey?.trim() || ""
+    const trimmedAttributeValue = attributeValue?.trim() || ""
+    if (!trimmedAttributeKey && !trimmedAttributeValue) return
+    const nextAttributes = productAttributes.filter((attribute) => (
+      attribute.key.trim().toLowerCase() !== trimmedAttributeKey.toLowerCase()
+    ))
+    const hasSamePair = productAttributes.some((attribute) => (
+      attribute.key.trim().toLowerCase() === trimmedAttributeKey.toLowerCase()
+      && attribute.value.trim().toLowerCase() === trimmedAttributeValue.toLowerCase()
+    ))
+    updateProductsView({
+      q: "",
+      attributes: hasSamePair
+        ? nextAttributes
+        : [...nextAttributes, { key: trimmedAttributeKey, value: trimmedAttributeValue }],
+      facetKey: trimmedAttributeKey,
     })
-    .sort((left, right) => {
-      if (productSort === "name_asc") {
-        return left.name.localeCompare(right.name, "es")
-      }
-
-      if (productSort === "price_desc") {
-        const leftPrice = left.variants.length > 0 ? Math.max(...left.variants.map((variant) => variant.priceMxn)) : 0
-        const rightPrice = right.variants.length > 0 ? Math.max(...right.variants.map((variant) => variant.priceMxn)) : 0
-        return rightPrice - leftPrice
-      }
-
-      if (productSort === "stock_asc") {
-        const leftStock = left.variants.reduce((sum, variant) => sum + variant.stock, 0)
-        const rightStock = right.variants.reduce((sum, variant) => sum + variant.stock, 0)
-        return leftStock - rightStock
-      }
-
-      return 0
+  }
+  const removeProductAttribute = (attributeKey: string, attributeValue: string) => {
+    updateProductsView({
+      attributes: productAttributes.filter((attribute) => !(
+        attribute.key.trim().toLowerCase() === attributeKey.trim().toLowerCase()
+        && attribute.value.trim().toLowerCase() === attributeValue.trim().toLowerCase()
+      )),
     })
+  }
+  const toggleProductFacetKey = (facetKey: string) => {
+    updateProductsView({
+      facetKey: productFacetKey === facetKey ? "" : facetKey,
+    })
+  }
+  const applyProductRowFilter = (
+    nextView: Partial<{
+      status: StoreProductStatusFilter
+      stock: StoreProductStockFilter
+    }>
+  ) => {
+    updateProductsView(nextView)
+  }
+  const updateDashboardTab = (nextTab: StoreDashboardTab) => {
+    const nextQuery = mergeDashboardViewQuery(
+      searchParams,
+      ["tab"],
+      buildStoreDashboardTabQuery(nextTab)
+    )
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
+  }
+  const updateDashboardSelection = (nextView: {
+    selectedOrderId?: string
+    expandedProductId?: string
+    editAutomationId?: string
+    editFunnelId?: string
+    editExperimentId?: string
+  }) => {
+    const nextQuery = mergeDashboardViewQuery(
+      searchParams,
+      ["selectedOrderId", "expandedProductId", "editAutomationId", "editFunnelId", "editExperimentId"],
+      buildStoreDashboardSelectionQuery({
+        selectedOrderId: nextView.selectedOrderId ?? (expandedOrderId ?? ""),
+        expandedProductId: nextView.expandedProductId ?? (expandedProductId ?? ""),
+        editAutomationId: nextView.editAutomationId ?? (editingAutomationId ?? ""),
+        editFunnelId: nextView.editFunnelId ?? (editingFunnelId ?? ""),
+        editExperimentId: nextView.editExperimentId ?? (editingExperimentId ?? ""),
+      })
+    )
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
+  }
+  const updateAutomationRunsView = (nextView: {
+    automationId?: string
+    result?: AutomationRunResultFilter
+    trigger?: "all" | AutomationTriggerType
+  }) => {
+    const nextQuery = mergeDashboardViewQuery(
+      searchParams,
+      ["runAutomationId", "runResult", "runTrigger"],
+      buildAutomationRunsViewQuery({
+        automationId: nextView.automationId ?? automationRunsView.automationId,
+        result: nextView.result ?? automationRunResultFilter,
+        trigger: nextView.trigger ?? automationRunTriggerFilter,
+      })
+    )
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
+  }
+  const applyOrderChipFilter = (target: "funnel" | "offer" | "paid", value?: string | null) => {
+    if (target === "paid") {
+      updateOrdersView({ context: "paid" })
+      return
+    }
+
+    if (target === "funnel") {
+      updateOrdersView({
+        context: "funnel",
+        step: value?.trim() ? value : orderStepFilter,
+      })
+      return
+    }
+
+    updateOrdersView({
+      context: "offer",
+      offerType: value?.trim() ? value : orderOfferTypeFilter,
+    })
+  }
+  const removeOrderMetaFilter = (target: "step" | "offerType") => {
+    if (target === "step") {
+      updateOrdersView({ step: "" })
+      return
+    }
+
+    updateOrdersView({ offerType: "" })
+  }
+  const toggleOrderFacetKey = (facetKey: "step" | "offerType") => {
+    updateOrdersView({
+      facetKey: orderFacetKey === facetKey ? "" : facetKey,
+    })
+  }
+  const copyOrderField = async (key: string, value?: string | null) => {
+    if (!value?.trim()) return
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedOrderField(key)
+    } catch {
+      setCopiedOrderField(null)
+    }
+  }
+  const copyFunnelField = async (key: string, value?: string | null) => {
+    if (!value?.trim()) return
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedFunnelField(key)
+    } catch {
+      setCopiedFunnelField(null)
+    }
+  }
+  const copyExperimentField = async (key: string, value?: string | null) => {
+    if (!value?.trim()) return
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedExperimentField(key)
+    } catch {
+      setCopiedExperimentField(null)
+    }
+  }
+  const copyProductField = async (key: string, value?: string | null) => {
+    if (!value?.trim()) return
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedProductField(key)
+    } catch {
+      setCopiedProductField(null)
+    }
+  }
+  const copyAutomationRunValue = async (key: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedAutomationRunId(key)
+    } catch {
+      setCopiedAutomationRunId(null)
+    }
+  }
+  const copyAutomationRunPayload = async (runId: string, payload: unknown) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload ?? {}, null, 2))
+      setCopiedAutomationRunId(runId)
+    } catch {
+      setCopiedAutomationRunId(null)
+    }
+  }
+
+  const filteredOrders = useMemo(() => filterStoreOrders(orders, ordersView), [orders, ordersView])
+  const orderFilterCounts = useMemo(() => getStoreOrderFilterCounts(orders, ordersView), [orders, ordersView])
+  const orderSummaryMetrics = useMemo(() => getStoreOrderSummaryMetrics(filteredOrders), [filteredOrders])
+  const orderMetaFacetGroups = useMemo(() => getStoreOrderMetaFacetGroups(orders, ordersView), [orders, ordersView])
+  const orderExpandedFacetValues = useMemo(
+    () => getStoreOrderMetaFacetValues(orders, ordersView, orderFacetKey),
+    [orders, ordersView, orderFacetKey]
+  )
+  const filteredAutomationRuns = useMemo(() => initialAutomationRuns.filter((run) => {
+    if (automationRunFilterAutomationId !== "all" && run.automationId !== automationRunFilterAutomationId) return false
+    if (automationRunResultFilter !== "all" && run.result !== automationRunResultFilter) return false
+    if (automationRunTriggerFilter !== "all" && run.triggerType !== automationRunTriggerFilter) return false
+    return true
+  }), [automationRunFilterAutomationId, automationRunResultFilter, automationRunTriggerFilter, initialAutomationRuns])
 
   const slugify = (value: string) => value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
 
   const startEditingFunnel = (funnel: Funnel) => {
     setEditingFunnelId(funnel.id)
+    updateDashboardSelection({ editFunnelId: funnel.id })
     setFunnelError("")
     setFunnelDrafts((prev) => ({
       ...prev,
@@ -721,7 +1084,41 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
 
   const stopEditingFunnel = () => {
     setEditingFunnelId(null)
+    updateDashboardSelection({ editFunnelId: "" })
     setFunnelError("")
+  }
+
+  const focusFunnelFromExperiment = (targetFunnelId: string) => {
+    const targetFunnel = funnels.find((entry) => entry.id === targetFunnelId)
+    if (!targetFunnel) return
+    updateDashboardTab("funnels")
+    startEditingFunnel(targetFunnel)
+  }
+
+  const focusExperimentFromRun = (experimentId: string) => {
+    const targetExperiment = experiments.find((entry) => entry.id === experimentId)
+    if (!targetExperiment) return
+    updateDashboardTab("experiments")
+    startEditingExperiment(targetExperiment)
+  }
+
+  const focusAutomationFromRun = (automationId: string) => {
+    const targetAutomation = automations.find((entry) => entry.id === automationId)
+    if (!targetAutomation) return
+    updateDashboardTab("automations")
+    startEditingAutomation(targetAutomation)
+    updateAutomationRunsView({ automationId })
+  }
+
+  const focusOrderFromAutomationRun = (orderId: string) => {
+    updateDashboardTab("orders")
+    setExpandedOrderId(orderId)
+    updateDashboardSelection({ selectedOrderId: orderId })
+    updateOrdersView({
+      q: orderId,
+      status: "all",
+      context: "all",
+    })
   }
 
   const updateFunnelDraft = (funnelId: string, patch: Partial<FunnelDraft>) => {
@@ -749,6 +1146,106 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
       const steps = current.steps.map((step, index) =>
         index === stepIndex ? { ...step, ...patch } : step
       )
+      return {
+        ...prev,
+        [funnelId]: { ...current, steps },
+      }
+    })
+  }
+
+  const updateFunnelDraftStepOffer = (
+    funnelId: string,
+    stepIndex: number,
+    patch: Partial<FunnelStepOfferDraft>
+  ) => {
+    setFunnelDrafts((prev) => {
+      const current = prev[funnelId]
+      if (!current) return prev
+
+      const steps = current.steps.map((step, index) => {
+        if (index !== stepIndex) return step
+        const currentDraft = getFunnelStepOfferDraft(step.settings)
+        return {
+          ...step,
+          settings: applyFunnelStepOfferDraft(step.settings, {
+            ...currentDraft,
+            ...patch,
+          }),
+        }
+      })
+
+      return {
+        ...prev,
+        [funnelId]: { ...current, steps },
+      }
+    })
+  }
+  const updateFunnelDraftStepOfferType = (
+    funnelId: string,
+    stepIndex: number,
+    nextType: FunnelStepOfferDraft["type"]
+  ) => {
+    setFunnelDrafts((prev) => {
+      const current = prev[funnelId]
+      if (!current) return prev
+
+      const steps = current.steps.map((step, index) => {
+        if (index !== stepIndex) return step
+        const currentDraft = getFunnelStepOfferDraft(step.settings)
+        const selectedProduct = productMap.get(currentDraft.productId)
+        const nextDraft = {
+          ...currentDraft,
+          type: nextType,
+          discountPercent: nextType === "discount" ? currentDraft.discountPercent : "",
+          discountFixed: nextType === "discount" ? currentDraft.discountFixed : "",
+        }
+        const autofill = selectedProduct
+          ? getFunnelOfferProductAutofill(selectedProduct, nextType, nextDraft)
+          : (nextType === "free_gift" ? { priceMxn: "" } : {})
+
+        return {
+          ...step,
+          settings: applyFunnelStepOfferDraft(step.settings, {
+            ...nextDraft,
+            ...autofill,
+          }),
+        }
+      })
+
+      return {
+        ...prev,
+        [funnelId]: { ...current, steps },
+      }
+    })
+  }
+  const updateFunnelDraftStepOfferProduct = (
+    funnelId: string,
+    stepIndex: number,
+    productId: string
+  ) => {
+    setFunnelDrafts((prev) => {
+      const current = prev[funnelId]
+      if (!current) return prev
+
+      const steps = current.steps.map((step, index) => {
+        if (index !== stepIndex) return step
+        const currentDraft = getFunnelStepOfferDraft(step.settings)
+        const selectedProduct = productMap.get(productId)
+        const nextDraft = {
+          ...currentDraft,
+          productId,
+        }
+        const autofill = getFunnelOfferProductAutofill(selectedProduct, currentDraft.type, nextDraft)
+
+        return {
+          ...step,
+          settings: applyFunnelStepOfferDraft(step.settings, {
+            ...nextDraft,
+            ...autofill,
+          }),
+        }
+      })
+
       return {
         ...prev,
         [funnelId]: { ...current, steps },
@@ -794,6 +1291,32 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
       }
     })
   }
+  const moveFunnelDraftStepBy = (funnelId: string, stepIndex: number, direction: -1 | 1) => {
+    setFunnelDrafts((prev) => {
+      const current = prev[funnelId]
+      if (!current) return prev
+      return {
+        ...prev,
+        [funnelId]: {
+          ...current,
+          steps: moveFunnelDraftStep(current.steps, stepIndex, direction),
+        },
+      }
+    })
+  }
+  const duplicateFunnelDraftStepAt = (funnelId: string, stepIndex: number) => {
+    setFunnelDrafts((prev) => {
+      const current = prev[funnelId]
+      if (!current) return prev
+      return {
+        ...prev,
+        [funnelId]: {
+          ...current,
+          steps: duplicateFunnelDraftStep(current.steps, stepIndex, () => `draft-${Date.now()}-${stepIndex}`),
+        },
+      }
+    })
+  }
 
   const saveFunnelDraft = async (funnel: Funnel) => {
     const draft = funnelDrafts[funnel.id]
@@ -802,6 +1325,20 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
     if (!draft.name.trim() || !draft.slug.trim()) {
       setFunnelError("Cada funnel necesita nombre y slug.")
       return
+    }
+
+    const knownProductIds = products.map((product) => product.id)
+    for (let index = 0; index < draft.steps.length; index += 1) {
+      const step = draft.steps[index]
+      if (!supportsStepOffer(step.kind)) continue
+
+      const errors = validateFunnelStepOfferDraft(getFunnelStepOfferDraft(step.settings), {
+        knownProductIds,
+      })
+      if (errors.length > 0) {
+        setFunnelError(`Paso ${index + 1} (${FUNNEL_STEP_LABEL[step.kind]}): ${errors[0]?.message ?? "Configura correctamente la oferta."}`)
+        return
+      }
     }
 
     setSavingFunnelId(funnel.id)
@@ -830,6 +1367,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
 
       setFunnels((prev) => prev.map((item) => item.id === funnel.id ? data.funnel! : item))
       setEditingFunnelId(null)
+      updateDashboardSelection({ editFunnelId: "" })
     } catch {
       setFunnelError("No se pudo guardar el funnel.")
     } finally {
@@ -959,6 +1497,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
 
   const startEditingExperiment = (experiment: Experiment) => {
     setEditingExperimentId(experiment.id)
+    updateDashboardSelection({ editExperimentId: experiment.id })
     setExperimentError("")
     setExperimentDrafts((prev) => ({
       ...prev,
@@ -976,6 +1515,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
 
   const stopEditingExperiment = () => {
     setEditingExperimentId(null)
+    updateDashboardSelection({ editExperimentId: "" })
     setExperimentError("")
   }
 
@@ -1042,6 +1582,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
 
       setExperiments((prev) => prev.map((item) => item.id === experiment.id ? data.experiment! : item))
       setEditingExperimentId(null)
+      updateDashboardSelection({ editExperimentId: "" })
     } catch {
       setExperimentError("No se pudo guardar el experimento.")
     } finally {
@@ -1141,6 +1682,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
 
   const startEditingAutomation = (automation: Automation) => {
     setEditingAutomationId(automation.id)
+    updateDashboardSelection({ editAutomationId: automation.id })
     setAutomationError("")
     setAutomationDrafts((prev) => ({
       ...prev,
@@ -1157,6 +1699,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
 
   const stopEditingAutomation = () => {
     setEditingAutomationId(null)
+    updateDashboardSelection({ editAutomationId: "" })
     setAutomationError("")
   }
 
@@ -1304,7 +1847,9 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
   }
 
   const startEditingProductInventory = (product: Product) => {
-    setExpandedProductId((current) => current === product.id ? null : product.id)
+    const nextExpandedProductId = expandedProductId === product.id ? null : product.id
+    setExpandedProductId(nextExpandedProductId)
+    updateDashboardSelection({ expandedProductId: nextExpandedProductId ?? "" })
     setInventoryError("")
     setVariantDrafts((prev) => ({
       ...prev,
@@ -1553,7 +2098,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
       {/* Tabs */}
       <div className="flex gap-1 mb-6 rounded-xl bg-white/[0.03] border border-white/[0.06] p-1 w-fit">
         {([["products", "Productos", Package], ["orders", "Pedidos", ShoppingCart], ["funnels", "Funnels", Workflow], ["experiments", "Experimentos", CheckCircle], ["automations", "Automatizaciones", Zap]] as const).map(([id, label, Icon]) => (
-          <button key={id} type="button" onClick={() => setTab(id)}
+          <button key={id} type="button" onClick={() => updateDashboardTab(id)}
             className={`flex items-center gap-1.5 h-8 px-4 rounded-lg text-sm font-semibold transition-colors ${
               tab === id ? "bg-[#00b5f6]/20 text-[#00b5f6]" : "text-slate-500 hover:text-slate-300"
             }`}>
@@ -1578,7 +2123,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
               <input
                 type="text"
                 value={productQuery}
-                onChange={(event) => setProductQuery(event.target.value)}
+                onChange={(event) => updateProductsView({ q: event.target.value })}
                 placeholder="Ej: camiseta, negro, SKU..."
                 className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50"
               />
@@ -1587,7 +2132,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
               <label className="mb-1.5 block text-[11px] text-slate-500">Estado</label>
               <select
                 value={productStatusFilter}
-                onChange={(event) => setProductStatusFilter(event.target.value as typeof productStatusFilter)}
+                onChange={(event) => updateProductsView({ status: event.target.value as StoreProductStatusFilter })}
                 className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2 text-sm text-white focus:outline-none"
               >
                 <option value="all">Todos</option>
@@ -1600,7 +2145,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
               <label className="mb-1.5 block text-[11px] text-slate-500">Stock</label>
               <select
                 value={productStockFilter}
-                onChange={(event) => setProductStockFilter(event.target.value as typeof productStockFilter)}
+                onChange={(event) => updateProductsView({ stock: event.target.value as StoreProductStockFilter })}
                 className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2 text-sm text-white focus:outline-none"
               >
                 <option value="all">Todos</option>
@@ -1613,7 +2158,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
               <label className="mb-1.5 block text-[11px] text-slate-500">Ordenar</label>
               <select
                 value={productSort}
-                onChange={(event) => setProductSort(event.target.value as typeof productSort)}
+                onChange={(event) => updateProductsView({ sort: event.target.value as StoreProductSort })}
                 className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2 text-sm text-white focus:outline-none"
               >
                 <option value="newest">Más recientes</option>
@@ -1622,6 +2167,148 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                 <option value="stock_asc">Menor stock</option>
               </select>
             </div>
+          </div>
+
+          {productAttributes.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-[11px]">
+              {productAttributes.map((attribute) => (
+                <span
+                  key={`active-attr-${attribute.key}:${attribute.value}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-[#00b5f6]/20 bg-[#00b5f6]/10 px-2 py-1 font-semibold text-[#7ddcff]"
+                >
+                  {attribute.key} = {attribute.value}
+                  <button
+                    type="button"
+                    onClick={() => removeProductAttribute(attribute.key, attribute.value)}
+                    className="text-[#b8f0ff] transition-colors hover:text-white"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={() => updateProductsView({ attributes: [], facetKey: "" })}
+                className="font-semibold text-slate-400 transition-colors hover:text-white"
+              >
+                Limpiar atributos
+              </button>
+            </div>
+          )}
+
+          {productAttributeFacetGroups.length > 0 && (
+            <div className="mb-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Facetas del catalogo
+              </p>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {productAttributeFacetGroups.map((group) => (
+                  <div key={group.key} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleProductFacetKey(group.key)}
+                      className="mb-2 flex w-full items-center justify-between text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 transition-colors hover:text-white"
+                    >
+                      <span>{group.key}</span>
+                      <span className="text-[10px] text-slate-600">
+                        {productFacetKey === group.key ? "Ocultar" : "Ver mas"}
+                      </span>
+                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      {group.values.map((facet) => (
+                        <button
+                          key={`${facet.key}:${facet.value}`}
+                          type="button"
+                          onClick={() => focusProductAttribute(facet.key, facet.value)}
+                          className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition-colors hover:border-[#00b5f6]/30 hover:text-white"
+                        >
+                          {facet.value}
+                          <span className="ml-1 text-slate-500">{facet.count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {productFacetKey && productExpandedFacetValues.length > 0 && (
+            <div className="mb-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Mas valores de {productFacetKey}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => updateProductsView({ facetKey: "" })}
+                  className="text-[11px] font-semibold text-slate-400 transition-colors hover:text-white"
+                >
+                  Cerrar
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {productExpandedFacetValues.map((facet) => (
+                  <button
+                    key={`expanded-${facet.key}:${facet.value}`}
+                    type="button"
+                    onClick={() => focusProductAttribute(facet.key, facet.value)}
+                    className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition-colors hover:border-[#00b5f6]/30 hover:text-white"
+                  >
+                    {facet.value}
+                    <span className="ml-1 text-slate-500">{facet.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <button
+              type="button"
+              onClick={() => updateProductsView({ status: "all", stock: "all" })}
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-left transition-colors hover:border-[#00b5f6]/30 hover:bg-[#00b5f6]/6"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Productos visibles</p>
+              <p className="mt-2 text-2xl font-bold text-white">{productSummaryMetrics.totalProducts}</p>
+              <p className="mt-1 text-xs text-slate-500">Unidades visibles: {productSummaryMetrics.totalUnits}</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyProductStatusFilter("active")}
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-left transition-colors hover:border-emerald-400/30 hover:bg-emerald-400/6"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300/80">Activos</p>
+              <p className="mt-2 text-2xl font-bold text-white">{productFilterCounts.status.active}</p>
+              <p className="mt-1 text-xs text-slate-500">Filtra productos listos para venta</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyProductStatusFilter("draft")}
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-left transition-colors hover:border-amber-400/30 hover:bg-amber-400/6"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300/80">Borrador</p>
+              <p className="mt-2 text-2xl font-bold text-white">{productFilterCounts.status.draft}</p>
+              <p className="mt-1 text-xs text-slate-500">Pendientes de publicarse</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyProductStockFilter("low_stock")}
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-left transition-colors hover:border-amber-400/30 hover:bg-amber-400/6"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300/80">Stock bajo</p>
+              <p className="mt-2 text-2xl font-bold text-white">{productFilterCounts.stock.low_stock}</p>
+              <p className="mt-1 text-xs text-slate-500">Productos con variantes por reponer</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyProductStockFilter("out_of_stock")}
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-left transition-colors hover:border-red-400/30 hover:bg-red-400/6"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-300/80">Agotados</p>
+              <p className="mt-2 text-2xl font-bold text-white">{productFilterCounts.stock.out_of_stock}</p>
+              <p className="mt-1 text-xs text-slate-500">Productos con al menos una variante sin stock</p>
+            </button>
           </div>
 
           {filteredProducts.length === 0 ? (
@@ -1661,18 +2348,30 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-sm font-semibold text-white truncate">{product.name}</span>
-                        <span className={`inline-flex items-center gap-1 h-5 px-1.5 rounded-full text-[9px] font-bold ${st.color}`}>
+                        <button
+                          type="button"
+                          onClick={() => applyProductRowFilter({ status: product.status as StoreProductStatusFilter })}
+                          className={`inline-flex items-center gap-1 h-5 rounded-full px-1.5 text-[9px] font-bold transition-colors hover:brightness-110 ${st.color}`}
+                        >
                           {st.icon} {st.label}
-                        </span>
+                        </button>
                         {hasOutOfStock && (
-                          <span className="inline-flex h-5 items-center rounded-full border border-red-500/20 bg-red-500/10 px-1.5 text-[9px] font-bold text-red-300">
+                          <button
+                            type="button"
+                            onClick={() => applyProductRowFilter({ stock: "out_of_stock" })}
+                            className="inline-flex h-5 items-center rounded-full border border-red-500/20 bg-red-500/10 px-1.5 text-[9px] font-bold text-red-300 transition-colors hover:bg-red-500/15"
+                          >
                             Agotado
-                          </span>
+                          </button>
                         )}
                         {!hasOutOfStock && hasLowStock && (
-                          <span className="inline-flex h-5 items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 text-[9px] font-bold text-amber-300">
+                          <button
+                            type="button"
+                            onClick={() => applyProductRowFilter({ stock: "low_stock" })}
+                            className="inline-flex h-5 items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 text-[9px] font-bold text-amber-300 transition-colors hover:bg-amber-500/15"
+                          >
                             Stock bajo
-                          </span>
+                          </button>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-[11px] text-slate-600">
@@ -1715,17 +2414,44 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                           {product.variants.map((variant) => {
                             const draft = variantDrafts[variant.id] ?? variant
                             const stockState = getVariantStockState(draft.stock)
+                            const stockFilter: StoreProductStockFilter = draft.stock <= 0
+                              ? "out_of_stock"
+                              : draft.stock <= LOW_STOCK_THRESHOLD
+                                ? "low_stock"
+                                : "in_stock"
                             return (
                               <div key={variant.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
                                 <div className="mb-3 flex items-center justify-between">
                                   <span className="text-sm font-semibold text-white">{draft.name || "Variante"}</span>
-                                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${stockState.className}`}>
+                                  <button
+                                    type="button"
+                                    onClick={() => applyProductStockFilter(stockFilter)}
+                                    className={`rounded-full px-2 py-1 text-[10px] font-semibold transition-colors hover:brightness-110 ${stockState.className}`}
+                                  >
                                     {stockState.label}
-                                  </span>
+                                  </button>
                                 </div>
                                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                                   <div>
-                                    <label className="mb-1.5 block text-[11px] text-slate-500">SKU</label>
+                                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                                      <label className="block text-[11px] text-slate-500">SKU</label>
+                                      <div className="flex items-center gap-3">
+                                        <button
+                                          type="button"
+                                          onClick={() => focusProductSku(draft.sku)}
+                                          className="text-[11px] font-semibold text-slate-400 transition-colors hover:text-white"
+                                        >
+                                          Buscar SKU
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => { void copyProductField(`sku-${variant.id}`, draft.sku) }}
+                                          className="text-[11px] font-semibold text-[#00b5f6] transition-colors hover:text-[#33d1ff]"
+                                        >
+                                          {copiedProductField === `sku-${variant.id}` ? "Copiado" : "Copiar"}
+                                        </button>
+                                      </div>
+                                    </div>
                                     <input
                                       type="text"
                                       value={draft.sku}
@@ -1734,7 +2460,16 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                                     />
                                   </div>
                                   <div>
-                                    <label className="mb-1.5 block text-[11px] text-slate-500">Nombre</label>
+                                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                                      <label className="block text-[11px] text-slate-500">Nombre</label>
+                                      <button
+                                        type="button"
+                                        onClick={() => focusProductSku(draft.name)}
+                                        className="text-[11px] font-semibold text-slate-400 transition-colors hover:text-white"
+                                      >
+                                        Buscar nombre
+                                      </button>
+                                    </div>
                                     <input
                                       type="text"
                                       value={draft.name}
@@ -1788,6 +2523,23 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                                     >
                                       + atributo
                                     </button>
+                                  </div>
+                                  <div className="mb-2 flex flex-wrap gap-2">
+                                    {parseAttributeEntries(variantAttributeDrafts[variant.id] ?? "")
+                                      .filter((entry) => entry.key.trim() || entry.value.trim())
+                                      .map((entry, rowIndex) => {
+                                        const attributeQuery = `${entry.key.trim()} ${entry.value.trim()}`.trim()
+                                        return (
+                                          <button
+                                            key={`${variant.id}-attr-chip-${rowIndex}`}
+                                            type="button"
+                                            onClick={() => focusProductAttribute(entry.key, entry.value || attributeQuery)}
+                                            className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-slate-300 transition-colors hover:border-[#00b5f6]/30 hover:text-white"
+                                          >
+                                            {entry.key.trim() || "atributo"}{entry.value.trim() ? `: ${entry.value.trim()}` : ""}
+                                          </button>
+                                        )
+                                      })}
                                   </div>
                                   <div className="space-y-2">
                                     {parseAttributeEntries(variantAttributeDrafts[variant.id] ?? "").map((entry, rowIndex) => (
@@ -2026,21 +2778,51 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                           <div className="mt-3 grid gap-2 md:grid-cols-3">
                             {steps.map((step) => {
                               const page = getPageForStep(step, availablePages)
-                              const href = getStepPublicPath(siteId, funnel.id, step.kind, page)
+                              const href = getStepPublicPath(siteId, funnel.id, step.kind, page, step.id)
                               return (
                                 <div key={`${funnel.id}-${step.id}-link`} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
-                                  <div className="mb-1 text-[11px] font-semibold text-slate-300">
-                                    {FUNNEL_STEP_LABEL[step.kind]}
+                                  <div className="mb-1 flex items-center gap-2">
+                                    <div className="text-[11px] font-semibold text-slate-300">
+                                      {FUNNEL_STEP_LABEL[step.kind]}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => { void copyFunnelField(`step-id-${step.id}`, step.id) }}
+                                      className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                    >
+                                      {copiedFunnelField === `step-id-${step.id}` ? "ID copiado" : "Copiar ID"}
+                                    </button>
                                   </div>
-                                  <div className="mb-2 text-[10px] text-slate-500">
-                                    {page ? `${page.name} (/${page.slug})` : "Resolver por runtime del funnel"}
+                                  <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                                    {page ? (
+                                      <>
+                                        <span>{page.name} (/{page.slug})</span>
+                                        <Link
+                                          href={getEditorPagePath(page.id)}
+                                          className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                        >
+                                          Editar pagina <ExternalLink size={10} />
+                                        </Link>
+                                      </>
+                                    ) : (
+                                      <span>Resolver por runtime del funnel</span>
+                                    )}
                                   </div>
-                                  <Link
-                                    href={href}
-                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00b5f6] hover:text-[#33d1ff]"
-                                  >
-                                    Abrir paso <ExternalLink size={11} />
-                                  </Link>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Link
+                                      href={href}
+                                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00b5f6] hover:text-[#33d1ff]"
+                                    >
+                                      Abrir paso <ExternalLink size={11} />
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      onClick={() => { void copyFunnelField(`step-url-${step.id}`, href) }}
+                                      className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-200 transition-colors hover:border-cyan-300/35 hover:bg-cyan-500/15"
+                                    >
+                                      {copiedFunnelField === `step-url-${step.id}` ? "URL copiada" : "Copiar URL"}
+                                    </button>
+                                  </div>
                                 </div>
                               )
                             })}
@@ -2151,7 +2933,46 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                           </div>
 
                           <div className="space-y-3">
-                            {funnelDrafts[funnel.id].steps.map((step, stepIndex) => (
+                            {funnelDrafts[funnel.id].steps.map((step, stepIndex) => {
+                              const offerSupported = supportsStepOffer(step.kind)
+                              const offerDraft = getFunnelStepOfferDraft(step.settings)
+                              const offerSummary = getFunnelStepOfferSummary(step.settings)
+                              const transitionSummary = getFunnelDraftTransitionSummary(
+                                funnelDrafts[funnel.id].steps,
+                                step.id
+                              )
+                              const offerErrors = validateFunnelStepOfferDraft(offerDraft, {
+                                knownProductIds: products.map((product) => product.id),
+                              })
+                              const offerCallout = offerSupported
+                                ? getPublicFunnelOfferCallout(step.kind, step.settings)
+                                : null
+                              const stepPublicPath = getStepPublicPath(siteId, funnel.id, step.kind, getPageForStep(step, availablePages), step.id)
+                              const offerPreviewLinks = offerSupported
+                                ? buildFunnelOfferPreviewLinks(stepPublicPath, step.kind, step.settings)
+                                : null
+                              const offerCartPreview = offerSupported
+                                ? getPublicCartOfferSummary({
+                                    stepKind: step.kind,
+                                    offerAccepted: offerDraft.enabled,
+                                    offerType: offerDraft.type,
+                                    offerLabel: offerDraft.label || null,
+                                    offerValue: offerDraft.type === "discount"
+                                      ? (offerDraft.discountPercent
+                                          ? `${offerDraft.discountPercent}%`
+                                          : offerDraft.discountFixed
+                                            ? formatPreviewMxn(Number(offerDraft.discountFixed || 0))
+                                            : null)
+                                      : offerDraft.type === "free_gift"
+                                        ? "Regalo incluido"
+                                        : (offerDraft.priceMxn ? formatPreviewMxn(Number(offerDraft.priceMxn || 0)) : null),
+                                    offerDiscountPercent: offerDraft.discountPercent || null,
+                                    offerDiscountFixed: offerDraft.discountFixed || null,
+                                    offerPriceMxn: offerDraft.priceMxn || null,
+                                    totalMxn: 129900,
+                                  })
+                                : null
+                              return (
                               <div key={step.id} className="grid gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 md:grid-cols-[80px_1fr_1fr_44px]">
                                 <div>
                                   <label className="mb-1.5 block text-[11px] text-slate-500">Orden</label>
@@ -2191,24 +3012,339 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                                   </select>
                                 </div>
                                 <div className="flex items-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => removeFunnelDraftStep(funnel.id, stepIndex)}
-                                    className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 transition-colors hover:bg-red-400/10 hover:text-red-400"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => moveFunnelDraftStepBy(funnel.id, stepIndex, -1)}
+                                      disabled={stepIndex === 0}
+                                      className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                                    >
+                                      <ChevronUp size={12} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveFunnelDraftStepBy(funnel.id, stepIndex, 1)}
+                                      disabled={stepIndex === funnelDrafts[funnel.id].steps.length - 1}
+                                      className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                                    >
+                                      <ChevronDown size={12} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => duplicateFunnelDraftStepAt(funnel.id, stepIndex)}
+                                      className="h-9 rounded-lg border border-white/[0.08] px-2 text-[10px] font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                    >
+                                      Duplicar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeFunnelDraftStep(funnel.id, stepIndex)}
+                                      className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 transition-colors hover:bg-red-400/10 hover:text-red-400"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
                                 </div>
                                 <div className="md:col-span-4">
                                   <div className="rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2 text-[11px] text-slate-500">
                                     URL resultante:{" "}
                                     <span className="font-mono text-slate-300">
-                                      {getStepPublicPath(siteId, funnel.id, step.kind, getPageForStep(step, availablePages))}
+                                      {stepPublicPath}
                                     </span>
                                   </div>
                                 </div>
+                                {transitionSummary && (
+                                  <div className="md:col-span-4">
+                                    <div className="flex flex-wrap gap-2 text-[11px]">
+                                      <span className="rounded-full border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-slate-300">
+                                        Siguiente: {transitionSummary.advanceLabel}
+                                      </span>
+                                      {transitionSummary.nextStepKind && (
+                                        <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-sky-300">
+                                          Paso destino: {FUNNEL_STEP_LABEL[transitionSummary.nextStepKind]}
+                                        </span>
+                                      )}
+                                      {transitionSummary.offerAcceptLabel && (
+                                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-300">
+                                          CTA oferta: {transitionSummary.offerAcceptLabel}
+                                        </span>
+                                      )}
+                                      {transitionSummary.offerSkipLabel && (
+                                        <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-amber-300">
+                                          CTA rechazo: {transitionSummary.offerSkipLabel}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {offerSupported && (
+                                  <div className="md:col-span-4">
+                                    <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div>
+                                          <p className="text-xs font-semibold text-white">Oferta del paso</p>
+                                          <p className="text-[11px] text-slate-500">
+                                            Configura upsell, downsell u orden bump sin salir del funnel.
+                                          </p>
+                                        </div>
+                                        <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-300">
+                                          <input
+                                            type="checkbox"
+                                            checked={offerDraft.enabled}
+                                            onChange={(event) => updateFunnelDraftStepOffer(funnel.id, stepIndex, { enabled: event.target.checked })}
+                                            className="h-4 w-4 rounded border-white/10 bg-white/5"
+                                          />
+                                          Activar oferta
+                                        </label>
+                                      </div>
+
+                                      {offerSummary && (
+                                        <div className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-[11px] text-cyan-100">
+                                          Oferta activa: {offerSummary}
+                                        </div>
+                                      )}
+
+                                      {offerDraft.enabled && offerErrors.length > 0 && (
+                                        <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+                                          {offerErrors.map((error) => (
+                                            <p key={`${step.id}-${error.field}`}>{error.message}</p>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                        <div>
+                                          <label className="mb-1.5 block text-[11px] text-slate-500">Tipo de oferta</label>
+                                          <select
+                                            value={offerDraft.type}
+                                            onChange={(event) => updateFunnelDraftStepOfferType(
+                                              funnel.id,
+                                              stepIndex,
+                                              event.target.value as FunnelStepOfferDraft["type"]
+                                            )}
+                                            disabled={!offerDraft.enabled}
+                                            className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2 text-sm text-white focus:outline-none disabled:opacity-50"
+                                          >
+                                            {Object.entries(FUNNEL_STEP_OFFER_TYPE_LABELS).map(([value, label]) => (
+                                              <option key={value} value={value}>{label}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="mb-1.5 block text-[11px] text-slate-500">Label visible</label>
+                                          <input
+                                            type="text"
+                                            value={offerDraft.label}
+                                            onChange={(event) => updateFunnelDraftStepOffer(funnel.id, stepIndex, { label: event.target.value })}
+                                            disabled={!offerDraft.enabled}
+                                            placeholder="Ej: Oferta exclusiva de cierre"
+                                            className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50 disabled:opacity-50"
+                                          />
+                                        </div>
+                                        {offerDraft.type !== "discount" && (
+                                          <div>
+                                            <label className="mb-1.5 block text-[11px] text-slate-500">Producto</label>
+                                            <select
+                                              value={offerDraft.productId}
+                                              onChange={(event) => updateFunnelDraftStepOfferProduct(funnel.id, stepIndex, event.target.value)}
+                                              disabled={!offerDraft.enabled}
+                                              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2 text-sm text-white focus:outline-none disabled:opacity-50"
+                                            >
+                                              <option value="">Selecciona producto</option>
+                                              {products.map((product) => (
+                                                <option key={`offer-product-${product.id}`} value={product.id}>{product.name}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        )}
+                                        {offerDraft.type !== "discount" && offerDraft.type !== "free_gift" && (
+                                          <div>
+                                            <label className="mb-1.5 block text-[11px] text-slate-500">Precio MXN (centavos)</label>
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              step={1}
+                                              value={offerDraft.priceMxn}
+                                              onChange={(event) => updateFunnelDraftStepOffer(funnel.id, stepIndex, { priceMxn: event.target.value })}
+                                              disabled={!offerDraft.enabled}
+                                              placeholder="29900"
+                                              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50 disabled:opacity-50"
+                                            />
+                                          </div>
+                                        )}
+                                        {offerDraft.type === "discount" && (
+                                          <div>
+                                            <label className="mb-1.5 block text-[11px] text-slate-500">Descuento %</label>
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              max={100}
+                                              step={1}
+                                              value={offerDraft.discountPercent}
+                                              onChange={(event) => updateFunnelDraftStepOffer(funnel.id, stepIndex, { discountPercent: event.target.value })}
+                                              disabled={!offerDraft.enabled}
+                                              placeholder="15"
+                                              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50 disabled:opacity-50"
+                                            />
+                                          </div>
+                                        )}
+                                        {offerDraft.type === "discount" && (
+                                          <div>
+                                            <label className="mb-1.5 block text-[11px] text-slate-500">Descuento fijo MXN (centavos)</label>
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              step={1}
+                                              value={offerDraft.discountFixed}
+                                              onChange={(event) => updateFunnelDraftStepOffer(funnel.id, stepIndex, { discountFixed: event.target.value })}
+                                              disabled={!offerDraft.enabled}
+                                              placeholder="5000"
+                                              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50 disabled:opacity-50"
+                                            />
+                                          </div>
+                                        )}
+                                        <div>
+                                          <label className="mb-1.5 block text-[11px] text-slate-500">CTA aceptar</label>
+                                          <input
+                                            type="text"
+                                            value={offerDraft.acceptLabel}
+                                            onChange={(event) => updateFunnelDraftStepOffer(funnel.id, stepIndex, { acceptLabel: event.target.value })}
+                                            disabled={!offerDraft.enabled}
+                                            placeholder="Sí, agregar"
+                                            className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50 disabled:opacity-50"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="mb-1.5 block text-[11px] text-slate-500">CTA rechazar</label>
+                                          <input
+                                            type="text"
+                                            value={offerDraft.declineLabel}
+                                            onChange={(event) => updateFunnelDraftStepOffer(funnel.id, stepIndex, { declineLabel: event.target.value })}
+                                            disabled={!offerDraft.enabled}
+                                            placeholder="No, gracias"
+                                            className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50 disabled:opacity-50"
+                                          />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                          <label className="mb-1.5 block text-[11px] text-slate-500">Imagen opcional</label>
+                                          <input
+                                            type="text"
+                                            value={offerDraft.imageUrl}
+                                            onChange={(event) => updateFunnelDraftStepOffer(funnel.id, stepIndex, { imageUrl: event.target.value })}
+                                            disabled={!offerDraft.enabled}
+                                            placeholder="https://..."
+                                            className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50 disabled:opacity-50"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {(offerCallout || offerCartPreview) && offerDraft.enabled && offerErrors.length === 0 && (
+                                        <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                                          {offerCallout && (
+                                            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
+                                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                                Preview del paso
+                                              </p>
+                                              <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 p-4">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                                  {offerCallout.eyebrow}
+                                                </p>
+                                                <p className="mt-2 text-sm font-semibold text-white">{offerCallout.title}</p>
+                                                <p className="mt-1 text-xs text-slate-300">{offerCallout.description}</p>
+                                                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+                                                  {offerPreviewLinks ? (
+                                                    <>
+                                                      <Link
+                                                        href={offerPreviewLinks.acceptHref}
+                                                        className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-white transition-opacity hover:opacity-90"
+                                                      >
+                                                        {step.kind === "upsell" || step.kind === "downsell"
+                                                          ? getFunnelOfferApplyLabel(step.kind)
+                                                          : offerCallout.acceptLabel}
+                                                      </Link>
+                                                      <Link
+                                                        href={offerPreviewLinks.declineHref}
+                                                        className="rounded-full border border-white/10 px-2.5 py-1 text-slate-300 transition-colors hover:text-white"
+                                                      >
+                                                        {step.kind === "upsell" || step.kind === "downsell"
+                                                          ? getFunnelOfferSkipLabel(step.kind)
+                                                          : offerCallout.declineLabel}
+                                                      </Link>
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-white">
+                                                        {step.kind === "upsell" || step.kind === "downsell"
+                                                          ? getFunnelOfferApplyLabel(step.kind)
+                                                          : offerCallout.acceptLabel}
+                                                      </span>
+                                                      <span className="rounded-full border border-white/10 px-2.5 py-1 text-slate-300">
+                                                        {step.kind === "upsell" || step.kind === "downsell"
+                                                          ? getFunnelOfferSkipLabel(step.kind)
+                                                          : offerCallout.declineLabel}
+                                                      </span>
+                                                    </>
+                                                  )}
+                                                </div>
+                                                {offerPreviewLinks && (
+                                                  <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold">
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => { void copyFunnelField(`offer-accept-${step.id}`, offerPreviewLinks.acceptHref) }}
+                                                      className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-200 transition-colors hover:border-cyan-300/35 hover:bg-cyan-500/15"
+                                                    >
+                                                      {copiedFunnelField === `offer-accept-${step.id}` ? "Aceptar copiada" : "Copiar URL aceptar"}
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => { void copyFunnelField(`offer-decline-${step.id}`, offerPreviewLinks.declineHref) }}
+                                                      className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                                    >
+                                                      {copiedFunnelField === `offer-decline-${step.id}` ? "Rechazo copiada" : "Copiar URL rechazar"}
+                                                    </button>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+                                          {offerCartPreview && (
+                                            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
+                                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                                Preview del checkout
+                                              </p>
+                                              <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 p-4">
+                                                <p className="text-sm font-semibold text-white">{offerCartPreview.title}</p>
+                                                <p className="mt-1 text-xs text-slate-300">{offerCartPreview.description}</p>
+                                                <div className="mt-3 space-y-2 text-xs">
+                                                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-slate-200">
+                                                    {offerCartPreview.checkboxLabel}
+                                                  </div>
+                                                  {offerCartPreview.estimatedLabel && offerCartPreview.estimatedValue && (
+                                                    <div className="flex items-center justify-between gap-3 text-slate-300">
+                                                      <span>{offerCartPreview.estimatedLabel}</span>
+                                                      <span className="font-semibold text-white">{offerCartPreview.estimatedValue}</span>
+                                                    </div>
+                                                  )}
+                                                  {offerCartPreview.estimatedTotalLabel && offerCartPreview.estimatedTotalValue && (
+                                                    <div className="flex items-center justify-between gap-3 text-slate-300">
+                                                      <span>{offerCartPreview.estimatedTotalLabel}</span>
+                                                      <span className="font-semibold text-white">{offerCartPreview.estimatedTotalValue}</span>
+                                                    </div>
+                                                  )}
+                                                  {offerCartPreview.finePrint && (
+                                                    <p className="text-[11px] text-slate-500">{offerCartPreview.finePrint}</p>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            ))}
+                            )})}
                           </div>
                         </div>
 
@@ -2375,6 +3511,9 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                 const variantBFunnelId = experiment.trafficSplit?.variants?.B?.funnelId ?? null
                 const variantBPage = variantBPageId ? availablePages.find((entry) => entry.id === variantBPageId) : null
                 const variantBFunnel = variantBFunnelId ? funnels.find((entry) => entry.id === variantBFunnelId) : null
+                const experimentHref = `/p/${encodeURIComponent(siteId)}/experiment/${encodeURIComponent(experiment.id)}`
+                const variantAFunnelHref = funnel ? getPrimaryFunnelStepPath(siteId, funnel, availablePages) : null
+                const variantBFunnelHref = variantBFunnel ? getPrimaryFunnelStepPath(siteId, variantBFunnel, availablePages) : null
                 return (
                   <div key={experiment.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
                     <div className="flex items-start justify-between gap-4">
@@ -2413,11 +3552,110 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                             A {splitA}% / B {splitB}%
                           </span>
                           <Link
-                            href={`/p/${encodeURIComponent(siteId)}/experiment/${encodeURIComponent(experiment.id)}`}
+                            href={experimentHref}
                             className="inline-flex items-center gap-1 rounded-full border border-[#00b5f6]/20 bg-[#00b5f6]/10 px-2 py-0.5 text-[#00b5f6] hover:text-[#33d1ff]"
                           >
                             Abrir experimento <ExternalLink size={11} />
                           </Link>
+                          <button
+                            type="button"
+                            onClick={() => { void copyExperimentField(`exp-url-${experiment.id}`, experimentHref) }}
+                            className="inline-flex items-center gap-1 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-cyan-200 transition-colors hover:border-cyan-300/35 hover:bg-cyan-500/15"
+                          >
+                            {copiedExperimentField === `exp-url-${experiment.id}` ? "URL copiada" : "Copiar URL"}
+                          </button>
+                        </div>
+                        <div className="mt-3 grid gap-2 md:grid-cols-2">
+                          <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Variante A</p>
+                            <p className="mt-2 text-sm text-white">
+                              {experiment.targetType === "page"
+                                ? (page ? `${page.name} (/${page.slug})` : "Sin página enlazada")
+                                : (funnel ? funnel.name : "Sin funnel enlazado")}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                              {experiment.targetType === "page" && page && (
+                                <>
+                                  <Link
+                                    href={getEditorPagePath(page.id)}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                  >
+                                    Editar pagina <ExternalLink size={10} />
+                                  </Link>
+                                  <Link
+                                    href={page.slug === "home" ? `/p/${encodeURIComponent(siteId)}` : `/p/${encodeURIComponent(siteId)}/${encodeURIComponent(page.slug)}`}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-[#00b5f6]/20 bg-[#00b5f6]/10 px-2 py-1 font-semibold text-[#00b5f6] hover:text-[#33d1ff]"
+                                  >
+                                    Abrir pagina <ExternalLink size={10} />
+                                  </Link>
+                                </>
+                              )}
+                              {experiment.targetType === "funnel" && funnel && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => focusFunnelFromExperiment(funnel.id)}
+                                    className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                  >
+                                    Editar funnel
+                                  </button>
+                                  {variantAFunnelHref && (
+                                    <Link
+                                      href={variantAFunnelHref}
+                                      className="inline-flex items-center gap-1 rounded-lg border border-[#00b5f6]/20 bg-[#00b5f6]/10 px-2 py-1 font-semibold text-[#00b5f6] hover:text-[#33d1ff]"
+                                    >
+                                      Abrir funnel <ExternalLink size={10} />
+                                    </Link>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-fuchsia-500/10 bg-fuchsia-500/5 p-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fuchsia-200/70">Variante B</p>
+                            <p className="mt-2 text-sm text-white">
+                              {experiment.targetType === "page"
+                                ? (variantBPage ? `${variantBPage.name} (/${variantBPage.slug})` : page ? `${page.name} (/${page.slug})` : "Mismo destino que A")
+                                : (variantBFunnel ? variantBFunnel.name : funnel ? funnel.name : "Mismo destino que A")}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                              {experiment.targetType === "page" && variantBPage && (
+                                <>
+                                  <Link
+                                    href={getEditorPagePath(variantBPage.id)}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                  >
+                                    Editar pagina B <ExternalLink size={10} />
+                                  </Link>
+                                  <Link
+                                    href={variantBPage.slug === "home" ? `/p/${encodeURIComponent(siteId)}` : `/p/${encodeURIComponent(siteId)}/${encodeURIComponent(variantBPage.slug)}`}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/10 px-2 py-1 font-semibold text-fuchsia-200 hover:text-fuchsia-100"
+                                  >
+                                    Abrir pagina B <ExternalLink size={10} />
+                                  </Link>
+                                </>
+                              )}
+                              {experiment.targetType === "funnel" && variantBFunnel && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => focusFunnelFromExperiment(variantBFunnel.id)}
+                                    className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                  >
+                                    Editar funnel B
+                                  </button>
+                                  {variantBFunnelHref && (
+                                    <Link
+                                      href={variantBFunnelHref}
+                                      className="inline-flex items-center gap-1 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/10 px-2 py-1 font-semibold text-fuchsia-200 hover:text-fuchsia-100"
+                                    >
+                                      Abrir funnel B <ExternalLink size={10} />
+                                    </Link>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         {experimentAnalytics[experiment.id] && (
                           <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
@@ -2785,44 +4023,199 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                 <p className="text-xs text-slate-500">Revisa si una regla se proceso, se salto por condiciones o fallo.</p>
               </div>
               <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-slate-300">
-                {initialAutomationRuns.length} registros
+                {filteredAutomationRuns.length}/{initialAutomationRuns.length} registros
               </span>
+            </div>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {([
+                { value: "all", label: "Todos" },
+                { value: "processed", label: "Procesadas" },
+                { value: "skipped", label: "Saltadas" },
+                { value: "failed", label: "Fallidas" },
+              ] as Array<{ value: AutomationRunResultFilter; label: string }>).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => updateAutomationRunsView({ result: option.value })}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    automationRunResultFilter === option.value
+                      ? "border-[#00b5f6]/40 bg-[#00b5f6]/10 text-[#7ddcff]"
+                      : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:border-white/[0.14] hover:text-white"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+              {(["all", ...AUTOMATION_TRIGGER_TYPES] as Array<"all" | AutomationTriggerType>).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => updateAutomationRunsView({ trigger: option })}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    automationRunTriggerFilter === option
+                      ? "border-violet-400/35 bg-violet-500/10 text-violet-200"
+                      : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:border-white/[0.14] hover:text-white"
+                  }`}
+                >
+                  {option === "all" ? "Todos los triggers" : AUTOMATION_TRIGGER_LABELS[option]}
+                </button>
+              ))}
+              {automationRunFilterAutomationId !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => updateAutomationRunsView({ automationId: "" })}
+                  className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200 transition-colors hover:border-amber-300/35 hover:bg-amber-500/15"
+                >
+                  Limpiar automatización
+                </button>
+              )}
             </div>
             {initialAutomationRuns.length === 0 ? (
               <p className="text-xs text-slate-500">Todavia no hay ejecuciones registradas para este sitio.</p>
+            ) : filteredAutomationRuns.length === 0 ? (
+              <p className="text-xs text-slate-500">No hay ejecuciones que coincidan con los filtros activos.</p>
             ) : (
               <div className="space-y-2">
-                {initialAutomationRuns.slice(0, 12).map((run) => {
+                {filteredAutomationRuns.slice(0, 12).map((run) => {
                   const resultClass =
                     run.result === "processed"
                       ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
                       : run.result === "skipped"
                         ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
                         : "border-red-500/20 bg-red-500/10 text-red-300"
+                  const payloadDetails = getAutomationRunPayloadDetails(run.payload)
+                  const runFunnel = payloadDetails.funnelId
+                    ? funnels.find((entry) => entry.id === payloadDetails.funnelId) ?? null
+                    : null
+                  const runFunnelHref = runFunnel
+                    ? getFunnelStepPathByKind(siteId, runFunnel, availablePages, payloadDetails.funnelStep)
+                    : null
 
                   return (
                     <div key={run.id} className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 md:flex-row md:items-center md:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-white">
+                          <button
+                            type="button"
+                            onClick={() => focusAutomationFromRun(run.automationId)}
+                            className="text-left text-sm font-semibold text-white transition-colors hover:text-[#7ddcff]"
+                          >
                             {automationNameMap.get(run.automationId) ?? "Automatización"}
-                          </span>
-                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${resultClass}`}>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateAutomationRunsView({ result: run.result })}
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors ${resultClass}`}
+                          >
                             {run.result === "processed" ? "Procesada" : run.result === "skipped" ? "Saltada" : "Fallida"}
-                          </span>
-                          <span className="rounded-full border border-white/[0.06] bg-white/[0.03] px-2 py-0.5 text-[10px] text-slate-400">
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateAutomationRunsView({ trigger: run.triggerType })}
+                            className="rounded-full border border-white/[0.06] bg-white/[0.03] px-2 py-0.5 text-[10px] text-slate-400 transition-colors hover:border-white/[0.14] hover:text-white"
+                          >
                             {AUTOMATION_TRIGGER_LABELS[run.triggerType]}
-                          </span>
+                          </button>
                         </div>
                         <p className="mt-1 truncate text-xs text-slate-400">
-                          {getAutomationPayloadSummary(run.payload)}
+                          {payloadDetails.summary}
                         </p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {payloadDetails.orderId && (
+                            <button
+                              type="button"
+                              onClick={() => focusOrderFromAutomationRun(payloadDetails.orderId!)}
+                              className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 transition-colors hover:border-emerald-300/35 hover:bg-emerald-500/15"
+                            >
+                              Pedido · {payloadDetails.orderId.slice(-8).toUpperCase()}
+                            </button>
+                          )}
+                          {payloadDetails.customerEmail && (
+                            <button
+                              type="button"
+                              onClick={() => { void copyAutomationRunValue(`email-${run.id}`, payloadDetails.customerEmail) }}
+                              className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-200 transition-colors hover:border-cyan-300/35 hover:bg-cyan-500/15"
+                            >
+                              {payloadDetails.customerEmail}
+                            </button>
+                          )}
+                          {payloadDetails.email && (
+                            <button
+                              type="button"
+                              onClick={() => { void copyAutomationRunValue(`contact-${run.id}`, payloadDetails.email) }}
+                              className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-200 transition-colors hover:border-cyan-300/35 hover:bg-cyan-500/15"
+                            >
+                              {payloadDetails.email}
+                            </button>
+                          )}
+                          {payloadDetails.collectionSlug && (
+                            <Link
+                              href={`/dashboard/cms/${encodeURIComponent(siteId)}/${encodeURIComponent(payloadDetails.collectionSlug)}${payloadDetails.recordId ? `?recordId=${encodeURIComponent(payloadDetails.recordId)}` : ""}`}
+                              className="rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-200 transition-colors hover:border-violet-300/35 hover:bg-violet-500/15"
+                            >
+                              CMS · {payloadDetails.collectionSlug}
+                            </Link>
+                          )}
+                          {payloadDetails.experimentId && (
+                            <button
+                              type="button"
+                              onClick={() => focusExperimentFromRun(payloadDetails.experimentId!)}
+                              className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-200 transition-colors hover:border-amber-300/35 hover:bg-amber-500/15"
+                            >
+                              Experimento
+                            </button>
+                          )}
+                          {payloadDetails.funnelStep && payloadDetails.funnelId && (
+                            <button
+                              type="button"
+                              onClick={() => focusFunnelFromExperiment(payloadDetails.funnelId!)}
+                              className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-200 transition-colors hover:border-sky-300/35 hover:bg-sky-500/15"
+                            >
+                              Editar funnel · {payloadDetails.funnelStep}
+                            </button>
+                          )}
+                          {runFunnelHref && (
+                            <Link
+                              href={runFunnelHref}
+                              className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-100 transition-colors hover:border-sky-300/35 hover:bg-sky-500/15"
+                            >
+                              Abrir paso funnel
+                            </Link>
+                          )}
+                          {payloadDetails.contactId && (
+                            <Link
+                              href={`/admin/contactos?${new URLSearchParams({
+                                ...(payloadDetails.email ? { q: payloadDetails.email } : {}),
+                                contactId: payloadDetails.contactId,
+                              }).toString()}`}
+                              className="rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-200 transition-colors hover:border-fuchsia-300/35 hover:bg-fuchsia-500/15"
+                            >
+                              Contacto · {payloadDetails.contactId.slice(-6)}
+                            </Link>
+                          )}
+                        </div>
                         {run.error && run.error !== "CONDITIONS_NOT_MATCHED" && (
                           <p className="mt-1 text-[11px] text-red-300">{run.error}</p>
                         )}
                       </div>
-                      <div className="shrink-0 text-[11px] text-slate-500">
-                        {formatAutomationRunTime(run.createdAt)}
+                      <div className="flex shrink-0 flex-col items-end gap-2 text-[11px] text-slate-500">
+                        <div>{formatAutomationRunTime(run.createdAt)}</div>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => focusAutomationFromRun(run.automationId)}
+                            className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                          >
+                            Editar regla
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { void copyAutomationRunPayload(run.id, run.payload) }}
+                            className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-200 transition-colors hover:border-cyan-300/35 hover:bg-cyan-500/15"
+                          >
+                            {copiedAutomationRunId === run.id ? "Payload copiado" : "Copiar payload"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
@@ -3071,11 +4464,302 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
       {/* Pedidos */}
       {tab === "orders" && (
         <>
-          {orders.length === 0 ? (
+          <div className="mb-4 grid gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:grid-cols-3">
+            <input
+              value={orderQuery}
+              onChange={(event) => updateOrdersView({ q: event.target.value })}
+              placeholder="Buscar por pedido, cliente o funnel"
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00b5f6]/50"
+            />
+            <select
+              value={orderStatusFilter}
+              onChange={(event) => updateOrdersView({ status: event.target.value as StoreOrderStatusFilter })}
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2 text-sm text-white focus:outline-none"
+            >
+              {ORDER_STATUS_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.value === "all" ? "Todos los estados" : option.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={orderContextFilter}
+              onChange={(event) => updateOrdersView({ context: event.target.value as StoreOrderContextFilter })}
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2 text-sm text-white focus:outline-none"
+            >
+              {ORDER_CONTEXT_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {(orderStepFilter || orderOfferTypeFilter) && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-[11px]">
+              {orderStepFilter && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-1 font-semibold text-sky-200">
+                  Paso: {orderStepFilter}
+                  <button
+                    type="button"
+                    onClick={() => removeOrderMetaFilter("step")}
+                    className="text-sky-100 transition-colors hover:text-white"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {orderOfferTypeFilter && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 font-semibold text-amber-200">
+                  Oferta: {orderOfferTypeFilter}
+                  <button
+                    type="button"
+                    onClick={() => removeOrderMetaFilter("offerType")}
+                    className="text-amber-100 transition-colors hover:text-white"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => updateOrdersView({ step: "", offerType: "" })}
+                className="font-semibold text-slate-400 transition-colors hover:text-white"
+              >
+                Limpiar facetas
+              </button>
+            </div>
+          )}
+          <div className="mb-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Estados</p>
+              <div className="flex flex-wrap gap-2">
+                {ORDER_STATUS_FILTER_OPTIONS.map((option) => {
+                  const isActive = orderStatusFilter === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateOrdersView({ status: option.value })}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        isActive
+                          ? "border-[#00b5f6]/50 bg-[#00b5f6]/15 text-[#7ddcff]"
+                          : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:border-white/[0.14] hover:text-white"
+                      }`}
+                    >
+                      <span>{option.label}</span>
+                      <span className="rounded-full bg-black/20 px-1.5 py-0.5 text-[10px] text-slate-300">
+                        {orderFilterCounts.status[option.value]}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Contexto</p>
+              <div className="flex flex-wrap gap-2">
+                {ORDER_CONTEXT_FILTER_OPTIONS.map((option) => {
+                  const isActive = orderContextFilter === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateOrdersView({ context: option.value })}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        isActive
+                          ? "border-[#00b5f6]/50 bg-[#00b5f6]/15 text-[#7ddcff]"
+                          : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:border-white/[0.14] hover:text-white"
+                      }`}
+                    >
+                      <span>{option.label}</span>
+                      <span className="rounded-full bg-black/20 px-1.5 py-0.5 text-[10px] text-slate-300">
+                        {orderFilterCounts.context[option.value]}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+          {orderMetaFacetGroups.length > 0 && (
+            <div className="mb-4 grid gap-3 md:grid-cols-2">
+              {orderMetaFacetGroups.map((group) => (
+                <div key={group.key} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleOrderFacetKey(group.key)}
+                    className="mb-2 flex w-full items-center justify-between text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 transition-colors hover:text-white"
+                  >
+                    <span>{group.label}</span>
+                    <span className="text-[10px] text-slate-600">
+                      {orderFacetKey === group.key ? "Ocultar" : "Ver mas"}
+                    </span>
+                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {group.values.map((facet) => (
+                      (() => {
+                        const isActive = group.key === "step"
+                          ? orderStepFilter === facet.value
+                          : orderOfferTypeFilter === facet.value
+                        return (
+                      <button
+                        key={`${group.key}:${facet.value}`}
+                        type="button"
+                        onClick={() => updateOrdersView({
+                          q: "",
+                          context: group.key === "offerType" ? "offer" : "funnel",
+                          step: group.key === "step" ? facet.value : orderStepFilter,
+                          offerType: group.key === "offerType" ? facet.value : orderOfferTypeFilter,
+                        })}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          isActive
+                            ? "border-[#00b5f6]/50 bg-[#00b5f6]/15 text-[#7ddcff]"
+                            : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:border-[#00b5f6]/30 hover:text-white"
+                        }`}
+                      >
+                        {facet.value}
+                        <span className="ml-1 rounded-full bg-black/20 px-1.5 py-0.5 text-[10px] text-slate-400">
+                          {facet.count}
+                        </span>
+                      </button>
+                        )
+                      })()
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {orderFacetKey && orderExpandedFacetValues.length > 0 && (
+            <div className="mb-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Mas valores de {orderFacetKey === "step" ? "Paso funnel" : "Tipo de oferta"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => updateOrdersView({ facetKey: "" })}
+                  className="text-[11px] font-semibold text-slate-400 transition-colors hover:text-white"
+                >
+                  Cerrar
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {orderExpandedFacetValues.map((facet) => {
+                  const isActive = orderFacetKey === "step"
+                    ? orderStepFilter === facet.value
+                    : orderOfferTypeFilter === facet.value
+                  return (
+                    <button
+                      key={`expanded-${orderFacetKey}:${facet.value}`}
+                      type="button"
+                      onClick={() => updateOrdersView({
+                        q: "",
+                        context: orderFacetKey === "offerType" ? "offer" : "funnel",
+                        step: orderFacetKey === "step" ? facet.value : orderStepFilter,
+                        offerType: orderFacetKey === "offerType" ? facet.value : orderOfferTypeFilter,
+                      })}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        isActive
+                          ? "border-[#00b5f6]/50 bg-[#00b5f6]/15 text-[#7ddcff]"
+                          : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:border-[#00b5f6]/30 hover:text-white"
+                      }`}
+                    >
+                      {facet.value}
+                      <span className="ml-1 rounded-full bg-black/20 px-1.5 py-0.5 text-[10px] text-slate-400">
+                        {facet.count}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <button
+              type="button"
+              onClick={() => updateOrdersView({ status: "all", context: "all", step: "", offerType: "", facetKey: "" })}
+              className={`rounded-2xl border p-4 text-left transition-colors ${
+                orderStatusFilter === "all" && orderContextFilter === "all" && !orderStepFilter && !orderOfferTypeFilter && !orderFacetKey
+                  ? "border-[#00b5f6]/40 bg-[#00b5f6]/10"
+                  : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.14] hover:bg-white/[0.03]"
+              }`}
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Pedidos visibles</p>
+              <p className="mt-2 text-2xl font-black text-white">{orderSummaryMetrics.totalOrders}</p>
+              <p className="mt-1 text-xs text-slate-500">Reinicia estado y contexto al total visible</p>
+            </button>
+            <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/5 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300/70">Ingreso filtrado</p>
+              <p className="mt-2 text-2xl font-black text-white">
+                ${orderSummaryMetrics.totalRevenueMxn.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+              </p>
+              <p className="mt-1 text-xs text-emerald-100/60">Suma de totales dentro de la vista</p>
+            </div>
+            <div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300/70">Pendientes vs cobrados</p>
+              <div className="mt-3 grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateOrdersView({ status: "pending" })}
+                  className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                    orderStatusFilter === "pending"
+                      ? "border-amber-300/50 bg-amber-400/15"
+                      : "border-amber-400/10 bg-black/10 hover:border-amber-300/25 hover:bg-black/20"
+                  }`}
+                >
+                  <div className="text-lg font-black text-white">{orderSummaryMetrics.pendingOrders}</div>
+                  <div className="text-xs text-amber-100/70">Ir a pendientes</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateOrdersView({ status: "paid" })}
+                  className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                    orderStatusFilter === "paid"
+                      ? "border-amber-300/50 bg-amber-400/15"
+                      : "border-amber-400/10 bg-black/10 hover:border-amber-300/25 hover:bg-black/20"
+                  }`}
+                >
+                  <div className="text-lg font-black text-white">{orderSummaryMetrics.paidOrders}</div>
+                  <div className="text-xs text-amber-100/70">Ir a cobrados</div>
+                </button>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-sky-500/15 bg-sky-500/5 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300/70">Contexto comercial</p>
+              <div className="mt-3 grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateOrdersView({ context: "funnel" })}
+                  className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                    orderContextFilter === "funnel"
+                      ? "border-sky-300/50 bg-sky-400/15"
+                      : "border-sky-400/10 bg-black/10 hover:border-sky-300/25 hover:bg-black/20"
+                  }`}
+                >
+                  <div className="text-lg font-black text-white">{orderSummaryMetrics.funnelOrders}</div>
+                  <div className="text-xs text-sky-100/70">Ir a pedidos con funnel</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateOrdersView({ context: "offer" })}
+                  className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                    orderContextFilter === "offer"
+                      ? "border-sky-300/50 bg-sky-400/15"
+                      : "border-sky-400/10 bg-black/10 hover:border-sky-300/25 hover:bg-black/20"
+                  }`}
+                >
+                  <div className="text-lg font-black text-white">{orderSummaryMetrics.offerOrders}</div>
+                  <div className="text-xs text-sky-100/70">Ir a pedidos con oferta</div>
+                </button>
+              </div>
+            </div>
+          </div>
+          {filteredOrders.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/[0.08] p-16 text-center">
               <ShoppingCart size={32} className="mx-auto mb-3 text-slate-700" />
-              <p className="text-sm font-semibold text-slate-500 mb-1">Sin pedidos aún</p>
-              <p className="text-xs text-slate-600">Los pedidos aparecerán aquí cuando los clientes compren</p>
+              <p className="text-sm font-semibold text-slate-500 mb-1">No hay pedidos para este filtro</p>
+              <p className="text-xs text-slate-600">Prueba cambiar estado, contexto o búsqueda.</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-white/[0.06]">
@@ -3091,35 +4775,208 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((order) => {
+                  {filteredOrders.map((order) => {
                     const st = ORDER_STATUS[order.status] ?? ORDER_STATUS.pending
                     const date = new Date(order.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+                    const noteSummary = getOrderNoteSummary(order.notes)
+                    const noteDetails = getOrderNoteDetails(order.notes)
+                    const orderItems = normalizeStoredOrderConfirmationItems(order.items)
+                    const isExpanded = expandedOrderId === order.id
                     return (
-                      <tr key={order.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                        <td className="px-4 py-3 font-mono text-[10px] text-slate-600">#{order.id.slice(-6).toUpperCase()}</td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm text-white">{order.customerName ?? "—"}</div>
-                          <div className="text-[10px] text-slate-600">{order.customerEmail}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center h-5 px-2 rounded-full text-[10px] font-semibold ${st.color}`}>
-                            {st.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-emerald-400/80 text-sm">
-                          {formatMxn(order.totalMxn)}
-                        </td>
-                        <td className="px-4 py-3 text-[11px] text-slate-500">{date}</td>
-                        <td className="px-4 py-3">
-                          {order.status === "paid" && (
-                            <button type="button"
-                              onClick={() => updateOrderStatus(order.id, "fulfilled")}
-                              className="h-6 px-2.5 rounded-lg bg-blue-500/15 text-blue-400 text-[10px] font-semibold hover:bg-blue-500/25 transition-colors">
-                              Marcar enviado
-                            </button>
-                          )}
-                        </td>
-                      </tr>
+                      <Fragment key={order.id}>
+                        <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                          <td className="px-4 py-3 font-mono text-[10px] text-slate-600">#{order.id.slice(-6).toUpperCase()}</td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm text-white">{order.customerName ?? "—"}</div>
+                            <div className="text-[10px] text-slate-600">{order.customerEmail}</div>
+                            {(noteSummary.funnelLabel || noteSummary.offerLabel || noteSummary.paidLabel) && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {noteSummary.funnelLabel && (
+                                  <button
+                                    type="button"
+                                    onClick={() => applyOrderChipFilter("funnel", noteDetails.step)}
+                                    className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-300 transition-colors hover:border-sky-300/35 hover:bg-sky-500/15"
+                                  >
+                                    {noteSummary.funnelLabel}
+                                  </button>
+                                )}
+                                {noteSummary.offerLabel && (
+                                  <button
+                                    type="button"
+                                    onClick={() => applyOrderChipFilter("offer", noteDetails.offerType)}
+                                    className="rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-300 transition-colors hover:border-fuchsia-300/35 hover:bg-fuchsia-500/15"
+                                  >
+                                    {noteSummary.offerLabel}
+                                  </button>
+                                )}
+                                {noteSummary.paidLabel && order.status !== "paid" && order.status !== "fulfilled" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => applyOrderChipFilter("paid")}
+                                    className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 transition-colors hover:border-emerald-300/35 hover:bg-emerald-500/15"
+                                  >
+                                    {noteSummary.paidLabel}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center h-5 px-2 rounded-full text-[10px] font-semibold ${st.color}`}>
+                              {st.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-emerald-400/80 text-sm">
+                            {formatMxn(order.totalMxn)}
+                          </td>
+                          <td className="px-4 py-3 text-[11px] text-slate-500">{date}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextOrderId = expandedOrderId === order.id ? null : order.id
+                                  setExpandedOrderId(nextOrderId)
+                                  updateDashboardSelection({ selectedOrderId: nextOrderId ?? "" })
+                                }}
+                                className="h-6 px-2.5 rounded-lg border border-white/[0.08] text-slate-300 text-[10px] font-semibold hover:text-white transition-colors"
+                              >
+                                {isExpanded ? "Ocultar" : "Ver detalle"}
+                              </button>
+                              {order.status === "paid" && (
+                                <button type="button"
+                                  onClick={() => updateOrderStatus(order.id, "fulfilled")}
+                                  className="h-6 px-2.5 rounded-lg bg-blue-500/15 text-blue-400 text-[10px] font-semibold hover:bg-blue-500/25 transition-colors">
+                                  Marcar enviado
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="border-b border-white/[0.04] bg-black/10">
+                            <td colSpan={6} className="px-4 py-4">
+                              <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+                                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Líneas del pedido</p>
+                                  {orderItems.length === 0 ? (
+                                    <p className="mt-3 text-xs text-slate-500">No hay líneas visibles en este pedido.</p>
+                                  ) : (
+                                    <div className="mt-3 space-y-2">
+                                      {orderItems.map((item, index) => (
+                                        <div key={`${order.id}-item-${index}`} className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                                          <div>
+                                            <p className="text-sm text-white">{item.productName}</p>
+                                            <p className="text-[11px] text-slate-500">
+                                              {item.variantName ?? "Variante"} · Cantidad {item.quantity}
+                                            </p>
+                                          </div>
+                                          <span className={`text-sm font-semibold ${item.priceMxn < 0 ? "text-fuchsia-300" : "text-emerald-300"}`}>
+                                            {formatMxn(item.priceMxn * item.quantity)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Contexto del pedido</p>
+                                  <div className="mt-3 space-y-2 text-xs">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="text-slate-500">Funnel</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-right text-slate-200">{noteDetails.funnelId ?? "—"}</span>
+                                        {noteDetails.funnelId && (
+                                          <button
+                                            type="button"
+                                            onClick={() => applyOrderChipFilter("funnel", noteDetails.step)}
+                                            className="rounded-lg border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[10px] font-semibold text-sky-300 transition-colors hover:border-sky-300/35 hover:bg-sky-500/15"
+                                          >
+                                            Filtrar
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="text-slate-500">Paso</span>
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-right">
+                                          <div className="text-slate-200">{noteDetails.step ?? "—"}</div>
+                                          {noteDetails.stepId && (
+                                            <div className="font-mono text-[10px] text-slate-500">{noteDetails.stepId}</div>
+                                          )}
+                                        </div>
+                                        {noteDetails.stepId && (
+                                          <button
+                                            type="button"
+                                            onClick={() => updateOrdersView({ q: noteDetails.stepId ?? orderQuery, context: "funnel" })}
+                                            className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                          >
+                                            Buscar
+                                          </button>
+                                        )}
+                                        {noteDetails.stepId && (
+                                          <button
+                                            type="button"
+                                            onClick={() => { void copyOrderField(`step-${order.id}`, noteDetails.stepId) }}
+                                            className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                          >
+                                            {copiedOrderField === `step-${order.id}` ? "Copiado" : "Copiar"}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="text-slate-500">Oferta</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-right text-slate-200">{noteSummary.offerLabel ?? "—"}</span>
+                                        {noteDetails.offerType && (
+                                          <button
+                                            type="button"
+                                            onClick={() => applyOrderChipFilter("offer", noteDetails.offerType)}
+                                            className="rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/10 px-2 py-1 text-[10px] font-semibold text-fuchsia-300 transition-colors hover:border-fuchsia-300/35 hover:bg-fuchsia-500/15"
+                                          >
+                                            Filtrar
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="text-slate-500">Pago MP</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-right font-mono text-slate-200">{order.mpPaymentId ?? noteDetails.paidPaymentId ?? "—"}</span>
+                                        {(order.mpPaymentId ?? noteDetails.paidPaymentId) && (
+                                          <button
+                                            type="button"
+                                            onClick={() => applyOrderChipFilter("paid")}
+                                            className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-300 transition-colors hover:border-emerald-300/35 hover:bg-emerald-500/15"
+                                          >
+                                            Filtrar
+                                          </button>
+                                        )}
+                                        {(order.mpPaymentId ?? noteDetails.paidPaymentId) && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              void copyOrderField(
+                                                `payment-${order.id}`,
+                                                order.mpPaymentId ?? noteDetails.paidPaymentId
+                                              )
+                                            }}
+                                            className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
+                                          >
+                                            {copiedOrderField === `payment-${order.id}` ? "Copiado" : "Copiar"}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     )
                   })}
                 </tbody>

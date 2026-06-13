@@ -9,6 +9,7 @@ import { isExperimentsReady, listExperiments } from "@/lib/commerce/experiments"
 import { getExperimentAnalyticsSummary } from "@/lib/commerce/experiment-analytics"
 import { isAutomationsReady, listAutomations, listAutomationRuns } from "@/lib/automation/runtime"
 import { listSitePages } from "@/lib/builder-core/tree/sitePages"
+import { AUTOMATION_TRIGGER_TYPES, type AutomationTriggerType } from "@/lib/automation/config"
 import StoreImpl from "@/app/dashboard/store/[siteId]/page.impl"
 
 interface Props {
@@ -16,6 +17,17 @@ interface Props {
 }
 
 export const metadata = { title: "Tienda — Productos · Orvenix" }
+
+function normalizeProductAttributes(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entryValue]) => [key, String(entryValue ?? "")])
+  )
+}
+
+function isAutomationTriggerType(value: string): value is AutomationTriggerType {
+  return AUTOMATION_TRIGGER_TYPES.includes(value as AutomationTriggerType)
+}
 
 export default async function StorePage({ params }: Props) {
   const { siteId } = await params
@@ -55,6 +67,31 @@ export default async function StorePage({ params }: Props) {
     listAutomationRuns(siteId, 60),
   ])
 
+  const normalizedProducts = products.map((product) => ({
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    type: product.type,
+    status: product.status,
+    media: product.media,
+    variants: product.variants.map((variant) => ({
+      id: variant.id,
+      sku: variant.sku,
+      name: variant.name,
+      priceMxn: variant.priceMxn,
+      comparePriceMxn: variant.comparePriceMxn,
+      stock: variant.stock,
+      attributes: normalizeProductAttributes(variant.attributes),
+    })),
+  }))
+
+  const normalizedAutomationRuns = automationRuns
+    .filter((run) => isAutomationTriggerType(run.triggerType))
+    .map((run) => ({
+      ...run,
+      triggerType: run.triggerType as AutomationTriggerType,
+    }))
+
   return (
     <div className="min-h-screen dashboard-shell text-white">
       <div className="fixed inset-0 pointer-events-none">
@@ -65,7 +102,7 @@ export default async function StorePage({ params }: Props) {
         <StoreImpl
           siteId={siteId}
           siteName={site.name}
-          initialProducts={products}
+          initialProducts={normalizedProducts}
           initialOrders={orders}
           initialFunnels={funnels}
           funnelsReady={funnelsReady}
@@ -75,7 +112,7 @@ export default async function StorePage({ params }: Props) {
           experimentAnalytics={experimentAnalytics}
           initialAutomations={automations}
           automationsReady={automationsReady}
-          initialAutomationRuns={automationRuns}
+          initialAutomationRuns={normalizedAutomationRuns}
           availablePages={pages.map((page) => ({
             id: page.id ?? "",
             name: page.name,

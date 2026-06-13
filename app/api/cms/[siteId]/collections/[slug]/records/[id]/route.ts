@@ -4,12 +4,13 @@ import { editorPrisma } from "@/lib/editor-db"
 import { canManageSite } from "@/lib/auth"
 import type { UserRole } from "@/lib/auth"
 import type { Prisma } from "@/generated/editor-prisma"
-import { normalizeCmsRecordData, parseCmsFields } from "@/lib/cms/schema"
+import { parseCmsFields, validateCmsRecordData } from "@/lib/cms/schema"
 import {
   getCmsWorkflowPublishedAt,
   getCmsWorkflowStatus,
   isCmsWorkflowStatus,
   withCmsWorkflowStatus,
+  withCmsWorkflowStatusApproval,
 } from "@/lib/cms/workflow"
 
 type Ctx = { params: Promise<{ siteId: string; slug: string; id: string }> }
@@ -23,7 +24,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const allowed = await canManageSite(siteId, session.user.id, (session.user.role ?? "CLIENT") as UserRole)
   if (!allowed) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 })
 
-  const body = await req.json() as { data?: unknown; published?: boolean; workflowStatus?: unknown }
+  const body = await req.json() as { data?: unknown; published?: boolean; workflowStatus?: unknown; workflowComment?: unknown }
   const collection = await editorPrisma.collection.findUnique({
     where: { siteId_slug: { siteId, slug } },
     select: { id: true, fields: true },
@@ -43,10 +44,32 @@ export async function PATCH(req: Request, { params }: Ctx) {
       ? (body.published ? "published" : "draft")
       : getCmsWorkflowStatus(existingRecord.data, existingRecord.publishedAt)
 
-  const baseData = body.data !== undefined
-    ? normalizeCmsRecordData(fields, body.data)
-    : (existingRecord.data as Record<string, unknown>)
-  const nextData = withCmsWorkflowStatus(baseData, status)
+  const validation = body.data !== undefined
+    ? validateCmsRecordData(fields, body.data)
+    : null
+  if (validation && !validation.valid) {
+    return NextResponse.json(
+      { error: "CMS_VALIDATION_FAILED", errors: validation.errors },
+      { status: 400 },
+    )
+  }
+
+  const baseData = validation?.data ?? (existingRecord.data as Record<string, unknown>)
+  const currentStatus = getCmsWorkflowStatus(existingRecord.data, existingRecord.publishedAt)
+  const shouldRecordApproval = status !== currentStatus || body.workflowStatus !== undefined || body.published !== undefined
+  const workflowComment = typeof body.workflowComment === "string" ? body.workflowComment : undefined
+  const nextData = shouldRecordApproval
+    ? withCmsWorkflowStatusApproval(
+        baseData,
+        status,
+        {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+        },
+        workflowComment,
+      )
+    : withCmsWorkflowStatus(baseData, status)
 
   const record = await editorPrisma.record.update({
     where: { id },

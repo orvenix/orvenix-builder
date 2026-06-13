@@ -4,8 +4,23 @@ import { ContactsTable } from './ContactsTable';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminContactosPage() {
+export type AdminContactosSearchParams = { [key: string]: string | string[] | undefined };
+
+interface Props {
+  searchParams?: AdminContactosSearchParams;
+}
+
+function getSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? '';
+}
+
+export async function AdminContactosPageContent({ searchParams }: Props) {
   const contacts = await readContacts();
+  const initialQuery = getSearchParam(searchParams?.q).trim();
+  const parsedContactId = Number(getSearchParam(searchParams?.contactId));
+  const initialExpandedId = Number.isInteger(parsedContactId)
+    ? contacts.find((contact) => contact.id === parsedContactId)?.id ?? null
+    : null;
 
   return (
     <div>
@@ -32,7 +47,13 @@ export default async function AdminContactosPage() {
         )}
       </div>
 
-      <ContactsTable initialContacts={contacts} />
+      <ContactsTable
+        initialContacts={contacts}
+        initialQuery={initialQuery}
+        initialExpandedId={initialExpandedId}
+      />
     </div>
   );
 }
+
+export default AdminContactosPageContent;

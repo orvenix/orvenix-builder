@@ -4,7 +4,7 @@ import { editorPrisma } from "@/lib/editor-db"
 import { canManageSite } from "@/lib/auth"
 import type { UserRole } from "@/lib/auth"
 import type { Prisma } from "@/generated/editor-prisma"
-import { normalizeCmsRecordData, parseCmsFields } from "@/lib/cms/schema"
+import { parseCmsFields, validateCmsRecordData } from "@/lib/cms/schema"
 import { resolveCmsRecordRelations } from "@/lib/cms/relations"
 import {
   getCmsWorkflowPublishedAt,
@@ -13,6 +13,8 @@ import {
   withCmsWorkflowStatus,
 } from "@/lib/cms/workflow"
 import { triggerAutomations } from "@/lib/automation/runtime"
+import { applyCmsFilterGroup, parseCmsFilterGroup } from "@/lib/cms/filters"
+import { parseCmsRecordsPagination } from "@/lib/cms/pagination"
 
 type Ctx = { params: Promise<{ siteId: string; slug: string }> }
 
@@ -33,8 +35,7 @@ export async function GET(req: Request, { params }: Ctx) {
   if (!collection) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 })
 
   const url = new URL(req.url)
-  const page    = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1",  10))
-  const limit   = Math.min(200, parseInt(url.searchParams.get("limit") ?? "50", 10))
+  const { page, limit, offset } = parseCmsRecordsPagination(url.searchParams.get("page"), url.searchParams.get("limit"))
   const onlyPub = url.searchParams.get("published") === "true"
   const expandRelations = url.searchParams.get("expand") === "relations"
   const statusParam = url.searchParams.get("status")
@@ -42,6 +43,7 @@ export async function GET(req: Request, { params }: Ctx) {
   const search = (url.searchParams.get("q") ?? "").trim().toLowerCase()
   const sort = url.searchParams.get("sort") ?? "createdAt_desc"
   const recordId = (url.searchParams.get("recordId") ?? "").trim()
+  const filterGroup = parseCmsFilterGroup(url.searchParams.get("filter"))
 
   const baseWhere = {
     collectionId: collection.id,
@@ -49,13 +51,13 @@ export async function GET(req: Request, { params }: Ctx) {
     ...(onlyPub || workflowStatus === "published" ? { publishedAt: { not: null } } : {}),
   }
 
-  const requiresClientFilter = Boolean(search) || (workflowStatus && workflowStatus !== "published") || sort !== "createdAt_desc"
+  const requiresClientFilter = Boolean(search) || Boolean(filterGroup) || (workflowStatus && workflowStatus !== "published") || sort !== "createdAt_desc"
 
   const recordsResult = await editorPrisma.record.findMany({
     where: baseWhere,
     orderBy: { createdAt: "desc" },
     ...(requiresClientFilter ? {} : {
-      skip: (page - 1) * limit,
+      skip: offset,
       take: limit,
     }),
   })
@@ -67,6 +69,13 @@ export async function GET(req: Request, { params }: Ctx) {
       const haystack = JSON.stringify(record.data).toLowerCase()
       return haystack.includes(search)
     })
+
+  const filteredByAdvancedFilters = applyCmsFilterGroup(
+    filteredRecords.map((record) => ({ ...record, data: record.data as Record<string, unknown> })),
+    filterGroup,
+  )
+
+  const sortedRecords = filteredByAdvancedFilters
     .sort((left, right) => {
       switch (sort) {
         case "createdAt_asc":
@@ -85,10 +94,10 @@ export async function GET(req: Request, { params }: Ctx) {
       }
     })
 
-  const total = filteredRecords.length
+  const total = sortedRecords.length
   const records = requiresClientFilter
-    ? filteredRecords.slice((page - 1) * limit, page * limit)
-    : filteredRecords
+    ? sortedRecords.slice(offset, offset + limit)
+    : sortedRecords
 
   const payloadRecords = expandRelations
     ? (await resolveCmsRecordRelations(siteId, collection, records)).map((record, index) => ({
@@ -128,7 +137,15 @@ export async function POST(req: Request, { params }: Ctx) {
     : body.published
       ? "published"
       : "draft"
-  const data = withCmsWorkflowStatus(normalizeCmsRecordData(fields, body.data ?? {}), status)
+  const validation = validateCmsRecordData(fields, body.data ?? {})
+  if (!validation.valid) {
+    return NextResponse.json(
+      { error: "CMS_VALIDATION_FAILED", errors: validation.errors },
+      { status: 400 },
+    )
+  }
+
+  const data = withCmsWorkflowStatus(validation.data, status)
   const record = await editorPrisma.record.create({
     data: {
       collectionId: collection.id,
