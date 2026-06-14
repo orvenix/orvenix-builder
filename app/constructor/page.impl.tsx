@@ -68,6 +68,8 @@ function normalizeSource(
   const sourceValue = Array.isArray(source) ? source[0] : source;
   const normalizedSource = sourceValue?.trim() ?? "";
 
+  if (normalizedSource === "blank") return "blank";
+
   // Check rich industry templates first
   if (normalizedSource && isEditorWebId(normalizedSource)) {
     return normalizedSource;
@@ -97,7 +99,17 @@ function normalizeSource(
   return "agencia";
 }
 
+function createBlankEditorTree(): EditorTree {
+  return {
+    rootId: "root",
+    nodes: {
+      root: { id: "root", type: "section", props: {}, children: [], version: 1 },
+    },
+  };
+}
+
 function getInitialTree(source: string): EditorTree {
+  if (source === "blank") return createBlankEditorTree();
   if (isEditorWebId(source)) {
     return WEB_EDITOR_TREES[source];
   }
@@ -109,11 +121,13 @@ function createDraftId(source: string) {
 }
 
 function toPreviewHref(source: string): string {
+  if (source === "blank") return "/";
   if (isEditorWebId(source)) return `/webs/${source}`;
   return getConstructorPresetPreviewHref(source) ?? "/";
 }
 
 function getSourceMeta(source: string): { label: string; emoji: string } {
+  if (source === "blank") return { label: "Lienzo en blanco", emoji: "✦" };
   const preset = INDUSTRY_PRESETS.find((p) => p.source === source);
   if (preset) return { label: preset.label, emoji: preset.emoji };
   if (source in WEB_LABELS)

@@ -150,7 +150,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/constructor"
+                href="/constructor?source=blank"
                 className="relative flex h-11 items-center gap-2 overflow-hidden rounded-2xl px-4 text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:scale-[0.98]"
                 style={{
                   background: "linear-gradient(135deg, #00b5f6 0%, #0083b3 100%)",
@@ -236,7 +236,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  href="/constructor"
+                  href="/constructor?source=blank"
                   className="relative flex h-11 items-center gap-2 overflow-hidden rounded-2xl px-5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:scale-[0.98]"
                   style={{
                     background: "linear-gradient(135deg, #22c55e 0%, #06b6d4 100%)",
@@ -289,7 +289,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
             {/* Add new card */}
             <Link
-              href="/constructor"
+              href="/constructor?source=blank"
               className="group flex flex-col items-center justify-center gap-3 rounded-[26px] border border-dashed border-[rgba(0,181,246,0.18)] bg-white/[0.02] p-8 text-center transition-all hover:-translate-y-0.5 hover:border-[rgba(0,181,246,0.35)] hover:bg-[rgba(0,181,246,0.04)]"
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[rgba(0,181,246,0.20)] bg-[rgba(0,181,246,0.10)] transition-transform group-hover:scale-110">

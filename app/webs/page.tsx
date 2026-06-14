@@ -42,7 +42,7 @@ export default function WebsHub() {
                 Ver catálogo
                 <ArrowRight size={16} />
               </a>
-              <Link href="/constructor" className="webs-secondary-link">
+              <Link href="/constructor?source=blank" className="webs-secondary-link">
                 Crear desde cero
               </Link>
             </div>

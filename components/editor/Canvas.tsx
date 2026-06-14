@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DynamicRenderer } from "@/components/editor/DynamicRenderer";
+import { GuidedBlankCanvas, type GuidedSectionSuggestion } from "@/components/editor/GuidedBlankCanvas";
 import { useEditorStore } from "@/components/editor/store/useEditorStore";
 import { cn } from "@/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
@@ -11,7 +12,6 @@ import { getFreeInsertProps } from "@/components/editor/freeInsert";
 import { resolveResponsiveProps } from "@/components/editor/responsive";
 import {
   ZoomIn, ZoomOut, Maximize2, Minimize2,
-  LayoutTemplate, Sparkles, MousePointerClick,
   MessageSquarePlus,
 } from "lucide-react";
 import type { EditorTree, NodeId, EditorComment } from "@/types/editor";
@@ -63,6 +63,10 @@ export const Canvas = () => {
   const pasteNodeAt = useEditorStore((s) => s.pasteNodeAt);
   const addNode = useEditorStore((s) => s.addNode);
   const rootId = useEditorStore((s) => s.tree.rootId);
+
+  const handleGuidedSectionInsert = useCallback((suggestion: GuidedSectionSuggestion) => {
+    addNode({ type: suggestion.type, parentId: rootId });
+  }, [addNode, rootId]);
 
   const [zoom, setZoom] = useState(100);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
@@ -412,39 +416,9 @@ export const Canvas = () => {
                   </div>
                 )}
 
-                {/* Empty state */}
+                {/* Guided blank canvas */}
                 {isEmpty && !isOver && !isPreviewMode && (
-                  <div className="pointer-events-none absolute inset-0 flex select-none flex-col items-center justify-center gap-5 px-6 py-32">
-                    {/* Animated background circles */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-64 h-64 rounded-full opacity-[0.03]"
-                        style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)", animation: "editor-glow-pulse 3s ease-in-out infinite" }} />
-                    </div>
-
-                    <div className="relative">
-                      <div className="grid h-16 w-16 place-items-center rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white text-slate-300 shadow-sm">
-                        <LayoutTemplate size={26} />
-                      </div>
-                      {/* Floating sparkle */}
-                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-indigo-500/10 border border-indigo-500/20 grid place-items-center"
-                        style={{ animation: "editor-bounce-subtle 2s ease-in-out infinite" }}>
-                        <Sparkles size={10} className="text-indigo-400" />
-                      </div>
-                    </div>
-
-                    <div className="relative text-center max-w-[220px]">
-                      <div className="text-sm font-bold text-slate-500 mb-1">Canvas vacío</div>
-                      <div className="text-xs leading-relaxed text-slate-400">
-                        Arrastra un bloque desde el panel izquierdo o haz clic en uno para comenzar
-                      </div>
-                    </div>
-
-                    {/* Quick action hint */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50">
-                      <MousePointerClick size={11} className="text-slate-400" />
-                      <span className="text-[10px] text-slate-400 font-medium">Clic en cualquier bloque del panel</span>
-                    </div>
-                  </div>
+                  <GuidedBlankCanvas onInsertSuggestion={handleGuidedSectionInsert} />
                 )}
 
                 {marqueeBox && !isPreviewMode && (
