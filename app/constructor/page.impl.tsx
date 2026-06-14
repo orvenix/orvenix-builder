@@ -138,11 +138,6 @@ export default async function ConstructorPage({ searchParams }: ConstructorPageP
   const initialTree = getInitialTree(sourceFile);
   const { label: sourceLabel, emoji: sourceEmoji } = getSourceMeta(sourceFile);
 
-  const presetItems = INDUSTRY_PRESETS.map((preset, index) => ({
-    preset,
-    showSep: index === 0 || preset.category !== INDUSTRY_PRESETS[index - 1]?.category,
-  }));
-
   return (
     <EditorProvider websiteId={websiteId} initialTree={initialTree}>
       <div className="ov-shell flex flex-col h-screen overflow-hidden">
@@ -206,58 +201,6 @@ export default async function ConstructorPage({ searchParams }: ConstructorPageP
               </div>
               <PublishButton />
             </div>
-          </div>
-
-          {/* Row 2: Industry template switcher */}
-          <div className="ov-topbar-row-sep flex items-center gap-0 overflow-x-auto px-3 py-1.5 scrollbar-none">
-            <span className="ov-pages-label shrink-0 pr-2">Sitios</span>
-
-            {presetItems.map(({ preset, showSep }) => {
-              const isActive = preset.source === sourceFile;
-
-              return (
-                <span key={preset.source} className="flex items-center gap-0 shrink-0">
-                  {showSep && (
-                    <span className="mx-2 h-3.5 w-px bg-white/8 shrink-0" />
-                  )}
-                  <Link
-                    href={`/constructor?source=${encodeURIComponent(preset.source)}`}
-                    className={
-                      isActive
-                        ? "ov-source-pill-active ov-industry-pill"
-                        : "ov-source-pill ov-industry-pill"
-                    }
-                  >
-                    <span className="mr-1 text-[12px] leading-none">{preset.emoji}</span>
-                    {preset.label}
-                  </Link>
-                </span>
-              );
-            })}
-
-            {/* Legacy Orvenix pages section */}
-            <span className="mx-2 h-3.5 w-px bg-white/8 shrink-0" />
-            <span className="ov-pages-label shrink-0 px-1 text-white/20">Orvenix</span>
-            {(["home", "platform", "pricing", "contact", "faq"] as const).map((src) => {
-              const labels: Record<string, string> = {
-                home: "Inicio", platform: "Plataforma",
-                pricing: "Precios", contact: "Contacto", faq: "FAQ",
-              };
-              const isActive = src === sourceFile;
-              return (
-                <Link
-                  key={src}
-                  href={`/constructor?source=${src}`}
-                  className={
-                    isActive
-                      ? "ov-source-pill-active shrink-0 ml-1"
-                      : "ov-source-pill shrink-0 ml-1 opacity-50"
-                  }
-                >
-                  {labels[src]}
-                </Link>
-              );
-            })}
           </div>
         </header>
 
