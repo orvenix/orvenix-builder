@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import * as Icons from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { EditorTree, NodeProps } from "@/types/editor";
 
 const TONE_STYLES = {
   cyan: "border-cyan-400/30 bg-cyan-50/70 text-cyan-950 shadow-cyan-950/[0.07]",
@@ -16,11 +17,28 @@ const TONE_STYLES = {
   slate: "border-slate-300/70 bg-white/72 text-slate-900 shadow-slate-950/[0.08]",
 } as const;
 
+type GuidedTemplateId =
+  | "hero"
+  | "nav"
+  | "trust"
+  | "features"
+  | "services"
+  | "capabilities"
+  | "architecture"
+  | "stats"
+  | "products"
+  | "process"
+  | "testimonials"
+  | "pricing"
+  | "contact"
+  | "cta"
+  | "footer";
+
 export type GuidedSectionSuggestion = {
-  id: string;
+  id: GuidedTemplateId;
   label: string;
   description: string;
-  type: string;
+  template: GuidedTemplateId;
   icon: keyof typeof Icons;
   x: number;
   y: number;
@@ -28,22 +46,213 @@ export type GuidedSectionSuggestion = {
 };
 
 export const GUIDED_SECTION_SUGGESTIONS: GuidedSectionSuggestion[] = [
-  { id: "hero", label: "Hero principal", description: "Apertura con propuesta y CTA", type: "landing-hero", icon: "PanelsTopLeft", x: 20, y: 18, tone: "cyan" },
-  { id: "nav", label: "Navegación", description: "Menú superior del sitio", type: "siteNav", icon: "Navigation", x: 48, y: 13, tone: "slate" },
-  { id: "trust", label: "Confianza", description: "Logos, sellos o indicadores", type: "modular-trust", icon: "BadgeCheck", x: 76, y: 18, tone: "teal" },
-  { id: "features", label: "Características", description: "Beneficios clave en grilla", type: "landing-features", icon: "LayoutGrid", x: 13, y: 38, tone: "sky" },
-  { id: "services", label: "Servicios", description: "Oferta comercial modular", type: "agency-services", icon: "BriefcaseBusiness", x: 34, y: 33, tone: "emerald" },
-  { id: "capabilities", label: "Capacidades", description: "Módulos y ventajas del producto", type: "modular-capabilities", icon: "Zap", x: 64, y: 34, tone: "violet" },
-  { id: "architecture", label: "Arquitectura", description: "Flujo técnico o integraciones", type: "modular-architecture", icon: "Network", x: 87, y: 39, tone: "slate" },
-  { id: "stats", label: "Métricas", description: "Números de impacto rápidos", type: "ec-stats-bar", icon: "TrendingUp", x: 22, y: 58, tone: "amber" },
-  { id: "products", label: "Productos", description: "Catálogo o vitrina comercial", type: "ec-product-grid", icon: "ShoppingBag", x: 47, y: 55, tone: "emerald" },
-  { id: "process", label: "Proceso", description: "Pasos claros de trabajo", type: "modular-process", icon: "Workflow", x: 72, y: 57, tone: "sky" },
-  { id: "testimonials", label: "Testimonios", description: "Prueba social de clientes", type: "landing-testimonials", icon: "MessageSquareQuote", x: 10, y: 79, tone: "rose" },
-  { id: "pricing", label: "Precios", description: "Planes, paquetes o membresías", type: "landing-pricing-real", icon: "BadgeDollarSign", x: 32, y: 78, tone: "amber" },
-  { id: "contact", label: "Formulario", description: "Captación de leads o solicitud", type: "modular-contact-form", icon: "MailPlus", x: 56, y: 78, tone: "cyan" },
-  { id: "cta", label: "CTA final", description: "Cierre directo a conversión", type: "agency-cta", icon: "MousePointerClick", x: 78, y: 78, tone: "violet" },
-  { id: "footer", label: "Footer", description: "Cierre con enlaces y marca", type: "landing-footer", icon: "Rows3", x: 91, y: 66, tone: "slate" },
+  { id: "hero", label: "Hero principal", description: "Apertura clara con propuesta y CTA", template: "hero", icon: "PanelsTopLeft", x: 20, y: 18, tone: "cyan" },
+  { id: "nav", label: "Navegación", description: "Cabecera simple con enlaces base", template: "nav", icon: "Navigation", x: 48, y: 13, tone: "slate" },
+  { id: "trust", label: "Confianza", description: "Sellos, garantías o datos clave", template: "trust", icon: "BadgeCheck", x: 76, y: 18, tone: "teal" },
+  { id: "features", label: "Características", description: "Beneficios principales del sitio", template: "features", icon: "LayoutGrid", x: 13, y: 38, tone: "sky" },
+  { id: "services", label: "Servicios", description: "Oferta organizada para vender", template: "services", icon: "BriefcaseBusiness", x: 34, y: 33, tone: "emerald" },
+  { id: "capabilities", label: "Capacidades", description: "Qué puede hacer tu solución", template: "capabilities", icon: "Zap", x: 64, y: 34, tone: "violet" },
+  { id: "architecture", label: "Cómo funciona", description: "Explica tu método o sistema", template: "architecture", icon: "Network", x: 87, y: 39, tone: "slate" },
+  { id: "stats", label: "Métricas", description: "Números para reforzar confianza", template: "stats", icon: "TrendingUp", x: 22, y: 58, tone: "amber" },
+  { id: "products", label: "Productos", description: "Muestra una vitrina sencilla", template: "products", icon: "ShoppingBag", x: 47, y: 55, tone: "emerald" },
+  { id: "process", label: "Proceso", description: "Pasos simples de trabajo", template: "process", icon: "Workflow", x: 72, y: 57, tone: "sky" },
+  { id: "testimonials", label: "Testimonios", description: "Opiniones y prueba social", template: "testimonials", icon: "MessageSquareQuote", x: 10, y: 79, tone: "rose" },
+  { id: "pricing", label: "Precios", description: "Planes o paquetes comparables", template: "pricing", icon: "BadgeDollarSign", x: 32, y: 78, tone: "amber" },
+  { id: "contact", label: "Contacto", description: "Invita a escribir o agendar", template: "contact", icon: "MailPlus", x: 56, y: 78, tone: "cyan" },
+  { id: "cta", label: "CTA final", description: "Cierre directo a conversión", template: "cta", icon: "MousePointerClick", x: 78, y: 78, tone: "violet" },
+  { id: "footer", label: "Footer", description: "Cierre con marca y enlaces", template: "footer", icon: "Rows3", x: 91, y: 66, tone: "slate" },
 ];
+
+type GuidedTemplate = {
+  heading: string;
+  body: string;
+  align?: "left" | "center";
+  as?: "section" | "header" | "footer";
+  button?: string;
+  items?: string[];
+};
+
+const GUIDED_SECTION_TEMPLATES: Record<GuidedTemplateId, GuidedTemplate> = {
+  hero: {
+    heading: "Título principal de tu sitio",
+    body: "Describe en una frase qué haces, para quién es y por qué vale la pena continuar.",
+    align: "center",
+    as: "header",
+    button: "Comenzar ahora",
+  },
+  nav: {
+    heading: "Nombre de tu marca",
+    body: "Inicio · Servicios · Precios · Contacto",
+    as: "header",
+  },
+  trust: {
+    heading: "Por qué pueden confiar en ti",
+    body: "Resume certificaciones, garantías, experiencia o señales de credibilidad que reduzcan dudas.",
+    items: ["Años de experiencia", "Clientes atendidos", "Garantía o soporte"],
+  },
+  features: {
+    heading: "Características principales",
+    body: "Presenta tres beneficios concretos que expliquen el valor de tu producto o servicio.",
+    items: ["Beneficio claro", "Implementación sencilla", "Resultado medible"],
+  },
+  services: {
+    heading: "Servicios destacados",
+    body: "Organiza tu oferta para que el visitante entienda rápidamente qué puede contratar.",
+    items: ["Servicio principal", "Servicio complementario", "Acompañamiento"],
+  },
+  capabilities: {
+    heading: "Qué puede hacer tu solución",
+    body: "Explica capacidades, módulos o entregables sin usar lenguaje demasiado técnico.",
+    items: ["Automatiza tareas", "Centraliza información", "Mejora el seguimiento"],
+  },
+  architecture: {
+    heading: "Cómo funciona",
+    body: "Muestra el método, proceso interno o sistema de trabajo que hace confiable tu propuesta.",
+    items: ["Diagnóstico", "Implementación", "Optimización"],
+  },
+  stats: {
+    heading: "Resultados en números",
+    body: "Agrega métricas simples que respalden tu promesa y ayuden a comparar tu valor.",
+    items: ["+120 proyectos", "98% satisfacción", "24h respuesta"],
+  },
+  products: {
+    heading: "Productos o paquetes",
+    body: "Crea una vitrina inicial para mostrar opciones, categorías o soluciones disponibles.",
+    items: ["Producto destacado", "Paquete recomendado", "Solución personalizada"],
+  },
+  process: {
+    heading: "Proceso de trabajo",
+    body: "Explica qué sucede desde el primer contacto hasta la entrega final.",
+    items: ["1. Consulta", "2. Propuesta", "3. Entrega"],
+  },
+  testimonials: {
+    heading: "Lo que dicen tus clientes",
+    body: "Incluye opiniones breves que transmitan confianza y resultados reales.",
+    items: ["Cliente satisfecho", "Resultado logrado", "Experiencia de servicio"],
+  },
+  pricing: {
+    heading: "Planes y precios",
+    body: "Presenta opciones simples para que el visitante sepa cuál es el siguiente paso.",
+    items: ["Básico", "Profesional", "A medida"],
+  },
+  contact: {
+    heading: "Hablemos de tu proyecto",
+    body: "Invita al usuario a dejar sus datos, escribir por WhatsApp o agendar una llamada.",
+    button: "Solicitar información",
+  },
+  cta: {
+    heading: "Listo para dar el siguiente paso",
+    body: "Cierra la página con una invitación directa, concreta y fácil de entender.",
+    align: "center",
+    button: "Quiero empezar",
+  },
+  footer: {
+    heading: "Tu marca",
+    body: "Agrega enlaces importantes, datos de contacto y una frase breve de cierre.",
+    as: "footer",
+    items: ["Privacidad", "Términos", "Contacto"],
+  },
+};
+
+export function buildGuidedSectionTree(suggestion: GuidedSectionSuggestion): EditorTree {
+  const template = GUIDED_SECTION_TEMPLATES[suggestion.template];
+  const id = suggestion.id;
+  const sectionId = `guided-${id}-section`;
+  const headingId = `guided-${id}-heading`;
+  const bodyId = `guided-${id}-body`;
+  const itemIds = (template.items ?? []).map((_, index) => `guided-${id}-item-${index + 1}`);
+  const buttonId = template.button ? `guided-${id}-button` : null;
+  const align = template.align ?? "left";
+  const sectionProps: NodeProps = {
+    as: template.as ?? "section",
+    maxWidth: id === "nav" || id === "footer" ? "xl" : "lg",
+    paddingY: id === "nav" ? "sm" : id === "hero" || id === "cta" ? "xl" : "lg",
+    paddingX: "md",
+    align,
+    background: id === "hero" || id === "cta" ? "#f8fafc" : "#ffffff",
+    border: id === "nav" || id === "footer" ? "1px solid rgba(15, 23, 42, 0.08)" : undefined,
+  };
+
+  return {
+    rootId: sectionId,
+    nodes: {
+      [sectionId]: {
+        id: sectionId,
+        type: "section",
+        displayName: suggestion.label,
+        props: sectionProps,
+        children: [headingId, bodyId, ...itemIds, ...(buttonId ? [buttonId] : [])],
+        version: 1,
+      },
+      [headingId]: {
+        id: headingId,
+        type: "heading",
+        displayName: `Título - ${suggestion.label}`,
+        props: {
+          text: template.heading,
+          level: id === "hero" ? 1 : 2,
+          size: id === "hero" ? "5xl" : id === "nav" || id === "footer" ? "2xl" : "3xl",
+          weight: "bold",
+          align,
+          color: "#0f172a",
+          marginBottom: "md",
+        },
+        children: [],
+        version: 1,
+      },
+      [bodyId]: {
+        id: bodyId,
+        type: "text",
+        displayName: `Texto - ${suggestion.label}`,
+        props: {
+          content: template.body,
+          size: id === "hero" ? "lg" : "md",
+          color: "#475569",
+          align,
+          maxWidth: align === "center" ? "lg" : "md",
+        },
+        children: [],
+        version: 1,
+      },
+      ...Object.fromEntries(
+        (template.items ?? []).map((item, index) => [
+          itemIds[index],
+          {
+            id: itemIds[index],
+            type: "text",
+            displayName: `Punto ${index + 1}`,
+            props: {
+              content: item,
+              size: "md",
+              color: "#334155",
+              align,
+              maxWidth: "md",
+            },
+            children: [],
+            version: 1,
+          },
+        ])
+      ),
+      ...(buttonId
+        ? {
+            [buttonId]: {
+              id: buttonId,
+              type: "ctaButton",
+              displayName: `Botón - ${suggestion.label}`,
+              props: {
+                label: template.button,
+                href: "#contacto",
+                variant: "primary",
+                size: id === "hero" || id === "cta" ? "lg" : "md",
+              },
+              children: [],
+              version: 1,
+            },
+          }
+        : {}),
+    },
+  };
+}
 
 interface GuidedBlankCanvasProps {
   onInsertSuggestion: (suggestion: GuidedSectionSuggestion) => void;
@@ -61,6 +270,12 @@ export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps
       onInsertSuggestion(suggestion);
     }, 180);
   };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
