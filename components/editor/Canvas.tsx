@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DynamicRenderer } from "@/components/editor/DynamicRenderer";
-import { GuidedBlankCanvas, buildGuidedSectionTree, type GuidedSectionSuggestion } from "@/components/editor/GuidedBlankCanvas";
+import { GuidedBlankCanvas, buildGuidedSectionTree, type GuidedSectionDraft, type GuidedSectionSuggestion } from "@/components/editor/GuidedBlankCanvas";
 import { useEditorStore } from "@/components/editor/store/useEditorStore";
 import { cn } from "@/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
@@ -65,8 +65,8 @@ export const Canvas = () => {
   const insertTree = useEditorStore((s) => s.insertTree);
   const rootId = useEditorStore((s) => s.tree.rootId);
 
-  const handleGuidedSectionInsert = useCallback((suggestion: GuidedSectionSuggestion) => {
-    insertTree({ tree: buildGuidedSectionTree(suggestion), parentId: rootId });
+  const handleGuidedSectionInsert = useCallback((suggestion: GuidedSectionSuggestion, draft: GuidedSectionDraft) => {
+    insertTree({ tree: buildGuidedSectionTree(suggestion, draft), parentId: rootId });
   }, [insertTree, rootId]);
 
   const [zoom, setZoom] = useState(100);

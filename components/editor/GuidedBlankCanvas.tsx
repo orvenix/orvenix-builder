@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ComponentType } from "react";
 import * as Icons from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,13 @@ export type GuidedSectionSuggestion = {
   x: number;
   y: number;
   tone: keyof typeof TONE_STYLES;
+};
+
+export type GuidedSectionDraft = {
+  heading: string;
+  body: string;
+  itemsText: string;
+  button: string;
 };
 
 export const GUIDED_SECTION_SUGGESTIONS: GuidedSectionSuggestion[] = [
@@ -154,14 +162,32 @@ const GUIDED_SECTION_TEMPLATES: Record<GuidedTemplateId, GuidedTemplate> = {
   },
 };
 
-export function buildGuidedSectionTree(suggestion: GuidedSectionSuggestion): EditorTree {
+function createGuidedSectionDraft(suggestion: GuidedSectionSuggestion): GuidedSectionDraft {
+  const template = GUIDED_SECTION_TEMPLATES[suggestion.template];
+  return {
+    heading: template.heading,
+    body: template.body,
+    itemsText: (template.items ?? []).join("\n"),
+    button: template.button ?? "",
+  };
+}
+
+export function buildGuidedSectionTree(
+  suggestion: GuidedSectionSuggestion,
+  draft = createGuidedSectionDraft(suggestion)
+): EditorTree {
   const template = GUIDED_SECTION_TEMPLATES[suggestion.template];
   const id = suggestion.id;
   const sectionId = `guided-${id}-section`;
   const headingId = `guided-${id}-heading`;
   const bodyId = `guided-${id}-body`;
-  const itemIds = (template.items ?? []).map((_, index) => `guided-${id}-item-${index + 1}`);
-  const buttonId = template.button ? `guided-${id}-button` : null;
+  const items = draft.itemsText
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const itemIds = items.map((_, index) => `guided-${id}-item-${index + 1}`);
+  const buttonLabel = draft.button.trim();
+  const buttonId = buttonLabel ? `guided-${id}-button` : null;
   const align = template.align ?? "left";
   const sectionProps: NodeProps = {
     as: template.as ?? "section",
@@ -189,7 +215,7 @@ export function buildGuidedSectionTree(suggestion: GuidedSectionSuggestion): Edi
         type: "heading",
         displayName: `Título - ${suggestion.label}`,
         props: {
-          text: template.heading,
+          text: draft.heading.trim() || template.heading,
           level: id === "hero" ? 1 : 2,
           size: id === "hero" ? "5xl" : id === "nav" || id === "footer" ? "2xl" : "3xl",
           weight: "bold",
@@ -205,7 +231,7 @@ export function buildGuidedSectionTree(suggestion: GuidedSectionSuggestion): Edi
         type: "text",
         displayName: `Texto - ${suggestion.label}`,
         props: {
-          content: template.body,
+          content: draft.body.trim() || template.body,
           size: id === "hero" ? "lg" : "md",
           color: "#475569",
           align,
@@ -215,7 +241,7 @@ export function buildGuidedSectionTree(suggestion: GuidedSectionSuggestion): Edi
         version: 1,
       },
       ...Object.fromEntries(
-        (template.items ?? []).map((item, index) => [
+        items.map((item, index) => [
           itemIds[index],
           {
             id: itemIds[index],
@@ -240,7 +266,7 @@ export function buildGuidedSectionTree(suggestion: GuidedSectionSuggestion): Edi
               type: "ctaButton",
               displayName: `Botón - ${suggestion.label}`,
               props: {
-                label: template.button,
+                label: buttonLabel,
                 href: "#contacto",
                 variant: "primary",
                 size: id === "hero" || id === "cta" ? "lg" : "md",
@@ -255,19 +281,37 @@ export function buildGuidedSectionTree(suggestion: GuidedSectionSuggestion): Edi
 }
 
 interface GuidedBlankCanvasProps {
-  onInsertSuggestion: (suggestion: GuidedSectionSuggestion) => void;
+  onInsertSuggestion: (suggestion: GuidedSectionSuggestion, draft: GuidedSectionDraft) => void;
 }
 
 export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps) {
+  const [activeSuggestion, setActiveSuggestion] = useState<GuidedSectionSuggestion | null>(null);
+  const [draft, setDraft] = useState<GuidedSectionDraft | null>(null);
   const [activatingId, setActivatingId] = useState<string | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
-  const handleInsert = (suggestion: GuidedSectionSuggestion) => {
+  const openEditor = (suggestion: GuidedSectionSuggestion) => {
     if (activatingId) return;
-    setActivatingId(suggestion.id);
+    setActiveSuggestion(suggestion);
+    setDraft(createGuidedSectionDraft(suggestion));
+  };
+
+  const closeEditor = () => {
+    if (activatingId) return;
+    setActiveSuggestion(null);
+    setDraft(null);
+  };
+
+  const updateDraft = (patch: Partial<GuidedSectionDraft>) => {
+    setDraft((current) => current ? { ...current, ...patch } : current);
+  };
+
+  const handleInsert = () => {
+    if (!activeSuggestion || !draft || activatingId) return;
+    setActivatingId(activeSuggestion.id);
     if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
     timeoutRef.current = window.setTimeout(() => {
-      onInsertSuggestion(suggestion);
+      onInsertSuggestion(activeSuggestion, draft);
     }, 180);
   };
 
@@ -292,7 +336,8 @@ export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps
       {GUIDED_SECTION_SUGGESTIONS.map((suggestion, index) => {
         const Icon = Icons[suggestion.icon] as ComponentType<{ size?: number; className?: string }>;
         const isActive = activatingId === suggestion.id;
-        const isOtherActive = activatingId !== null && !isActive;
+        const isEditing = activeSuggestion?.id === suggestion.id;
+        const isOtherActive = (activatingId !== null && !isActive) || (activeSuggestion !== null && !isEditing);
 
         return (
           <div
@@ -316,7 +361,7 @@ export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                handleInsert(suggestion);
+                openEditor(suggestion);
               }}
               className={cn(
                 "group flex min-h-[74px] w-[176px] flex-col justify-between rounded-lg border px-3 py-2 text-left shadow-xl backdrop-blur-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 disabled:cursor-wait",
@@ -337,6 +382,90 @@ export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps
           </div>
         );
       })}
+
+      {activeSuggestion && draft && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[2300] flex items-center justify-center bg-slate-950/20 px-4 backdrop-blur-[2px]">
+          <div
+            className="w-full max-w-md overflow-hidden rounded-lg border border-slate-200/80 bg-white/95 shadow-2xl shadow-slate-950/15 backdrop-blur-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">{activeSuggestion.label}</p>
+                <p className="mt-0.5 truncate text-[11px] text-slate-500">{activeSuggestion.description}</p>
+              </div>
+              <button
+                type="button"
+                title="Cerrar"
+                onClick={closeEditor}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              >
+                <Icons.X size={15} />
+              </button>
+            </div>
+
+            <div className="space-y-3 px-4 py-4">
+              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Título
+                <input
+                  value={draft.heading}
+                  onChange={(event) => updateDraft({ heading: event.target.value })}
+                  className="mt-1.5 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition-colors focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                />
+              </label>
+
+              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Texto
+                <textarea
+                  value={draft.body}
+                  onChange={(event) => updateDraft({ body: event.target.value })}
+                  rows={3}
+                  className="mt-1.5 w-full resize-none rounded-md border border-slate-200 bg-white px-3 py-2 text-sm normal-case leading-5 tracking-normal text-slate-700 outline-none transition-colors focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                />
+              </label>
+
+              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Puntos
+                <textarea
+                  value={draft.itemsText}
+                  onChange={(event) => updateDraft({ itemsText: event.target.value })}
+                  rows={3}
+                  className="mt-1.5 w-full resize-none rounded-md border border-slate-200 bg-white px-3 py-2 text-sm normal-case leading-5 tracking-normal text-slate-700 outline-none transition-colors focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                />
+              </label>
+
+              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Botón
+                <input
+                  value={draft.button}
+                  onChange={(event) => updateDraft({ button: event.target.value })}
+                  className="mt-1.5 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm normal-case tracking-normal text-slate-900 outline-none transition-colors focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                />
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200/70 px-4 py-3">
+              <button
+                type="button"
+                onClick={closeEditor}
+                className="h-9 rounded-md border border-slate-200 px-3 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleInsert}
+                disabled={activatingId !== null}
+                className="inline-flex h-9 items-center gap-2 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+              >
+                {activatingId ? <Icons.Loader2 size={13} className="animate-spin" /> : <Icons.Plus size={13} />}
+                Insertar sección
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
