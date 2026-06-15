@@ -32,7 +32,7 @@
 - [x] Typecheck de app verificado limpio con `npm run typecheck` (`next typegen` + `tsc -p tsconfig.typecheck.json --noEmit`)
 - [~] Reducir warnings y errores runtime detectados en auditoria
 - [x] Next.js 16 usa `proxy.ts` en lugar de `middleware.ts`
-- [x] Deploy preparado con `vercel.json`
+- [x] Deploy en servidor Node preparado
 - [!] Migraciones Prisma versionadas y verificadas en el repo actual
 - [x] Fuente Prisma restaurada en `prisma/editor.prisma`
 - [x] Scripts base de Prisma restaurados: `seed`, `billing:sync-mp-plans`, `migrate:contacts`
@@ -46,7 +46,7 @@
 - `npm run lint` quedo verde en este workspace.
 - `npm run typecheck` quedo verde en este workspace tras separar `tsconfig.typecheck.json`, agregar augment de `next-auth` y alinear tipos del editor.
 - Se acoto el escaneo de Tailwind v4 en `app/globals.css` con `source(none)` + `@source` para reducir costo de compilacion.
-- `package.json` ya deja `build` y `vercel-build` sobre `next build --webpack`; `build:turbo` queda solo para pruebas puntuales del bundler.
+- `package.json` deja `build` sobre `next build --webpack`; `build:turbo` queda solo para pruebas puntuales del bundler.
 - Queda pendiente verificar `build` completo y una corrida limpia de CI local.
 
 ### Revalidacion local 2026-05-21
@@ -146,14 +146,14 @@
 - Webhooks de pago: ya registran y actualizan estado, pero falta validacion publica real en ambos proveedores
 - CMS visual: CRUD y bindings basicos listos, faltan field builder completo, relaciones y robustez visual
 - Commerce core: carrito y checkout existen, pero faltan pruebas reales, variantes avanzadas y operacion de stock/email
-- Deploy: `vercel.json`, build y health endpoint listos, pero faltan variables reales, aplicar schema productivo real y verificacion desde dominio publico
+- Deploy Node, build y health endpoint listos; faltan variables reales, aplicar schema productivo real y verificacion desde dominio publico
 
 ### Rojo — Pendiente critico o bloqueante de salida
 
 - Falta validar el primer deploy real de la baseline Prisma en entorno publico y luego continuar ya sobre migraciones incrementales
 - Falta cerrar la validacion productiva de pagos, cancelaciones y webhooks antes de considerar produccion real
 - Funnels basicos no estan iniciados y no forman parte del MVP productivo todavia
-- Persisten pendientes operativos de produccion: `NEXTAUTH_URL`, variables reales en Vercel, primer `resolve/deploy` real de Prisma y pruebas desde dominio real
+- Persisten pendientes operativos de produccion: `NEXTAUTH_URL`, variables reales en el servidor, primer `resolve/deploy` real de Prisma y pruebas desde dominio real
 
 ### Prioridad Recomendada
 
@@ -594,7 +594,7 @@
 - [x] Soporte completo para bloques complejos sin imports rotos
 - [x] Export HTML semantico mas completo
 - [x] Validacion W3C automatica
-- [ ] Deploy 1-click a Vercel
+- [ ] Deploy en servidor Node
 
 **Estado Fase D:** 68%  
 **Bloqueante restante:** sketch-to-web + auditoria integrada + export semantico/validado.
@@ -626,14 +626,14 @@
 
 ## L3. Deploy
 
-- [x] `vercel.json`
-- [x] Script `vercel-build`
+- [x] `ecosystem.config.cjs`
+- [x] Script `build`
 - [x] Scripts `prisma:generate`, `prisma:migrate:deploy` y `prisma:deploy-schema`
 - [x] `PRODUCCION.md` actualizado
 - [x] `/api/health`
 - [x] `/api/health` incluye estado de billing sin exponer secretos
 - [x] `public/manifest.json` restaurado
-- [ ] Configurar variables reales en Vercel
+- [ ] Configurar variables reales en el servidor
 - [x] Versionar baseline de `prisma/migrations`
 - [x] Aplicar baseline local con `prisma migrate resolve --applied 20260524_000000_baseline` sobre base existente
 - [x] Validar localmente `npm run prisma:deploy-schema`
@@ -697,7 +697,7 @@
 
 - [x] Build y lint pasan sin errores
 - [ ] Warnings de lint reducidos a menos de 10
-- [ ] Variables de produccion configuradas en Vercel
+- [ ] Variables de produccion configuradas en el servidor
 - [ ] `NEXTAUTH_URL` alineado a `https://orvenix.com.mx`
 - [ ] Migrations aplicadas en DB productiva
 - [ ] Planes MercadoPago reales sincronizados

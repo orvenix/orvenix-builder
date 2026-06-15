@@ -114,7 +114,7 @@ export default function AdminBillingPage() {
             </span>
           </div>
           <p className="mt-2 text-xs leading-5 text-[color:var(--text-secondary)]">
-            Este bloque separa lo que el entorno actual ya confirma automaticamente de lo que todavia necesita validacion manual en Vercel, DB, Stripe publico y checkout real de tienda.
+            Este bloque separa lo que el entorno actual ya confirma automaticamente de lo que todavia necesita validacion manual en servidor, DB, Stripe publico y checkout real de tienda.
           </p>
         </div>
 

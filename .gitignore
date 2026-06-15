@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.tmp/
 
 # next.js
 /.next/
@@ -40,8 +41,6 @@ editor-dev.db
 .env*
 !.env.example
 
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo

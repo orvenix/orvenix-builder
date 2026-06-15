@@ -38,8 +38,6 @@
   ],
   "exclude": [
     "node_modules",
-    "page.tsx",
-    "webs nuevas",
-    "orvenix-builder"
+    "page.tsx"
   ]
 }

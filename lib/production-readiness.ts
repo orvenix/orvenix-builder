@@ -120,7 +120,7 @@ function buildStorageCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
       key: "storage_mode",
       label: "Persistencia de produccion",
       status: "attention",
-      detail: `ORVENIX_STORAGE_MODE=${storageMode}. En Vercel o produccion serverless conviene usar prisma con una base de datos real.`,
+      detail: `ORVENIX_STORAGE_MODE=${storageMode}. En produccion conviene usar prisma con una base de datos real y persistente.`,
     }
   }
 
@@ -211,7 +211,7 @@ export function getProductionReadinessReport(env: NodeJS.ProcessEnv = process.en
 
   const manualChecks: ProductionReadinessCheck[] = [
     {
-      key: "vercel_env",
+      key: "production_env",
       label: "Variables reales del entorno",
       status: "manual",
       detail: "Confirmar que el servidor o plataforma activa usa valores reales de produccion para auth, DB, billing y email.",

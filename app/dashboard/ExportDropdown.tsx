@@ -93,7 +93,7 @@ export function ExportDropdown({ siteId }: Props) {
               <FileCode2 size={14} className="shrink-0 mt-0.5 text-[color:var(--accent)]" />
               <div>
                 <p className="text-xs font-semibold text-[color:var(--text)]">Next.js 15</p>
-                <p className="mt-0.5 text-[10px] text-[color:var(--text-secondary)]">App Router + Tailwind. Deploy a Vercel en 1 clic.</p>
+                <p className="mt-0.5 text-[10px] text-[color:var(--text-secondary)]">App Router + Tailwind. Listo para servidor Node.</p>
               </div>
             </button>
 
