@@ -98,3 +98,22 @@ La configuración de pasarelas se puede revisar sin exponer secretos en `/admin/
 - El checkout de suscripciones usa Stripe si están configurados `STRIPE_SECRET_KEY` y los `STRIPE_PRICE_*`; si no, intenta MercadoPago.
 - Los webhooks de Stripe/MercadoPago quedan auditados en `/admin/webhooks`.
 - El chat de IA requiere `ANTHROPIC_API_KEY`.
+
+## Preflight para salir al publico
+
+Antes de anunciar o abrir trafico real, corre:
+
+```bash
+npm run secrets:check
+npm run preflight:public
+```
+
+`secrets:check` revisa archivos versionados para evitar llaves reales en Git. `preflight:public` encadena escaneo de secretos, typecheck, lint API y build productivo.
+
+Despues valida manualmente desde el dominio real:
+
+- `/api/health` sin estados `down` inesperados
+- checkout de suscripcion Stripe + webhook
+- cancelacion/reactivacion de suscripcion
+- checkout de tienda MercadoPago si seguira activo
+- crear sitio, abrir constructor, publicar, exportar, CMS CRUD y store CRUD

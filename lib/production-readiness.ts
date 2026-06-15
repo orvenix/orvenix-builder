@@ -1,4 +1,5 @@
 import { getBillingConfigReport } from "./billing-config"
+import { hasConfiguredEnvValue } from "./env-placeholders"
 import { isPlaceholderDatabaseUrl } from "./storage-mode"
 
 export type ProductionReadinessStatus = "ready" | "attention" | "manual"
@@ -17,7 +18,7 @@ export type ProductionReadinessReport = {
 }
 
 function hasValue(value: string | undefined) {
-  return Boolean(value && value.trim() && !value.includes("placeholder"))
+  return hasConfiguredEnvValue(value)
 }
 
 function normalizeOrigin(url: string | undefined) {

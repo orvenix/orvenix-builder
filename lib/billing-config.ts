@@ -1,3 +1,5 @@
+import { hasConfiguredEnvValue } from "./env-placeholders"
+
 type BillingCheckStatus = "ok" | "missing" | "warning"
 
 export type BillingConfigCheck = {
@@ -10,7 +12,7 @@ export type BillingConfigCheck = {
 type BillingEnv = NodeJS.ProcessEnv
 
 function hasValue(value: string | undefined) {
-  return Boolean(value && value.trim() && !value.includes("placeholder"))
+  return hasConfiguredEnvValue(value)
 }
 
 function hasStripePrice(env: BillingEnv, plan: string, interval: "MONTH" | "YEAR") {

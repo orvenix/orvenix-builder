@@ -126,7 +126,7 @@ Usa:
 
 ```env
 ORVENIX_STORAGE_MODE=prisma
-DATABASE_URL=mysql://usuario:password@host:3306/base
+DATABASE_URL="mysql://<USER>:<PASSWORD>@<HOST>:3306/<DATABASE>"
 ```
 
 Y luego ejecuta la preparación de esquema correspondiente antes de abrir tráfico real.

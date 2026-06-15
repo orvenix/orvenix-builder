@@ -145,8 +145,8 @@
 | B — Canvas profesional | 93% | Constructor estable, lienzo guiado editable/responsive, menu contextual completo, componentes guardados usables y keyframes visuales basicos |
 | C — CMS + Commerce | 71% | Base funcional, checkout tienda implementado, falta prueba real y variantes avanzadas |
 | D — IA + Export limpio | 78% | IA/export/auditoria existen, compiler/export esta modularizado y el scaffold exportado ya no depende de una plataforma serverless especifica |
-| Limpieza + Deploy | 86% | Repo consolidado, basura versionada eliminada, despliegue serverless anterior retirado y servidor Node validado localmente; faltan variables/productivo real |
-| **TOTAL** | **87%** | Proyecto usable, constructor recuperado, repo limpio y UX del editor mas solida; sigue faltando validacion productiva real de billing, DB y dominio publico |
+| Limpieza + Deploy | 88% | Repo consolidado, basura versionada eliminada, secretos saneados en plantilla y preflight publico agregado; faltan variables/productivo real |
+| **TOTAL** | **88%** | Proyecto usable, constructor recuperado, repo limpio, preflight publico agregado y UX del editor mas solida; sigue faltando validacion productiva real de billing, DB y dominio publico |
 
 ## Auditoria Ejecutiva 2026-05-20
 
@@ -164,7 +164,7 @@
 - Webhooks de pago: ya registran y actualizan estado, pero falta validacion publica real en ambos proveedores
 - CMS visual: CRUD y bindings basicos listos, faltan field builder completo, relaciones y robustez visual
 - Commerce core: carrito y checkout existen, pero faltan pruebas reales, variantes avanzadas y operacion de stock/email
-- Deploy Node, build y health endpoint listos; el despliegue serverless anterior ya fue retirado del proyecto; faltan variables reales, aplicar schema productivo real y verificacion desde dominio publico
+- Deploy Node, build, health endpoint y preflight publico listos; el despliegue serverless anterior ya fue retirado del proyecto; faltan variables reales, aplicar schema productivo real y verificacion desde dominio publico
 
 ### Rojo — Pendiente critico o bloqueante de salida
 
@@ -716,13 +716,16 @@
 5. **Probar flujos clave desde dominio real**
    - Constructor, crear desde cero, publicar, exportar, CMS CRUD, store CRUD, checkout y `/api/health`.
 
-6. **Reducir warnings y suppressions restantes**
+6. **Ejecutar preflight publico antes de anunciar**
+   - Correr `npm run secrets:check` y `npm run preflight:public` antes de abrir trafico real.
+
+7. **Reducir warnings y suppressions restantes**
    - Lint esta verde, pero falta bajar deuda residual y warnings operativos a un nivel de lanzamiento.
 
-7. **Cerrar consistencia visual restante**
+8. **Cerrar consistencia visual restante**
    - Quedan pantallas secundarias por unificar (`store`, `cms`, bloques demo y algunas vistas admin/dashboard`).
 
-8. **Pulir UX avanzada del constructor**
+9. **Pulir UX avanzada del constructor**
    - Context menu reutilizable, componentes de usuario, keyframes visuales y microinteracciones del lienzo guiado.
 
 ---
@@ -730,6 +733,9 @@
 # Definicion De “Listo Para Produccion”
 
 - [x] Build y lint pasan sin errores
+- [x] `.env.example` saneado sin secretos reales
+- [x] `npm run secrets:check` disponible y verde
+- [x] `npm run preflight:public` documentado
 - [ ] Warnings de lint reducidos a menos de 10
 - [ ] Variables de produccion configuradas en el servidor
 - [ ] `NEXTAUTH_URL` alineado a `https://orvenix.com.mx`

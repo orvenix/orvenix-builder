@@ -29,7 +29,9 @@
     "prisma:resolve-baseline": "prisma migrate resolve --applied 20260524_000000_baseline --schema=prisma/editor.prisma",
     "seed": "node prisma/seed-plans.mjs",
     "billing:sync-mp-plans": "node prisma/sync-mp-plans.mjs",
-    "migrate:contacts": "node prisma/migrate-contacts.mjs"
+    "migrate:contacts": "node prisma/migrate-contacts.mjs",
+    "secrets:check": "node scripts/check-secrets.mjs",
+    "preflight:public": "npm run secrets:check && npm run typecheck && npm run lint:api && npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
