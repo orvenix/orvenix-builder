@@ -4819,27 +4819,27 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
 }
 
 @keyframes editor-motion-fade-up {
-  from { opacity: 0; transform: translateY(18px); filter: blur(5px); }
+  from { opacity: 0; transform: translateY(var(--editor-motion-distance, 18px)); filter: blur(var(--editor-motion-blur, 5px)); }
   to   { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
 @keyframes editor-motion-fade-down {
-  from { opacity: 0; transform: translateY(-18px); filter: blur(5px); }
+  from { opacity: 0; transform: translateY(calc(var(--editor-motion-distance, 18px) * -1)); filter: blur(var(--editor-motion-blur, 5px)); }
   to   { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
 @keyframes editor-motion-slide-left {
-  from { opacity: 0; transform: translateX(-22px); filter: blur(4px); }
+  from { opacity: 0; transform: translateX(calc(var(--editor-motion-distance, 22px) * -1)); filter: blur(var(--editor-motion-blur, 4px)); }
   to   { opacity: 1; transform: translateX(0); filter: blur(0); }
 }
 
 @keyframes editor-motion-slide-right {
-  from { opacity: 0; transform: translateX(22px); filter: blur(4px); }
+  from { opacity: 0; transform: translateX(var(--editor-motion-distance, 22px)); filter: blur(var(--editor-motion-blur, 4px)); }
   to   { opacity: 1; transform: translateX(0); filter: blur(0); }
 }
 
 @keyframes editor-motion-scale {
-  from { opacity: 0; transform: scale(0.96); filter: blur(4px); }
+  from { opacity: 0; transform: scale(var(--editor-motion-scale, 0.96)); filter: blur(var(--editor-motion-blur, 4px)); }
   to   { opacity: 1; transform: scale(1); filter: blur(0); }
 }
 
@@ -4857,6 +4857,9 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
   --editor-motion-duration: 560ms;
   --editor-motion-delay: 0ms;
   --editor-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --editor-motion-distance: 18px;
+  --editor-motion-scale: 0.96;
+  --editor-motion-blur: 5px;
   transform-origin: center;
   transition:
     transform var(--editor-motion-duration) var(--editor-motion-ease),

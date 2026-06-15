@@ -77,6 +77,9 @@ export function AnimationsPanel() {
     delay:       typeof props?.motionDelay === "number"       ? props.motionDelay     : DEFAULT_NODE_ANIMATION.delay,
     easing:      (props?.motionEasing    as MotionEasing)     ?? DEFAULT_NODE_ANIMATION.easing,
     hoverEffect: (props?.motionTransition as MotionTransition) ?? DEFAULT_NODE_ANIMATION.hoverEffect,
+    distance:    typeof props?.motionDistance === "number"    ? props.motionDistance : DEFAULT_NODE_ANIMATION.distance,
+    scale:       typeof props?.motionScale === "number"       ? props.motionScale    : DEFAULT_NODE_ANIMATION.scale,
+    blur:        typeof props?.motionBlur === "number"        ? props.motionBlur     : DEFAULT_NODE_ANIMATION.blur,
   }), [props]);
 
   const update = useCallback((patch: Partial<Record<string, unknown>>) => {
@@ -216,6 +219,45 @@ export function AnimationsPanel() {
           </section>
         )}
 
+        {/* Visual keyframes editor */}
+        {anim.type !== "none" && (
+          <section>
+            <Label>Editor visual de keyframes</Label>
+            <div className="mt-1.5 space-y-2 rounded-xl border border-white/[0.07] bg-white/[0.025] p-2.5">
+              {anim.type !== "fade" && anim.type !== "scale" && (
+                <SliderRow
+                  label={`Distancia inicial: ${anim.distance}px`}
+                  min={0} max={96} step={2}
+                  value={anim.distance}
+                  onChange={(v) => update({ motionDistance: v })}
+                />
+              )}
+              {anim.type === "scale" && (
+                <SliderRow
+                  label={`Escala inicial: ${Math.round(anim.scale * 100)}%`}
+                  min={80} max={100} step={1}
+                  value={Math.round(anim.scale * 100)}
+                  onChange={(v) => update({ motionScale: v / 100 })}
+                />
+              )}
+              <SliderRow
+                label={`Blur inicial: ${anim.blur}px`}
+                min={0} max={16} step={1}
+                value={anim.blur}
+                onChange={(v) => update({ motionBlur: v })}
+              />
+              <div className="grid grid-cols-2 gap-1.5 pt-1">
+                <KeyframePreviewCard label="0%" active muted={false}>
+                  {getInitialKeyframeLabel(anim)}
+                </KeyframePreviewCard>
+                <KeyframePreviewCard label="100%" muted>
+                  opacity 1 · transform 0 · blur 0
+                </KeyframePreviewCard>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Hover */}
         <section>
           <Label>Efecto hover</Label>
@@ -271,8 +313,8 @@ export function AnimationsPanel() {
                 </div>
                 {/* Keyframe values */}
                 <div className="flex-1 py-2 px-3 font-mono text-[9px] space-y-3">
-                  <KeyframePoint label="0%" isFrom />
-                  <KeyframePoint label="100%" />
+                  <KeyframePoint label="0%" details={getInitialKeyframeLabel(anim)} isFrom />
+                  <KeyframePoint label="100%" details="opacity 1 · transform 0 · blur 0" />
                 </div>
               </div>
               <div className="px-3 pb-2">
@@ -330,6 +372,16 @@ export function AnimationsPanel() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+function getInitialKeyframeLabel(anim: NodeAnimation) {
+  if (anim.type === "fade") return `opacity 0 · blur ${anim.blur}px`;
+  if (anim.type === "scale") return `opacity 0 · scale ${Math.round(anim.scale * 100)}% · blur ${anim.blur}px`;
+  if (anim.type === "fade-up") return `opacity 0 · y +${anim.distance}px · blur ${anim.blur}px`;
+  if (anim.type === "fade-down") return `opacity 0 · y -${anim.distance}px · blur ${anim.blur}px`;
+  if (anim.type === "slide-left") return `opacity 0 · x -${anim.distance}px · blur ${anim.blur}px`;
+  if (anim.type === "slide-right") return `opacity 0 · x +${anim.distance}px · blur ${anim.blur}px`;
+  return "sin transform";
+}
+
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
@@ -360,15 +412,33 @@ function SliderRow({
   );
 }
 
-function KeyframePoint({ label, isFrom }: { label: string; isFrom?: boolean }) {
+function KeyframePreviewCard({
+  label, children, active, muted,
+}: {
+  label: string;
+  children: React.ReactNode;
+  active?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div className={`rounded-lg border px-2 py-1.5 ${
+      active
+        ? "border-violet-400/25 bg-violet-500/10 text-violet-200"
+        : "border-white/[0.06] bg-black/10 text-slate-400"
+    }`}>
+      <div className="text-[8px] font-bold uppercase tracking-[0.12em] opacity-70">{label}</div>
+      <div className={`mt-0.5 text-[9px] leading-4 ${muted ? "text-slate-500" : ""}`}>{children}</div>
+    </div>
+  );
+}
+
+function KeyframePoint({ label, details, isFrom }: { label: string; details: string; isFrom?: boolean }) {
   return (
     <div className="flex items-start gap-1.5">
       <span className={`shrink-0 text-[8px] font-semibold ${isFrom ? "text-violet-400" : "text-emerald-400"}`}>
         {label}
       </span>
-      <span className="text-slate-500">
-        {isFrom ? "{ opacity: 0; transform: … }" : "{ opacity: 1; transform: initial; }"}
-      </span>
+      <span className="text-slate-500">{details}</span>
     </div>
   );
 }
