@@ -1,7 +1,7 @@
 # ORVENIX — ROADMAP Y AUDITORIA DE AVANCE
 ## Hacia el Super Builder | Estado real del proyecto
 
-> Actualizado: 2026-05-26  
+> Actualizado: 2026-06-15  
 > Stack actual: Next.js 16.2.4 + React 19 + Prisma 7 + MySQL/MariaDB + Stripe + MercadoPago + Anthropic + Monaco
 
 ---
@@ -117,6 +117,24 @@
   - `compiler-export-renderers`
 - `eslint` dirigido sobre cada slice nuevo de `builder-core/compiler` quedo limpio.
 
+### Revalidacion local 2026-06-15
+
+- El constructor vuelve a cargar correctamente y `/constructor?source=blank` responde `200 OK` en el servidor vivo.
+- Se corrigio el ciclo de render que provocaba `Minified React error #185` en el constructor.
+- El constructor recibio una pasada responsive para evitar desmaquetado al reducir ancho de pantalla.
+- El logo del constructor quedo alineado con el resto de la app.
+- Se elimino la barra `Sitios` del constructor por ser redundante.
+- Se implemento el flujo inicial de "Lienzo Blanco Guiado" con sugerencias flotantes editables para iniciar paginas sin dejar al usuario perdido.
+- Las sugerencias del constructor ahora usan plantillas mas neutrales y variadas, evitando que todos los sitios salgan con el mismo patron visual futurista.
+- Se agrego un preloader global con logo y animacion antes de cargar la app.
+- Se elimino el workspace duplicado `/home/orvenix/apps/orvenix-builder/orvenix-builder` y se consolido el trabajo en la carpeta viva `/home/orvenix/apps/orvenix-builder`.
+- Se retiro la configuracion de despliegue serverless anterior: fuera archivo de plataforma, script de build dedicado, referencias de docs/UI y exports orientados a esa plataforma.
+- Se limpio basura versionada: `.tmp/`, caches de navegador, artefactos de unit tests, `webs nuevas/`, `stripe.tar.gz` y un archivo invalido de raiz.
+- `.tmp/` quedo ignorado para que caches/logs locales no vuelvan a entrar al repo.
+- Revalidacion final de la tanda: `npm run lint`, `npm run typecheck`, `npm run test:unit` y `npm run build` quedaron verdes.
+- `npm run test:unit` quedo en `154/154` pruebas pasando.
+- Commit de limpieza: `1eaecc4 Clean obsolete generated artifacts`.
+
 ---
 
 # Resumen De Avance
@@ -124,11 +142,11 @@
 | Fase | Avance real | Estado |
 |------|-------------|--------|
 | A — Monetizacion real | 96% | Stripe local validado para alta/cancelacion; faltan pruebas publicas y tienda con MP |
-| B — Canvas profesional | 85% | Mejor de lo estimado: responsive, animaciones y dev mode ya existen; el frente estructural del builder-core ya esta mucho mas limpio |
+| B — Canvas profesional | 88% | Constructor estable, responsive, con lienzo blanco guiado editable y patrones visuales mas variados; faltan pulidos avanzados de UX |
 | C — CMS + Commerce | 71% | Base funcional, checkout tienda implementado, falta prueba real y variantes avanzadas |
-| D — IA + Export limpio | 74% | IA/export/auditoria existen y el compiler/export ya quedo mucho mas modular dentro de `builder-core` |
-| Limpieza + Deploy | 79% | Mejoro bastante la consistencia visual y el runtime, y la baseline Prisma ya fue validada localmente; faltan validaciones publicas y el primer deploy real |
-| **TOTAL** | **83%** | Proyecto usable, monetizable con Stripe y con un core del builder mucho mas limpio, pero aun no production-ready |
+| D — IA + Export limpio | 78% | IA/export/auditoria existen, compiler/export esta modularizado y el scaffold exportado ya no depende de una plataforma serverless especifica |
+| Limpieza + Deploy | 86% | Repo consolidado, basura versionada eliminada, despliegue serverless anterior retirado y servidor Node validado localmente; faltan variables/productivo real |
+| **TOTAL** | **86%** | Proyecto usable, constructor recuperado y repo limpio; sigue faltando validacion productiva real de billing, DB y dominio publico |
 
 ## Auditoria Ejecutiva 2026-05-20
 
@@ -146,7 +164,7 @@
 - Webhooks de pago: ya registran y actualizan estado, pero falta validacion publica real en ambos proveedores
 - CMS visual: CRUD y bindings basicos listos, faltan field builder completo, relaciones y robustez visual
 - Commerce core: carrito y checkout existen, pero faltan pruebas reales, variantes avanzadas y operacion de stock/email
-- Deploy Node, build y health endpoint listos; faltan variables reales, aplicar schema productivo real y verificacion desde dominio publico
+- Deploy Node, build y health endpoint listos; el despliegue serverless anterior ya fue retirado del proyecto; faltan variables reales, aplicar schema productivo real y verificacion desde dominio publico
 
 ### Rojo — Pendiente critico o bloqueante de salida
 
@@ -164,9 +182,9 @@
 
 ### Estado Ejecutivo
 
-- Avance total auditado del roadmap: ~82%
+- Avance total auditado del roadmap: ~86%
 - Fase mas solida hoy: monetizacion con Stripe para suscripciones nuevas + base del editor
-- Riesgo principal actual: validacion real de produccion y cierre operativo, no ausencia de features
+- Riesgo principal actual: validacion real de produccion, credenciales finales y cierre operativo, no ausencia de features base
 - Recomendacion: tratar el proyecto como "feature-complete en gran parte, internamente usable y ya validado localmente en Stripe, pero no todavia production-ready"
 
 ---
@@ -485,8 +503,21 @@
 - [ ] Wrap en Flex/Grid
 - [ ] Buscar/resaltar en Layers
 
-**Estado Fase B:** 81%  
-**Bloqueante restante:** tests del normalizador + pulido UX responsive.
+## B7. Experiencia Inicial Del Constructor
+
+- [x] Constructor abre desde ruta directa y desde crear desde cero
+- [x] Correccion de loop de render asociado a React error #185
+- [x] Ajuste responsive del constructor al reducir ancho de pantalla
+- [x] Logo del constructor alineado al branding global
+- [x] Barra `Sitios` eliminada del constructor
+- [x] Lienzo blanco guiado con sugerencias flotantes
+- [x] Insercion de secciones desde sugerencias
+- [x] Sugerencias editables tras insertarlas en el canvas
+- [x] Plantillas neutrales y variadas para evitar patron unico futurista
+- [~] Pulir microinteracciones y estados vacios secundarios
+
+**Estado Fase B:** 88%  
+**Bloqueante restante:** pulido UX responsive avanzado, context menu reutilizable y componentes de usuario.
 
 ---
 
@@ -594,10 +625,10 @@
 - [x] Soporte completo para bloques complejos sin imports rotos
 - [x] Export HTML semantico mas completo
 - [x] Validacion W3C automatica
-- [ ] Deploy en servidor Node
+- [x] Scaffold exportado con instrucciones genericas para servidor Node
 
-**Estado Fase D:** 68%  
-**Bloqueante restante:** sketch-to-web + auditoria integrada + export semantico/validado.
+**Estado Fase D:** 78%  
+**Bloqueante restante:** pruebas reales de export con sitios grandes, assets y despliegue externo.
 
 ---
 
@@ -611,8 +642,8 @@
 - [x] No existe `.htaccess`
 - [x] No existe `public/sw.js`
 - [x] `middleware.ts` eliminado
-- [ ] Revisar si `proxy.ts` debe conservarse: actualmente necesario para Next 16 auth/proxy
-- [ ] Limpiar logs locales: `next-dev*.log`, `chrome-dom*.log`
+- [x] `proxy.ts` se conserva: es necesario para Next 16 auth/proxy
+- [x] Limpiar basura versionada y logs/caches locales del repo
 
 ## L2. Contactos A Prisma
 
@@ -629,10 +660,11 @@
 - [x] `ecosystem.config.cjs`
 - [x] Script `build`
 - [x] Scripts `prisma:generate`, `prisma:migrate:deploy` y `prisma:deploy-schema`
-- [x] `PRODUCCION.md` actualizado
+- [x] `PRODUCCION.md` actualizado para servidor Node
 - [x] `/api/health`
 - [x] `/api/health` incluye estado de billing sin exponer secretos
 - [x] `public/manifest.json` restaurado
+- [x] Despliegue serverless anterior retirado: sin archivo de plataforma, sin script dedicado y sin dependencias de esa plataforma en docs/UI
 - [ ] Configurar variables reales en el servidor
 - [x] Versionar baseline de `prisma/migrations`
 - [x] Aplicar baseline local con `prisma migrate resolve --applied 20260524_000000_baseline` sobre base existente
@@ -661,35 +693,35 @@
 - [x] El panel admin de billing ya expone advertencias de consistencia para credenciales y origen publico
 - [~] Auditoria visual fuerte en admin/dashboard/editor ya corrigio varios desfaces de marca; faltan pantallas secundarias del ecosistema
 
-**Estado Limpieza + Deploy:** 74%
+**Estado Limpieza + Deploy:** 86%
 
 ---
 
 # Pendientes Criticos Ordenados
 
-1. **Probar MercadoPago end-to-end**
-   - Ya no bloquea suscripciones nuevas, pero sigue importando para tienda y flujos legacy.
+1. **Configurar entorno productivo real**
+   - Alinear `NEXTAUTH_URL`, `AUTH_URL`, `NEXT_PUBLIC_API_URL`, DB, billing, email e IA con el dominio publico final.
 
 2. **Confirmar webhooks en entorno publico**
-   - Necesario para activar/renovar/cancelar suscripciones correctamente.
+   - Necesario para activar/renovar/cancelar suscripciones correctamente con Stripe y para tienda/legacy con MercadoPago.
 
 3. **Probar checkout de tienda con MercadoPago**
    - La integracion tecnica ya existe; falta prueba real sandbox/productiva desde carrito.
 
-4. **Export HTML semantico y validado**
-   - El ZIP ya copia assets y evita imports rotos; falta mejorar semantica y validacion W3C.
+4. **Aplicar schema y baseline en base productiva**
+   - Ejecutar el flujo documentado de `prisma migrate resolve`/`npm run prisma:deploy-schema` segun el estado real de la DB.
 
-5. **Integrar auditoria SEO/WCAG al flujo de publicar**
-   - Ya hay motor, falta hacerlo parte de la UX.
+5. **Probar flujos clave desde dominio real**
+   - Constructor, crear desde cero, publicar, exportar, CMS CRUD, store CRUD, checkout y `/api/health`.
 
 6. **Reducir warnings y suppressions restantes**
-   - Ya se limpio deuda puntual en editor, pagos y varias paginas visuales, pero falta una pasada amplia del repo.
+   - Lint esta verde, pero falta bajar deuda residual y warnings operativos a un nivel de lanzamiento.
 
-7. **Alinear configuracion final de auth/billing**
-   - Corregir `NEXTAUTH_URL` a `https://orvenix.com.mx` y revalidar `/admin/billing`.
-
-8. **Cerrar consistencia visual restante**
+7. **Cerrar consistencia visual restante**
    - Quedan pantallas secundarias por unificar (`store`, `cms`, bloques demo y algunas vistas admin/dashboard`).
+
+8. **Pulir UX avanzada del constructor**
+   - Context menu reutilizable, componentes de usuario, keyframes visuales y microinteracciones del lienzo guiado.
 
 ---
 
@@ -706,8 +738,10 @@
 - [ ] Cancelacion probada
 - [ ] Crear sitio respeta limite de plan
 - [ ] Editor no permite features fuera de plan
-- [ ] Export funciona para sitio real con imagenes
+- [~] Export funciona tecnicamente; falta validarlo con sitio real pesado e imagenes externas
 - [ ] CMS CRUD probado
 - [ ] Store CRUD probado
 - [ ] Checkout tienda probado
 - [ ] `/api/health` OK desde dominio real
+- [x] Constructor carga desde ruta directa en servidor vivo
+- [x] App muestra preloader global con logo antes de cargar
