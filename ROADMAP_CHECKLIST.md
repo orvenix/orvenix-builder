@@ -142,7 +142,7 @@
 | Fase | Avance real | Estado |
 |------|-------------|--------|
 | A — Monetizacion real | 96% | Stripe local validado para alta/cancelacion; faltan pruebas publicas y tienda con MP |
-| B — Canvas profesional | 90% | Constructor estable, lienzo guiado editable y menu contextual mas completo; faltan presets de componentes y keyframes visuales |
+| B — Canvas profesional | 91% | Constructor estable, lienzo guiado editable, menu contextual completo y componentes guardados mas usables; faltan keyframes visuales |
 | C — CMS + Commerce | 71% | Base funcional, checkout tienda implementado, falta prueba real y variantes avanzadas |
 | D — IA + Export limpio | 78% | IA/export/auditoria existen, compiler/export esta modularizado y el scaffold exportado ya no depende de una plataforma serverless especifica |
 | Limpieza + Deploy | 86% | Repo consolidado, basura versionada eliminada, despliegue serverless anterior retirado y servidor Node validado localmente; faltan variables/productivo real |
@@ -503,7 +503,7 @@
 - [x] Wrap en Flex/Grid respetando orden, locks y seleccion
 - [x] Buscar/resaltar en Layers con seleccion automatica
 - [x] Menu contextual contenido dentro del viewport en pantallas reducidas
-- [ ] Crear presets/acciones rapidas para componentes guardados
+- [x] Accesos rapidos, busqueda y renombrado inline para componentes guardados
 
 ## B7. Experiencia Inicial Del Constructor
 
@@ -518,8 +518,8 @@
 - [x] Plantillas neutrales y variadas para evitar patron unico futurista
 - [~] Pulir microinteracciones y estados vacios secundarios
 
-**Estado Fase B:** 90%  
-**Bloqueante restante:** pulido UX responsive avanzado, presets de componentes de usuario y editor visual de keyframes.
+**Estado Fase B:** 91%  
+**Bloqueante restante:** pulido UX responsive avanzado y editor visual de keyframes.
 
 ---
 

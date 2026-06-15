@@ -48,3 +48,13 @@ export function deleteUserComponent(id: string): void {
   const existing = loadUserComponents();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(existing.filter((c) => c.id !== id)));
 }
+
+export function renameUserComponent(id: string, name: string): SavedComponent[] {
+  const nextName = name.trim();
+  const existing = loadUserComponents();
+  const updated = existing.map((component) =>
+    component.id === id && nextName ? { ...component, name: nextName } : component
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  return updated;
+}
