@@ -257,6 +257,60 @@ export interface EditorState {
 const GUIDE_THRESHOLD = 5; // Píxeles de proximidad para activar la guía
 const ASSET_LIBRARY_LIMIT = 24;
 
+const STYLE_CLIPBOARD_KEYS = new Set([
+  "align",
+  "alignItems",
+  "animation",
+  "background",
+  "border",
+  "borderColor",
+  "borderRadius",
+  "borderWidth",
+  "boxShadow",
+  "color",
+  "customCss",
+  "display",
+  "flexDirection",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "gap",
+  "gridTemplateColumns",
+  "justifyContent",
+  "lineHeight",
+  "margin",
+  "maxWidth",
+  "motion",
+  "opacity",
+  "padding",
+  "paddingX",
+  "paddingY",
+  "size",
+  "textAlign",
+  "weight",
+  "styleBackground",
+  "styleOpacity",
+  "stylePadding",
+  "styleRadius",
+  "styleBorderWidth",
+  "styleBorderColor",
+  "styleShadow",
+]);
+
+function pickStyleClipboardProps(props: NodeProps): NodeProps {
+  return Object.fromEntries(
+    Object.entries(props).filter(([key, value]) => {
+      if (value === undefined) return false;
+      return (
+        STYLE_CLIPBOARD_KEYS.has(key) ||
+        key.startsWith("style") ||
+        key.startsWith("motion") ||
+        key.startsWith("animation")
+      );
+    })
+  ) as NodeProps;
+}
+
 // Generador de IDs más robusto para producción
 const nid = (): string => 
   typeof window !== 'undefined' && window.crypto?.randomUUID ? `n_${window.crypto.randomUUID().slice(0, 8)}` : `n_${Math.random().toString(36).slice(2, 10)}`;
@@ -640,11 +694,7 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   copyNodeStyles: (id) => {
     const node = get().tree.nodes[id];
     if (!node) return;
-    const STYLE_KEYS = ["styleBackground", "styleOpacity", "stylePadding", "styleRadius", "styleBorderWidth", "styleBorderColor", "styleShadow", "customCss"];
-    const styleProps = Object.fromEntries(
-      Object.entries(node.props).filter(([k]) => STYLE_KEYS.includes(k))
-    );
-    set({ styleClipboard: styleProps });
+    set({ styleClipboard: pickStyleClipboardProps(node.props) });
   },
 
   pasteNodeStyles: (id) => {
@@ -662,29 +712,47 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     if (ids.length === 0) return;
     const containerId = nid();
     get().execute(`wrap-in-${layout}`, (draft) => {
-      const parent = Object.values(draft.tree.nodes).find((n) => ids.every((id) => n.children.includes(id)));
+      const parent = Object.values(draft.tree.nodes).find((node) =>
+        ids.every((id) => id !== draft.tree.rootId && !draft.tree.nodes[id]?.locked && node.children.includes(id))
+      );
       if (!parent) return;
 
-      const firstIndex = Math.min(...ids.map((id) => parent.children.indexOf(id)).filter((i) => i >= 0));
+      const orderedIds = parent.children.filter((id) => ids.includes(id));
+      if (orderedIds.length === 0) return;
+
+      const firstIndex = Math.min(...orderedIds.map((id) => parent.children.indexOf(id)).filter((index) => index >= 0));
       const containerProps: NodeProps = layout === "grid"
-        ? { display: "grid", maxWidth: "lg", paddingY: "md", paddingX: "md" }
-        : { display: "flex", flexDirection: "column", maxWidth: "lg", paddingY: "md", paddingX: "md" };
+        ? { display: "grid", maxWidth: "lg", paddingY: "md", paddingX: "md", gap: "md" }
+        : { display: "flex", flexDirection: "column", maxWidth: "lg", paddingY: "md", paddingX: "md", gap: "md" };
 
       draft.tree.nodes[containerId] = {
-        id: containerId, type: "section",
-        props: containerProps, children: [...ids], version: 1,
+        id: containerId,
+        type: "section",
+        props: containerProps,
+        children: orderedIds,
+        version: 1,
       };
-      ids.forEach((id) => {
-        const idx = parent.children.indexOf(id);
-        if (idx >= 0) parent.children.splice(idx, 1);
+      orderedIds.forEach((id) => {
+        const index = parent.children.indexOf(id);
+        if (index >= 0) parent.children.splice(index, 1);
       });
       parent.children.splice(firstIndex, 0, containerId);
       draft.selectedId = containerId;
       draft.selectedIds = [containerId];
+      draft.layersHighlightId = containerId;
     });
   },
 
-  highlightInLayers: (id) => set({ layersHighlightId: id }),
+  highlightInLayers: (id) =>
+    set((state) => {
+      if (!state.tree.nodes[id]) return { layersHighlightId: null };
+      return {
+        layersHighlightId: id,
+        selectedId: id === state.tree.rootId ? null : id,
+        selectedIds: id === state.tree.rootId ? [] : [id],
+        editingNodeId: null,
+      };
+    }),
   clearLayersHighlight: () => set({ layersHighlightId: null }),
   openContextMenu: (nodeId: NodeId, position: { x: number; y: number }) =>
     set({ contextMenu: { isOpen: true, nodeId, x: position.x, y: position.y } }),

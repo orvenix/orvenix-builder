@@ -14,6 +14,25 @@ import {
 } from "lucide-react";
 import type { NodeId } from "@/types/editor";
 
+const CONTEXT_MENU_WIDTH = 240;
+const CONTEXT_MENU_MAX_HEIGHT = 620;
+const CONTEXT_MENU_MARGIN = 8;
+
+function clampMenuPosition(x: number, y: number) {
+  if (typeof window === "undefined") return { left: x, top: y };
+
+  return {
+    left: Math.min(
+      Math.max(CONTEXT_MENU_MARGIN, x),
+      Math.max(CONTEXT_MENU_MARGIN, window.innerWidth - CONTEXT_MENU_WIDTH - CONTEXT_MENU_MARGIN)
+    ),
+    top: Math.min(
+      Math.max(CONTEXT_MENU_MARGIN, y),
+      Math.max(CONTEXT_MENU_MARGIN, window.innerHeight - CONTEXT_MENU_MAX_HEIGHT - CONTEXT_MENU_MARGIN)
+    ),
+  };
+}
+
 // ─── Reusable primitives (exported for use by other menus) ────────────────────
 
 export function ContextMenuItem({
@@ -148,11 +167,12 @@ export function EditorContextMenu() {
 
   const handleWrapFlex = () => run(() => wrapInContainer(multiSelected ? selectedIds : [nodeId], "flex"));
   const handleWrapGrid = () => run(() => wrapInContainer(multiSelected ? selectedIds : [nodeId], "grid"));
+  const menuPosition = clampMenuPosition(contextMenu.x, contextMenu.y);
 
   return (
     <div
-      className="fixed z-[2000] w-60 overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b1020]/95 py-1.5 shadow-2xl shadow-black/70 backdrop-blur-xl editor-anim-scale-in"
-      style={{ left: contextMenu.x, top: contextMenu.y }}
+      className="fixed z-[2000] w-60 max-h-[min(620px,calc(100vh-16px))] overflow-y-auto overflow-x-hidden rounded-xl border border-white/[0.08] bg-[#0b1020]/95 py-1.5 shadow-2xl shadow-black/70 backdrop-blur-xl editor-anim-scale-in"
+      style={{ left: menuPosition.left, top: menuPosition.top }}
       onPointerDown={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
     >

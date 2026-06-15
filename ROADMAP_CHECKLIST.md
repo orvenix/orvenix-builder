@@ -142,11 +142,11 @@
 | Fase | Avance real | Estado |
 |------|-------------|--------|
 | A — Monetizacion real | 96% | Stripe local validado para alta/cancelacion; faltan pruebas publicas y tienda con MP |
-| B — Canvas profesional | 88% | Constructor estable, responsive, con lienzo blanco guiado editable y patrones visuales mas variados; faltan pulidos avanzados de UX |
+| B — Canvas profesional | 90% | Constructor estable, lienzo guiado editable y menu contextual mas completo; faltan presets de componentes y keyframes visuales |
 | C — CMS + Commerce | 71% | Base funcional, checkout tienda implementado, falta prueba real y variantes avanzadas |
 | D — IA + Export limpio | 78% | IA/export/auditoria existen, compiler/export esta modularizado y el scaffold exportado ya no depende de una plataforma serverless especifica |
 | Limpieza + Deploy | 86% | Repo consolidado, basura versionada eliminada, despliegue serverless anterior retirado y servidor Node validado localmente; faltan variables/productivo real |
-| **TOTAL** | **86%** | Proyecto usable, constructor recuperado y repo limpio; sigue faltando validacion productiva real de billing, DB y dominio publico |
+| **TOTAL** | **87%** | Proyecto usable, constructor recuperado, repo limpio y UX del editor mas solida; sigue faltando validacion productiva real de billing, DB y dominio publico |
 
 ## Auditoria Ejecutiva 2026-05-20
 
@@ -182,7 +182,7 @@
 
 ### Estado Ejecutivo
 
-- Avance total auditado del roadmap: ~86%
+- Avance total auditado del roadmap: ~87%
 - Fase mas solida hoy: monetizacion con Stripe para suscripciones nuevas + base del editor
 - Riesgo principal actual: validacion real de produccion, credenciales finales y cierre operativo, no ausencia de features base
 - Recomendacion: tratar el proyecto como "feature-complete en gran parte, internamente usable y ya validado localmente en Stripe, pero no todavia production-ready"
@@ -497,11 +497,13 @@
 
 - [x] Context menu/editor ops existentes
 - [x] Acciones de lock/hide/group/ungroup
-- [ ] Convertir a componente reutilizable
-- [ ] Guardar componentes de usuario
-- [ ] Copiar/pegar estilos
-- [ ] Wrap en Flex/Grid
-- [ ] Buscar/resaltar en Layers
+- [x] Primitivas reutilizables para items, separadores y header del menu
+- [x] Guardar componentes de usuario desde seleccion/nodo
+- [x] Copiar/pegar estilos con props visuales comunes
+- [x] Wrap en Flex/Grid respetando orden, locks y seleccion
+- [x] Buscar/resaltar en Layers con seleccion automatica
+- [x] Menu contextual contenido dentro del viewport en pantallas reducidas
+- [ ] Crear presets/acciones rapidas para componentes guardados
 
 ## B7. Experiencia Inicial Del Constructor
 
@@ -516,8 +518,8 @@
 - [x] Plantillas neutrales y variadas para evitar patron unico futurista
 - [~] Pulir microinteracciones y estados vacios secundarios
 
-**Estado Fase B:** 88%  
-**Bloqueante restante:** pulido UX responsive avanzado, context menu reutilizable y componentes de usuario.
+**Estado Fase B:** 90%  
+**Bloqueante restante:** pulido UX responsive avanzado, presets de componentes de usuario y editor visual de keyframes.
 
 ---
 
