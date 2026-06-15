@@ -141,12 +141,12 @@
 
 | Fase | Avance real | Estado |
 |------|-------------|--------|
-| A — Monetizacion real | 96% | Stripe local validado para alta/cancelacion; faltan pruebas publicas y tienda con MP |
+| A — Monetizacion real | 97% | Stripe configurado en entorno vivo, planes sembrados y seleccion de planes recuperada; faltan prueba publica de pago/webhook y tienda con MP |
 | B — Canvas profesional | 93% | Constructor estable, lienzo guiado editable/responsive, menu contextual completo, componentes guardados usables y keyframes visuales basicos |
 | C — CMS + Commerce | 71% | Base funcional, checkout tienda implementado, falta prueba real y variantes avanzadas |
 | D — IA + Export limpio | 78% | IA/export/auditoria existen, compiler/export esta modularizado y el scaffold exportado ya no depende de una plataforma serverless especifica |
-| Limpieza + Deploy | 88% | Repo consolidado, basura versionada eliminada, secretos saneados en plantilla y preflight publico agregado; faltan variables/productivo real |
-| **TOTAL** | **88%** | Proyecto usable, constructor recuperado, repo limpio, preflight publico agregado y UX del editor mas solida; sigue faltando validacion productiva real de billing, DB y dominio publico |
+| Limpieza + Deploy | 89% | Repo consolidado, preflight publico agregado, health vivo operativo y servidor Node validado; faltan pruebas desde dominio publico |
+| **TOTAL** | **89%** | Proyecto usable, constructor recuperado, preflight publico agregado, health vivo operativo y flujo de seleccion de planes corregido; sigue faltando prueba real de pago/webhook desde dominio publico |
 
 ## Auditoria Ejecutiva 2026-05-20
 
@@ -160,7 +160,7 @@
 
 ### Amarillo — Funciona, pero falta validar o endurecer
 
-- Checkout de suscripcion con Stripe y MercadoPago: la logica existe, faltan pruebas end-to-end reales
+- Checkout de suscripcion con Stripe: seleccion de planes y configuracion viva recuperadas; falta prueba end-to-end real con pago/webhook
 - Webhooks de pago: ya registran y actualizan estado, pero falta validacion publica real en ambos proveedores
 - CMS visual: CRUD y bindings basicos listos, faltan field builder completo, relaciones y robustez visual
 - Commerce core: carrito y checkout existen, pero faltan pruebas reales, variantes avanzadas y operacion de stock/email
@@ -171,7 +171,7 @@
 - Falta validar el primer deploy real de la baseline Prisma en entorno publico y luego continuar ya sobre migraciones incrementales
 - Falta cerrar la validacion productiva de pagos, cancelaciones y webhooks antes de considerar produccion real
 - Funnels basicos no estan iniciados y no forman parte del MVP productivo todavia
-- Persisten pendientes operativos de produccion: `NEXTAUTH_URL`, variables reales en el servidor, primer `resolve/deploy` real de Prisma y pruebas desde dominio real
+- Persisten pendientes operativos de produccion: prueba real de pago/webhook, primer `resolve/deploy` real de Prisma si aplica y pruebas desde dominio real
 
 ### Prioridad Recomendada
 
@@ -204,7 +204,7 @@
 - [x] Modelo `WebhookEvent` para auditoria de webhooks
 - [x] Seed de planes: `prisma/seed-plans.mjs`
 - [x] Script `npm run seed`
-- [~] Planes activos leidos desde DB
+- [x] Planes activos leidos desde DB y sembrados en entorno vivo
 
 ## A2. MercadoPago SDK Y Planes Recurrentes
 
@@ -232,7 +232,7 @@
 - [x] Botones de pricing conectados al checkout
 - [x] Redireccion a registro si no hay sesion
 - [!] Probar flujo completo con cuenta real/sandbox de MercadoPago para suscripciones nuevas
-- [x] Probar flujo completo con Stripe test mode
+- [x] Probar configuracion viva de Stripe test mode en health y habilitar seleccion de planes
 - [x] Confirmar comportamiento de retorno despues del pago aprobado
 
 ## A4. Webhooks De Pago
@@ -741,7 +741,7 @@
 - [ ] `NEXTAUTH_URL` alineado a `https://orvenix.com.mx`
 - [ ] Migrations aplicadas en DB productiva
 - [ ] Planes MercadoPago reales sincronizados
-- [ ] Pago de suscripcion probado
+- [~] Pago de suscripcion preparado; falta completar checkout real y confirmar webhook
 - [ ] Webhook de suscripcion probado
 - [ ] Cancelacion probada
 - [ ] Crear sitio respeta limite de plan
@@ -750,6 +750,7 @@
 - [ ] CMS CRUD probado
 - [ ] Store CRUD probado
 - [ ] Checkout tienda probado
+- [x] `/api/health` OK en servidor vivo local
 - [ ] `/api/health` OK desde dominio real
 - [x] Constructor carga desde ruta directa en servidor vivo
 - [x] App muestra preloader global con logo antes de cargar

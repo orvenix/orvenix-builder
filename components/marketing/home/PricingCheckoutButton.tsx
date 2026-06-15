@@ -26,9 +26,10 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
       return
     }
 
-    // Si no hay sesión → registrar con el plan preseleccionado
+    // Si no hay sesión → registrar con el plan preseleccionado y volver al checkout
     if (!session) {
-      router.push(`/register?plan=${planId}&interval=${interval}`)
+      const checkoutReturn = `/precios?checkout=${encodeURIComponent(planId)}&interval=${interval}`
+      router.push(`/register?plan=${encodeURIComponent(planId)}&interval=${interval}&callbackUrl=${encodeURIComponent(checkoutReturn)}`)
       return
     }
 

@@ -292,9 +292,12 @@ async function claimPendingDesignAfterRegister() {
   const pendingDesignKey = params.get("pendingDesignKey");
   const callbackUrl = params.get("callbackUrl");
   const returnTo = params.get("returnTo");
+  const plan = params.get("plan");
+  const interval = params.get("interval") === "year" ? "year" : "month";
 
   if (!pendingDesignKey) {
     if (callbackUrl?.startsWith("/")) return callbackUrl;
+    if (plan) return "/precios?checkout=" + encodeURIComponent(plan) + "&interval=" + interval;
     return returnTo && returnTo !== "/editor/pending" ? returnTo : "/dashboard";
   }
 

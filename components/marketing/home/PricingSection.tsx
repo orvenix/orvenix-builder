@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { PricingCheckoutButton } from './PricingCheckoutButton';
 
 export interface PricingPlanView {
@@ -49,6 +51,8 @@ interface PricingSectionProps {
   currentInterval?: BillingInterval | null;
   currentStatus?: string | null;
   currentEndsAt?: string | null;
+  autoCheckoutPlanId?: string | null;
+  autoCheckoutInterval?: BillingInterval;
 }
 
 function planFeatures(plan: PricingPlanView) {
@@ -69,8 +73,12 @@ function formatDate(value: string | null | undefined) {
   });
 }
 
-export function PricingSection({ plans, currentPlanId, currentInterval, currentStatus, currentEndsAt }: PricingSectionProps) {
-  const [annual, setAnnual] = useState(false);
+export function PricingSection({ plans, currentPlanId, currentInterval, currentStatus, currentEndsAt, autoCheckoutPlanId, autoCheckoutInterval = 'month' }: PricingSectionProps) {
+  const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
+  const autoCheckoutStartedRef = useRef(false);
+  const [annual, setAnnual] = useState(autoCheckoutInterval === 'year');
+  const [autoCheckoutError, setAutoCheckoutError] = useState<string | null>(null);
   const hasPendingSubscription = currentStatus === 'pending';
   const hasScheduledCancellation = currentStatus === 'cancelled' || currentStatus === 'canceled';
   const pendingPlan = hasPendingSubscription
@@ -78,9 +86,81 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
     : null;
   const currentPlan = currentPlanId ? plans.find((plan) => plan.id === currentPlanId) : null;
 
+  useEffect(() => {
+    if (!autoCheckoutPlanId || autoCheckoutStartedRef.current) return;
+
+    const targetPlan = plans.find((plan) => plan.id === autoCheckoutPlanId);
+    const interval = autoCheckoutInterval === 'year' ? 'year' : 'month';
+    const isAvailable = interval === 'year' ? targetPlan?.isAvailableYear : targetPlan?.isAvailableMonth;
+
+    if (!targetPlan) {
+      window.setTimeout(() => {
+        setAutoCheckoutError('No encontramos el plan seleccionado. Elige otro plan para continuar.');
+      }, 0);
+      autoCheckoutStartedRef.current = true;
+      return;
+    }
+
+    if (!isAvailable) {
+      window.setTimeout(() => {
+        setAutoCheckoutError('Este plan todavia no tiene pagos configurados para el intervalo seleccionado.');
+      }, 0);
+      autoCheckoutStartedRef.current = true;
+      return;
+    }
+
+    if (sessionStatus === 'loading') return;
+
+    if (!session) {
+      const checkoutReturn = '/precios?checkout=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval;
+      router.replace('/register?plan=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + '&callbackUrl=' + encodeURIComponent(checkoutReturn));
+      autoCheckoutStartedRef.current = true;
+      return;
+    }
+
+    autoCheckoutStartedRef.current = true;
+
+    void (async () => {
+      setAutoCheckoutError(null);
+      try {
+        const res = await fetch('/api/billing/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ planId: autoCheckoutPlanId, interval }),
+        });
+        const data = await res.json() as { initPoint?: string; error?: string; code?: string };
+
+        if (data.initPoint) {
+          window.location.href = data.initPoint;
+          return;
+        }
+
+        if (data.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
+          router.replace('/dashboard');
+          return;
+        }
+
+        setAutoCheckoutError(data.error ?? 'No se pudo iniciar el pago automaticamente. Intenta desde el boton del plan.');
+      } catch {
+        setAutoCheckoutError('No se pudo conectar con el checkout. Intenta desde el boton del plan.');
+      }
+    })();
+  }, [autoCheckoutInterval, autoCheckoutPlanId, plans, router, session, sessionStatus]);
+
   return (
     <section id="planes" className="mk-section bg-orvenix-bg">
       <div className="mk-container">
+        {autoCheckoutPlanId && !autoCheckoutError && (
+          <div className="mb-8 rounded-xl border border-sky-400/30 bg-sky-400/10 px-4 py-3 text-sm text-sky-100">
+            Preparando checkout seguro para tu plan seleccionado...
+          </div>
+        )}
+        {autoCheckoutError && (
+          <div className="mb-8 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-100">
+            <strong className="text-red-200">No se pudo abrir el checkout:</strong>{' '}
+            {autoCheckoutError}
+          </div>
+        )}
         {pendingPlan && (
           <div className="mb-8 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
             <strong className="text-amber-200">Pago pendiente:</strong>{' '}

@@ -117,6 +117,11 @@ async function getPricingPlans(): Promise<PricingPlanView[]> {
       orderBy: { priceMonthMxn: 'asc' },
     });
 
+    if (plans.length === 0) {
+      serverWarn('[precios] No active plans found in DB, rendering fallback pricing plans');
+      return FALLBACK_PRICING_PLANS;
+    }
+
     return plans.map((plan) => ({
       id: plan.id,
       name: plan.name,
@@ -187,13 +192,25 @@ async function getCurrentPlan(userId?: string | null): Promise<CurrentPlanView> 
   };
 }
 
-export default async function PreciosPage() {
+type PreciosPageProps = {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+function firstSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function PreciosPage({ searchParams }: PreciosPageProps) {
   let session = null;
   try {
     session = await getAuthSession();
   } catch (error) {
     serverWarn('[precios] Auth session unavailable, rendering pricing without current plan context', error);
   }
+  const rawSearchParams = await searchParams;
+  const autoCheckoutPlanId = firstSearchValue(rawSearchParams?.checkout) ?? null;
+  const autoCheckoutInterval = firstSearchValue(rawSearchParams?.interval) === 'year' ? 'year' : 'month';
+
   const [plans, currentPlan] = await Promise.all([
     getPricingPlans(),
     getCurrentPlan(session?.user?.id),
@@ -239,6 +256,8 @@ export default async function PreciosPage() {
         currentInterval={currentPlan.currentInterval}
         currentStatus={currentPlan.currentStatus}
         currentEndsAt={currentPlan.currentEndsAt}
+        autoCheckoutPlanId={autoCheckoutPlanId}
+        autoCheckoutInterval={autoCheckoutInterval}
       />
 
       {/* Trust items */}
