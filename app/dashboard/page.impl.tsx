@@ -6,11 +6,12 @@ import { getEditRequestsForRole, type EditRequest, type EditRequestStatus } from
 import { CreateSiteDialog } from "./CreateSiteDialog";
 import { EditRequestDialog } from "./EditRequestDialog";
 import { ExportDropdown } from "./ExportDropdown";
-import { deleteSiteAction, updateEditRequestStatusAction } from "./actions";
+import { updateEditRequestStatusAction } from "./actions";
+import { DeleteSiteButton } from "./DeleteSiteButton";
 import { DashboardNav } from "./DashboardNav";
 import { DashboardBillingPanel } from "./DashboardBillingPanel";
 import {
-  Edit3, Globe, Trash2, ExternalLink,
+  Edit3, Globe, ExternalLink,
   ArrowRight, Sparkles, TrendingUp, Clock, ShieldCheck,
   Activity, Layers3, LayoutTemplate, Wrench, CheckCircle2, CircleDot, XCircle, CreditCard, FileText, BarChart2,
   type LucideIcon,
@@ -562,15 +563,7 @@ function SiteCard({
 
           <ExportDropdown siteId={site.id} />
 
-          <form action={deleteSiteAction.bind(null, site.id)}>
-            <button
-              type="submit"
-              title="Eliminar sitio"
-              className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] text-white/20 transition-all hover:border-red-500/20 hover:bg-red-400/[0.08] hover:text-red-400"
-            >
-              <Trash2 size={12} />
-            </button>
-          </form>
+          <DeleteSiteButton siteId={site.id} siteName={site.name} />
         </div>
       </div>
     </article>

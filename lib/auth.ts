@@ -122,14 +122,25 @@ export async function createSiteFromTree({
 }
 
 export async function deleteSite(id: string, userId: string) {
-  return editorPrisma.editorWebsite.deleteMany({ where: { id, userId } });
+  const result = await editorPrisma.editorWebsite.deleteMany({ where: { id, userId } });
+
+  if (result.count === 0) {
+    throw new Error("No se encontro el sitio o no pertenece a tu cuenta.");
+  }
+
+  return result;
 }
 
 export async function deleteSiteForRole(id: string, userId: string, role: UserRole) {
-  if (role === "ADMIN") {
-    return editorPrisma.editorWebsite.deleteMany({ where: { id } });
+  const result = role === "ADMIN"
+    ? await editorPrisma.editorWebsite.deleteMany({ where: { id } })
+    : await editorPrisma.editorWebsite.deleteMany({ where: { id, userId } });
+
+  if (result.count === 0) {
+    throw new Error("No se encontro el sitio o no tienes permiso para eliminarlo.");
   }
-  return deleteSite(id, userId);
+
+  return result;
 }
 
 export async function publishSite(id: string, userId: string) {
