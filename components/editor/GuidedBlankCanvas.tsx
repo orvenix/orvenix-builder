@@ -80,6 +80,341 @@ type GuidedTemplate = {
   items?: string[];
 };
 
+type GuidedVisualRecipe = {
+  family: string;
+  section: NodeProps;
+  headingSize: "2xl" | "3xl" | "4xl" | "5xl";
+  headingWeight: "semibold" | "bold" | "extrabold";
+  headingColor: string;
+  bodyColor: string;
+  itemColor: string;
+  buttonVariant: "primary" | "secondary" | "ghost";
+  buttonSize: "md" | "lg";
+  bodyMaxWidth: "md" | "lg" | "none";
+  itemPrefix?: string;
+};
+
+const GUIDED_VISUAL_RECIPES: Record<GuidedTemplateId, GuidedVisualRecipe> = {
+  hero: {
+    family: "Editorial claro",
+    section: {
+      as: "header",
+      maxWidth: "xl",
+      paddingY: "xl",
+      paddingX: "lg",
+      align: "left",
+      mobileAlign: "center",
+      background: "linear-gradient(135deg, #fff7ed 0%, #f8fafc 54%, #e0f2fe 100%)",
+      border: "1px solid rgba(15, 23, 42, 0.08)",
+      borderRadius: "2xl",
+      boxShadow: "0 26px 70px rgba(15, 23, 42, 0.10)",
+    },
+    headingSize: "5xl",
+    headingWeight: "extrabold",
+    headingColor: "#172554",
+    bodyColor: "#475569",
+    itemColor: "#334155",
+    buttonVariant: "primary",
+    buttonSize: "lg",
+    bodyMaxWidth: "lg",
+  },
+  nav: {
+    family: "Barra minimal",
+    section: {
+      as: "header",
+      maxWidth: "xl",
+      paddingY: "sm",
+      paddingX: "lg",
+      align: "center",
+      background: "rgba(255, 255, 255, 0.86)",
+      border: "1px solid rgba(15, 23, 42, 0.10)",
+      borderRadius: "xl",
+      backdropFilter: "blur(18px)",
+    },
+    headingSize: "2xl",
+    headingWeight: "bold",
+    headingColor: "#0f172a",
+    bodyColor: "#64748b",
+    itemColor: "#64748b",
+    buttonVariant: "ghost",
+    buttonSize: "md",
+    bodyMaxWidth: "none",
+  },
+  trust: {
+    family: "Confianza limpia",
+    section: {
+      maxWidth: "lg",
+      paddingY: "lg",
+      paddingX: "lg",
+      align: "center",
+      background: "#f0fdfa",
+      border: "1px solid rgba(13, 148, 136, 0.18)",
+      borderRadius: "xl",
+    },
+    headingSize: "3xl",
+    headingWeight: "bold",
+    headingColor: "#134e4a",
+    bodyColor: "#0f766e",
+    itemColor: "#115e59",
+    buttonVariant: "ghost",
+    buttonSize: "md",
+    bodyMaxWidth: "lg",
+    itemPrefix: "✓ ",
+  },
+  features: {
+    family: "Producto limpio",
+    section: {
+      maxWidth: "xl",
+      paddingY: "xl",
+      paddingX: "md",
+      align: "left",
+      background: "#ffffff",
+      border: "1px solid rgba(2, 132, 199, 0.14)",
+      borderRadius: "lg",
+    },
+    headingSize: "4xl",
+    headingWeight: "extrabold",
+    headingColor: "#0f172a",
+    bodyColor: "#475569",
+    itemColor: "#075985",
+    buttonVariant: "secondary",
+    buttonSize: "md",
+    bodyMaxWidth: "lg",
+    itemPrefix: "• ",
+  },
+  services: {
+    family: "Local premium",
+    section: {
+      maxWidth: "lg",
+      paddingY: "lg",
+      paddingX: "lg",
+      align: "left",
+      background: "#ecfdf5",
+      border: "1px solid rgba(22, 163, 74, 0.20)",
+      borderRadius: "md",
+      boxShadow: "0 18px 50px rgba(22, 101, 52, 0.08)",
+    },
+    headingSize: "3xl",
+    headingWeight: "bold",
+    headingColor: "#14532d",
+    bodyColor: "#166534",
+    itemColor: "#15803d",
+    buttonVariant: "primary",
+    buttonSize: "md",
+    bodyMaxWidth: "md",
+    itemPrefix: "Servicio: ",
+  },
+  capabilities: {
+    family: "Tecnico sobrio",
+    section: {
+      maxWidth: "xl",
+      paddingY: "xl",
+      paddingX: "lg",
+      align: "left",
+      background: "#111827",
+      border: "1px solid rgba(255, 255, 255, 0.10)",
+      borderRadius: "xl",
+      boxShadow: "0 28px 80px rgba(17, 24, 39, 0.24)",
+    },
+    headingSize: "4xl",
+    headingWeight: "extrabold",
+    headingColor: "#ffffff",
+    bodyColor: "#cbd5e1",
+    itemColor: "#93c5fd",
+    buttonVariant: "primary",
+    buttonSize: "lg",
+    bodyMaxWidth: "lg",
+    itemPrefix: "→ ",
+  },
+  architecture: {
+    family: "Proceso institucional",
+    section: {
+      maxWidth: "md",
+      paddingY: "lg",
+      paddingX: "lg",
+      align: "left",
+      background: "#f8fafc",
+      border: "1px solid rgba(71, 85, 105, 0.18)",
+      borderRadius: "none",
+    },
+    headingSize: "3xl",
+    headingWeight: "semibold",
+    headingColor: "#1e293b",
+    bodyColor: "#475569",
+    itemColor: "#334155",
+    buttonVariant: "ghost",
+    buttonSize: "md",
+    bodyMaxWidth: "md",
+    itemPrefix: "Paso ",
+  },
+  stats: {
+    family: "Impacto numerico",
+    section: {
+      maxWidth: "xl",
+      paddingY: "md",
+      paddingX: "lg",
+      align: "center",
+      background: "#fffbeb",
+      border: "1px solid rgba(217, 119, 6, 0.22)",
+      borderRadius: "lg",
+    },
+    headingSize: "3xl",
+    headingWeight: "extrabold",
+    headingColor: "#78350f",
+    bodyColor: "#92400e",
+    itemColor: "#b45309",
+    buttonVariant: "ghost",
+    buttonSize: "md",
+    bodyMaxWidth: "lg",
+  },
+  products: {
+    family: "Vitrina comercial",
+    section: {
+      maxWidth: "xl",
+      paddingY: "xl",
+      paddingX: "md",
+      align: "center",
+      background: "linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)",
+      border: "1px solid rgba(20, 184, 166, 0.18)",
+      borderRadius: "xl",
+    },
+    headingSize: "4xl",
+    headingWeight: "bold",
+    headingColor: "#064e3b",
+    bodyColor: "#0f766e",
+    itemColor: "#047857",
+    buttonVariant: "primary",
+    buttonSize: "md",
+    bodyMaxWidth: "lg",
+    itemPrefix: "Disponible: ",
+  },
+  process: {
+    family: "Metodo guiado",
+    section: {
+      maxWidth: "lg",
+      paddingY: "lg",
+      paddingX: "lg",
+      align: "left",
+      background: "#eff6ff",
+      border: "1px solid rgba(37, 99, 235, 0.16)",
+      borderRadius: "lg",
+    },
+    headingSize: "3xl",
+    headingWeight: "bold",
+    headingColor: "#1e3a8a",
+    bodyColor: "#1d4ed8",
+    itemColor: "#1e40af",
+    buttonVariant: "secondary",
+    buttonSize: "md",
+    bodyMaxWidth: "md",
+  },
+  testimonials: {
+    family: "Editorial humano",
+    section: {
+      maxWidth: "md",
+      paddingY: "xl",
+      paddingX: "lg",
+      align: "center",
+      background: "#fff1f2",
+      border: "1px solid rgba(225, 29, 72, 0.14)",
+      borderRadius: "2xl",
+      boxShadow: "0 22px 70px rgba(159, 18, 57, 0.08)",
+    },
+    headingSize: "3xl",
+    headingWeight: "bold",
+    headingColor: "#881337",
+    bodyColor: "#9f1239",
+    itemColor: "#be123c",
+    buttonVariant: "ghost",
+    buttonSize: "md",
+    bodyMaxWidth: "lg",
+    itemPrefix: "“",
+  },
+  pricing: {
+    family: "Comparativo directo",
+    section: {
+      maxWidth: "xl",
+      paddingY: "xl",
+      paddingX: "lg",
+      align: "left",
+      background: "#fafaf9",
+      border: "1px solid rgba(120, 113, 108, 0.18)",
+      borderRadius: "md",
+    },
+    headingSize: "4xl",
+    headingWeight: "extrabold",
+    headingColor: "#292524",
+    bodyColor: "#57534e",
+    itemColor: "#92400e",
+    buttonVariant: "primary",
+    buttonSize: "lg",
+    bodyMaxWidth: "lg",
+    itemPrefix: "Plan ",
+  },
+  contact: {
+    family: "Contacto cercano",
+    section: {
+      maxWidth: "lg",
+      paddingY: "lg",
+      paddingX: "lg",
+      align: "center",
+      background: "#ecfeff",
+      border: "1px solid rgba(8, 145, 178, 0.18)",
+      borderRadius: "xl",
+    },
+    headingSize: "3xl",
+    headingWeight: "bold",
+    headingColor: "#164e63",
+    bodyColor: "#0e7490",
+    itemColor: "#0891b2",
+    buttonVariant: "primary",
+    buttonSize: "lg",
+    bodyMaxWidth: "lg",
+  },
+  cta: {
+    family: "Cierre fuerte",
+    section: {
+      maxWidth: "xl",
+      paddingY: "xl",
+      paddingX: "lg",
+      align: "center",
+      background: "linear-gradient(135deg, #312e81 0%, #0f172a 100%)",
+      border: "1px solid rgba(255, 255, 255, 0.12)",
+      borderRadius: "2xl",
+      boxShadow: "0 28px 80px rgba(49, 46, 129, 0.22)",
+    },
+    headingSize: "4xl",
+    headingWeight: "extrabold",
+    headingColor: "#ffffff",
+    bodyColor: "#dbeafe",
+    itemColor: "#bfdbfe",
+    buttonVariant: "primary",
+    buttonSize: "lg",
+    bodyMaxWidth: "lg",
+  },
+  footer: {
+    family: "Footer sobrio",
+    section: {
+      as: "footer",
+      maxWidth: "xl",
+      paddingY: "md",
+      paddingX: "lg",
+      align: "left",
+      background: "#020617",
+      border: "1px solid rgba(255, 255, 255, 0.08)",
+      borderRadius: "none",
+    },
+    headingSize: "2xl",
+    headingWeight: "bold",
+    headingColor: "#f8fafc",
+    bodyColor: "#94a3b8",
+    itemColor: "#cbd5e1",
+    buttonVariant: "ghost",
+    buttonSize: "md",
+    bodyMaxWidth: "lg",
+  },
+};
+
 const GUIDED_SECTION_TEMPLATES: Record<GuidedTemplateId, GuidedTemplate> = {
   hero: {
     heading: "Título principal de tu sitio",
@@ -177,6 +512,7 @@ export function buildGuidedSectionTree(
   draft = createGuidedSectionDraft(suggestion)
 ): EditorTree {
   const template = GUIDED_SECTION_TEMPLATES[suggestion.template];
+  const recipe = GUIDED_VISUAL_RECIPES[suggestion.template];
   const id = suggestion.id;
   const sectionId = `guided-${id}-section`;
   const headingId = `guided-${id}-heading`;
@@ -188,15 +524,11 @@ export function buildGuidedSectionTree(
   const itemIds = items.map((_, index) => `guided-${id}-item-${index + 1}`);
   const buttonLabel = draft.button.trim();
   const buttonId = buttonLabel ? `guided-${id}-button` : null;
-  const align = template.align ?? "left";
+  const align = (recipe.section.align as "left" | "center" | undefined) ?? template.align ?? "left";
   const sectionProps: NodeProps = {
-    as: template.as ?? "section",
-    maxWidth: id === "nav" || id === "footer" ? "xl" : "lg",
-    paddingY: id === "nav" ? "sm" : id === "hero" || id === "cta" ? "xl" : "lg",
-    paddingX: "md",
+    ...recipe.section,
+    as: recipe.section.as ?? template.as ?? "section",
     align,
-    background: id === "hero" || id === "cta" ? "#f8fafc" : "#ffffff",
-    border: id === "nav" || id === "footer" ? "1px solid rgba(15, 23, 42, 0.08)" : undefined,
   };
 
   return {
@@ -217,10 +549,10 @@ export function buildGuidedSectionTree(
         props: {
           text: draft.heading.trim() || template.heading,
           level: id === "hero" ? 1 : 2,
-          size: id === "hero" ? "5xl" : id === "nav" || id === "footer" ? "2xl" : "3xl",
-          weight: "bold",
+          size: recipe.headingSize,
+          weight: recipe.headingWeight,
           align,
-          color: "#0f172a",
+          color: recipe.headingColor,
           marginBottom: "md",
         },
         children: [],
@@ -232,10 +564,10 @@ export function buildGuidedSectionTree(
         displayName: `Texto - ${suggestion.label}`,
         props: {
           content: draft.body.trim() || template.body,
-          size: id === "hero" ? "lg" : "md",
-          color: "#475569",
+          size: id === "hero" || id === "cta" ? "lg" : "md",
+          color: recipe.bodyColor,
           align,
-          maxWidth: align === "center" ? "lg" : "md",
+          maxWidth: recipe.bodyMaxWidth,
         },
         children: [],
         version: 1,
@@ -248,9 +580,9 @@ export function buildGuidedSectionTree(
             type: "text",
             displayName: `Punto ${index + 1}`,
             props: {
-              content: item,
+              content: `${recipe.itemPrefix ?? ""}${item}`,
               size: "md",
-              color: "#334155",
+              color: recipe.itemColor,
               align,
               maxWidth: "md",
             },
@@ -268,8 +600,8 @@ export function buildGuidedSectionTree(
               props: {
                 label: buttonLabel,
                 href: "#contacto",
-                variant: "primary",
-                size: id === "hero" || id === "cta" ? "lg" : "md",
+                variant: recipe.buttonVariant,
+                size: recipe.buttonSize,
               },
               children: [],
               version: 1,
@@ -392,7 +724,9 @@ export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps
             <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-slate-900">{activeSuggestion.label}</p>
-                <p className="mt-0.5 truncate text-[11px] text-slate-500">{activeSuggestion.description}</p>
+                <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                  {activeSuggestion.description} · {GUIDED_VISUAL_RECIPES[activeSuggestion.template].family}
+                </p>
               </div>
               <button
                 type="button"
