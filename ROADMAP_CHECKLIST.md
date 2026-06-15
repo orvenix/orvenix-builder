@@ -142,7 +142,7 @@
 | Fase | Avance real | Estado |
 |------|-------------|--------|
 | A — Monetizacion real | 96% | Stripe local validado para alta/cancelacion; faltan pruebas publicas y tienda con MP |
-| B — Canvas profesional | 92% | Constructor estable, lienzo guiado editable, menu contextual completo, componentes guardados usables y keyframes visuales basicos |
+| B — Canvas profesional | 93% | Constructor estable, lienzo guiado editable/responsive, menu contextual completo, componentes guardados usables y keyframes visuales basicos |
 | C — CMS + Commerce | 71% | Base funcional, checkout tienda implementado, falta prueba real y variantes avanzadas |
 | D — IA + Export limpio | 78% | IA/export/auditoria existen, compiler/export esta modularizado y el scaffold exportado ya no depende de una plataforma serverless especifica |
 | Limpieza + Deploy | 86% | Repo consolidado, basura versionada eliminada, despliegue serverless anterior retirado y servidor Node validado localmente; faltan variables/productivo real |
@@ -516,10 +516,10 @@
 - [x] Insercion de secciones desde sugerencias
 - [x] Sugerencias editables tras insertarlas en el canvas
 - [x] Plantillas neutrales y variadas para evitar patron unico futurista
-- [~] Pulir microinteracciones y estados vacios secundarios
+- [x] Pulir microinteracciones y estados vacios secundarios con modo compacto y feedback de insercion
 
-**Estado Fase B:** 92%  
-**Bloqueante restante:** pulido UX responsive avanzado y pruebas visuales amplias del editor.
+**Estado Fase B:** 93%  
+**Bloqueante restante:** pruebas visuales amplias del editor y pulido responsive en paneles laterales.
 
 ---
 

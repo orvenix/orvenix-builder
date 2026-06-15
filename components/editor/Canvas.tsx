@@ -12,7 +12,7 @@ import { getFreeInsertProps } from "@/components/editor/freeInsert";
 import { resolveResponsiveProps } from "@/components/editor/responsive";
 import {
   ZoomIn, ZoomOut, Maximize2, Minimize2,
-  MessageSquarePlus,
+  CheckCircle2, MessageSquarePlus,
 } from "lucide-react";
 import type { EditorTree, NodeId, EditorComment } from "@/types/editor";
 import { generateSectionAI } from "@/app/actions/ai";
@@ -65,8 +65,11 @@ export const Canvas = () => {
   const insertTree = useEditorStore((s) => s.insertTree);
   const rootId = useEditorStore((s) => s.tree.rootId);
 
+  const [insertedSuggestionLabel, setInsertedSuggestionLabel] = useState<string | null>(null);
+
   const handleGuidedSectionInsert = useCallback((suggestion: GuidedSectionSuggestion, draft: GuidedSectionDraft) => {
     insertTree({ tree: buildGuidedSectionTree(suggestion, draft), parentId: rootId });
+    setInsertedSuggestionLabel(suggestion.label);
   }, [insertTree, rootId]);
 
   const [zoom, setZoom] = useState(100);
@@ -100,6 +103,11 @@ export const Canvas = () => {
 
   useEffect(() => { fitToWidth(); }, [fitToWidth]);
   useEffect(() => { setCanvasZoom(zoom); }, [setCanvasZoom, zoom]);
+  useEffect(() => {
+    if (!insertedSuggestionLabel) return;
+    const id = window.setTimeout(() => setInsertedSuggestionLabel(null), 2200);
+    return () => window.clearTimeout(id);
+  }, [insertedSuggestionLabel]);
 
   // Listener para Generación de Secciones con IA (Nivel 4)
   useEffect(() => {
@@ -419,7 +427,10 @@ export const Canvas = () => {
 
                 {/* Guided blank canvas */}
                 {isEmpty && !isOver && !isPreviewMode && (
-                  <GuidedBlankCanvas onInsertSuggestion={handleGuidedSectionInsert} />
+                  <GuidedBlankCanvas
+                    compact={currentDevice !== "desktop"}
+                    onInsertSuggestion={handleGuidedSectionInsert}
+                  />
                 )}
 
                 {marqueeBox && !isPreviewMode && (
@@ -438,6 +449,13 @@ export const Canvas = () => {
           </div>
         </div>
       </div>
+
+      {!isPreviewMode && insertedSuggestionLabel && (
+        <div className="pointer-events-none absolute right-4 top-12 z-30 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-950/90 px-3 py-2 text-xs font-semibold text-emerald-100 shadow-2xl shadow-black/40 backdrop-blur-xl editor-anim-scale-in">
+          <CheckCircle2 size={14} className="text-emerald-300" />
+          {insertedSuggestionLabel} insertada y lista para editar
+        </div>
+      )}
 
       {/* ── Zoom controls ── */}
       {!isPreviewMode && (

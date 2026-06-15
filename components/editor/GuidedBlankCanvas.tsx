@@ -613,10 +613,11 @@ export function buildGuidedSectionTree(
 }
 
 interface GuidedBlankCanvasProps {
+  compact?: boolean;
   onInsertSuggestion: (suggestion: GuidedSectionSuggestion, draft: GuidedSectionDraft) => void;
 }
 
-export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps) {
+export function GuidedBlankCanvas({ compact = false, onInsertSuggestion }: GuidedBlankCanvasProps) {
   const [activeSuggestion, setActiveSuggestion] = useState<GuidedSectionSuggestion | null>(null);
   const [draft, setDraft] = useState<GuidedSectionDraft | null>(null);
   const [activatingId, setActivatingId] = useState<string | null>(null);
@@ -653,69 +654,7 @@ export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps
     };
   }, []);
 
-  return (
-    <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.045)_1px,transparent_1px)] bg-[size:48px_48px]" />
-
-      <div className="absolute left-1/2 top-1/2 w-[260px] -translate-x-1/2 -translate-y-1/2 text-center">
-        <div className="mx-auto mb-3 grid h-9 w-9 place-items-center rounded-lg border border-slate-200/80 bg-white/75 text-slate-500 shadow-sm backdrop-blur-xl">
-          <Icons.Sparkles size={16} />
-        </div>
-        <p className="text-sm font-semibold text-slate-700">Empieza con una sección</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">Elige un globo para insertar una base editable.</p>
-      </div>
-
-      {GUIDED_SECTION_SUGGESTIONS.map((suggestion, index) => {
-        const Icon = Icons[suggestion.icon] as ComponentType<{ size?: number; className?: string }>;
-        const isActive = activatingId === suggestion.id;
-        const isEditing = activeSuggestion?.id === suggestion.id;
-        const isOtherActive = (activatingId !== null && !isActive) || (activeSuggestion !== null && !isEditing);
-
-        return (
-          <div
-            key={suggestion.id}
-            className={cn(
-              "pointer-events-auto absolute transition-all duration-200 ease-out",
-              isActive ? "opacity-0" : "opacity-100",
-              isOtherActive && "opacity-25"
-            )}
-            style={{
-              left: `${suggestion.x}%`,
-              top: `${suggestion.y}%`,
-              transform: `translate(-50%, -50%) scale(${isActive ? 0.92 : 1})`,
-              transitionDelay: `${Math.min(index * 12, 120)}ms`,
-            }}
-          >
-            <button
-              type="button"
-              aria-label={`Insertar ${suggestion.label}`}
-              disabled={activatingId !== null}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                openEditor(suggestion);
-              }}
-              className={cn(
-                "group flex min-h-[74px] w-[176px] flex-col justify-between rounded-lg border px-3 py-2 text-left shadow-xl backdrop-blur-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 disabled:cursor-wait",
-                TONE_STYLES[suggestion.tone]
-              )}
-            >
-              <span className="flex items-center gap-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-current/10 bg-white/45">
-                  <Icon size={14} className="opacity-75" />
-                </span>
-                <span className="min-w-0 text-[12px] font-semibold leading-4">{suggestion.label}</span>
-              </span>
-              <span className="mt-2 line-clamp-2 text-[10px] leading-4 opacity-70">{suggestion.description}</span>
-              <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-md border border-current/10 bg-white/40 opacity-0 transition-opacity group-hover:opacity-100">
-                <Icons.Plus size={11} />
-              </span>
-            </button>
-          </div>
-        );
-      })}
-
-      {activeSuggestion && draft && typeof document !== "undefined" && createPortal(
+  const suggestionEditor = activeSuggestion && draft && typeof document !== "undefined" ? createPortal(
         <div className="fixed inset-0 z-[2300] flex items-center justify-center bg-slate-950/20 px-4 backdrop-blur-[2px]">
           <div
             className="w-full max-w-md overflow-hidden rounded-lg border border-slate-200/80 bg-white/95 shadow-2xl shadow-slate-950/15 backdrop-blur-xl"
@@ -799,7 +738,107 @@ export function GuidedBlankCanvas({ onInsertSuggestion }: GuidedBlankCanvasProps
           </div>
         </div>,
         document.body
-      )}
+      ) : null;
+
+  const renderSuggestionButton = (suggestion: GuidedSectionSuggestion, options: { compactButton?: boolean } = {}) => {
+    const Icon = Icons[suggestion.icon] as ComponentType<{ size?: number; className?: string }>;
+    const isActive = activatingId === suggestion.id;
+    const isEditing = activeSuggestion?.id === suggestion.id;
+    const isOtherActive = (activatingId !== null && !isActive) || (activeSuggestion !== null && !isEditing);
+
+    return (
+      <button
+        type="button"
+        aria-label={"Insertar " + suggestion.label}
+        disabled={activatingId !== null}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openEditor(suggestion);
+        }}
+        className={cn(
+          "group relative flex min-h-[74px] flex-col justify-between rounded-lg border px-3 py-2 text-left shadow-xl backdrop-blur-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 disabled:cursor-wait",
+          options.compactButton ? "w-full" : "w-[176px]",
+          isActive ? "scale-95 opacity-0" : "opacity-100",
+          isOtherActive && "opacity-25",
+          TONE_STYLES[suggestion.tone]
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-current/10 bg-white/45">
+            <Icon size={14} className="opacity-75" />
+          </span>
+          <span className="min-w-0 text-[12px] font-semibold leading-4">{suggestion.label}</span>
+        </span>
+        <span className="mt-2 line-clamp-2 text-[10px] leading-4 opacity-70">{suggestion.description}</span>
+        <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-md border border-current/10 bg-white/40 opacity-0 transition-opacity group-hover:opacity-100">
+          <Icons.Plus size={11} />
+        </span>
+      </button>
+    );
+  };
+
+  if (compact) {
+    return (
+      <div className="pointer-events-none absolute inset-0 z-40 overflow-auto px-4 py-6">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.045)_1px,transparent_1px)] bg-[size:32px_32px]" />
+        <div className="pointer-events-auto relative mx-auto w-full max-w-[320px] rounded-xl border border-slate-200/80 bg-white/78 p-3 shadow-2xl shadow-slate-950/10 backdrop-blur-xl">
+          <div className="mb-3 flex items-start gap-2">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white/80 text-slate-500">
+              <Icons.Sparkles size={15} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800">Empieza con una sección</p>
+              <p className="mt-0.5 text-[11px] leading-4 text-slate-500">Edita una sugerencia antes de insertarla en el lienzo.</p>
+            </div>
+          </div>
+          <div className="grid gap-2">
+            {GUIDED_SECTION_SUGGESTIONS.map((suggestion) => (
+              <div key={suggestion.id}>{renderSuggestionButton(suggestion, { compactButton: true })}</div>
+            ))}
+          </div>
+        </div>
+        {suggestionEditor}
+      </div>
+    );
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.045)_1px,transparent_1px)] bg-[size:48px_48px]" />
+
+      <div className="absolute left-1/2 top-1/2 w-[280px] -translate-x-1/2 -translate-y-1/2 text-center">
+        <div className="mx-auto mb-3 grid h-9 w-9 place-items-center rounded-lg border border-slate-200/80 bg-white/75 text-slate-500 shadow-sm backdrop-blur-xl">
+          <Icons.Sparkles size={16} />
+        </div>
+        <p className="text-sm font-semibold text-slate-700">Empieza con una sección</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">15 sugerencias listas: elige una, edítala y conviértela en bloque.</p>
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-semibold text-slate-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+          Base editable
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Diseño neutral
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+          Inserción rápida
+        </div>
+      </div>
+
+      {GUIDED_SECTION_SUGGESTIONS.map((suggestion, index) => (
+        <div
+          key={suggestion.id}
+          className="pointer-events-auto absolute transition-transform duration-200 ease-out"
+          style={{
+            left: suggestion.x + "%",
+            top: suggestion.y + "%",
+            transform: "translate(-50%, -50%)",
+            transitionDelay: Math.min(index * 12, 120) + "ms",
+          }}
+        >
+          {renderSuggestionButton(suggestion)}
+        </div>
+      ))}
+
+      {suggestionEditor}
     </div>
   );
 }
