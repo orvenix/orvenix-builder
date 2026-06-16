@@ -97,6 +97,12 @@ async function stripeRequest<T>(path: string, init: RequestInit = {}): Promise<T
   return payload as T
 }
 
+export async function retrieveStripeCheckoutSession(sessionId: string) {
+  return stripeRequest<StripeCheckoutSession>(
+    `/checkout/sessions/${encodeURIComponent(sessionId)}`
+  )
+}
+
 export async function createStripeCheckoutSession(params: {
   userId: string
   userEmail: string

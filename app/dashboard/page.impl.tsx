@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { normalizeCheckoutAction } from "@/lib/checkout";
 import { editorPrisma } from "@/lib/editor-db";
+import { retrieveStripeCheckoutSession } from "@/lib/stripe";
+import { processStripeCheckoutSession } from "@/lib/stripe-subscription-payment";
+import { serverWarn } from "@/lib/server-log";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +29,34 @@ interface DashboardPageProps {
     checkout?: string | string[];
     intent?: string | string[];
     siteId?: string | string[];
+    provider?: string | string[];
+    session_id?: string | string[];
+    sub?: string | string[];
   }>;
+}
+
+async function syncStripeCheckoutReturn(sessionId: string | undefined, userId: string) {
+  if (!sessionId || !sessionId.startsWith("cs_")) return;
+
+  try {
+    const checkoutSession = await retrieveStripeCheckoutSession(sessionId);
+    const checkoutUserId = checkoutSession.client_reference_id ?? checkoutSession.metadata?.userId;
+
+    if (checkoutUserId !== userId) {
+      serverWarn("[billing:dashboard] Stripe checkout session no pertenece al usuario", {
+        sessionId,
+        hasCheckoutUserId: Boolean(checkoutUserId),
+      });
+      return;
+    }
+
+    await processStripeCheckoutSession(checkoutSession);
+  } catch (error) {
+    serverWarn("[billing:dashboard] No se pudo sincronizar retorno de Stripe", {
+      sessionId,
+      error,
+    });
+  }
 }
 
 function firstParam(value?: string | string[]) {
@@ -41,6 +71,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const checkoutStatus = firstParam(resolvedSearchParams?.checkout);
   const checkoutIntent = normalizeCheckoutAction(firstParam(resolvedSearchParams?.intent));
   const checkoutSiteId = firstParam(resolvedSearchParams?.siteId);
+  const billingProvider = firstParam(resolvedSearchParams?.provider);
+  const billingReturn = firstParam(resolvedSearchParams?.sub);
+  const stripeSessionId = firstParam(resolvedSearchParams?.session_id);
+
+  if (billingProvider === "stripe" && billingReturn === "ok") {
+    await syncStripeCheckoutReturn(stripeSessionId, session.user.id);
+  }
+
   const role = (session.user.role ?? "CLIENT") as UserRole;
   const isAdmin = role === "ADMIN";
   const sites = await getSitesForRole(session.user.id, role);
