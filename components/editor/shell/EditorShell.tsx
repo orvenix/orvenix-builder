@@ -214,6 +214,7 @@ export function EditorShell() {
   const editor = (
     <div className="flex min-h-0 min-w-0 flex-1 page-transition">
       <FloatingSaveIndicator />
+      {!isPreviewMode && <SmallViewportNotice />}
       {!isPreviewMode && <EditorContextMenu />}
       {!isPreviewMode && <MediaCenter />}
 
@@ -346,7 +347,9 @@ export function EditorShell() {
         </div>
       )}
 
-      <Canvas />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <Canvas />
+      </div>
       {!isPreviewMode && (
         <div className="hidden min-h-0 shrink-0 2xl:block">
           <SettingsPanel />
@@ -372,6 +375,17 @@ export function EditorShell() {
     >
       {editor}
     </DndContext>
+  );
+}
+
+function SmallViewportNotice() {
+  return (
+    <div className="pointer-events-none absolute inset-x-2 top-2 z-40 lg:hidden">
+      <div className="mx-auto flex max-w-md items-start gap-2 rounded-2xl border border-amber-300/20 bg-[#120f06]/92 px-3 py-2 text-[11px] leading-5 text-amber-100 shadow-2xl shadow-black/35 backdrop-blur-xl">
+        <Icons.AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-200" />
+        <span>Para sacar el maximo del constructor usa una pantalla grande. En esta resolucion el lienzo se ajusta automaticamente.</span>
+      </div>
+    </div>
   );
 }
 

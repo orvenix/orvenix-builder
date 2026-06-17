@@ -6993,3 +6993,23 @@ body.light-mode .cb-badge { border-color: #f8fafc; }
     animation: none;
   }
 }
+
+
+@media (max-width: 767px) {
+  .editor-header {
+    align-content: center;
+  }
+
+  .editor-device-toggle {
+    scrollbar-width: none;
+  }
+
+  .editor-device-toggle::-webkit-scrollbar {
+    display: none;
+  }
+
+  .editor-publish-btn {
+    max-width: 7.25rem;
+    white-space: nowrap;
+  }
+}

@@ -17,7 +17,8 @@ import {
 import type { EditorTree, NodeId, EditorComment } from "@/types/editor";
 import { generateSectionAI } from "@/app/actions/ai";
 
-const ZOOM_STEPS = [50, 75, 100, 125, 150] as const;
+const ZOOM_STEPS = [25, 33, 50, 75, 100, 125, 150] as const;
+const MIN_CANVAS_ZOOM = ZOOM_STEPS[0];
 const EMPTY_COMMENTS: EditorComment[] = [];
 const EMPTY_CHILDREN: NodeId[] = [];
 
@@ -97,8 +98,7 @@ export const Canvas = () => {
     const viewport = viewportRef.current;
     const deviceWidth = Number.parseInt(DEVICE_WIDTHS[currentDevice], 10);
     if (!viewport || Number.isNaN(deviceWidth)) { setZoom(100); return; }
-    const available = Math.max(viewport.clientWidth - 48, 240);
-    setZoom(Math.min(100, Math.max(50, Math.floor((available / deviceWidth) * 100))));
+    setZoom(getFitZoom(viewport.clientWidth, deviceWidth));
   }, [currentDevice]);
 
   useEffect(() => { fitToWidth(); }, [fitToWidth]);
@@ -154,8 +154,7 @@ export const Canvas = () => {
     const ro = new ResizeObserver(() => {
       const deviceWidth = Number.parseInt(DEVICE_WIDTHS[currentDevice], 10);
       if (Number.isNaN(deviceWidth)) return;
-      const available = Math.max(viewport.clientWidth - 48, 240);
-      const maxZoom = Math.min(100, Math.max(50, Math.floor((available / deviceWidth) * 100)));
+      const maxZoom = getFitZoom(viewport.clientWidth, deviceWidth);
       setZoom((z) => Math.min(z, maxZoom));
     });
     ro.observe(viewport);
@@ -317,8 +316,8 @@ export const Canvas = () => {
         className={cn(
           "flex flex-1 items-start justify-center overflow-auto",
           isPreviewMode
-            ? currentDevice === "desktop" ? "p-0" : "bg-[color:var(--bg)] p-6 lg:p-10"
-            : currentDevice === "desktop" ? "p-0" : "p-3 lg:p-5"
+            ? currentDevice === "desktop" ? "p-0" : "bg-[color:var(--bg)] p-4 sm:p-6 lg:p-10"
+            : currentDevice === "desktop" ? "p-3 xl:p-0" : "p-3 lg:p-5"
         )}
         onClick={isPreviewMode ? undefined : () => select(null)}
       >
@@ -604,6 +603,12 @@ export const Canvas = () => {
     </main>
   );
 };
+
+function getFitZoom(viewportWidth: number, deviceWidth: number) {
+  const gutter = viewportWidth < 640 ? 24 : 48;
+  const available = Math.max(viewportWidth - gutter, 160);
+  return Math.min(100, Math.max(MIN_CANVAS_ZOOM, Math.floor((available / deviceWidth) * 100)));
+}
 
 function DeviceShell({ type, children }: { type: string; children: React.ReactNode }) {
   if (type === "desktop") return <>{children}</>;

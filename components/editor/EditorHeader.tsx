@@ -72,10 +72,10 @@ export const EditorHeader = () => {
   };
 
   return (
-    <header className="editor-header h-14 border-b border-white/[0.08] bg-[color:var(--bg)] flex items-center justify-between px-4 z-[100] relative">
+    <header className="editor-header min-h-14 border-b border-white/[0.08] bg-[color:var(--bg)] flex flex-wrap items-center justify-between gap-2 px-2 py-2 sm:px-4 xl:flex-nowrap z-[100] relative">
 
       {/* ── IZQUIERDA: volver + estado + rol ── */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 xl:flex-none">
         <Link
           href="/dashboard"
           className="editor-back-btn group flex items-center gap-1.5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all duration-200 hover:-translate-x-0.5"
@@ -86,7 +86,7 @@ export const EditorHeader = () => {
         <div className="h-4 w-px bg-white/[0.08]" />
 
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-bold text-white truncate max-w-[140px]">
+          <span className="max-w-[92px] truncate text-xs font-bold text-white sm:max-w-[140px] sm:text-sm">
             {websiteId?.replace("draft:", "Borrador: ") || "Proyecto Nuevo"}
           </span>
           <SaveStatusBadge status={saveStatus} />
@@ -111,7 +111,7 @@ export const EditorHeader = () => {
       </div>
 
       {/* ── CENTRO: AI button + Device toggle ── */}
-      <div className="flex items-center gap-3 absolute left-1/2 -translate-x-1/2">
+      <div className="order-3 flex w-full min-w-0 items-center justify-center gap-2 xl:absolute xl:left-1/2 xl:order-none xl:w-auto xl:-translate-x-1/2 xl:gap-3">
         {/* AI button — borde giratorio */}
         {!isPreviewMode && (
           <button
@@ -128,7 +128,7 @@ export const EditorHeader = () => {
         )}
 
         {/* Device toggle con pill deslizante */}
-        <div className="editor-device-toggle relative flex items-center bg-white/[0.05] p-1 rounded-xl border border-white/[0.06]">
+        <div className="editor-device-toggle relative flex max-w-full items-center overflow-x-auto bg-white/[0.05] p-1 rounded-xl border border-white/[0.06]">
           {/* Pill activo */}
           <span
             className="editor-device-pill"
@@ -151,7 +151,7 @@ export const EditorHeader = () => {
       </div>
 
       {/* ── DERECHA: export + settings + feedback + preview + publish ── */}
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
         {reachedWebsiteLimit && (
           <Link
             href="/precios?upgrade=websites&callbackUrl=/dashboard"
@@ -217,7 +217,7 @@ export const EditorHeader = () => {
             type="button"
             onClick={() => startCheckout({ action: "rent" })}
             disabled={isCheckingSession}
-            className="editor-publish-btn editor-publish-draft relative overflow-hidden px-5 py-2 rounded-xl text-sm font-black transition-all duration-300 hover:scale-[1.03] active:scale-95 disabled:opacity-50"
+            className="editor-publish-btn editor-publish-draft relative overflow-hidden rounded-xl px-3 py-2 text-xs font-black transition-all duration-300 hover:scale-[1.03] active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
           >
             <span className="editor-publish-shimmer" aria-hidden="true" />
             <span className="relative z-10">{isCheckingSession ? "Procesando..." : "Publicar Sitio"}</span>
@@ -228,7 +228,7 @@ export const EditorHeader = () => {
             onClick={userRole === "admin" ? publishWebsite : requestReview}
             disabled={publishStatus === "published" && userRole === "client"}
             className={cn(
-              "editor-publish-btn relative overflow-hidden flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-black transition-all duration-300 hover:scale-[1.03] active:scale-95",
+              "editor-publish-btn relative overflow-hidden flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-all duration-300 hover:scale-[1.03] active:scale-95 sm:gap-2 sm:px-5 sm:text-sm",
               userRole === "admin"
                 ? "bg-[color:var(--accent)] text-[#112540] hover:bg-[#00c7ff] shadow-lg shadow-[rgba(0,181,246,0.28)]"
                 : "bg-white text-slate-950 hover:bg-[#e8f7ff]"
@@ -237,7 +237,8 @@ export const EditorHeader = () => {
             <span className="editor-publish-shimmer" aria-hidden="true" />
             <Rocket size={15} className="relative z-10" />
             <span className="relative z-10">
-              {userRole === "admin" ? "Publicar" : "Solicitar Revisión"}
+              <span className="hidden sm:inline">{userRole === "admin" ? "Publicar" : "Solicitar Revisión"}</span>
+              <span className="sm:hidden">{userRole === "admin" ? "Publicar" : "Revision"}</span>
             </span>
           </button>
         )}
