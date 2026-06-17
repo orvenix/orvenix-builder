@@ -3743,12 +3743,13 @@ body.light-mode .social-link {
     max-height: min(72vh, 560px);
     padding: 0;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
     margin-left: 0;
     flex-wrap: nowrap;
     transform: translateY(-12px) scale(0.98);
     transform-origin: top center;
-    transition: opacity 240ms ease, transform 320ms var(--ease-standard), padding 240ms ease;
+    transition: none;
   }
 
   body.light-mode .nav-links {
@@ -3770,8 +3771,10 @@ body.light-mode .social-link {
   .nav-links.active {
     padding: 0.85rem 1rem 1rem;
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
     transform: translateY(0) scale(1);
+    transition: opacity 180ms ease, transform 260ms var(--ease-standard), padding 180ms ease;
   }
 
   .nav-links li {
