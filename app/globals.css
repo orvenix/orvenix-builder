@@ -1289,11 +1289,12 @@
 
 .nav-inner {
   display: grid;
-  grid-template-columns: max-content 1fr max-content;
+  grid-template-columns: minmax(0, max-content) minmax(42px, 1fr) minmax(0, max-content);
   align-items: center;
   width: 100%;
   height: 100%;
-  gap: 1.5rem;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  min-width: 0;
 }
 
 .nav-zone {
@@ -1313,8 +1314,8 @@
 
 .nav-zone-right {
   justify-content: flex-end;
-  gap: 1rem;
-  min-width: max-content;
+  gap: clamp(0.5rem, 1.4vw, 1rem);
+  min-width: 0;
 }
 
 .logo {
@@ -1327,7 +1328,7 @@
 
 .logo-image {
   display: block;
-  height: 74px;
+  height: clamp(58px, 6vw, 74px);
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 0 15px rgba(0, 181, 246, 0.4));
@@ -1412,14 +1413,14 @@ a:hover .orvenix-brand::after {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 1.75rem;
+  gap: clamp(0.55rem, 1.35vw, 1.75rem);
   margin: 0;
   min-width: 0;
   flex-wrap: nowrap;
 }
 
 .nav-links a {
-  font-size: 0.92rem;
+  font-size: clamp(0.78rem, 0.9vw, 0.92rem);
   font-weight: 500;
   color: rgba(255, 255, 255, 0.8);
   padding: 0.45rem 0.15rem;
@@ -1444,7 +1445,7 @@ a:hover .orvenix-brand::after {
   isolation: isolate;
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
   color: #fff !important;
-  padding: 0.55rem 1.25rem !important;
+  padding: 0.55rem clamp(0.75rem, 1.1vw, 1.25rem) !important;
   border-radius: 8px;
   border: 1px solid rgba(0, 181, 246, 0.28);
   font-weight: 600 !important;
@@ -1461,7 +1462,7 @@ a:hover .orvenix-brand::after {
 
 .nav-plat {
   position: relative;
-  padding: 0.45rem 1.1rem !important;
+  padding: 0.45rem clamp(0.7rem, 1vw, 1.1rem) !important;
   border-radius: 8px;
   font-weight: 700 !important;
   color: var(--accent) !important;
@@ -1502,7 +1503,7 @@ a:hover .orvenix-brand::after {
 }
 
 .nav-panel-btn {
-  padding: 0.45rem 1.1rem !important;
+  padding: 0.45rem clamp(0.7rem, 1vw, 1.1rem) !important;
   border-radius: 8px;
   font-weight: 600 !important;
   color: rgba(255, 255, 255, 0.65) !important;
@@ -2921,6 +2922,20 @@ body.light-mode .register-strength-label.text-emerald-300 {
   }
 }
 
+@media (min-width: 1181px) and (max-width: 1280px) {
+  .nav-shell {
+    padding-inline: 0.5rem;
+  }
+
+  .nav-links {
+    gap: 0.65rem;
+  }
+
+  .nav-plat-badge {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .login-nav-inner {
     width: min(100% - 1.25rem, 1200px);
@@ -3654,18 +3669,34 @@ body.light-mode .social-link {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1180px) {
   .nav {
     isolation: isolate;
   }
 
   .nav-inner {
-    grid-template-columns: max-content 1fr max-content;
+    grid-template-columns: minmax(0, max-content) minmax(38px, 1fr) minmax(0, max-content);
     gap: 0.75rem;
+  }
+
+  .nav-zone-left,
+  .nav-zone-center,
+  .nav-zone-right {
+    min-width: 0;
+  }
+
+  .nav-zone-center {
+    justify-content: flex-end;
   }
 
   .nav-zone-right {
     justify-content: flex-end;
+    gap: 0.55rem;
+  }
+
+  .nav .theme-toggle {
+    width: 40px;
+    height: 40px;
   }
 
   .nav-menu-backdrop {
@@ -3730,6 +3761,10 @@ body.light-mode .social-link {
 
   .nav.scrolled .nav-links {
     top: calc(68px + env(safe-area-inset-top));
+  }
+
+  .nav-links a:not(.nav-cta):not(.nav-plat):not(.nav-panel-btn) {
+    padding-bottom: 0.85rem;
   }
 
   .nav-links.active {
