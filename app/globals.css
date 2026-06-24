@@ -1325,19 +1325,19 @@
 }
 
 .nav-shell {
-  max-width: var(--container-max);
+  max-width: none;
   width: 100%;
   height: 100%;
-  padding-inline: 0;
+  padding-inline: clamp(1rem, 2.6vw, 3rem);
 }
 
 .nav-inner {
   display: grid;
-  grid-template-columns: minmax(0, max-content) minmax(42px, 1fr) minmax(0, max-content);
+  grid-template-columns: minmax(176px, 240px) 48px minmax(0, 1fr);
   align-items: center;
   width: 100%;
   height: 100%;
-  gap: clamp(0.75rem, 2vw, 1.5rem);
+  gap: clamp(0.75rem, 1.6vw, 1.75rem);
   min-width: 0;
 }
 
@@ -1358,8 +1358,9 @@
 
 .nav-zone-right {
   justify-content: flex-end;
-  gap: clamp(0.5rem, 1.4vw, 1rem);
+  gap: clamp(0.5rem, 1.2vw, 1rem);
   min-width: 0;
+  overflow: visible;
 }
 
 .logo {
@@ -1372,7 +1373,7 @@
 
 .logo-image {
   display: block;
-  height: clamp(58px, 6vw, 74px);
+  height: clamp(54px, 4vw, 68px);
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 0 15px rgba(0, 181, 246, 0.4));
@@ -1457,14 +1458,14 @@ a:hover .orvenix-brand::after {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: clamp(0.55rem, 1.35vw, 1.75rem);
+  gap: clamp(0.5rem, 1vw, 1.35rem);
   margin: 0;
   min-width: 0;
   flex-wrap: nowrap;
 }
 
 .nav-links a {
-  font-size: clamp(0.78rem, 0.9vw, 0.92rem);
+  font-size: clamp(0.78rem, 0.78vw, 0.9rem);
   font-weight: 500;
   color: rgba(255, 255, 255, 0.8);
   padding: 0.45rem 0.15rem;
@@ -1582,12 +1583,21 @@ a:hover .orvenix-brand::after {
   transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, transform 0.2s ease;
 }
 
+.nav .theme-toggle {
+  position: static;
+  transform: none;
+}
+
 .theme-toggle:hover {
   background: rgba(0, 181, 246, 0.1);
 }
 
 .theme-toggle:active {
   transform: translate(-50%, -50%) scale(0.92);
+}
+
+.nav .theme-toggle:active {
+  transform: scale(0.92);
 }
 
 .theme-toggle svg {
@@ -2968,11 +2978,20 @@ body.light-mode .register-strength-label.text-emerald-300 {
 
 @media (min-width: 1281px) and (max-width: 1440px) {
   .nav-shell {
-    padding-inline: 0.5rem;
+    padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
+  }
+
+  .nav-inner {
+    grid-template-columns: minmax(154px, 198px) 44px minmax(0, 1fr);
+    gap: 0.7rem;
   }
 
   .nav-links {
-    gap: 0.65rem;
+    gap: 0.48rem;
+  }
+
+  .nav-links a {
+    font-size: 0.78rem;
   }
 
   .nav-plat-badge {
