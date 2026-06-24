@@ -3687,6 +3687,92 @@ body.light-mode .nav-toggle.active {
   box-shadow: 0 14px 32px rgba(0, 131, 179, 0.16);
 }
 
+body.light-mode .mk-section-alt {
+  background:
+    radial-gradient(circle at top, rgba(0, 118, 168, 0.08), transparent 30%),
+    linear-gradient(180deg, #f6fbff 0%, var(--bg-2) 100%);
+}
+
+body.light-mode .mk-glass-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(243, 249, 255, 0.86));
+  border-color: rgba(0, 76, 104, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 18px 42px rgba(7, 24, 39, 0.10);
+}
+
+body.light-mode .mk-glass-card:hover {
+  border-color: rgba(0, 118, 168, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 24px 52px rgba(7, 24, 39, 0.14);
+}
+
+body.light-mode .mk-btn-outline {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(7, 24, 39, 0.18);
+  box-shadow: 0 8px 22px rgba(7, 24, 39, 0.06);
+}
+
+body.light-mode .mk-btn-outline:hover {
+  border-color: rgba(0, 118, 168, 0.42);
+  background: rgba(239, 248, 255, 0.94);
+}
+
+body.light-mode .mk-feature-tag,
+body.light-mode .mk-saving-badge,
+body.light-mode .mk-badge {
+  color: var(--accent-2);
+  background: rgba(0, 118, 168, 0.10);
+  border-color: rgba(0, 76, 104, 0.22);
+}
+
+body.light-mode .mk-testimonial-card,
+body.light-mode .mk-plan-card {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(0, 76, 104, 0.18);
+  box-shadow: 0 18px 42px rgba(7, 24, 39, 0.09);
+}
+
+body.light-mode .mk-integration-pill,
+body.light-mode .mk-urgency-pill,
+body.light-mode .mk-promo-pill {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(7, 24, 39, 0.14);
+}
+
+body.light-mode .mk-urgency-pill-red {
+  color: var(--accent-2);
+  background: rgba(0, 118, 168, 0.10);
+  border-color: rgba(0, 76, 104, 0.22);
+}
+
+body.light-mode .mk-faq-item {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(7, 24, 39, 0.13);
+}
+
+body.light-mode .mk-faq-item[data-open="true"] {
+  background: rgba(0, 118, 168, 0.08);
+  border-color: rgba(0, 76, 104, 0.24);
+}
+
+body.light-mode .mk-faq-icon {
+  background: rgba(7, 24, 39, 0.08);
+  color: var(--text-secondary);
+}
+
+body.light-mode .mk-cmp-table th,
+body.light-mode .mk-cmp-table td {
+  border-bottom-color: rgba(7, 24, 39, 0.11);
+}
+
+body.light-mode .mk-cmp-table tr:hover td {
+  background: #edf6ff;
+}
+
+body.light-mode .mk-cmp-table td.highlight {
+  background: rgba(0, 118, 168, 0.07);
+}
+
 body.light-mode .footer {
   background: rgba(232, 249, 249, 0.5);
   border-top-color: rgba(0, 181, 246, 0.15);

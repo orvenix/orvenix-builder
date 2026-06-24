@@ -106,34 +106,34 @@
 
 body.light-mode {
   /* Fondos */
-  --bg:   #ffffff;
-  --bg-2: #f0f6ff;
-  --bg-3: #ddeeff;
+  --bg:   #fbfdff;
+  --bg-2: #eef6ff;
+  --bg-3: #d8e9ff;
 
   /* Texto — alto contraste sobre blanco */
-  --text:           #0a1929;
-  --text-secondary: #2c4a6e;
-  --text-muted:     #4a6080;
+  --text:           #071827;
+  --text-secondary: #263f5d;
+  --text-muted:     #52677f;
 
   /* Acentos — versiones más oscuras del cyan original */
-  --accent:          #0083b3;
-  --accent-2:        #00516f;
-  --accent-3:        #009cd4;
-  --accent-gradient: linear-gradient(135deg, #0083b3, #00516f);
+  --accent:          #0076a8;
+  --accent-2:        #004c68;
+  --accent-3:        #006f9f;
+  --accent-gradient: linear-gradient(135deg, #007fb3, #004c68);
 
   /* Glassmorphism — tono cyan sobre blanco */
-  --glass:               rgba(0, 181, 246, 0.06);
-  --glass-border:        rgba(0, 181, 246, 0.20);
-  --glass-border-hover:  rgba(0, 181, 246, 0.40);
-  --border:              rgba(0, 131, 179, 0.18);
+  --glass:               rgba(0, 118, 168, 0.08);
+  --glass-border:        rgba(0, 89, 128, 0.22);
+  --glass-border-hover:  rgba(0, 118, 168, 0.44);
+  --border:              rgba(0, 76, 104, 0.20);
 
   /* Nav */
-  --glass-nav:           rgba(240, 250, 255, 0.93);
-  --glass-nav-scrolled:  rgba(240, 250, 255, 0.98);
+  --glass-nav:           rgba(250, 253, 255, 0.94);
+  --glass-nav-scrolled:  rgba(250, 253, 255, 0.985);
 
   /* Sombras más suaves para fondos claros */
-  --shadow-sm:          0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-md:          0 8px 32px rgba(0, 0, 0, 0.10);
+  --shadow-sm:          0 4px 18px rgba(7, 24, 39, 0.08);
+  --shadow-md:          0 12px 34px rgba(7, 24, 39, 0.11);
   --shadow-btn-primary: 0 10px 20px -10px rgba(0, 131, 179, 0.40);
   --shadow-btn-hover:   0 20px 30px -10px rgba(0, 181, 246, 0.30);
   --glow-accent:        0 0 20px rgba(0, 181, 246, 0.30);
