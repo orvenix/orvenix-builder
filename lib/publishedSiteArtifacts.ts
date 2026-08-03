@@ -39,7 +39,7 @@ export interface PublishedArtifactPage {
 }
 
 export function getPublishedSitePublicPath(siteId: string, slug = "home") {
-  const basePath = `/published-sites/${encodeURIComponent(siteId)}`;
+  const basePath = `/p/${encodeURIComponent(siteId)}`;
   return slug === "home" ? `${basePath}/` : `${basePath}/${encodeURIComponent(slug)}/`;
 }
 

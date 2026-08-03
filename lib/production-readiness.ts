@@ -1,3 +1,4 @@
+import type { EnvironmentVariables } from "@/lib/env-types"
 import { getBillingConfigReport } from "./billing-config"
 import { hasConfiguredEnvValue } from "./env-placeholders"
 import { isPlaceholderDatabaseUrl } from "./storage-mode"
@@ -31,7 +32,7 @@ function normalizeOrigin(url: string | undefined) {
   }
 }
 
-function buildPublicUrlCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildPublicUrlCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const authUrl = normalizeOrigin(env.AUTH_URL)
   const nextAuthUrl = normalizeOrigin(env.NEXTAUTH_URL)
   const publicApiUrl = normalizeOrigin(env.NEXT_PUBLIC_API_URL)
@@ -80,7 +81,7 @@ function buildPublicUrlCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
   }
 }
 
-function buildAuthSecretCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildAuthSecretCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const authSecret = env.AUTH_SECRET
   const nextAuthSecret = env.NEXTAUTH_SECRET
   const hasAuthSecret = hasValue(authSecret)
@@ -112,7 +113,7 @@ function buildAuthSecretCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck 
   }
 }
 
-function buildStorageCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildStorageCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const storageMode = env.ORVENIX_STORAGE_MODE?.trim() ?? "file"
   const databaseUrl = env.DATABASE_URL
 
@@ -151,7 +152,7 @@ function buildStorageCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
   }
 }
 
-function buildBillingCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildBillingCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const billing = getBillingConfigReport(env)
 
   if (billing.status === "ok") {
@@ -180,7 +181,7 @@ function buildBillingCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
   }
 }
 
-function buildEmailCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildEmailCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const hasResendKey = hasValue(env.RESEND_API_KEY)
   const hasResendFrom = hasValue(env.RESEND_FROM)
 
@@ -201,7 +202,7 @@ function buildEmailCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
   }
 }
 
-export function getProductionReadinessReport(env: NodeJS.ProcessEnv = process.env): ProductionReadinessReport {
+export function getProductionReadinessReport(env: EnvironmentVariables = process.env): ProductionReadinessReport {
   const automaticChecks = [
     buildPublicUrlCheck(env),
     buildAuthSecretCheck(env),

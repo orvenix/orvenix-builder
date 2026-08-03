@@ -24,7 +24,7 @@ const faqs = [
   },
   {
     question: '¿Podré editar mi sitio yo mismo?',
-    answer: 'Sí. Los planes Pro y Empresa incluyen un CMS intuitivo con el que podrás actualizar textos, imágenes y secciones sin conocimientos técnicos. Incluimos capacitación.',
+    answer: 'Sí. Los planes Pro y Business incluyen un CMS intuitivo con el que podrás actualizar textos, imágenes y secciones sin conocimientos técnicos. Incluimos capacitación.',
   },
   {
     question: '¿Cómo es el proceso de pago?',

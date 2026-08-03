@@ -23,28 +23,28 @@ const quickCards = [
 
 const plans = [
   {
-    name: 'Básico',
-    price: '$349',
-    period: 'MXN/mes',
-    desc: 'Sitio profesional, acceso al panel y configuración inicial para negocios que están empezando.',
+    name: 'Starter',
+    price: '15 USD',
+    period: '/mes + IVA',
+    desc: 'Sitio institucional administrado, editor visual, SSL y soporte estandar para empezar con orden.',
     cta: 'Empezar',
     ctaHref: '/register',
     featured: false,
   },
   {
     name: 'Pro',
-    price: '$699',
-    period: 'MXN/mes',
-    desc: 'Editor visual, plantillas, publicación y mejoras para equipos que necesitan crecer con ritmo.',
+    price: '39 USD',
+    period: '/mes + IVA',
+    desc: 'Hasta 10 sitios, eCommerce, IA, CRM, blog, SEO, exportacion y soporte prioritario.',
     cta: 'Crear cuenta',
     ctaHref: '/register',
     featured: true,
   },
   {
-    name: 'Empresa',
-    price: '$1,399',
-    period: 'MXN/mes',
-    desc: 'Acompañamiento, personalización y soporte para operaciones con más usuarios o flujos internos.',
+    name: 'Business',
+    price: '79 USD',
+    period: '/mes + IVA',
+    desc: 'Sitios y funnels ilimitados, automatizaciones, eCommerce multi-moneda y soporte omnicanal.',
     cta: 'Cotizar',
     ctaHref: '/contacto',
     featured: false,
@@ -206,7 +206,7 @@ export default function PlataformaPage() {
           </div>
 
           <p className="text-center text-xs text-orvenix-muted mt-6">
-            Todos los precios en MXN · IVA no incluido · Cancela en cualquier momento
+            Precios oficiales en USD · IVA no incluido · cancelacion con 5 dias naturales de anticipacion
           </p>
         </div>
       </section>

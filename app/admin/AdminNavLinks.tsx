@@ -46,12 +46,12 @@ export function AdminNavLinks() {
             <span className={`admin-nav-icon flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-300 ${
               active
                 ? "border-[rgba(0,181,246,0.28)] bg-[rgba(0,181,246,0.12)] shadow-[0_0_16px_rgba(0,181,246,0.18)]"
-                : "border-white/8 bg-white/3 group-hover:border-[rgba(0,181,246,0.20)] group-hover:bg-[rgba(0,181,246,0.08)]"
+                : "border-[color:var(--admin-nav-icon-border)] bg-[color:var(--admin-nav-icon-bg)] group-hover:border-[rgba(0,181,246,0.20)] group-hover:bg-[rgba(0,181,246,0.08)]"
             }`}>
               <Icon className={`h-4 w-4 shrink-0 transition-all duration-300 ${
                 active
                   ? "text-[color:var(--accent)] drop-shadow-[0_0_6px_rgba(0,181,246,0.45)]"
-                  : "text-white/25 group-hover:text-[color:var(--accent)] group-hover:rotate-[8deg] group-hover:scale-110"
+                  : "text-[color:var(--admin-nav-icon-muted)] group-hover:text-[color:var(--accent)] group-hover:rotate-[8deg] group-hover:scale-110"
               }`} />
             </span>
 

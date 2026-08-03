@@ -24,9 +24,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 }
 
 const TIER_INFO = [
-  { pct: 20, plan: "Plan Básico", monthly: 349, label: null },
-  { pct: 25, plan: "Plan Pro", monthly: 699, label: "Más rentable" },
-  { pct: 30, plan: "Plan Empresa", monthly: 1399, label: null },
+  { pct: 20, plan: "Plan Starter", monthly: 15, label: null },
+  { pct: 25, plan: "Plan Pro", monthly: 39, label: "Más rentable" },
+  { pct: 30, plan: "Plan Business", monthly: 79, label: null },
 ]
 
 export default function AffiliatesDashboard({ userName, appUrl }: AffiliatesDashboardProps) {
@@ -144,9 +144,9 @@ export default function AffiliatesDashboard({ userName, appUrl }: AffiliatesDash
   }
 
   // ── Dashboard principal ────────────────────────────────────────────────────
-  const pendingMXN = (affiliate.pendingCents / 100).toFixed(2)
-  const totalMXN = (affiliate.totalEarnedCents / 100).toFixed(2)
-  const paidMXN = (affiliate.paidCents / 100).toFixed(2)
+  const pendingUsd = (affiliate.pendingCents / 100).toFixed(2)
+  const totalUsd = (affiliate.totalEarnedCents / 100).toFixed(2)
+  const paidUsd = (affiliate.paidCents / 100).toFixed(2)
   const conversionRate = affiliate.totalReferrals > 0
     ? Math.round((affiliate.activeReferrals / affiliate.totalReferrals) * 100)
     : 0
@@ -221,8 +221,8 @@ export default function AffiliatesDashboard({ userName, appUrl }: AffiliatesDash
             {[
               { icon: Users, label: "Total referidos", value: affiliate.totalReferrals, sub: `${affiliate.activeReferrals} activos`, color: "text-blue-400" },
               { icon: TrendingUp, label: "Tasa de conversión", value: `${conversionRate}%`, sub: "Registrados → activos", color: "text-[color:var(--accent)]" },
-              { icon: Clock, label: "Pendiente de cobro", value: `$${pendingMXN}`, sub: "MXN", color: "text-amber-400" },
-              { icon: DollarSign, label: "Total ganado", value: `$${totalMXN}`, sub: `$${paidMXN} pagado`, color: "text-[color:var(--accent-2)]" },
+              { icon: Clock, label: "Pendiente de cobro", value: `${pendingUsd} USD`, sub: "pendiente", color: "text-amber-400" },
+              { icon: DollarSign, label: "Total ganado", value: `${totalUsd} USD`, sub: `${paidUsd} USD pagado`, color: "text-[color:var(--accent-2)]" },
             ].map(stat => {
               const Icon = stat.icon
               return (
@@ -244,11 +244,11 @@ export default function AffiliatesDashboard({ userName, appUrl }: AffiliatesDash
                 <div key={t.pct} className="flex items-center justify-between py-3 border-b border-white/[0.05] last:border-0">
                   <div>
                     <p className="text-sm font-semibold text-white">{t.plan}</p>
-                    <p className="text-xs text-[color:var(--text-secondary)]">${t.monthly}/mes · {t.pct}% comisión</p>
+                    <p className="text-xs text-[color:var(--text-secondary)]">{t.monthly} USD/mes · {t.pct}% comisión</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-black text-[color:var(--accent)]">${Math.round(t.monthly * t.pct / 100)}/mes</p>
-                    <p className="text-xs text-[color:var(--text-muted)]">${Math.round(t.monthly * t.pct / 100 * 12)}/año</p>
+                    <p className="text-lg font-black text-[color:var(--accent)]">{Math.round(t.monthly * t.pct / 100)} USD/mes</p>
+                    <p className="text-xs text-[color:var(--text-muted)]">{Math.round(t.monthly * t.pct / 100 * 12)} USD/año</p>
                   </div>
                 </div>
               ))}
@@ -319,7 +319,7 @@ export default function AffiliatesDashboard({ userName, appUrl }: AffiliatesDash
             <div className="flex items-start gap-3">
               <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5" />
               <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">
-                Los pagos se procesan el primer día hábil de cada mes. Se requiere al menos $500 MXN acumulados para procesar una transferencia.
+                Los pagos se procesan el primer día hábil de cada mes. Se requiere el minimo operativo definido por Orvenix para procesar una transferencia.
               </p>
             </div>
           </div>
@@ -401,14 +401,14 @@ export default function AffiliatesDashboard({ userName, appUrl }: AffiliatesDash
             <div className="rounded-2xl border border-[rgba(0,131,179,0.28)] bg-[rgba(0,131,179,0.12)] p-6 text-center">
               <p className="mb-3 text-xs uppercase tracking-wider text-[color:var(--accent-3)]">Tu ingreso estimado</p>
               <p className="text-5xl font-black text-[color:var(--accent)]">${calcMonthly.toLocaleString()}</p>
-              <p className="mt-1 text-sm text-[color:var(--text-secondary)]">MXN / mes</p>
+              <p className="mt-1 text-sm text-[color:var(--text-secondary)]">USD / mes</p>
               <div className="mt-4 border-t border-[rgba(0,81,111,0.35)] pt-4">
-                <p className="text-2xl font-black text-white">${calcAnnual.toLocaleString()} <span className="text-base font-normal text-[color:var(--text-muted)]">MXN / año</span></p>
+                <p className="text-2xl font-black text-white">${calcAnnual.toLocaleString()} <span className="text-base font-normal text-[color:var(--text-muted)]">USD / año</span></p>
               </div>
             </div>
 
             <p className="text-xs leading-relaxed text-[color:var(--text-muted)]">
-              Estimación basada en {calcReferrals} clientes en {tier?.plan} a ${tier?.monthly}/mes con {tier?.pct}% de comisión mensual recurrente.
+              Estimación basada en {calcReferrals} clientes en {tier?.plan} a {tier?.monthly} USD/mes con {tier?.pct}% de comisión mensual recurrente.
             </p>
           </div>
         </div>

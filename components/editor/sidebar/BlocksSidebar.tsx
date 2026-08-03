@@ -13,6 +13,8 @@ import { getFreeInsertProps } from "@/components/editor/freeInsert";
 import { useEditorStore } from "@/store/useEditorStore";
 import { loadUserComponents, deleteUserComponent, renameUserComponent, type SavedComponent } from "@/lib/editor/userComponents";
 
+const SIMPLE_BLOCK_CATEGORIES = new Set(["layout", "content", "action", "marketing", "ecommerce"]);
+
 export function BlocksSidebar() {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -104,7 +106,15 @@ export function BlocksSidebar() {
     return result;
   }, [query, groups]);
 
-  const displayGroups = filteredGroups ?? groups;
+  const simpleGroups = useMemo(() => {
+    const result = new Map<string, EditorBlockDefinition[]>();
+    for (const [cat, items] of groups) {
+      if (SIMPLE_BLOCK_CATEGORIES.has(cat)) result.set(cat, items);
+    }
+    return result;
+  }, [groups]);
+
+  const displayGroups = filteredGroups ?? simpleGroups;
 
   const toggleCollapse = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
@@ -254,7 +264,7 @@ export function BlocksSidebar() {
           </div>
         )}
 
-        {CATEGORY_ORDER.map((category) => {
+        {CATEGORY_ORDER.filter((category) => displayGroups.has(category)).map((category) => {
           const items = displayGroups.get(category);
           if (!items?.length) return null;
           const isCollapsed = collapsed[category];
@@ -292,7 +302,7 @@ export function BlocksSidebar() {
         })}
       </div>
 
-      <SidebarFooter />
+
     </aside>
   );
 }
@@ -381,35 +391,5 @@ function BlockCard({ definition }: { definition: EditorBlockDefinition }) {
         <div className="absolute inset-0 rounded-xl bg-linear-to-br from-indigo-500/0 via-transparent to-indigo-500/5" />
       </div>
     </button>
-  );
-}
-
-function SidebarFooter() {
-  const selectedId = useEditorStore((s) => s.selectedId);
-  const selectedType = useEditorStore((s) =>
-    s.selectedId ? s.tree.nodes[s.selectedId]?.type : null
-  );
-
-  return (
-    <div className="border-t border-white/[0.05] px-4 py-2.5">
-      <div className="text-[9px] font-semibold uppercase tracking-widest text-slate-600">
-        Selección
-      </div>
-      <div className="mt-0.5 truncate text-[11px] text-slate-400">
-        {selectedId && selectedType ? (
-          <>
-            <span className="text-indigo-300">
-              {blockRegistry[selectedType as keyof typeof blockRegistry]?.label ??
-                selectedType}
-            </span>
-            <span className="ml-2 font-mono text-[9px] text-slate-600">
-              #{selectedId.slice(-6)}
-            </span>
-          </>
-        ) : (
-          <span className="text-slate-600">Ningún bloque seleccionado</span>
-        )}
-      </div>
-    </div>
   );
 }

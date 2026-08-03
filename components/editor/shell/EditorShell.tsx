@@ -18,10 +18,6 @@ import { Canvas } from "@/components/editor/Canvas";
 import { SettingsPanel } from "@/components/editor/inspector/SettingsPanel";
 import { TemplatesPanel } from "@/components/editor/sidebar/TemplatesPanel";
 import { LayersPanel } from "@/components/editor/sidebar/LayersPanel";
-import { AiAssistantPanel } from "@/components/editor/sidebar/AiAssistantPanel";
-import { BindModePanel } from "@/components/editor/sidebar/BindModePanel";
-import { AnimationsPanel } from "@/components/editor/sidebar/AnimationsPanel";
-import { SEOPanel } from "@/components/editor/SEOPanel";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { FloatingSaveIndicator } from "@/components/editor/toolbar/FloatingSaveIndicator";
@@ -32,7 +28,7 @@ import { resolveResponsiveProps } from "@/components/editor/responsive";
 import * as Icons from "lucide-react";
 import type { DeviceMode, EditorTree, NodeId } from "@/types/editor";
 
-type SidebarTab = "ai" | "bloques" | "capas" | "templates" | "cms" | "animaciones";
+type SidebarTab = "bloques" | "capas" | "templates";
 
 const TABS: {
   id: SidebarTab;
@@ -40,12 +36,9 @@ const TABS: {
   label: string;
   accent: string;
 }[] = [
-  { id: "ai",          icon: "Sparkles",      label: "Orvenix AI",    accent: "#00b5f6" },
   { id: "bloques",     icon: "LayoutGrid",    label: "Bloques",       accent: "#009cd4" },
   { id: "capas",       icon: "Layers",        label: "Capas",         accent: "#0083b3" },
-  { id: "templates",   icon: "LayoutTemplate",label: "Sitios reales", accent: "#00bbff" },
-  { id: "cms",         icon: "Database",      label: "Datos CMS",     accent: "#00b5f6" },
-  { id: "animaciones", icon: "PlayCircle",    label: "Animaciones",   accent: "#006a91" },
+  { id: "templates",   icon: "LayoutTemplate",label: "Plantillas",     accent: "#00bbff" },
 ];
 
 export function EditorShell() {
@@ -53,10 +46,7 @@ export function EditorShell() {
   useKeyboardShortcuts();
 
   const rootChildCount = useEditorStore((s) => s.tree.nodes[s.tree.rootId]?.children?.length ?? 0);
-  const websiteId = useEditorStore((s) => s.websiteId ?? "");
   const layersHighlightId = useEditorStore((s) => s.layersHighlightId);
-  const seoOpen    = useEditorStore((s) => s.seoOpen);
-  const setSeoOpen = useEditorStore((s) => s.setSeoOpen);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>(
     rootChildCount === 0 ? "templates" : "bloques"
   );
@@ -204,12 +194,7 @@ export function EditorShell() {
   };
 
   const activeTab = TABS.find((t) => t.id === sidebarTab)!;
-  const panelWidth =
-    sidebarTab === "ai" || sidebarTab === "cms" || sidebarTab === "animaciones"
-      ? "w-72 xl:w-80"
-      : sidebarTab === "templates"
-        ? "w-80 xl:w-96"
-        : "w-56 xl:w-60";
+  const panelWidth = sidebarTab === "templates" ? "w-80 xl:w-96" : "w-56 xl:w-60";
 
   const editor = (
     <div className="flex min-h-0 min-w-0 flex-1 page-transition">
@@ -278,29 +263,6 @@ export function EditorShell() {
               );
             })}
 
-            {/* Separator */}
-            <div className="my-1 h-px w-6 bg-white/[0.06] rounded-full" />
-
-            {/* Extra actions */}
-            {([
-              { icon: "HelpCircle" as keyof typeof Icons, label: "Ayuda" },
-              { icon: "Settings2" as keyof typeof Icons, label: "Configuración" },
-            ] as const).map(({ icon, label }) => {
-              const Icon = Icons[icon] as React.ComponentType<{ size?: number }>;
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  title={label}
-                  className="relative group grid h-9 w-9 place-items-center rounded-xl text-slate-700 hover:text-slate-400 transition-colors"
-                >
-                  <Icon size={13} />
-                  <span className="pointer-events-none absolute left-11 z-50 whitespace-nowrap rounded-md border border-white/[0.08] bg-[color:var(--bg-2)] px-2 py-1 text-[11px] font-medium text-slate-200 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 ml-1">
-                    {label}
-                  </span>
-                </button>
-              );
-            })}
           </nav>
 
           {/* Panel content */}
@@ -324,9 +286,6 @@ export function EditorShell() {
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden">
-              <div className={sidebarTab === "ai" ? "section-transition h-full" : "hidden"}>
-                <AiAssistantPanel />
-              </div>
               <div className={sidebarTab === "bloques" ? "section-transition h-full" : "hidden"}>
                 <BlocksSidebar />
               </div>
@@ -335,12 +294,6 @@ export function EditorShell() {
               </div>
               <div className={sidebarTab === "templates" ? "section-transition h-full" : "hidden"}>
                 <TemplatesPanel />
-              </div>
-              <div className={sidebarTab === "cms" ? "section-transition h-full overflow-auto" : "hidden"}>
-                <BindModePanel siteId={websiteId} />
-              </div>
-              <div className={sidebarTab === "animaciones" ? "section-transition h-full overflow-auto" : "hidden"}>
-                <AnimationsPanel />
               </div>
             </div>
           </div>
@@ -354,9 +307,6 @@ export function EditorShell() {
         <div className="hidden min-h-0 shrink-0 2xl:block">
           <SettingsPanel />
         </div>
-      )}
-      {!isPreviewMode && seoOpen && (
-        <SEOPanel onClose={() => setSeoOpen(false)} />
       )}
     </div>
   );

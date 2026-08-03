@@ -4400,6 +4400,18 @@ body.light-mode .editor-shell-page {
   color: var(--text) !important;
 }
 
+body.light-mode .admin-shell {
+  --admin-nav-icon-muted: rgba(56, 78, 110, 0.72);
+  --admin-nav-icon-border: rgba(10, 35, 66, 0.10);
+  --admin-nav-icon-bg: rgba(255, 255, 255, 0.68);
+}
+
+body:not(.light-mode) .admin-shell {
+  --admin-nav-icon-muted: rgba(255, 255, 255, 0.25);
+  --admin-nav-icon-border: rgba(255, 255, 255, 0.08);
+  --admin-nav-icon-bg: rgba(255, 255, 255, 0.03);
+}
+
 /* 2. Fondo decorativo en claro con acento Orvenix ───────────── */
 body.light-mode .auth-shell .theme-bg-glows,
 body.light-mode .checkout-shell .theme-bg-glows,
@@ -4489,6 +4501,11 @@ body.light-mode .auth-shell .text-white\/40,
 body.light-mode .checkout-shell .text-white\/40,
 body.light-mode .dashboard-shell .text-white\/40,
 body.light-mode .admin-shell .text-white\/40 {
+  color: var(--text-muted) !important;
+}
+
+body.light-mode .admin-shell .text-white\/35,
+body.light-mode .admin-shell .text-white\/25 {
   color: var(--text-muted) !important;
 }
 
@@ -6320,6 +6337,106 @@ body.light-mode .admin-shell {
 
 body.light-mode .admin-sidebar {
   background: rgba(240, 246, 255, 0.75);
+}
+
+.admin-shell .theme-toggle,
+.admin-shell .admin-theme-toggle {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.035);
+  z-index: 1;
+}
+
+.admin-shell .theme-toggle:hover,
+.admin-shell .admin-theme-toggle:hover {
+  border-color: rgba(0, 181, 246, 0.32);
+  background: rgba(0, 181, 246, 0.10);
+  box-shadow: 0 10px 28px rgba(0, 181, 246, 0.10);
+}
+
+.admin-shell .theme-toggle:active,
+.admin-shell .admin-theme-toggle:active {
+  transform: scale(0.94);
+}
+
+.admin-shell .theme-toggle svg,
+.admin-shell .admin-theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+body.light-mode .admin-theme-row {
+  border-color: rgba(14, 74, 107, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+body.light-mode .admin-theme-row span {
+  color: rgba(17, 37, 64, 0.52);
+}
+
+.admin-theme-button {
+  position: relative;
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--accent);
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease, color 0.25s ease;
+}
+
+.admin-theme-button:hover {
+  border-color: rgba(0, 181, 246, 0.32);
+  background: rgba(0, 181, 246, 0.10);
+  box-shadow: 0 10px 28px rgba(0, 181, 246, 0.10);
+}
+
+.admin-theme-button:active {
+  transform: scale(0.94);
+}
+
+.admin-theme-button svg {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  transition: transform 0.7s var(--ease-spring), opacity 0.3s ease;
+}
+
+.admin-theme-sun {
+  opacity: 0;
+  transform: rotate(-180deg) scale(0.5);
+}
+
+.admin-theme-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+body.light-mode .admin-theme-button {
+  border-color: rgba(14, 74, 107, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--accent-2);
+}
+
+body.light-mode .admin-theme-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+body.light-mode .admin-theme-moon {
+  opacity: 0;
+  transform: rotate(180deg) scale(0.5);
 }
 
 /* Glow de fondo — mismos radiales que el sitio marketing */

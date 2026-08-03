@@ -18,9 +18,12 @@ import {
 } from "lucide-react";
 import { normalizeCheckoutAction } from "@/lib/checkout";
 import { editorPrisma } from "@/lib/editor-db";
-import { retrieveStripeCheckoutSession } from "@/lib/stripe";
-import { processStripeCheckoutSession } from "@/lib/stripe-subscription-payment";
+import { retrieveStripeCheckoutSession, retrieveStripeSubscription } from "@/lib/stripe";
+import { processStripeCheckoutSession, processStripeSubscription } from "@/lib/stripe-subscription-payment";
 import { serverWarn } from "@/lib/server-log";
+import { getOfficialPlanName } from "@/lib/orvenix-official-2026";
+import { listSitePages, type SitePageListItem } from "@/lib/builder-core/tree/sitePages";
+import { getUserPlanAccess } from "@/lib/plan-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +35,7 @@ interface DashboardPageProps {
     provider?: string | string[];
     session_id?: string | string[];
     sub?: string | string[];
+    billing?: string | string[];
   }>;
 }
 
@@ -59,6 +63,25 @@ async function syncStripeCheckoutReturn(sessionId: string | undefined, userId: s
   }
 }
 
+async function syncStripePortalReturn(userId: string) {
+  const localSubscription = await editorPrisma.subscription.findUnique({
+    where: { userId },
+    select: { provider: true, stripeSubscriptionId: true },
+  });
+
+  if (localSubscription?.provider !== "stripe" || !localSubscription.stripeSubscriptionId) return;
+
+  try {
+    const stripeSubscription = await retrieveStripeSubscription(localSubscription.stripeSubscriptionId);
+    await processStripeSubscription(stripeSubscription);
+  } catch (error) {
+    serverWarn("[billing:dashboard] No se pudo sincronizar el retorno del portal Stripe", {
+      userId,
+      error,
+    });
+  }
+}
+
 function firstParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -73,15 +96,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const checkoutSiteId = firstParam(resolvedSearchParams?.siteId);
   const billingProvider = firstParam(resolvedSearchParams?.provider);
   const billingReturn = firstParam(resolvedSearchParams?.sub);
+  const billingAction = firstParam(resolvedSearchParams?.billing);
   const stripeSessionId = firstParam(resolvedSearchParams?.session_id);
+  const planAccess = await getUserPlanAccess(session.user.id);
 
   if (billingProvider === "stripe" && billingReturn === "ok") {
     await syncStripeCheckoutReturn(stripeSessionId, session.user.id);
   }
 
+  if (billingAction === "portal") {
+    await syncStripePortalReturn(session.user.id);
+  }
+
   const role = (session.user.role ?? "CLIENT") as UserRole;
   const isAdmin = role === "ADMIN";
   const sites = await getSitesForRole(session.user.id, role);
+  const sitePagesEntries = await Promise.all(
+    sites.map(async (site) => [site.id, await listSitePages(site.id)] as const)
+  );
+  const pagesBySiteId = new Map(sitePagesEntries);
   const editRequests = await getEditRequestsForRole(session.user.id, role);
   const subscription = await editorPrisma.subscription.findUnique({
     where: { userId: session.user.id },
@@ -210,7 +243,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
 
         <DashboardBillingPanel
-          plan={subscription?.plan ?? null}
+          plan={subscription?.plan ? {
+            ...subscription.plan,
+            name: getOfficialPlanName(subscription.plan.id, subscription.plan.name),
+          } : null}
+          entitlements={planAccess.entitlements}
           subscription={subscription ? {
             status: subscription.status,
             interval: subscription.interval,
@@ -218,6 +255,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             canceledAt: subscription.canceledAt?.toISOString() ?? null,
             provider: subscription.provider,
             stripeCustomerId: subscription.stripeCustomerId,
+
+            pendingPlanId: subscription.pendingPlanId,
+            pendingInterval: subscription.pendingInterval,
+            pendingStartsAt: subscription.pendingStartsAt?.toISOString() ?? null,
           } : null}
           websitesUsed={sites.filter((site) => site.userId === session.user.id || !isAdmin).length}
           isActive={isActiveSubscription}
@@ -323,7 +364,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {sites.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 editor-anim-fade-up">
             {sites.map((site, i) => (
-              <SiteCard key={site.id} site={site} index={i} />
+              <SiteCard key={site.id} site={site} pages={pagesBySiteId.get(site.id) ?? []} index={i} />
             ))}
 
             {/* Add new card */}
@@ -482,10 +523,18 @@ function EditRequestsPanel({
   );
 }
 
+function getEditorPageHref(siteId: string, slug: string) {
+  const encodedSiteId = encodeURIComponent(siteId);
+  return slug === "home"
+    ? "/editor/" + encodedSiteId
+    : "/editor/" + encodedSiteId + "?page=" + encodeURIComponent(slug);
+}
+
 // ── Site card component ────────────────────────────────────────
 
 function SiteCard({
   site,
+  pages,
   index,
 }: {
   site: {
@@ -496,14 +545,18 @@ function SiteCard({
     updatedAt: Date;
     user?: { email: string; name: string | null } | null;
   };
+  pages: SitePageListItem[];
   index: number;
 }) {
   const ACCENT_COLORS = ["#38bdf8", "#22c55e", "#818cf8", "#06b6d4", "#60a5fa", "#14b8a6"];
   const accent = ACCENT_COLORS[index % ACCENT_COLORS.length];
+  const pageLinks = pages.length > 0 ? pages : [{ id: null, siteId: site.id, name: "Inicio", slug: "home", isHome: true, published: site.published, source: "legacy-site-tree" as const }];
+  const primaryPage = pageLinks.find((page) => page.isHome) ?? pageLinks[0];
+  const primaryEditorHref = getEditorPageHref(site.id, primaryPage?.slug ?? "home");
 
   return (
     <article
-      className="group relative flex flex-col overflow-hidden rounded-[26px] border border-white/[0.08] bg-white/[0.03] shadow-xl shadow-black/18 transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(0,181,246,0.20)]"
+      className="group relative flex flex-col overflow-visible rounded-[26px] border border-white/[0.08] bg-white/[0.03] shadow-xl shadow-black/18 transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(0,181,246,0.20)]"
     >
       {/* Top accent bar */}
       <div className="h-px w-full" style={{ background: `linear-gradient(to right, transparent, ${accent}90, transparent)` }} />
@@ -529,7 +582,7 @@ function SiteCard({
       </div>
 
       {/* Content */}
-      <div className="flex flex-col flex-1 p-5">
+      <div className="relative z-10 flex flex-col flex-1 p-5">
         <div className="flex items-start justify-between gap-2 mb-1">
           <h3 className="truncate text-base font-bold leading-tight text-white/90 transition-colors group-hover:text-white">
             {site.name}
@@ -547,16 +600,43 @@ function SiteCard({
           </p>
         )}
 
+        <div className="mb-4 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-2.5">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-white/25">Páginas editables</span>
+            <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[9px] font-semibold text-white/30">{pageLinks.length}</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {pageLinks.slice(0, 5).map((page) => (
+              <Link
+                key={site.id + ":" + page.slug}
+                href={getEditorPageHref(site.id, page.slug)}
+                className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-white/45 transition-all hover:border-[rgba(0,181,246,0.28)] hover:bg-[rgba(0,181,246,0.08)] hover:text-[color:var(--accent)]"
+                title={"Editar " + page.name}
+              >
+                {page.name}
+              </Link>
+            ))}
+            {pageLinks.length > 5 && (
+              <Link
+                href={primaryEditorHref}
+                className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-white/30 transition-all hover:text-white/60"
+              >
+                +{pageLinks.length - 5}
+              </Link>
+            )}
+          </div>
+        </div>
+
         <p className="mb-4 flex items-center gap-1 text-[10px] text-white/15">
           <Clock size={9} />
           {new Date(site.updatedAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}
         </p>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 mt-auto">
+        <div className="relative z-20 mt-auto flex flex-wrap items-center gap-2">
           <Link
-            href={`/editor/${site.id}`}
-            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-all hover:brightness-110"
+            href={primaryEditorHref}
+            className="flex h-9 min-w-[128px] flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-all hover:brightness-110"
             style={{
               background: `${accent}18`,
               border: `1px solid ${accent}30`,
@@ -564,7 +644,7 @@ function SiteCard({
             }}
           >
             <Edit3 size={11} />
-            Editar
+            Editar inicio
           </Link>
 
           <EditRequestDialog siteId={site.id} siteName={site.name} accent={accent} />

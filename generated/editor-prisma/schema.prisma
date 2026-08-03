@@ -9,15 +9,16 @@ datasource db {
 }
 
 model User {
-  id           String          @id @default(cuid())
-  email        String          @unique @db.VarChar(191)
-  name         String?         @db.VarChar(191)
-  password     String          @db.VarChar(255)
-  role         String          @default("CLIENT") @db.VarChar(32)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  sites        EditorWebsite[]
-  subscription Subscription?
+  id                  String                @id @default(cuid())
+  email               String                @unique @db.VarChar(191)
+  name                String?               @db.VarChar(191)
+  password            String                @db.VarChar(255)
+  role                String                @default("CLIENT") @db.VarChar(32)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  sites               EditorWebsite[]
+  subscription        Subscription?
+  subscriptionHistory SubscriptionHistory[]
 
   @@map("users")
 }
@@ -60,22 +61,27 @@ model Plan {
 }
 
 model Subscription {
-  id                   String    @id @default(cuid())
-  userId               String    @unique @db.VarChar(191)
-  planId               String    @db.VarChar(64)
-  provider             String    @default("mercadopago") @db.VarChar(32)
-  mpSubscriptionId     String?   @unique @db.VarChar(191)
-  mpPayerId            String?   @db.VarChar(128)
-  stripeSubscriptionId String?   @unique @db.VarChar(191)
-  stripeCustomerId     String?   @db.VarChar(191)
-  interval             String    @default("month") @db.VarChar(16)
-  status               String    @default("pending") @db.VarChar(32)
+  id                   String                @id @default(cuid())
+  userId               String                @unique @db.VarChar(191)
+  planId               String                @db.VarChar(64)
+  provider             String                @default("mercadopago") @db.VarChar(32)
+  mpSubscriptionId     String?               @unique @db.VarChar(191)
+  mpPayerId            String?               @db.VarChar(128)
+  stripeSubscriptionId String?               @unique @db.VarChar(191)
+  stripeCustomerId     String?               @db.VarChar(191)
+  interval             String                @default("month") @db.VarChar(16)
+  status               String                @default("pending") @db.VarChar(32)
+  history              SubscriptionHistory[]
   currentPeriodEnd     DateTime?
   canceledAt           DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan                 Plan      @relation(fields: [planId], references: [id])
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  pendingPlanId        String?               @db.VarChar(64)
+  pendingInterval      String?               @db.VarChar(16)
+  pendingStartsAt      DateTime?
+  pendingStripePriceId String?               @db.VarChar(191)
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 Plan                  @relation(fields: [planId], references: [id])
 
   @@index([userId])
   @@index([planId])
@@ -96,6 +102,7 @@ model WebhookEvent {
   createdAt   DateTime  @default(now())
   processedAt DateTime?
 
+  @@unique([provider, eventId])
   @@index([provider])
   @@index([eventId])
   @@index([resourceId])
@@ -105,29 +112,65 @@ model WebhookEvent {
 }
 
 model EditorWebsite {
-  id          String       @id @db.VarChar(64)
-  name        String       @db.VarChar(191)
-  description String       @default("") @db.Text
-  tree        Json
-  published   Boolean      @default(false)
-  userId      String?      @db.VarChar(191)
-  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  collections Collection[]
-  products    Product[]
-  orders      Order[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id               String            @id @db.VarChar(64)
+  name             String            @db.VarChar(191)
+  description      String            @default("") @db.VarChar(1024)
+  tree             Json
+  published        Boolean           @default(false)
+  userId           String?           @db.VarChar(191)
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  pages            SitePage[]
+  theme            SiteTheme?
+  collections      Collection[]
+  products         Product[]
+  orders           Order[]
+  funnels          Funnel[]
+  experiments      Experiment[]
+  aiGenerationJobs AiGenerationJob[]
+  automations      Automation[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([userId])
   @@index([published])
   @@map("editor_websites")
 }
 
+model SitePage {
+  id        String        @id @default(cuid())
+  siteId    String        @db.VarChar(64)
+  name      String        @db.VarChar(191)
+  slug      String        @db.VarChar(191)
+  tree      Json
+  seo       Json?
+  isHome    Boolean       @default(false)
+  published Boolean       @default(false)
+  site      EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+  @@index([siteId, published])
+  @@map("site_pages")
+}
+
+model SiteTheme {
+  id        String        @id @default(cuid())
+  siteId    String        @unique @db.VarChar(64)
+  tokens    Json
+  site      EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("site_themes")
+}
+
 model Product {
   id          String           @id @default(cuid())
   siteId      String           @db.VarChar(64)
   name        String           @db.VarChar(191)
-  description String           @default("") @db.Text
+  description String           @default("") @db.VarChar(1024)
   type        String           @default("physical") @db.VarChar(32)
   status      String           @default("draft") @db.VarChar(32)
   media       Json
@@ -169,7 +212,7 @@ model Order {
   status        String        @default("pending") @db.VarChar(32)
   items         Json
   totalMxn      Int
-  mpPaymentId   String?       @db.VarChar(128)
+  mpPaymentId   String?       @unique @db.VarChar(128)
   notes         String?       @db.Text
   site          EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
   createdAt     DateTime      @default(now())
@@ -179,6 +222,97 @@ model Order {
   @@index([status])
   @@index([customerEmail])
   @@map("orders")
+}
+
+model Funnel {
+  id        String        @id @default(cuid())
+  siteId    String        @db.VarChar(64)
+  name      String        @db.VarChar(191)
+  slug      String        @db.VarChar(191)
+  status    String        @default("draft") @db.VarChar(32)
+  settings  Json
+  site      EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  steps     FunnelStep[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+  @@index([siteId, status])
+  @@map("funnels")
+}
+
+model FunnelStep {
+  id        String   @id @default(cuid())
+  funnelId  String
+  pageId    String?  @db.VarChar(191)
+  kind      String   @db.VarChar(32)
+  position  Int
+  settings  Json?
+  funnel    Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([funnelId])
+  @@index([funnelId, position])
+  @@map("funnel_steps")
+}
+
+model Experiment {
+  id           String        @id @default(cuid())
+  siteId       String        @db.VarChar(64)
+  pageId       String?       @db.VarChar(191)
+  funnelId     String?       @db.VarChar(191)
+  name         String        @db.VarChar(191)
+  status       String        @default("draft") @db.VarChar(32)
+  targetType   String        @db.VarChar(32)
+  trafficSplit Json
+  site         EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, status])
+  @@index([funnelId])
+  @@index([pageId])
+  @@map("experiments")
+}
+
+model AiGenerationJob {
+  id        String         @id @default(cuid())
+  siteId    String?        @db.VarChar(64)
+  pageId    String?        @db.VarChar(191)
+  type      String         @db.VarChar(64)
+  input     Json
+  output    Json?
+  status    String         @default("queued") @db.VarChar(32)
+  error     String?        @db.Text
+  site      EditorWebsite? @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([siteId])
+  @@index([pageId])
+  @@index([status])
+  @@index([type])
+  @@map("ai_generation_jobs")
+}
+
+model Automation {
+  id          String        @id @default(cuid())
+  siteId      String        @db.VarChar(64)
+  name        String        @db.VarChar(191)
+  triggerType String        @db.VarChar(64)
+  actionGraph Json
+  status      String        @default("draft") @db.VarChar(32)
+  site        EditorWebsite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, status])
+  @@index([triggerType])
+  @@map("automations")
 }
 
 model Collection {
@@ -209,4 +343,62 @@ model Record {
   @@index([collectionId])
   @@index([publishedAt])
   @@map("records")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  level  String @default("info") @db.VarChar(20)
+  module String @db.VarChar(50)
+  action String @db.VarChar(100)
+
+  userId String? @db.VarChar(191)
+  siteId String? @db.VarChar(191)
+
+  entityType String? @db.VarChar(50)
+  entityId   String? @db.VarChar(191)
+
+  ipAddress String? @db.VarChar(64)
+  userAgent String? @db.VarChar(255)
+
+  message  String @db.Text
+  metadata Json?
+
+  @@index([createdAt])
+  @@index([module])
+  @@index([userId])
+  @@index([siteId])
+  @@index([level])
+  @@map("audit_logs")
+}
+
+model SubscriptionHistory {
+  id             String @id @default(cuid())
+  subscriptionId String @db.VarChar(191)
+  userId         String @db.VarChar(191)
+
+  oldPlanId String? @db.VarChar(64)
+  newPlanId String? @db.VarChar(64)
+
+  oldInterval String? @db.VarChar(16)
+  newInterval String? @db.VarChar(16)
+
+  oldStatus String? @db.VarChar(32)
+  newStatus String? @db.VarChar(32)
+
+  provider String @default("stripe") @db.VarChar(32)
+  reason   String @db.VarChar(64)
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([reason])
+  @@map("subscription_history")
 }

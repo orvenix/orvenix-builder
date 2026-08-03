@@ -1,3 +1,4 @@
+import type { EnvironmentVariables } from "@/lib/env-types"
 import type { getBillingConfigReport } from "@/lib/billing-config";
 
 export type HealthState = "operational" | "degraded" | "down";
@@ -15,7 +16,7 @@ export interface HealthReport {
   warnings: string[];
 }
 
-function validateNextAuthUrl(url?: string, env: NodeJS.ProcessEnv = process.env) {
+function validateNextAuthUrl(url?: string, env: EnvironmentVariables = process.env) {
   if (!url) return "NEXTAUTH_URL no esta configurada.";
 
   try {
@@ -49,7 +50,7 @@ function normalizeOrigin(url?: string) {
   }
 }
 
-function validatePublicUrlAlignment(env: NodeJS.ProcessEnv = process.env) {
+function validatePublicUrlAlignment(env: EnvironmentVariables = process.env) {
   const configured = [
     ["AUTH_URL", normalizeOrigin(env.AUTH_URL)],
     ["NEXTAUTH_URL", normalizeOrigin(env.NEXTAUTH_URL)],
@@ -64,7 +65,7 @@ function validatePublicUrlAlignment(env: NodeJS.ProcessEnv = process.env) {
   return `${configured.map(([key, origin]) => `${key}=${origin}`).join(" · ")}. Deben apuntar al mismo origen publico.`;
 }
 
-function validateHttpsOrigins(env: NodeJS.ProcessEnv = process.env) {
+function validateHttpsOrigins(env: EnvironmentVariables = process.env) {
   if (env.NODE_ENV !== "production") return [];
 
   const configured = [
@@ -86,7 +87,7 @@ function validateHttpsOrigins(env: NodeJS.ProcessEnv = process.env) {
 }
 
 export type RuntimeHealthDeps = {
-  env: NodeJS.ProcessEnv
+  env: EnvironmentVariables
   countUsers: () => Promise<number>
   billing: ReturnType<typeof getBillingConfigReport>
   storageMode: "prisma" | "file"

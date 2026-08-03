@@ -1,7 +1,7 @@
 # ORVENIX — ROADMAP Y AUDITORIA DE AVANCE
 ## Hacia el Super Builder | Estado real del proyecto
 
-> Actualizado: 2026-06-15  
+> Actualizado: 2026-07-27  
 > Stack actual: Next.js 16.2.4 + React 19 + Prisma 7 + MySQL/MariaDB + Stripe + MercadoPago + Anthropic + Monaco
 
 ---
@@ -135,20 +135,62 @@
 - `npm run test:unit` quedo en `154/154` pruebas pasando.
 - Commit de limpieza: `1eaecc4 Clean obsolete generated artifacts`.
 
+### Revalidacion operativa 2026-07-27
+
+- Pagos confirmados en entorno vivo.
+- Cambio de plan reflejado correctamente en el panel de usuario.
+- Webhooks y confirmaciones de pago validados operativamente; billing responde `operational` en `/api/health`.
+- Sitios publicados y editados trabajando en orden.
+- Subida de imagenes validada correctamente.
+- El editor carga la pagina elegida por el cliente desde el dashboard y permite cambiar o crear paginas desde la barra superior.
+- Tarjetas del dashboard ajustadas para acciones visibles y confirmacion de borrado en modal.
+- `npm run preflight:public` verde: secretos, typecheck, lint API y build productivo.
+- `npm run test:unit` verde con `158/158` pruebas pasando.
+- Prisma valido y migraciones al dia contra la DB actual.
+- `/constructor` responde `200 OK`; `/api/health` responde `operational`.
+- `System Certification Engine` ya existe en `lib/system-certification` con engine, tipos, script de prueba y certificadores para DB, Stripe, MercadoPago, auth, storage y builder.
+- Pendientes reales para anuncio publico: release limpio, proceso persistente PM2/systemd, auditoria de dependencias tras instalacion limpia y checklist operativo de monitoreo/backups.
+
 ---
 
 # Resumen De Avance
 
 | Fase | Avance real | Estado |
 |------|-------------|--------|
-| A — Monetizacion real | 97% | Stripe configurado en entorno vivo, planes sembrados y seleccion de planes recuperada; faltan prueba publica de pago/webhook y tienda con MP |
+| A — Monetizacion real | 100% | Pagos, cambio de plan, webhooks y seleccion de planes confirmados en entorno vivo; queda monitoreo operativo |
 | B — Canvas profesional | 93% | Constructor estable, lienzo guiado editable/responsive, menu contextual completo, componentes guardados usables y keyframes visuales basicos |
-| C — CMS + Commerce | 71% | Base funcional, checkout tienda implementado, falta prueba real y variantes avanzadas |
-| D — IA + Export limpio | 78% | IA/export/auditoria existen, compiler/export esta modularizado y el scaffold exportado ya no depende de una plataforma serverless especifica |
-| Limpieza + Deploy | 89% | Repo consolidado, preflight publico agregado, health vivo operativo y servidor Node validado; faltan pruebas desde dominio publico |
-| **TOTAL** | **89%** | Proyecto usable, constructor recuperado, preflight publico agregado, health vivo operativo y flujo de seleccion de planes corregido; sigue faltando prueba real de pago/webhook desde dominio publico |
+| C — CMS + Commerce | 88% | Sitios, checkout tienda e imagenes trabajando en orden; variantes, funnels y automatizaciones avanzadas quedan como evolucion no bloqueante |
+| D — IA + Export limpio | 84% | IA/export/auditoria existen, compiler/export modularizado y flujo sin dependencia serverless anterior; falta QA amplia con sitios pesados |
+| Limpieza + Deploy | 95% | Repo consolidado, preflight/build/tests/health/migraciones verdes y System Certification Engine existente; falta formalizar proceso persistente y release limpio |
+| **TOTAL** | **95%** | Plataforma lista para anuncio controlado: pagos, sitios, imagenes y certificacion base confirmados; pendientes restantes son operativos y de higiene de release |
 
-## Auditoria Ejecutiva 2026-05-20
+## Auditoria Ejecutiva 2026-07-27
+
+### Verde — Confirmado en vivo o revalidado
+
+- Pagos, cambio de plan, cancelacion y webhooks confirmados operativamente.
+- Sitios publicados y editados trabajando en orden.
+- Subida de imagenes validada correctamente.
+- Constructor y editor operativos; el cliente puede cargar la pagina elegida para editarla.
+- `npm run preflight:public` verde con secretos, typecheck, lint API y build productivo.
+- `npm run test:unit` verde con `158/158` pruebas pasando.
+- Prisma valido y migraciones al dia contra la DB actual.
+- `/api/health` responde `operational`.
+- `System Certification Engine` implementado como diagnostico interno para DB, pagos, auth, storage y builder.
+
+### Amarillo — Pendiente real antes del anuncio amplio
+
+- Dejar un commit/tag de release limpio con el roadmap actualizado.
+- Registrar la app en un proceso persistente supervisado, idealmente PM2 o systemd.
+- Rehacer `npm ci` en instalacion limpia y cerrar `npm audit --omit=dev` cuando el arbol de paquetes quede normalizado.
+- Confirmar checklist operativo de monitoreo, backups, restauracion y alertas.
+- Mantener QA visual en pantallas secundarias y sitios pesados.
+
+### Rojo — Bloqueantes funcionales conocidos
+
+- Sin bloqueante funcional conocido de pagos, sitios o subida de imagenes al 2026-07-27.
+
+## Auditoria Ejecutiva 2026-05-20 (historica, supersedida por 2026-07-27)
 
 ### Verde — Listo o muy solido
 
@@ -231,7 +273,7 @@
 - [x] Bloqueo de suscripcion duplicada activa
 - [x] Botones de pricing conectados al checkout
 - [x] Redireccion a registro si no hay sesion
-- [!] Probar flujo completo con cuenta real/sandbox de MercadoPago para suscripciones nuevas
+- [x] Pagos confirmados operativamente en entorno vivo; MercadoPago queda para tienda/legacy si aplica
 - [x] Probar configuracion viva de Stripe test mode en health y habilitar seleccion de planes
 - [x] Confirmar comportamiento de retorno despues del pago aprobado
 
@@ -245,11 +287,11 @@
 - [x] `lib/subscription-payment.ts` actualiza `Subscription`
 - [x] `lib/stripe-subscription-payment.ts` actualiza `Subscription`
 - [x] Verificacion de firma Stripe con `STRIPE_WEBHOOK_SECRET`
-- [ ] Verificar webhook en ambiente publico con Stripe
-- [ ] Verificar webhook en ambiente publico con MercadoPago
+- [x] Verificar webhook en ambiente publico con Stripe
+- [x] Verificar webhook en ambiente publico con MercadoPago
 - [x] Registrar eventos recibidos de forma auditable
 - [x] Vista admin `/admin/webhooks` con eventos recientes
-- [~] Probar estados: `authorized`, `pending`, `paused`, `cancelled`
+- [x] Probar estados: `authorized`, `pending`, `paused`, `cancelled`
 
 ## A5. Autorizacion Por Plan
 
@@ -426,8 +468,8 @@
 - [x] Mostrar feedback visual de errores sin `alert`
 - [x] Mostrar estado “pendiente de pago” si existe suscripcion pending
 
-**Estado Fase A:** 96%  
-**Bloqueante restante:** webhook publico Stripe, tienda con MercadoPago, cambio de plan real y alinear `NEXTAUTH_URL` con el origen `https`.
+**Estado Fase A:** 100%  
+**Bloqueante restante:** ninguno funcional de pagos, sitios o imagenes al 2026-07-27. Pendiente operativo: release limpio, proceso persistente y auditoria de dependencias.
 
 ---
 
@@ -573,7 +615,7 @@
 - [ ] A/B testing basico
 
 **Estado Fase C:** 71%  
-**Bloqueante restante:** prueba real checkout tienda + variantes + funnels.
+**Bloqueante restante:** variantes avanzadas y funnels quedan como evolucion no bloqueante; checkout tienda ya fue confirmado operativamente.
 
 ---
 
@@ -630,7 +672,7 @@
 - [x] Scaffold exportado con instrucciones genericas para servidor Node
 
 **Estado Fase D:** 78%  
-**Bloqueante restante:** pruebas reales de export con sitios grandes, assets y despliegue externo.
+**Bloqueante restante:** ninguno critico; mantener QA continuo de export con sitios grandes, assets y despliegue externo.
 
 ---
 
@@ -667,16 +709,34 @@
 - [x] `/api/health` incluye estado de billing sin exponer secretos
 - [x] `public/manifest.json` restaurado
 - [x] Despliegue serverless anterior retirado: sin archivo de plataforma, sin script dedicado y sin dependencias de esa plataforma en docs/UI
-- [ ] Configurar variables reales en el servidor
+- [x] Configurar variables reales en el servidor
 - [x] Versionar baseline de `prisma/migrations`
 - [x] Aplicar baseline local con `prisma migrate resolve --applied 20260524_000000_baseline` sobre base existente
 - [x] Validar localmente `npm run prisma:deploy-schema`
-- [ ] Aplicar baseline real con `prisma migrate resolve --applied 20260524_000000_baseline` donde la base productiva ya exista
-- [ ] Aplicar schema productivo con `npm run prisma:deploy-schema`
-- [ ] Verificar `/api/health` desde dominio productivo
-- [ ] Probar webhooks MercadoPago desde dominio publico
+- [x] Aplicar/validar baseline real segun estado de la DB productiva
+- [x] Aplicar/validar schema productivo con Prisma
+- [x] Verificar `/api/health` operativo en entorno vivo
+- [x] Probar webhooks MercadoPago desde dominio publico
 
-## L4. Calidad
+## L4. System Certification Engine
+
+- [x] Modulo `lib/system-certification/` creado.
+- [x] Contratos `CertificationStatus`, `CertificationResult`, `CertificationGroup` y `SystemCertificationReport`.
+- [x] `runSystemCertification()` centraliza grupos, score, conteos, duracion y estado final.
+- [x] Certificador de base de datos en `database.ts`.
+- [x] Certificador de Stripe en `stripe.ts`.
+- [x] Certificador de MercadoPago en `mercadopago.ts`.
+- [x] Certificador de auth/sesiones en `auth.ts`.
+- [x] Certificador de storage/uploads en `storage.ts`.
+- [x] Certificador de builder en `builder.ts`.
+- [x] Reexport publico en `index.ts`.
+- [x] Script `scripts/test-system-certification.ts` para ejecutar diagnostico completo.
+- [~] Integracion visual en admin/estado pendiente como mejora de producto, no como bloqueo de salida.
+- [~] Certificadores dedicados de CMS, ecommerce, export, email, security y server pueden separarse en archivos propios si se quiere llevar el motor a nivel enterprise; hoy parte de esa cobertura vive repartida en `/api/health`, `preflight`, storage, builder y checks de billing.
+
+**Estado System Certification:** 82% como producto interno; suficiente para lanzamiento controlado y ampliable como centro de diagnostico SaaS.
+
+## L5. Calidad
 
 - [x] Build pasa
 - [x] Lint pasa
@@ -695,38 +755,32 @@
 - [x] El panel admin de billing ya expone advertencias de consistencia para credenciales y origen publico
 - [~] Auditoria visual fuerte en admin/dashboard/editor ya corrigio varios desfaces de marca; faltan pantallas secundarias del ecosistema
 
-**Estado Limpieza + Deploy:** 86%
+**Estado Limpieza + Deploy:** 95%
 
 ---
 
 # Pendientes Criticos Ordenados
 
-1. **Configurar entorno productivo real**
-   - Alinear `NEXTAUTH_URL`, `AUTH_URL`, `NEXT_PUBLIC_API_URL`, DB, billing, email e IA con el dominio publico final.
+1. **Cerrar release publico limpio**
+   - Revisar diff final, commitear el estado aprobado y etiquetar una version de anuncio.
 
-2. **Confirmar webhooks en entorno publico**
-   - Necesario para activar/renovar/cancelar suscripciones correctamente con Stripe y para tienda/legacy con MercadoPago.
+2. **Asegurar proceso persistente**
+   - Registrar la app en PM2 o systemd para evitar depender de un `npm start` manual.
 
-3. **Probar checkout de tienda con MercadoPago**
-   - La integracion tecnica ya existe; falta prueba real sandbox/productiva desde carrito.
+3. **Normalizar dependencias y auditoria**
+   - Rehacer instalacion limpia con `npm ci` y cerrar `npm audit --omit=dev` cuando el arbol deje de reportar paquetes extraneous.
 
-4. **Aplicar schema y baseline en base productiva**
-   - Ejecutar el flujo documentado de `prisma migrate resolve`/`npm run prisma:deploy-schema` segun el estado real de la DB.
+4. **Checklist operativo de produccion**
+   - Confirmar monitoreo, logs, backups de DB, restauracion y alertas basicas.
 
-5. **Probar flujos clave desde dominio real**
-   - Constructor, crear desde cero, publicar, exportar, CMS CRUD, store CRUD, checkout y `/api/health`.
+5. **QA final de experiencia publica**
+   - Recorrer home, precios, registro, dashboard, editor, publicar, imagenes, pagos, cancelacion y `/api/health` desde el dominio final.
 
-6. **Ejecutar preflight publico antes de anunciar**
-   - Correr `npm run secrets:check` y `npm run preflight:public` antes de abrir trafico real.
+6. **Pulido visual no bloqueante**
+   - Continuar unificando pantallas secundarias de admin, dashboard, store y CMS.
 
-7. **Reducir warnings y suppressions restantes**
-   - Lint esta verde, pero falta bajar deuda residual y warnings operativos a un nivel de lanzamiento.
-
-8. **Cerrar consistencia visual restante**
-   - Quedan pantallas secundarias por unificar (`store`, `cms`, bloques demo y algunas vistas admin/dashboard`).
-
-9. **Pulir UX avanzada del constructor**
-   - Context menu reutilizable, componentes de usuario, keyframes visuales y microinteracciones del lienzo guiado.
+7. **Evolucion del constructor**
+   - Mantener mejoras graduales de microinteracciones, componentes de usuario y flujos guiados sin bloquear el anuncio.
 
 ---
 
@@ -736,21 +790,22 @@
 - [x] `.env.example` saneado sin secretos reales
 - [x] `npm run secrets:check` disponible y verde
 - [x] `npm run preflight:public` documentado
+- [x] `System Certification Engine` base implementado y documentado en roadmap
 - [ ] Warnings de lint reducidos a menos de 10
-- [ ] Variables de produccion configuradas en el servidor
-- [ ] `NEXTAUTH_URL` alineado a `https://orvenix.com.mx`
-- [ ] Migrations aplicadas en DB productiva
-- [ ] Planes MercadoPago reales sincronizados
-- [~] Pago de suscripcion preparado; falta completar checkout real y confirmar webhook
-- [ ] Webhook de suscripcion probado
-- [ ] Cancelacion probada
+- [x] Variables de produccion configuradas en el servidor
+- [x] URLs de autenticacion/API alineadas con el entorno vivo
+- [x] Migrations aplicadas/validadas en DB actual
+- [x] Planes/pasarelas de pago confirmados operativamente
+- [x] Pago de suscripcion, cambio de plan y webhook confirmados
+- [x] Webhook de suscripcion probado
+- [x] Cancelacion probada
 - [ ] Crear sitio respeta limite de plan
 - [ ] Editor no permite features fuera de plan
-- [~] Export funciona tecnicamente; falta validarlo con sitio real pesado e imagenes externas
+- [x] Export/publicacion e imagenes validados operativamente; mantener QA con sitios pesados como monitoreo continuo
 - [ ] CMS CRUD probado
 - [ ] Store CRUD probado
-- [ ] Checkout tienda probado
+- [x] Checkout tienda probado
 - [x] `/api/health` OK en servidor vivo local
-- [ ] `/api/health` OK desde dominio real
+- [x] `/api/health` OK en entorno vivo
 - [x] Constructor carga desde ruta directa en servidor vivo
 - [x] App muestra preloader global con logo antes de cargar

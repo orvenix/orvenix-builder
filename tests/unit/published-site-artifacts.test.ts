@@ -93,8 +93,11 @@ test("static published artifacts write home and nested pages with shared css", a
 
     assert.equal(await hasPublishedSiteArtifact(siteId), true)
     assert.equal(await hasPublishedSiteArtifact(siteId, "servicios"), true)
-    assert.equal(getPublishedSitePublicPath(siteId), `/published-sites/${siteId}/`)
-    assert.equal(getPublishedSitePublicPath(siteId, "servicios"), `/published-sites/${siteId}/servicios/`)
+    assert.equal(getPublishedSitePublicPath(siteId), `/p/${siteId}/`)
+assert.equal(
+  getPublishedSitePublicPath(siteId, "servicios"),
+  `/p/${siteId}/servicios/`
+)
 
     const homeHtml = await fs.readFile(
       path.join(process.cwd(), "public", "published-sites", siteId, "index.html"),

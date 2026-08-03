@@ -21,6 +21,9 @@ const NAV_LINKS = [
   { href: '/proceso',     label: 'Proceso' },
   { href: '/afiliados',   label: 'Afiliados' },
   { href: '/contacto',    label: 'Contacto' },
+  { href: '/legal/dossier-2026', label: 'Dossier 2026' },
+  { href: '/legal/sla', label: 'SLA' },
+  { href: '/legal/contrato', label: 'Contrato' },
   { href: '/legal/privacidad', label: 'Privacidad' },
   { href: '/legal/terminos',   label: 'Términos' },
 ];

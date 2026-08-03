@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { LogOut, ShieldCheck } from 'lucide-react';
 import { OrvenixBrand } from '@/components/OrvenixLogo';
-import { ThemeToggle } from '@/components/theme/ThemeMode';
+import { AdminThemeToggle } from './AdminThemeToggle';
 import { AdminNavLinks } from './AdminNavLinks';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .toUpperCase();
 
   return (
-    <div className="admin-shell min-h-screen overflow-hidden text-white">
+    <div className="admin-shell min-h-screen overflow-hidden text-[color:var(--text)]">
       {/* Glows del sitio principal */}
       <div className="pointer-events-none fixed inset-0">
         <div className="dashboard-glow-1" />
@@ -34,13 +34,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <aside className="admin-sidebar w-72 shrink-0 border-r border-white/[0.07] backdrop-blur-xl">
 
           {/* Header del sidebar */}
-          <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[color:var(--glass-border-hover)] bg-[color:rgba(0,181,246,0.10)] text-[color:var(--accent)]">
+          <div className="border-b border-white/[0.07] px-5 py-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[color:var(--glass-border-hover)] bg-[color:rgba(0,181,246,0.10)] text-[color:var(--accent)]">
                 <ShieldCheck className="h-4 w-4" />
               </div>
-              <div>
-                <Link href="/admin" className="block">
+              <div className="min-w-0 flex-1">
+                <Link href="/admin" className="block max-w-full overflow-hidden">
                   <OrvenixBrand iconSize={30} textSize="base" />
                 </Link>
                 <span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
@@ -48,7 +48,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 </span>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="admin-theme-row mt-4 flex items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/35">Tema</span>
+              <AdminThemeToggle />
+            </div>
           </div>
 
           {/* Badge "Orvenix Command" — con el estilo mk-promo-badge */}

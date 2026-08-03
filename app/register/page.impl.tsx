@@ -72,8 +72,21 @@ export default function RegisterPage() {
     }
     await signIn("credentials", { email, password, redirect: false });
 
-    const nextRoute = await claimPendingDesignAfterRegister();
-    router.push(nextRoute);
+    const login = await signIn("credentials", {
+  email,
+  password,
+  redirect: false,
+});
+
+if (!login || login.error) {
+  setLoading(false);
+  setError(login?.error ?? "La cuenta fue creada pero no se pudo iniciar sesión.");
+  return;
+}
+
+const nextRoute = await claimPendingDesignAfterRegister();
+router.replace(nextRoute);
+router.refresh();
   };
 
   return (

@@ -68,18 +68,17 @@ export function Hero() {
             </div>
 
             <h1 className="mk-hero-title mb-5 text-orvenix-text">
-              Tu negocio digital,{' '}
-              <span className="mk-gradient-text">todo en un panel</span>
+              Tu sitio web, tienda y clientes,{' '}
+              <span className="mk-gradient-text">todo en una sola plataforma</span>
             </h1>
 
             <p className="text-base leading-relaxed mb-8 max-w-lg text-orvenix-secondary">
-              Web profesional + panel privado + gestión de clientes + almacenamiento en la nube.
-              Todo incluido, sin instalar nada, activo en menos de 24 horas.
+              Crea tu sitio profesional, administra clientes, vende en línea y controla tu operación desde un panel privado. Sin instalar nada y listo para crecer.
             </p>
 
             <div className="flex flex-wrap gap-3 mb-10">
-              <Link href="/precios" className="mk-btn-primary">Ver planes desde $349/mes ↗</Link>
-              <Link href="/webs" className="mk-btn-outline">Ver demos en vivo</Link>
+              <Link href="/precios" className="mk-btn-primary">Comenzar ahora ↗</Link>
+              <Link href="/webs" className="mk-btn-outline">Ver demostración</Link>
             </div>
 
             <div className="grid grid-cols-3 gap-6 pt-6 mk-divider">

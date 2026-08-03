@@ -38,9 +38,13 @@ export default async function StorePage({ params }: Props) {
   if (!site) notFound()
 
   const access = await getUserPlanAccess(session.user.id)
-  if (!access.plan?.hasEcommerce) {
-    redirect("/precios?upgrade=ecommerce")
-  }
+
+if (
+  !access.entitlements ||
+  access.entitlements.features.ecommerce === "none"
+) {
+  redirect("/precios?upgrade=ecommerce")
+}
 
   const funnelsReady = isFunnelsReady()
   const experimentsReady = isExperimentsReady()

@@ -40,7 +40,10 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId, interval }),
       })
-      const data = await res.json() as { initPoint?: string; error?: string; code?: string }
+      const contentType = res.headers.get('content-type') ?? ''
+      const data = contentType.includes('application/json')
+        ? await res.json() as { initPoint?: string; error?: string; code?: string }
+        : { error: 'El servidor no devolvio una respuesta valida de checkout.', code: 'INVALID_CHECKOUT_RESPONSE' }
 
       if (data.initPoint) {
         window.location.href = data.initPoint
@@ -56,7 +59,7 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
         setError(data.error ?? 'Error al iniciar el pago. Intenta de nuevo.')
       }
     } catch {
-      setError('Error de conexión. Intenta de nuevo.')
+      setError('No se pudo conectar con el checkout. Revisa tu conexion e intenta de nuevo.')
     } finally {
       setLoading(false)
     }

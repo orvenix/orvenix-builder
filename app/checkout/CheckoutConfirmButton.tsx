@@ -52,7 +52,7 @@ export function CheckoutConfirmButton({ action, siteId, templateId, priceMxn }: 
   }
 
   const buttonLabel = priceMxn
-    ? `Pagar ${new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(priceMxn)} con MercadoPago`
+    ? `Pagar ${new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(priceMxn)} con Mercado Pago`
     : "Continuar al pago"
 
   return (
@@ -76,7 +76,7 @@ export function CheckoutConfirmButton({ action, siteId, templateId, priceMxn }: 
       {priceMxn && (
         <p className="text-center text-[11px] text-white/25 flex items-center justify-center gap-1.5">
           <ShieldCheck size={11} className="text-white/30" />
-          Pago procesado de forma segura por MercadoPago
+          Pago procesado de forma segura por Mercado Pago
         </p>
       )}
 

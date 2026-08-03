@@ -4,7 +4,12 @@ import { getAuthSession } from "@/lib/auth-session"
 import { canManageSite } from "@/lib/auth"
 import type { UserRole } from "@/lib/auth"
 import { requireEcommercePlan } from "@/lib/plan-guard"
-import { createAutomation, isAutomationsReady, listAutomations } from "@/lib/automation/runtime"
+import {
+  AutomationAccessError,
+  createAutomation,
+  isAutomationsReady,
+  listAutomations,
+} from "@/lib/automation/runtime"
 import {
   AUTOMATION_ACTION_TYPES,
   AUTOMATION_CONDITION_OPERATORS,
@@ -85,6 +90,7 @@ export async function POST(req: Request, { params }: Ctx) {
   }
 
   const body = AutomationSchema.safeParse(await req.json())
+  createAutomation(siteId, body.data)
   if (!body.success) return NextResponse.json({ error: body.error.flatten() }, { status: 400 })
 
   const automation = await createAutomation(siteId, body.data)

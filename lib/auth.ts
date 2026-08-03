@@ -1,6 +1,8 @@
 import { pbkdf2Sync, randomBytes } from "crypto";
 import { editorPrisma } from "@/lib/editor-db";
 import { getDefaultStarterEditorTree } from "@/lib/editorWebs";
+import { canCreateWebsite } from "@/lib/billing/plan-entitlements"
+import { getUserPlanAccess } from "@/lib/plan-guard"
 import type { Prisma } from "@/generated/editor-prisma";
 import type { EditorTree } from "@/types/editor";
 
@@ -84,13 +86,53 @@ export async function getSitesForRole(userId: string, role: UserRole) {
   return role === "ADMIN" ? getAllSitesForAdmin() : getSitesByUser(userId);
 }
 
-export async function createSite(name: string, description: string, userId: string) {
-  const id = `site_${randomBytes(6).toString("hex")}`;
-  const starterTree = getDefaultStarterEditorTree();
+export class WebsiteLimitReachedError extends Error {
+  readonly code = "WEBSITE_LIMIT_REACHED"
+
+  constructor(
+    message = "Has alcanzado el límite de sitios incluido en tu plan.",
+  ) {
+    super(message)
+    this.name = "WebsiteLimitReachedError"
+  }
+}
+
+async function requireCanCreateWebsite(userId: string) {
+  const [access, websitesUsed] = await Promise.all([
+    getUserPlanAccess(userId),
+    editorPrisma.editorWebsite.count({
+      where: { userId },
+    }),
+  ])
+
+  if (
+    !access.isActive ||
+    !access.plan ||
+    !canCreateWebsite(access.plan.id, websitesUsed)
+  ) {
+    throw new WebsiteLimitReachedError()
+  }
+}
+
+export async function createSite(
+  name: string,
+  description: string,
+  userId: string,
+) {
+  await requireCanCreateWebsite(userId)
+
+  const id = `site_${randomBytes(6).toString("hex")}`
+  const starterTree = getDefaultStarterEditorTree()
 
   return editorPrisma.editorWebsite.create({
-    data: { id, name, description, tree: toPrismaJson(starterTree), userId },
-  });
+    data: {
+      id,
+      name,
+      description,
+      tree: toPrismaJson(starterTree),
+      userId,
+    },
+  })
 }
 
 function toPrismaJson(tree: EditorTree): Prisma.InputJsonValue {
@@ -108,6 +150,9 @@ export async function createSiteFromTree({
   userId: string;
   tree: EditorTree;
 }) {
+
+   await requireCanCreateWebsite(userId)
+
   const id = `site_${randomBytes(6).toString("hex")}`;
 
   return editorPrisma.editorWebsite.create({

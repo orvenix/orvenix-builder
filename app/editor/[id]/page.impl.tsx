@@ -4,7 +4,6 @@ import { EditorProvider } from "@/components/editor/store/EditorProvider";
 import { EditorShell } from "@/components/editor/shell/EditorShell";
 import { HistoryControls } from "@/components/editor/toolbar/HistoryControls";
 import { DeviceToggle } from "@/components/editor/toolbar/DeviceToggle";
-import { EditorCommandPalette } from "@/components/editor/toolbar/EditorCommandPalette";
 import { EditorOpsBar } from "@/components/editor/toolbar/EditorOpsBar";
 import { getEditorTreeFromDb } from "@/lib/editorPersistence";
 import { canManageSite, type UserRole } from "@/lib/auth";
@@ -20,19 +19,6 @@ interface EditorPageProps {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ page?: string }>;
 }
-
-const COLLAB_AVATARS = [
-  { initials: "TM", color: "#6366f1" },
-  { initials: "SR", color: "#10b981" },
-  { initials: "KL", color: "#f59e0b" },
-];
-
-const EDITOR_NAV_LINKS = [
-  { href: "/", label: "Inicio" },
-  { href: "/webs", label: "Sitios" },
-  { href: "/templates", label: "Templates" },
-  { href: "/precios", label: "Precios" },
-];
 
 export default async function EditorPage({ params, searchParams }: EditorPageProps) {
   const { id } = await params;
@@ -111,19 +97,6 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
               <OrvenixBrand iconSize={28} textSize="base" />
             </Link>
 
-            {/* Nav links */}
-            <nav className="editor-topbar-menu hidden items-center gap-0.5 lg:flex" aria-label="Navegación del editor">
-              {EDITOR_NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="ov-link-ghost rounded-md px-2.5 py-1.5 text-[12px] font-medium"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-
             {/* Breadcrumb */}
             <div className="ml-2 flex items-center gap-1 text-[11px] font-medium min-w-0">
               <span className="hidden text-white/25 sm:inline">Sitios</span>
@@ -144,7 +117,6 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
             <div className="ov-vsep mx-2 hidden h-4 w-px shrink-0 sm:block" />
 
             <HistoryControls />
-            <EditorCommandPalette />
           </div>
 
           {/* Device toggle centrado */}
@@ -155,23 +127,6 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
           {/* Grupo derecho */}
           <div className="flex min-w-0 flex-1 items-center justify-end gap-2 pr-3">
             <ThemeToggle className="editor-theme-toggle" />
-
-            {/* Avatares colaboración */}
-            <div className="hidden xl:flex items-center">
-              <div className="flex items-center -space-x-1.5">
-                {COLLAB_AVATARS.map((a) => (
-                  <div
-                    key={a.initials}
-                    className="ov-collab-avatar relative flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                    style={{ backgroundColor: a.color + "cc" }}
-                    title={a.initials}
-                  >
-                    {a.initials}
-                  </div>
-                ))}
-              </div>
-              <div className="ov-vsep ml-2 mr-1 h-4 w-px" />
-            </div>
 
             <EditorOpsBar />
           </div>

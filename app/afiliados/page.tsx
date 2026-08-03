@@ -7,24 +7,24 @@ import { FaqAccordion } from '@/components/marketing/sections/FaqAccordion';
 
 const tiers = [
   {
-    name: 'Plan Básico',
+    name: 'Plan Starter',
     pct: '20%',
-    monthly: '$69.80/mes',
-    base: '$349/mes',
+    monthly: '3 USD/mes',
+    base: '15 USD/mes',
     label: null,
   },
   {
     name: 'Plan Pro',
     pct: '25%',
-    monthly: '$174.75/mes',
-    base: '$699/mes',
+    monthly: '9.75 USD/mes',
+    base: '39 USD/mes',
     label: 'Más rentable',
   },
   {
-    name: 'Plan Empresa',
+    name: 'Plan Business',
     pct: '30%',
-    monthly: '$419.70/mes',
-    base: '$1,399/mes',
+    monthly: '23.70 USD/mes',
+    base: '79 USD/mes',
     label: null,
   },
 ];
@@ -140,7 +140,7 @@ export default function AfiliadosPage() {
           <SectionHeader
             tag="Comisiones"
             title={<>Elige tu <em className="not-italic mk-accent-text">nivel de ganancias</em></>}
-            description="Tu comisión depende del plan que contrate tu referido. A mejor plan, mayor ingreso mensual."
+            description="Tu comisión depende del plan oficial que contrate tu referido. Los montos se calculan sobre precios base en USD antes de IVA."
             center
           />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12">

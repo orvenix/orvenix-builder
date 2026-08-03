@@ -1,5 +1,10 @@
 import { editorPrisma } from "@/lib/editor-db"
 import type { Prisma } from "@/generated/editor-prisma"
+import {
+  canCreateFunnel as canCreateFunnelForPlan,
+  canUseEcommerce,
+} from "@/lib/billing/plan-entitlements"
+import { getUserPlanAccess } from "@/lib/plan-guard"
 
 export type FunnelStatus = "draft" | "active" | "archived"
 export type FunnelStepKind = "landing" | "checkout" | "upsell" | "downsell" | "thankyou"
@@ -27,12 +32,26 @@ export interface FunnelStepRecord {
   updatedAt: Date
 }
 
+export class FunnelAccessError extends Error {
+  constructor(
+    readonly code: "PLAN_REQUIRED" | "FUNNEL_LIMIT_REACHED",
+    message: string,
+  ) {
+    super(message)
+    this.name = "FunnelAccessError"
+  }
+}
+
 type DynamicFunnelDelegate = {
   findMany: (args: {
     where?: Record<string, unknown>
     orderBy?: Record<string, "asc" | "desc">
     include?: Record<string, unknown>
   }) => Promise<FunnelRecord[]>
+  count: (args: {
+  where?: Record<string, unknown>
+}) => Promise<number>
+
   create: (args: {
     data: Record<string, unknown>
     include?: Record<string, unknown>
@@ -105,6 +124,43 @@ export async function createFunnel(siteId: string, input: {
   if (!delegate) {
     throw new Error("FUNNELS_NOT_READY")
   }
+
+  const site = await editorPrisma.editorWebsite.findUnique({
+  where: { id: siteId },
+  select: { userId: true },
+})
+
+if (!site) {
+  throw new Error("SITE_NOT_FOUND")
+}
+
+const access = await getUserPlanAccess(site.userId)
+
+if (
+  !access.isActive ||
+  !access.plan ||
+  !canUseEcommerce(access.plan.id)
+) {
+  throw new FunnelAccessError(
+    "PLAN_REQUIRED",
+    "El e-commerce no está incluido en el plan del propietario del sitio.",
+  )
+}
+
+const funnelsUsed = await delegate.count({
+  where: { siteId },
+})
+
+if (!canCreateFunnelForPlan(access.plan.id, funnelsUsed)) {
+  const limit = access.entitlements?.limits.funnels
+
+  throw new FunnelAccessError(
+    "FUNNEL_LIMIT_REACHED",
+    typeof limit === "number"
+      ? `Tu plan permite hasta ${limit} funnels. Actualiza tu plan para crear más.`
+      : "Tu plan actual no permite crear más funnels.",
+  )
+}
 
   return delegate.create({
     data: {

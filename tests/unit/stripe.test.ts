@@ -4,6 +4,7 @@ import { createHmac } from "node:crypto"
 import {
   getStripePriceId,
   mapStripeSubscriptionStatus,
+  resolveConfiguredStripePlanFromPrice,
   verifyStripeWebhookSignature,
 } from "../../lib/stripe"
 import { dateFromUnixSeconds, mapMercadoPagoSubscriptionStatus } from "../../lib/subscription-status"
@@ -16,6 +17,50 @@ test("getStripePriceId prefers database value over environment", () => {
 test("getStripePriceId maps plan and interval to env name", () => {
   process.env.STRIPE_PRICE_COMMERCE_YEAR = "price_commerce_year"
   assert.equal(getStripePriceId("commerce", "year"), "price_commerce_year")
+})
+
+
+test("getStripePriceId supports business and commerce aliases", () => {
+  const previousBusiness = process.env.STRIPE_PRICE_BUSINESS_MONTH
+  const previousCommerce = process.env.STRIPE_PRICE_COMMERCE_MONTH
+  delete process.env.STRIPE_PRICE_BUSINESS_MONTH
+  process.env.STRIPE_PRICE_COMMERCE_MONTH = "price_commerce_month"
+
+  assert.equal(getStripePriceId("business", "month"), "price_commerce_month")
+
+  process.env.STRIPE_PRICE_BUSINESS_MONTH = "price_business_month"
+  delete process.env.STRIPE_PRICE_COMMERCE_MONTH
+  assert.equal(getStripePriceId("commerce", "month"), "price_business_month")
+
+  if (previousBusiness === undefined) delete process.env.STRIPE_PRICE_BUSINESS_MONTH
+  else process.env.STRIPE_PRICE_BUSINESS_MONTH = previousBusiness
+  if (previousCommerce === undefined) delete process.env.STRIPE_PRICE_COMMERCE_MONTH
+  else process.env.STRIPE_PRICE_COMMERCE_MONTH = previousCommerce
+})
+
+test("resolveConfiguredStripePlanFromPrice recognizes Business as the commerce database plan", () => {
+  const env = {
+    STRIPE_PRICE_BUSINESS_MONTH: "price_business_month",
+    STRIPE_PRICE_BUSINESS_YEAR: "price_business_year",
+  }
+
+  assert.deepEqual(resolveConfiguredStripePlanFromPrice("price_business_month", env), {
+    planId: "commerce",
+    interval: "month",
+  })
+  assert.deepEqual(resolveConfiguredStripePlanFromPrice("price_business_year", env), {
+    planId: "commerce",
+    interval: "year",
+  })
+})
+
+test("resolveConfiguredStripePlanFromPrice preserves the legacy Commerce alias", () => {
+  const env = { STRIPE_PRICE_COMMERCE_MONTH: "price_commerce_month" }
+
+  assert.deepEqual(resolveConfiguredStripePlanFromPrice("price_commerce_month", env), {
+    planId: "commerce",
+    interval: "month",
+  })
 })
 
 test("mapStripeSubscriptionStatus normalizes Stripe status names", () => {

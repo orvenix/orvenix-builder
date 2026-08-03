@@ -22,13 +22,13 @@ const MAX_HISTORY = 12;
 const DEFAULT_MESSAGES: ChatMessage[] = [{ role: "assistant", content: getDefaultWelcomeMessage() }];
 
 function getDefaultWelcomeMessage() {
-  return "Hola, soy orvenix. Puedo ayudarte con precios, plataforma, editor visual, plantillas reales, demos por industria y el proceso para lanzar tu sitio.";
+  return "Hola, soy Orvenix AI. Puedo ayudarte con planes oficiales 2026, Super Builder, templates por industria, pagos, soporte y la ruta para lanzar tu sitio.";
 }
 
 const SUGGESTIONS = [
-  "Que incluye la Plataforma Orvenix?",
-  "Cuanto cuesta un sitio?",
-  "Como funciona el editor?",
+  "Que plan me conviene?",
+  "Como funciona el Super Builder?",
+  "Que incluye Pro y Business?",
 ];
 
 function loadHistory(): ChatMessage[] {
@@ -393,7 +393,7 @@ export function Chatbot() {
             }}
             rows={2}
             disabled={isBusy}
-            placeholder="Pregunta por precios, plataforma, tiempos..."
+            placeholder="Pregunta por planes, pagos, Builder, templates..."
             className="min-w-0 flex-1 resize-none rounded-xl border border-slate-400/20 bg-slate-900/90 px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-300/50 disabled:opacity-70"
           />
           <button

@@ -1,3 +1,4 @@
+import type { EnvironmentVariables } from "@/lib/env-types"
 import { hasConfiguredEnvValue } from "./env-placeholders"
 
 type BillingCheckStatus = "ok" | "missing" | "warning"
@@ -9,7 +10,7 @@ export type BillingConfigCheck = {
   detail: string
 }
 
-type BillingEnv = NodeJS.ProcessEnv
+type BillingEnv = EnvironmentVariables
 
 function hasValue(value: string | undefined) {
   return hasConfiguredEnvValue(value)
@@ -17,6 +18,10 @@ function hasValue(value: string | undefined) {
 
 function hasStripePrice(env: BillingEnv, plan: string, interval: "MONTH" | "YEAR") {
   return hasValue(env[`STRIPE_PRICE_${plan}_${interval}`])
+}
+
+function hasAnyStripePrice(env: BillingEnv, plans: string[], interval: "MONTH" | "YEAR") {
+  return plans.some((plan) => hasStripePrice(env, plan, interval))
 }
 
 function check(key: string, label: string, condition: boolean, detail: string): BillingConfigCheck {
@@ -87,8 +92,8 @@ export function getBillingConfigReport(env: BillingEnv = process.env) {
     check("stripe_price_starter_year", "Stripe Starter anual", hasStripePrice(env, "STARTER", "YEAR"), "Requiere STRIPE_PRICE_STARTER_YEAR."),
     check("stripe_price_pro_month", "Stripe Pro mensual", hasStripePrice(env, "PRO", "MONTH"), "Requiere STRIPE_PRICE_PRO_MONTH."),
     check("stripe_price_pro_year", "Stripe Pro anual", hasStripePrice(env, "PRO", "YEAR"), "Requiere STRIPE_PRICE_PRO_YEAR."),
-    check("stripe_price_commerce_month", "Stripe Commerce mensual", hasStripePrice(env, "COMMERCE", "MONTH"), "Requiere STRIPE_PRICE_COMMERCE_MONTH."),
-    check("stripe_price_commerce_year", "Stripe Commerce anual", hasStripePrice(env, "COMMERCE", "YEAR"), "Requiere STRIPE_PRICE_COMMERCE_YEAR."),
+    check("stripe_price_business_month", "Stripe Business mensual", hasAnyStripePrice(env, ["BUSINESS", "COMMERCE"], "MONTH"), "Requiere STRIPE_PRICE_BUSINESS_MONTH o STRIPE_PRICE_COMMERCE_MONTH."),
+    check("stripe_price_business_year", "Stripe Business anual", hasAnyStripePrice(env, ["BUSINESS", "COMMERCE"], "YEAR"), "Requiere STRIPE_PRICE_BUSINESS_YEAR o STRIPE_PRICE_COMMERCE_YEAR."),
   ]
 
   const stripePublishableMode = stripeModeFromValue(env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)

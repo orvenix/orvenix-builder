@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto"
 import { serverWarn } from "./server-log"
 
 type WebhookProvider = "stripe" | "mercadopago"
@@ -6,6 +7,7 @@ type WebhookStatus = "received" | "processed" | "skipped" | "failed"
 export type WebhookEventClient = {
   create: (args: {
     data: {
+      id: string
       provider: WebhookProvider
       eventId?: string | null
       eventType: string
@@ -57,36 +59,69 @@ export function errorMessage(error: unknown) {
 export function createWebhookEventService(client?: WebhookEventClient | null) {
   return {
     async recordWebhookEvent(params: {
-      provider: WebhookProvider
-      eventId?: string | null
-      eventType: string
-      resourceId?: string | null
-      payload?: unknown
-    }) {
-      try {
-        if (!client) return null
-
-        const event = await client.create({
-          data: {
-            provider: params.provider,
-            eventId: params.eventId ?? null,
-            eventType: params.eventType,
-            resourceId: params.resourceId ?? null,
-            status: "received",
-            payload: params.payload,
-          },
-        })
-
-        return event.id
-      } catch (error) {
-        serverWarn("[webhook:audit] No se pudo registrar evento", {
-          provider: params.provider,
-          eventType: params.eventType,
-          error: errorMessage(error),
-        })
-        return null
+  provider: WebhookProvider
+  eventId?: string | null
+  eventType: string
+  resourceId?: string | null
+  payload?: unknown
+}) {
+  try {
+    if (!client) {
+      return {
+        id: null,
+        duplicate: false,
       }
-    },
+    }
+
+    const id = `wh_${randomUUID()}`
+
+    await client.create({
+      data: {
+        id,
+        provider: params.provider,
+        eventId: params.eventId ?? null,
+        eventType: params.eventType,
+        resourceId: params.resourceId ?? null,
+        status: "received",
+        payload: params.payload,
+      },
+    })
+
+    return {
+      id,
+      duplicate: false,
+    }
+  } catch (error) {
+    const message = errorMessage(error)
+
+    if (
+      message.includes("Unique constraint failed") ||
+      message.includes("Duplicate entry")
+    ) {
+      serverWarn("[webhook:audit] Evento duplicado ignorado", {
+        provider: params.provider,
+        eventId: params.eventId ?? null,
+        eventType: params.eventType,
+      })
+
+      return {
+        id: null,
+        duplicate: true,
+      }
+    }
+
+    serverWarn("[webhook:audit] No se pudo registrar evento", {
+      provider: params.provider,
+      eventType: params.eventType,
+      error: message,
+    })
+
+    return {
+      id: null,
+      duplicate: false,
+    }
+  }
+},
 
     async markWebhookEvent(
       id: string | null,

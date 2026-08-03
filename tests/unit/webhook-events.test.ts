@@ -4,11 +4,11 @@ import { createWebhookEventService, errorMessage, type WebhookEventClient } from
 
 function createMockClient() {
   const calls: {
-    create: Array<unknown>
-    update: Array<unknown>
-    findMany: Array<unknown>
-    count: Array<unknown>
-  } = {
+  create: Array<Parameters<WebhookEventClient["create"]>[0]>
+  update: Array<Parameters<WebhookEventClient["update"]>[0]>
+  findMany: Array<Parameters<WebhookEventClient["findMany"]>[0]>
+  count: Array<Parameters<WebhookEventClient["count"]>[0] | null>
+} = {
     create: [],
     update: [],
     findMany: [],
@@ -61,11 +61,11 @@ test("errorMessage normalizes different error values", () => {
   assert.equal(errorMessage(42), "42")
 })
 
-test("recordWebhookEvent stores a received audit event and returns id", async () => {
+test("recordWebhookEvent stores a received audit event and returns result", async () => {
   const { client, calls } = createMockClient()
   const service = createWebhookEventService(client)
 
-  const id = await service.recordWebhookEvent({
+  const result = await service.recordWebhookEvent({
     provider: "stripe",
     eventId: "evt_1",
     eventType: "checkout.session.completed",
@@ -73,18 +73,21 @@ test("recordWebhookEvent stores a received audit event and returns id", async ()
     payload: { ok: true },
   })
 
-  assert.equal(id, "evt_local")
+  assert.equal(result.duplicate, false)
+  assert.equal(typeof result.id, "string")
+  assert.ok(result.id.length > 0)
+
   assert.equal(calls.create.length, 1)
-  assert.deepEqual(calls.create[0], {
-    data: {
-      provider: "stripe",
-      eventId: "evt_1",
-      eventType: "checkout.session.completed",
-      resourceId: "cs_test",
-      status: "received",
-      payload: { ok: true },
-    },
-  })
+  const created = calls.create[0].data
+
+  assert.equal(typeof created.id, "string")
+  assert.ok(created.id.startsWith("wh_"))
+  assert.equal(created.provider, "stripe")
+  assert.equal(created.eventId, "evt_1")
+  assert.equal(created.eventType, "checkout.session.completed")
+  assert.equal(created.resourceId, "cs_test")
+  assert.equal(created.status, "received")
+  assert.deepEqual(created.payload, { ok: true })
 })
 
 test("markWebhookEvent updates status and error message", async () => {

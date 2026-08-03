@@ -17,7 +17,7 @@ Usa EXCLUSIVAMENTE la base de conocimiento incluida al final de este prompt. Si 
 - Mencionar nombres de usuarios, clientes, correos o datos personales
 - Discutir herramientas internas de administración o gestión de tickets
 - Revelar que el sistema usa Next.js, Prisma, Tailwind, Anthropic, Resend, MercadoPago u otras tecnologías específicas
-- Hablar sobre el panel de administración, tickets DIFM, sistema de afiliados o cualquier funcionalidad interna de operación
+- Hablar sobre herramientas internas de administracion, tickets DIFM o cualquier funcionalidad privada de operacion. El programa publico de afiliados solo puede explicarse si aparece en la base de conocimiento
 - Inventar precios diferentes a los que aparecen en tu base de conocimiento
 - Dar información sobre cómo está construida la plataforma por dentro
 
@@ -39,62 +39,60 @@ BASE DE CONOCIMIENTO ORVENIX:
 const FALLBACK_RESPONSES: Array<{ keywords: string[]; answer: string }> = [
   {
     keywords: ["precio", "costo", "cotiz", "cuanto", "vale", "cobran"],
-    answer: `Los precios base de Orvenix son:
+    answer: `Los precios oficiales 2026 de Orvenix son:
 
-**Plataforma (suscripción mensual):**
-- Básico: $349 MXN/mes
-- Pro: $699 MXN/mes
-- Empresa: $1,399 MXN/mes
+**Suscripcion mensual, USD + IVA:**
+- Starter: 15 USD/mes + IVA
+- Pro: 39 USD/mes + IVA
+- Business: 79 USD/mes + IVA
+- Enterprise: cotizacion segun alcance
 
-**Desarrollo a medida:**
-- Landing page: desde $7,000 MXN
-- Sitio corporativo: desde $15,000 MXN
-- E-commerce: desde $25,000 MXN
-- App móvil: desde $45,000 MXN
+**Suscripcion anual, USD + IVA:**
+- Starter: 150 USD/ano + IVA
+- Pro: 390 USD/ano + IVA
+- Business: 790 USD/ano + IVA
 
-¿Tienes un proyecto en mente? Te puedo orientar sobre la opción más adecuada.`,
+Los add-ons y desarrollos a medida se cotizan segun alcance. ¿Quieres que te recomiende un plan segun tu negocio?`,
   },
   {
     keywords: ["tiempo", "entrega", "cuanto tard", "cuando", "urgente", "plazo"],
-    answer: `Tiempos estimados de Orvenix:
+    answer: `La activacion y el lanzamiento dependen del plan, pago, contenido y alcance.
 
-- **Plataforma**: activa el mismo día del registro
-- **Landing page**: 1 a 2 semanas
-- **Sitio corporativo**: 3 a 6 semanas
-- **E-commerce**: 6 a 10 semanas
-- **App móvil**: 10 a 16 semanas
+- La plataforma puede avanzar rapido cuando el pago y la configuracion estan listos.
+- El Super Builder permite partir de templates o de un lienzo guiado para acelerar la construccion.
+- Proyectos Enterprise, integraciones o compra definitiva requieren revision comercial.
 
-Si tienes una fecha límite, cuéntame y te orientamos sobre cómo priorizamos el proyecto.`,
+Si tienes una fecha limite, lo mejor es compartir el alcance en /contacto/ para confirmar viabilidad.`,
   },
   {
     keywords: ["template", "plantilla", "industria", "demo", "ejemplo", "sector"],
-    answer: `Orvenix tiene templates profesionales para más de 15 industrias:
+    answer: `Orvenix tiene templates y demos por industria para acelerar el lanzamiento:
 
-Restaurante, clínica, inmobiliaria, gimnasio, abogados, tienda online, hotel, academia, barbería, servicios locales, agencia digital, transporte ejecutivo y más.
+Tienda online, restaurante, clinica, inmobiliaria, gimnasio, barberia, hotel, abogados, academia, agencia, transporte, contabilidad, viajes, notaria, recursos humanos, arquitectura, seguros, finanzas, fotografia, servicios locales y mas.
 
-Todos incluyen secciones de hero, servicios, testimonios, galería y contacto — editables sin código. ¿Qué tipo de negocio tienes?`,
+Todos son editables desde el Super Builder. ¿Que tipo de negocio quieres crear?`,
   },
   {
     keywords: ["editor", "editar", "personaliz", "cambiar", "modificar", "como funciona"],
-    answer: `El editor de Orvenix es visual y no requiere programación:
+    answer: `El Super Builder de Orvenix es visual y no requiere programacion:
 
-- Editas textos con clic directo
-- Cambias imágenes, colores y secciones
-- Agregas o reordenas bloques con drag & drop
-- Ves el resultado en móvil, tablet y desktop en tiempo real
-- Publicas con un botón
+- Editas textos, imagenes, colores, enlaces y secciones
+- Puedes partir de templates reales por industria
+- El lienzo blanco guiado muestra sugerencias editables para no empezar desde cero
+- Ves el sitio en desktop, tablet y movil
+- Publicas desde la plataforma
 
-¿Quieres ver un demo del editor en acción?`,
+¿Quieres que te recomiende una ruta: template por industria o lienzo guiado?`,
   },
   {
     keywords: ["incluye", "que tiene", "que ofrece", "servicio", "hacen"],
     answer: `Orvenix ofrece dos modelos:
 
-**Plataforma** (suscripción): sitio web + panel privado + editor visual + templates + hosting. Desde $349 MXN/mes.
+**Plataforma SaaS**: sitio web, panel privado, Super Builder, templates, hosting administrado, SSL, soporte y publicacion. Desde 15 USD/mes + IVA.
 
-**Desarrollo a medida**: landing pages, sitios corporativos, e-commerce, apps móviles y sistemas personalizados.
+**Compra definitiva o desarrollo a medida**: se cotiza por proyecto cuando necesitas arquitectura dedicada, integraciones, funciones personalizadas o derechos patrimoniales sobre codigo entregado.
 
-¿Buscas algo específico para tu negocio?`,
+¿Buscas lanzar rapido con plan SaaS o necesitas algo a medida?`,
   },
 ]
 

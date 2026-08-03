@@ -1,88 +1,305 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth-session";
-import { canManageSite, createSiteFromTree, type UserRole } from "@/lib/auth";
+import {
+  canManageSite,
+  createSiteFromTree,
+  type UserRole,
+} from "@/lib/auth";
 import { saveEditorTreeToDb } from "@/lib/editorPersistence";
 import { buildCheckoutRedirectUrl } from "@/lib/checkout";
 import { validateTree } from "@/types/validateTree";
-import type { CheckoutAction } from "@/lib/pendingDesignDraft";
+import {
+  PENDING_DESIGN_PREFIX,
+  type CheckoutAction,
+} from "@/lib/pendingDesignDraft";
 import { requireCanCreateWebsite } from "@/lib/plan-guard";
+import { serverError } from "@/lib/server-log";
 
 interface ClaimDraftBody {
-  draftKey?: string;
-  action?: CheckoutAction;
-  sourceSiteId?: string | null;
+  draftKey?: unknown;
+  action?: unknown;
+  sourceSiteId?: unknown;
   tree?: unknown;
+}
+
+const MAX_DRAFT_KEY_LENGTH = 191;
+const MAX_SITE_ID_LENGTH = 191;
+const MAX_CLAIM_BODY_BYTES = 2 * 1024 * 1024;
+
+const SAFE_DRAFT_KEY_SUFFIX_PATTERN = /^[a-zA-Z0-9_-]+$/;
+const SAFE_SITE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+function jsonResponse(
+  body: Record<string, unknown>,
+  status = 200,
+) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 export async function POST(request: Request) {
   const session = await getAuthSession();
+
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "SESSION_REQUIRED" }, { status: 401 });
+    return jsonResponse(
+      {
+        error: "Autenticación requerida",
+        code: "UNAUTHENTICATED",
+      },
+      401,
+    );
   }
 
-  const body = (await request.json()) as ClaimDraftBody;
-  if (!body.draftKey || !body.tree) {
-    return NextResponse.json({ error: "Draft incompleto." }, { status: 400 });
-  }
+  let body: ClaimDraftBody;
 
-  const action = body.action === "buy" ? "buy" : "rent";
-  const tree = validateTree(body.tree);
-  let siteId: string;
+try {
+  const contentLength = request.headers.get("content-length");
 
-  async function guardSiteCreation() {
-    try {
-      await requireCanCreateWebsite(session.user.id);
-      return null;
-    } catch (error) {
-      return NextResponse.json(
+  if (contentLength !== null) {
+    const declaredSize = Number.parseInt(contentLength, 10);
+
+    if (
+      Number.isFinite(declaredSize) &&
+      declaredSize > MAX_CLAIM_BODY_BYTES
+    ) {
+      return jsonResponse(
         {
-          error: "PLAN_LIMIT_REACHED",
-          message: error instanceof Error ? error.message : "No puedes crear mas sitios con tu plan actual.",
+          error: "El cuerpo de la solicitud es demasiado grande",
+          code: "PAYLOAD_TOO_LARGE",
         },
-        { status: 403 }
+        413,
       );
     }
   }
 
-  if (body.sourceSiteId) {
-    const allowed = await canManageSite(
-      body.sourceSiteId,
-      session.user.id,
-      (session.user.role ?? "CLIENT") as UserRole
-    );
+  const rawBody = await request.text();
+  const actualSize = new TextEncoder().encode(rawBody).byteLength;
 
-    if (allowed) {
-      await saveEditorTreeToDb(body.sourceSiteId, tree);
-      siteId = body.sourceSiteId;
+  if (actualSize > MAX_CLAIM_BODY_BYTES) {
+    return jsonResponse(
+      {
+        error: "El cuerpo de la solicitud es demasiado grande",
+        code: "PAYLOAD_TOO_LARGE",
+      },
+      413,
+    );
+  }
+
+  const parsed: unknown = JSON.parse(rawBody);
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return jsonResponse(
+      {
+        error: "El cuerpo de la solicitud no es válido",
+        code: "INVALID_BODY",
+      },
+      400,
+    );
+  }
+
+  body = parsed as ClaimDraftBody;
+} catch {
+  return jsonResponse(
+    {
+      error: "El cuerpo de la solicitud no contiene JSON válido",
+      code: "INVALID_JSON",
+    },
+    400,
+  );
+}
+
+  if (typeof body.draftKey !== "string") {
+    return jsonResponse(
+      {
+        error: "La clave del borrador es obligatoria",
+        code: "DRAFT_KEY_REQUIRED",
+      },
+      400,
+    );
+  }
+
+  const draftKey = body.draftKey.trim();
+if (
+  !draftKey.startsWith(PENDING_DESIGN_PREFIX) ||
+  draftKey.length <= PENDING_DESIGN_PREFIX.length ||
+  draftKey.length > MAX_DRAFT_KEY_LENGTH
+) {
+  return jsonResponse(
+    {
+      error: "La clave del borrador no es válida",
+      code: "INVALID_DRAFT_KEY",
+    },
+    400,
+  );
+}
+
+const draftKeySuffix = draftKey.slice(
+  PENDING_DESIGN_PREFIX.length,
+);
+
+if (!SAFE_DRAFT_KEY_SUFFIX_PATTERN.test(draftKeySuffix)) {
+  return jsonResponse(
+    {
+      error: "La clave del borrador no es válida",
+      code: "INVALID_DRAFT_KEY",
+    },
+    400,
+  );
+}
+
+  if (body.tree === undefined || body.tree === null) {
+    return jsonResponse(
+      {
+        error: "El borrador no contiene un árbol de diseño",
+        code: "DRAFT_TREE_REQUIRED",
+      },
+      400,
+    );
+  }
+
+  if (body.action !== "buy" && body.action !== "rent") {
+  return jsonResponse(
+    {
+      error: "La acción solicitada no es válida",
+      code: "INVALID_CHECKOUT_ACTION",
+    },
+    400,
+  );
+}
+
+const action: CheckoutAction = body.action;
+
+  let sourceSiteId: string | null = null;
+
+  if (body.sourceSiteId !== undefined && body.sourceSiteId !== null) {
+    if (typeof body.sourceSiteId !== "string") {
+      return jsonResponse(
+        {
+          error: "El identificador del sitio de origen no es válido",
+          code: "INVALID_SOURCE_SITE_ID",
+        },
+        400,
+      );
+    }
+
+    sourceSiteId = body.sourceSiteId.trim();
+
+    if (
+      !sourceSiteId ||
+      sourceSiteId.length > MAX_SITE_ID_LENGTH ||
+      !SAFE_SITE_ID_PATTERN.test(sourceSiteId)
+    ) {
+      return jsonResponse(
+        {
+          error: "El identificador del sitio de origen no es válido",
+          code: "INVALID_SOURCE_SITE_ID",
+        },
+        400,
+      );
+    }
+  }
+
+  let tree: ReturnType<typeof validateTree>;
+
+  try {
+    tree = validateTree(body.tree);
+  } catch (error) {
+    serverError("[claim-draft] Árbol de diseño inválido", error);
+
+    return jsonResponse(
+      {
+        error: "El árbol del borrador no es válido",
+        code: "INVALID_DRAFT_TREE",
+      },
+      400,
+    );
+  }
+
+  async function requireSiteCreationPermission() {
+    try {
+      await requireCanCreateWebsite(session.user.id);
+      return null;
+    } catch (error) {
+      serverError(
+        "[claim-draft] Límite del plan alcanzado",
+        error,
+      );
+
+      return jsonResponse(
+        {
+          error: "Tu plan no permite crear otro sitio",
+          code: "PLAN_LIMIT_REACHED",
+        },
+        403,
+      );
+    }
+  }
+
+  try {
+    let siteId: string;
+
+    if (sourceSiteId) {
+      const allowed = await canManageSite(
+        sourceSiteId,
+        session.user.id,
+        (session.user.role ?? "CLIENT") as UserRole,
+      );
+
+      if (!allowed) {
+        return jsonResponse(
+          {
+            error: "No tienes permiso para modificar el sitio de origen",
+            code: "FORBIDDEN",
+          },
+          403,
+        );
+      }
+
+      await saveEditorTreeToDb(sourceSiteId, tree);
+      siteId = sourceSiteId;
     } else {
-      const limitResponse = await guardSiteCreation();
-      if (limitResponse) return limitResponse;
+      const limitResponse =
+        await requireSiteCreationPermission();
+
+      if (limitResponse) {
+        return limitResponse;
+      }
 
       const site = await createSiteFromTree({
-        name: action === "buy" ? "Diseño para compra" : "Diseño para renta",
-        description: `pending_design:${action}:${body.draftKey}`,
+        name:
+          action === "buy"
+            ? "Diseño para compra"
+            : "Diseño para renta",
+        description: `pending_design:${action}:${draftKey}`,
         userId: session.user.id,
         tree,
       });
+
       siteId = site.id;
     }
-  } else {
-    const limitResponse = await guardSiteCreation();
-    if (limitResponse) return limitResponse;
 
-    const site = await createSiteFromTree({
-      name: action === "buy" ? "Diseño para compra" : "Diseño para renta",
-      description: `pending_design:${action}:${body.draftKey}`,
-      userId: session.user.id,
-      tree,
+    return jsonResponse({
+      ok: true,
+      siteId,
+      nextRoute: `/editor/${siteId}`,
+      redirectUrl: buildCheckoutRedirectUrl(action, siteId),
     });
-    siteId = site.id;
-  }
+  } catch (error) {
+    serverError(
+      "[claim-draft] No se pudo reclamar el borrador",
+      error,
+    );
 
-  return NextResponse.json({
-    ok: true,
-    siteId,
-    nextRoute: `/editor/${siteId}`,
-    redirectUrl: buildCheckoutRedirectUrl(action, siteId),
-  });
-}
+    return jsonResponse(
+      {
+        error: "No se pudo reclamar el borrador",
+        code: "CLAIM_DRAFT_FAILED",
+      },
+      500,
+    );
+  }
+} 

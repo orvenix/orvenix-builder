@@ -1,3 +1,4 @@
+import type { EnvironmentVariables } from "@/lib/env-types"
 import test from "node:test"
 import assert from "node:assert/strict"
 import { getProductionReadinessReport } from "../../lib/production-readiness"
@@ -21,7 +22,7 @@ const stripeReadyEnv = {
   STRIPE_PRICE_COMMERCE_YEAR: "price_6",
   RESEND_API_KEY: "re_live_value",
   RESEND_FROM: "Orvenix <hola@orvenix.com.mx>",
-} satisfies NodeJS.ProcessEnv
+} satisfies EnvironmentVariables
 
 test("production readiness is ready when automatic checks are aligned", () => {
   const report = getProductionReadinessReport(stripeReadyEnv)
