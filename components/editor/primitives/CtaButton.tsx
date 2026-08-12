@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import type { BlockComponentProps } from "@/types/editor";
 import { resolveRuntimeHref } from "@/lib/builder-core/tree/pageLinks";
 

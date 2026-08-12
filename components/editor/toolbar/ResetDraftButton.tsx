@@ -2,7 +2,7 @@
 
 import { RotateCcw } from "lucide-react";
 import { clearSavedTree } from "@/hooks/useAutosave";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import type { EditorTree } from "@/types/editor";
 
 export function ResetDraftButton({ initialTree }: { initialTree: EditorTree }) {

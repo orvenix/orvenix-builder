@@ -1,7 +1,6 @@
 import { editorPrisma } from "@/lib/editor-db";
 import type { Prisma } from "@/generated/editor-prisma";
 import {
-  getDefaultStarterEditorTree,
   getEditorTreeForWeb,
   isEditorWebId,
   WEB_LABELS,
@@ -19,11 +18,6 @@ import type { EditorTree } from "@/types/editor";
 
 function toPrismaJson(tree: EditorTree): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(tree)) as Prisma.InputJsonValue;
-}
-
-function isBlankEditorTree(tree: EditorTree) {
-  const root = tree.nodes[tree.rootId];
-  return !root || root.children.length === 0;
 }
 
 export async function getEditorTreeFromDb(id: string, pageSlug = "home"): Promise<EditorTree> {
@@ -53,12 +47,6 @@ export async function getEditorTreeFromDb(id: string, pageSlug = "home"): Promis
     theme: resolvedTheme.tokens,
     globalTheme: resolvedTheme.tokens,
   };
-  if (isBlankEditorTree(resolvedTree)) {
-    const starterTree = getDefaultStarterEditorTree();
-    await saveEditorTreeToDb(id, starterTree);
-    return starterTree;
-  }
-
   return resolvedTree;
 }
 

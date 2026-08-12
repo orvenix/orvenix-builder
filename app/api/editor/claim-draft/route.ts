@@ -6,13 +6,16 @@ import {
   type UserRole,
 } from "@/lib/auth";
 import { saveEditorTreeToDb } from "@/lib/editorPersistence";
+import { isArtisanEditableTree } from "@/lib/editorWebs";
 import { buildCheckoutRedirectUrl } from "@/lib/checkout";
 import { validateTree } from "@/types/validateTree";
 import {
   PENDING_DESIGN_PREFIX,
   type CheckoutAction,
 } from "@/lib/pendingDesignDraft";
-import { requireCanCreateWebsite } from "@/lib/plan-guard";
+import { getUserPlanAccess, requireCanCreateWebsite } from "@/lib/plan-guard";
+import { isAdvancedBuilderPlan } from "@/lib/pro-plan";
+import { seedProfessionalStarterPages } from "@/lib/professional-site-starter";
 import { serverError } from "@/lib/server-log";
 
 interface ClaimDraftBody {
@@ -260,6 +263,12 @@ const action: CheckoutAction = body.action;
       }
 
       await saveEditorTreeToDb(sourceSiteId, tree);
+
+      const planAccess = await getUserPlanAccess(session.user.id);
+      if (isAdvancedBuilderPlan(planAccess.plan?.id) && !isArtisanEditableTree(tree)) {
+        await seedProfessionalStarterPages(sourceSiteId, tree);
+      }
+
       siteId = sourceSiteId;
     } else {
       const limitResponse =

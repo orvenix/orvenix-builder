@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useEditorStore } from "./store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { MessageSquarePlus, CheckCircle2, Clock, X } from "lucide-react";
 import type { EditorComment } from "@/types/editor";
 

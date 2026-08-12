@@ -1,22 +1,15 @@
 import { EditorProvider } from "@/components/editor/store/EditorProvider";
-import { EditorShell } from "@/components/editor/shell/EditorShell";
-import { HistoryControls } from "@/components/editor/toolbar/HistoryControls";
-import { DeviceToggle } from "@/components/editor/toolbar/DeviceToggle";
-import { SaveStatus } from "@/components/editor/toolbar/SaveStatus";
-import { PublishButton } from "@/components/editor/toolbar/PublishButton";
-import { ResetDraftButton } from "@/components/editor/toolbar/ResetDraftButton";
-import { PreviewModeButton } from "@/components/editor/toolbar/PreviewModeButton";
-import { CheckoutActionButtons } from "@/components/editor/CheckoutActionButtons";
-import { ConstructorSyncButton } from "@/components/editor/toolbar/ConstructorSyncButton";
-import { OrvenixBrand } from "@/components/OrvenixLogo";
 import {
-  getConstructorPresetPreviewHref,
   getConstructorPresetTree,
   resolveConstructorPresetId,
 } from "@/lib/constructorPresets";
-import { WEB_EDITOR_TREES, isEditorWebId, WEB_LABELS } from "@/lib/editorWebs";
-import Link from "next/link";
+import { getDefaultStarterEditorTree, getEditorTreeForWeb, isEditorWebId, WEB_LABELS } from "@/lib/editorWebs";
 import type { EditorTree } from "@/types/editor";
+import { EditorExperienceShell } from "@/components/editor/experience"
+import { getAuthSession } from "@/lib/auth-session";
+import { getUserPlanAccess } from "@/lib/plan-guard";
+import { isAdvancedBuilderPlan } from "@/lib/pro-plan";
+import { buildProfessionalStarterPages, getProfessionalStarterPageList } from "@/lib/professional-site-starter";
 
 // ── Plantillas de industria con bloques ricos ────────────────────────────────
 
@@ -95,39 +88,25 @@ function normalizeSource(
     : null;
   if (presetFromFile) return presetFromFile;
 
-  // Default: rich agency template
-  return "agencia";
-}
-
-function createBlankEditorTree(): EditorTree {
-  return {
-    rootId: "root",
-    nodes: {
-      root: { id: "root", type: "section", props: {}, children: [], version: 1 },
-    },
-  };
+  // Default: blank canvas for a calmer first editing experience
+  return "blank";
 }
 
 function getInitialTree(source: string): EditorTree {
-  if (source === "blank") return createBlankEditorTree();
+  if (source === "blank") return getDefaultStarterEditorTree();
   if (isEditorWebId(source)) {
-    return WEB_EDITOR_TREES[source];
+    return getEditorTreeForWeb(source);
   }
-  return getConstructorPresetTree(source) ?? WEB_EDITOR_TREES["agencia"];
+  return getConstructorPresetTree(source) ?? getEditorTreeForWeb("agencia");
 }
 
 function createDraftId(source: string) {
-  return `draft:constructor:${encodeURIComponent(source)}`;
-}
-
-function toPreviewHref(source: string): string {
-  if (source === "blank") return "/";
-  if (isEditorWebId(source)) return `/webs/${source}`;
-  return getConstructorPresetPreviewHref(source) ?? "/";
+  if (source === "blank") return "draft:constructor:starter-landing-v2-simple";
+  return "draft:constructor:" + encodeURIComponent(source);
 }
 
 function getSourceMeta(source: string): { label: string; emoji: string } {
-  if (source === "blank") return { label: "Lienzo en blanco", emoji: "✦" };
+  if (source === "blank") return { label: "Landing editable", emoji: "✦" };
   const preset = INDUSTRY_PRESETS.find((p) => p.source === source);
   if (preset) return { label: preset.label, emoji: preset.emoji };
   if (source in WEB_LABELS)
@@ -141,85 +120,58 @@ interface ConstructorPageProps {
   searchParams?: Promise<{
     source?: string | string[];
     file?: string | string[];
+    page?: string | string[];
   }>;
 }
 
 export default async function ConstructorPage({ searchParams }: ConstructorPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const sourceFile  = normalizeSource(resolvedSearchParams?.source, resolvedSearchParams?.file);
-  const websiteId   = createDraftId(sourceFile);
-  const previewHref = toPreviewHref(sourceFile);
+  const baseWebsiteId = createDraftId(sourceFile);
   const initialTree = getInitialTree(sourceFile);
-  const { label: sourceLabel, emoji: sourceEmoji } = getSourceMeta(sourceFile);
+  const sourceMeta = getSourceMeta(sourceFile);
+  const session = await getAuthSession();
+  const planAccess = session?.user?.id
+    ? await getUserPlanAccess(session.user.id)
+    : null;
+  const isAdvancedExperience = isAdvancedBuilderPlan(planAccess?.plan?.id);
+  const websiteId = isAdvancedExperience && sourceFile === "blank"
+    ? "draft:constructor:starter-site-pro-v12-interactive-scalable"
+    : baseWebsiteId;
+  const proStarterPages = isAdvancedExperience && sourceFile === "blank"
+    ? buildProfessionalStarterPages(initialTree)
+    : [];
+  const requestedPageValue = Array.isArray(resolvedSearchParams?.page)
+    ? resolvedSearchParams?.page[0]
+    : resolvedSearchParams?.page;
+  const requestedPageSlug = requestedPageValue?.trim() || "home";
+  const selectedProPage = proStarterPages.find((page) => page.slug === requestedPageSlug) ?? proStarterPages[0];
+  const effectiveInitialTree = isAdvancedExperience && sourceFile === "blank"
+    ? selectedProPage?.tree ?? initialTree
+    : initialTree;
+  const availablePages = isAdvancedExperience
+    ? getProfessionalStarterPageList(websiteId)
+    : undefined;
+  const activePageSlug = isAdvancedExperience && sourceFile === "blank"
+    ? selectedProPage?.slug ?? "home"
+    : "home";
+  const activePageName = isAdvancedExperience && sourceFile === "blank"
+    ? selectedProPage?.name ?? "Inicio"
+    : "Inicio";
 
   return (
-    <EditorProvider websiteId={websiteId} initialTree={initialTree}>
-      <div className="ov-shell flex flex-col h-screen overflow-hidden">
-
-        {/* ── Top bar ── */}
-        <header className="ov-topbar z-20 shrink-0">
-
-          {/* Row 1: Logo + controls */}
-          <div className="flex h-14 min-w-0 items-center gap-2 overflow-x-auto px-3 lg:px-4 scrollbar-none">
-
-            {/* Left: brand + breadcrumb */}
-            <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-2">
-              <div className="ov-topbar-sep flex shrink-0 items-center pr-3">
-                <Link href="/" aria-label="Orvenix - inicio" className="group relative flex items-center transition-opacity hover:opacity-90">
-                  <OrvenixBrand iconSize={24} textSize="sm" />
-                </Link>
-              </div>
-
-              {/* Badge + current site chip */}
-              <div className="hidden min-w-0 items-center gap-2 md:flex">
-                <span className="ov-badge-accent shrink-0">Constructor</span>
-                <div className="ov-site-chip flex items-center gap-1.5 min-w-0">
-                  <span className="shrink-0 leading-none">{sourceEmoji}</span>
-                  <span className="truncate text-[11px] font-semibold text-white/75">{sourceLabel}</span>
-                </div>
-                <Link
-                  href={previewHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ov-link-ghost shrink-0"
-                  title="Abrir sitio en nueva pestaña"
-                >
-                  Ver sitio ↗
-                </Link>
-              </div>
-
-              <div className="hidden shrink-0 sm:block">
-                <HistoryControls />
-              </div>
-            </div>
-
-            {/* Center: device toggle */}
-            <div className="absolute left-1/2 hidden -translate-x-1/2 2xl:block">
-              <DeviceToggle />
-            </div>
-
-            {/* Right: actions */}
-            <div className="flex shrink-0 items-center gap-1.5">
-              <div className="hidden sm:block">
-                <SaveStatus />
-              </div>
-              <div className="hidden md:block">
-                <ConstructorSyncButton />
-              </div>
-              <PreviewModeButton />
-              <div className="hidden sm:block">
-                <ResetDraftButton initialTree={initialTree} />
-              </div>
-              <div className="ov-btn-sep hidden pl-2 lg:block">
-                <CheckoutActionButtons />
-              </div>
-              <PublishButton />
-            </div>
-          </div>
-        </header>
-
-        <EditorShell />
-      </div>
+    <EditorProvider
+  websiteId={websiteId}
+  initialTree={effectiveInitialTree}
+  initialUserRole="client"
+  initialBuilderTier={isAdvancedExperience ? "pro" : "basic"}
+  initialPageSlug={activePageSlug}
+  initialPageName={activePageName}
+  availablePages={availablePages}
+>
+      <div className="ov-shell flex h-screen flex-col overflow-hidden" data-source-label={sourceMeta.label} data-source-emoji={sourceMeta.emoji} data-builder-tier={isAdvancedExperience ? "advanced" : "simple"}>
+  <EditorExperienceShell />
+</div>
     </EditorProvider>
   );
 }

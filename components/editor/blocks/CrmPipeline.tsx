@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users2, Target, FileText, Handshake, CheckCircle2, BrainCircuit, MoreHorizontal } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 
 interface CrmPipelineProps {
   stages?: number;

@@ -376,9 +376,25 @@ const siteNavSettings: SettingsField[] = [
       {
         kind: "text",
         key: "title",
-        label: "Etiqueta accesible",
-        placeholder: "Navegación principal",
+        label: "Nombre visible",
+        placeholder: "Nombre del negocio",
         maxLength: 80,
+      },
+      {
+        kind: "text",
+        key: "subtitle",
+        label: "Subtítulo",
+        placeholder: "Sitio profesional",
+        maxLength: 80,
+      },
+      {
+        kind: "textarea",
+        key: "labelOverrides",
+        label: "Textos del menú",
+        placeholder: "home=Inicio\nservicios=Servicios\ncontacto=Contacto",
+        help: "Una línea por enlace: slug=Texto visible. Deja vacío para usar el nombre de cada página.",
+        rows: 4,
+        maxLength: 400,
       },
       {
         kind: "toggle",
@@ -388,8 +404,34 @@ const siteNavSettings: SettingsField[] = [
       {
         kind: "text",
         key: "hiddenSlugs",
-        label: "Ocultar slugs",
+        label: "Ocultar páginas",
         placeholder: "blog, contacto-interno",
+        help: "Escribe slugs separados por coma para ocultarlos del menú.",
+      },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Botón",
+    fields: [
+      {
+        kind: "toggle",
+        key: "showCta",
+        label: "Mostrar botón",
+      },
+      {
+        kind: "text",
+        key: "ctaLabel",
+        label: "Texto del botón",
+        placeholder: "Contactar",
+        maxLength: 40,
+      },
+      {
+        kind: "text",
+        key: "ctaHref",
+        label: "Enlace del botón",
+        placeholder: "#contacto",
+        maxLength: 120,
       },
     ],
   },

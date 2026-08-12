@@ -1,8 +1,10 @@
 import { pbkdf2Sync, randomBytes } from "crypto";
 import { editorPrisma } from "@/lib/editor-db";
-import { getDefaultStarterEditorTree } from "@/lib/editorWebs";
+import { getDefaultStarterEditorTree, isArtisanEditableTree } from "@/lib/editorWebs";
 import { canCreateWebsite } from "@/lib/billing/plan-entitlements"
 import { getUserPlanAccess } from "@/lib/plan-guard"
+import { isAdvancedBuilderPlan } from "@/lib/pro-plan"
+import { seedProfessionalStarterPages } from "@/lib/professional-site-starter"
 import type { Prisma } from "@/generated/editor-prisma";
 import type { EditorTree } from "@/types/editor";
 
@@ -112,6 +114,8 @@ async function requireCanCreateWebsite(userId: string) {
   ) {
     throw new WebsiteLimitReachedError()
   }
+
+  return access
 }
 
 export async function createSite(
@@ -119,12 +123,12 @@ export async function createSite(
   description: string,
   userId: string,
 ) {
-  await requireCanCreateWebsite(userId)
+  const access = await requireCanCreateWebsite(userId)
 
   const id = `site_${randomBytes(6).toString("hex")}`
   const starterTree = getDefaultStarterEditorTree()
 
-  return editorPrisma.editorWebsite.create({
+  const site = await editorPrisma.editorWebsite.create({
     data: {
       id,
       name,
@@ -133,6 +137,12 @@ export async function createSite(
       userId,
     },
   })
+
+  if (isAdvancedBuilderPlan(access.plan?.id)) {
+    await seedProfessionalStarterPages(site.id, starterTree)
+  }
+
+  return site
 }
 
 function toPrismaJson(tree: EditorTree): Prisma.InputJsonValue {
@@ -151,11 +161,11 @@ export async function createSiteFromTree({
   tree: EditorTree;
 }) {
 
-   await requireCanCreateWebsite(userId)
+   const access = await requireCanCreateWebsite(userId)
 
   const id = `site_${randomBytes(6).toString("hex")}`;
 
-  return editorPrisma.editorWebsite.create({
+  const site = await editorPrisma.editorWebsite.create({
     data: {
       id,
       name,
@@ -164,6 +174,12 @@ export async function createSiteFromTree({
       userId,
     },
   });
+
+  if (isAdvancedBuilderPlan(access.plan?.id) && !isArtisanEditableTree(tree)) {
+    await seedProfessionalStarterPages(site.id, tree)
+  }
+
+  return site;
 }
 
 export async function deleteSite(id: string, userId: string) {

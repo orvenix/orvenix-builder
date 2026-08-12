@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import type { BlockComponentProps } from "@/types/editor";
 
 export interface TextProps {

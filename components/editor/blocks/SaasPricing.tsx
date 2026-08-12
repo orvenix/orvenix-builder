@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 
 export function SaasPricing({ highlightPopular = true, currency = "usd" }) {
   const theme = useEditorStore((s) => s.tree.theme);

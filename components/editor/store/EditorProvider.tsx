@@ -5,10 +5,18 @@ import { EditorRuntimeBoundary } from "./EditorRuntimeBoundary";
 import { loadSavedTree } from "@/hooks/useAutosave";
 import type { EditorTree } from "@/types/editor";
 import type { SitePageListItem } from "@/lib/builder-core/tree/sitePages";
+import { isArtisanEditableTree } from "@/lib/editorWebs";
+import {
+  ExperienceBoundary,
+  ExperienceProvider,
+} from "@/components/editor/experience"
+import type { BuilderTier, UserRole } from "./useEditorStore"
 
 interface EditorProviderProps {
   children: ReactNode;
   websiteId: string;
+  initialUserRole?: UserRole;
+  initialBuilderTier?: BuilderTier;
   initialTree: EditorTree;
   initialPageSlug?: string;
   initialPageName?: string;
@@ -21,35 +29,60 @@ export function EditorProvider({
   children,
   websiteId,
   initialTree,
+  initialUserRole = "client",
+  initialBuilderTier = "basic",
   initialPageSlug = "home",
   initialPageName = "Inicio",
   availablePages = EMPTY_SITE_PAGES,
 }: EditorProviderProps) {
   const initialize = useEditorStore((s) => s.initialize);
+  const setUserRole = useEditorStore((s) => s.setUserRole);
+  const setBuilderTier = useEditorStore((s) => s.setBuilderTier);
   const isReady = useEditorStore((s) => s.websiteId === websiteId);
   const [initializationIssue, setInitializationIssue] = useState<string | null>(null);
   const initializationKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const initializationKey = websiteId + ":" + initialPageSlug;
-    if (initializationKeyRef.current === initializationKey) return;
-    initializationKeyRef.current = initializationKey;
+  const initializationKey =
+    `${websiteId}:${initialPageSlug}:${initialUserRole}:${initialBuilderTier}`;
 
-    const pageContext = {
-      activePageSlug: initialPageSlug,
-      activePageName: initialPageName,
-      availablePages,
-    };
+  if (initializationKeyRef.current === initializationKey) return;
+
+  initializationKeyRef.current = initializationKey;
+
+  const pageContext = {
+    activePageSlug: initialPageSlug,
+    activePageName: initialPageName,
+    availablePages,
+  };
 
     let nextInitializationIssue: string | null = null;
 
     try {
+      setUserRole(initialUserRole);
+      setBuilderTier(initialBuilderTier);
       const savedTree = loadSavedTree(websiteId, initialPageSlug);
-      initialize(websiteId, savedTree ?? initialTree, null, pageContext);
+      const shouldIgnoreStaleDraft =
+        Boolean(savedTree) &&
+        isArtisanEditableTree(initialTree) &&
+        !isArtisanEditableTree(savedTree);
+
+      initialize(
+        websiteId,
+        shouldIgnoreStaleDraft ? initialTree : savedTree ?? initialTree,
+        null,
+        pageContext,
+      );
     } catch (error) {
-      console.error("[EditorProvider] Constructor initialization failed", error);
-      try {
-        initialize(websiteId, initialTree, null, pageContext);
+  console.error(
+    "[EditorProvider] Constructor initialization failed",
+    error,
+  );
+
+  try {
+    setUserRole(initialUserRole);
+    setBuilderTier(initialBuilderTier);
+    initialize(websiteId, initialTree, null, pageContext);
         nextInitializationIssue =
           error instanceof Error ? error.message : "No se pudo cargar el borrador local";
       } catch (fallbackError) {
@@ -66,7 +99,18 @@ export function EditorProvider({
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [availablePages, initialPageName, initialPageSlug, initialTree, initialize, websiteId]);
+  }, [
+  availablePages,
+  initialBuilderTier,
+  initialPageName,
+  initialPageSlug,
+  initialTree,
+  initialUserRole,
+  initialize,
+  setBuilderTier,
+  setUserRole,
+  websiteId,
+]);
 
   if (!isReady) {
     return (
@@ -117,8 +161,12 @@ export function EditorProvider({
   }
 
   return (
-    <EditorRuntimeBoundary resetKey={websiteId}>
-      {children}
-    </EditorRuntimeBoundary>
-  );
+  <EditorRuntimeBoundary resetKey={websiteId}>
+    <ExperienceProvider>
+      <ExperienceBoundary>
+        {children}
+      </ExperienceBoundary>
+    </ExperienceProvider>
+  </EditorRuntimeBoundary>
+)
 }

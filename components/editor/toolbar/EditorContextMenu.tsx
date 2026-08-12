@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { blockRegistry } from "@/blocks/registry";
 import { resolveResponsiveProps } from "@/components/editor/responsive";
 import { saveUserComponent } from "@/lib/editor/userComponents";

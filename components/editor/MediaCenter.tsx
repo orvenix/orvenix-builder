@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import React, { useState } from "react";
-import { useEditorStore } from "./store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { X, Search, Image as ImageIcon, Upload, Globe, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditorAsset } from "@/types/editor";

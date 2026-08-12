@@ -13,6 +13,13 @@ import { getFreeInsertProps } from "@/components/editor/freeInsert";
 import { useEditorStore } from "@/store/useEditorStore";
 import { loadUserComponents, deleteUserComponent, renameUserComponent, type SavedComponent } from "@/lib/editor/userComponents";
 
+const FRIENDLY_CATEGORY_LABELS: Record<string, string> = {
+  layout: "Estructura",
+  content: "Contenido",
+  action: "Acciones",
+  marketing: "Promoción",
+  ecommerce: "Tienda",
+}
 const SIMPLE_BLOCK_CATEGORIES = new Set(["layout", "content", "action", "marketing", "ecommerce"]);
 
 export function BlocksSidebar() {
@@ -132,7 +139,7 @@ export function BlocksSidebar() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar bloques…"
+            placeholder="¿Qué quieres agregar?"
             className="motion-glass w-full rounded-lg border border-white/[0.06] bg-white/[0.04] py-2 pl-8 pr-3 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/40 focus:bg-white/[0.06] focus:outline-none transition-all duration-300"
           />
           {search && (
@@ -278,7 +285,9 @@ export function BlocksSidebar() {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 group-hover:text-slate-400">
-                    {CATEGORY_LABELS[category]}
+                    {FRIENDLY_CATEGORY_LABELS[category] ??
+  CATEGORY_LABELS[category] ??
+  category}
                   </span>
                   <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[9px] font-medium text-slate-500">
                     {items.length}

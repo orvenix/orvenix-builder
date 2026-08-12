@@ -45,3 +45,5 @@ editor-dev.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/public/published-sites/

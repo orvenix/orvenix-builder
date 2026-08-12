@@ -1,0 +1,216 @@
+:root {
+  /* Fondo */
+  --paper: #fbf9f6;
+  --paper-alt: #f5f1ea;
+  --surface: #ffffff;
+
+  /* Bordes */
+  --border: #eae3d8;
+  --border-strong: #ddd3c2;
+
+  /* Texto */
+  --ink: #24262f;
+  --ink-muted: #6c7280;
+  --ink-faint: #9a9fac;
+
+  /* Acentos */
+  --coral: #ff6a4d;
+  --coral-dim: #e8582f;
+  --coral-tint: #fff1ec;
+  --teal: #1c9f8f;
+  --teal-dim: #16816f;
+  --teal-tint: #e8f8f5;
+  --amber: #f6a93b;
+  --amber-tint: #fef4e2;
+
+  --shadow-sm: 0 2px 10px -4px rgba(36, 38, 47, 0.1);
+  --shadow-md: 0 12px 32px -12px rgba(36, 38, 47, 0.16);
+  --shadow-lg: 0 24px 48px -16px rgba(36, 38, 47, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.font-display {
+  font-family: var(--font-sora), system-ui, sans-serif;
+}
+
+/* Fondo con textura de puntos suave, evoca el lienzo del editor sin verse técnico */
+.grid-bg {
+  background-image: radial-gradient(rgba(36, 38, 47, 0.055) 1px, transparent 1px);
+  background-size: 26px 26px;
+  background-position: -8px -8px;
+}
+
+.blob-coral {
+  background: radial-gradient(circle, rgba(255, 106, 77, 0.18) 0%, rgba(255, 106, 77, 0) 70%);
+}
+.blob-teal {
+  background: radial-gradient(circle, rgba(28, 159, 143, 0.16) 0%, rgba(28, 159, 143, 0) 70%);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.text-muted {
+  color: var(--ink-muted);
+}
+.text-faint {
+  color: var(--ink-faint);
+}
+
+.btn-primary {
+  background: var(--coral);
+  color: #fff8f5;
+  font-weight: 600;
+  box-shadow: 0 10px 24px -10px rgba(255, 106, 77, 0.55);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover {
+  background: var(--coral-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px -10px rgba(255, 106, 77, 0.6);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--border-strong);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.btn-secondary:hover {
+  border-color: var(--coral);
+  background: var(--coral-tint);
+  transform: translateY(-1px);
+}
+
+.pill {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--coral-dim);
+  border: 1px solid rgba(255, 106, 77, 0.25);
+  background: var(--coral-tint);
+}
+
+.feature-card {
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.feature-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.price-card {
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.price-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+.price-card.highlight {
+  border-color: var(--coral);
+  box-shadow: var(--shadow-lg);
+}
+
+/* --- mockup del editor de bloques (elemento distintivo del hero) --- */
+.canvas-frame {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+.canvas-block {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: blockIn 0.6s ease forwards;
+}
+.canvas-block:nth-child(1) {
+  animation-delay: 0.15s;
+}
+.canvas-block:nth-child(2) {
+  animation-delay: 0.45s;
+}
+.canvas-block:nth-child(3) {
+  animation-delay: 0.75s;
+}
+.canvas-block:nth-child(4) {
+  animation-delay: 1.05s;
+}
+
+@keyframes blockIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.canvas-cursor {
+  animation: cursorMove 3.2s ease-in-out 1.4s infinite;
+}
+@keyframes cursorMove {
+  0% {
+    transform: translate(0px, 0px);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  35% {
+    transform: translate(6px, 92px);
+  }
+  50% {
+    transform: translate(6px, 92px);
+  }
+  65% {
+    transform: translate(2px, 4px);
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(2px, 4px);
+    opacity: 0;
+  }
+}
+
+.layers-panel-row {
+  border-bottom: 1px solid var(--border);
+}
+.layers-panel-row:last-child {
+  border-bottom: none;
+}
+
+.accordion-icon {
+  transition: transform 0.2s ease;
+}
+.accordion-icon.open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-block,
+  .canvas-cursor {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

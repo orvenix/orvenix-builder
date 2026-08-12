@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DynamicRenderer } from "@/components/editor/DynamicRenderer";
-import { GuidedBlankCanvas, buildGuidedSectionTree, type GuidedSectionDraft, type GuidedSectionSuggestion } from "@/components/editor/GuidedBlankCanvas";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { DEVICE_WIDTHS } from "@/store/useEditorStore";
@@ -12,7 +11,7 @@ import { getFreeInsertProps } from "@/components/editor/freeInsert";
 import { resolveResponsiveProps } from "@/components/editor/responsive";
 import {
   ZoomIn, ZoomOut, Maximize2, Minimize2,
-  CheckCircle2, MessageSquarePlus,
+  MessageSquarePlus,
 } from "lucide-react";
 import type { EditorTree, NodeId, EditorComment } from "@/types/editor";
 import { generateSectionAI } from "@/app/actions/ai";
@@ -63,15 +62,7 @@ export const Canvas = () => {
   const clipboardTree = useEditorStore((s) => s.clipboardTree);
   const pasteNodeAt = useEditorStore((s) => s.pasteNodeAt);
   const addNode = useEditorStore((s) => s.addNode);
-  const insertTree = useEditorStore((s) => s.insertTree);
   const rootId = useEditorStore((s) => s.tree.rootId);
-
-  const [insertedSuggestionLabel, setInsertedSuggestionLabel] = useState<string | null>(null);
-
-  const handleGuidedSectionInsert = useCallback((suggestion: GuidedSectionSuggestion, draft: GuidedSectionDraft) => {
-    insertTree({ tree: buildGuidedSectionTree(suggestion, draft), parentId: rootId });
-    setInsertedSuggestionLabel(suggestion.label);
-  }, [insertTree, rootId]);
 
   const [zoom, setZoom] = useState(100);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
@@ -103,12 +94,6 @@ export const Canvas = () => {
 
   useEffect(() => { fitToWidth(); }, [fitToWidth]);
   useEffect(() => { setCanvasZoom(zoom); }, [setCanvasZoom, zoom]);
-  useEffect(() => {
-    if (!insertedSuggestionLabel) return;
-    const id = window.setTimeout(() => setInsertedSuggestionLabel(null), 2200);
-    return () => window.clearTimeout(id);
-  }, [insertedSuggestionLabel]);
-
   // Listener para Generación de Secciones con IA (Nivel 4)
   useEffect(() => {
     const handleAIGenerate = async (e: AIGenerateEvent) => {
@@ -161,7 +146,6 @@ export const Canvas = () => {
     return () => ro.disconnect();
   }, [currentDevice]);
 
-  const isEmpty = rootChildren.length === 0;
   const rendererMode = isPreviewMode ? "preview" : "edit";
   const freeCanvasHeight = getFreeCanvasHeight(tree, currentDevice);
   const deviceWidth = DEVICE_WIDTHS[currentDevice];
@@ -424,14 +408,6 @@ export const Canvas = () => {
                   </div>
                 )}
 
-                {/* Guided blank canvas */}
-                {isEmpty && !isOver && !isPreviewMode && (
-                  <GuidedBlankCanvas
-                    compact={currentDevice !== "desktop"}
-                    onInsertSuggestion={handleGuidedSectionInsert}
-                  />
-                )}
-
                 {marqueeBox && !isPreviewMode && (
                   <div
                     className="pointer-events-none absolute z-[997] rounded border border-fuchsia-500 bg-fuchsia-500/10 shadow-[0_0_18px_rgba(217,70,239,0.25)]"
@@ -448,13 +424,6 @@ export const Canvas = () => {
           </div>
         </div>
       </div>
-
-      {!isPreviewMode && insertedSuggestionLabel && (
-        <div className="pointer-events-none absolute right-4 top-12 z-30 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-950/90 px-3 py-2 text-xs font-semibold text-emerald-100 shadow-2xl shadow-black/40 backdrop-blur-xl editor-anim-scale-in">
-          <CheckCircle2 size={14} className="text-emerald-300" />
-          {insertedSuggestionLabel} insertada y lista para editar
-        </div>
-      )}
 
       {/* ── Zoom controls ── */}
       {!isPreviewMode && (

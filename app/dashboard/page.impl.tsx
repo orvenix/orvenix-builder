@@ -6,6 +6,7 @@ import { getEditRequestsForRole, type EditRequest, type EditRequestStatus } from
 import { CreateSiteDialog } from "./CreateSiteDialog";
 import { EditRequestDialog } from "./EditRequestDialog";
 import { ExportDropdown } from "./ExportDropdown";
+import { EditSiteLink } from "./EditSiteLink";
 import { updateEditRequestStatusAction } from "./actions";
 import { DeleteSiteButton } from "./DeleteSiteButton";
 import { DashboardNav } from "./DashboardNav";
@@ -607,22 +608,22 @@ function SiteCard({
           </div>
           <div className="flex flex-wrap gap-1.5">
             {pageLinks.slice(0, 5).map((page) => (
-              <Link
+              <EditSiteLink
                 key={site.id + ":" + page.slug}
                 href={getEditorPageHref(site.id, page.slug)}
-                className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-white/45 transition-all hover:border-[rgba(0,181,246,0.28)] hover:bg-[rgba(0,181,246,0.08)] hover:text-[color:var(--accent)]"
+                className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-white/45 transition-all hover:border-[rgba(0,181,246,0.28)] hover:bg-[rgba(0,181,246,0.08)] hover:text-[color:var(--accent)] aria-busy:opacity-70"
                 title={"Editar " + page.name}
               >
                 {page.name}
-              </Link>
+              </EditSiteLink>
             ))}
             {pageLinks.length > 5 && (
-              <Link
+              <EditSiteLink
                 href={primaryEditorHref}
-                className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-white/30 transition-all hover:text-white/60"
+                className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-white/30 transition-all hover:text-white/60 aria-busy:opacity-70"
               >
                 +{pageLinks.length - 5}
-              </Link>
+              </EditSiteLink>
             )}
           </div>
         </div>
@@ -634,9 +635,9 @@ function SiteCard({
 
         {/* Actions */}
         <div className="relative z-20 mt-auto flex flex-wrap items-center gap-2">
-          <Link
+          <EditSiteLink
             href={primaryEditorHref}
-            className="flex h-9 min-w-[128px] flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-all hover:brightness-110"
+            className="flex h-9 min-w-[128px] flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-all hover:brightness-110 aria-busy:opacity-70"
             style={{
               background: `${accent}18`,
               border: `1px solid ${accent}30`,
@@ -645,7 +646,7 @@ function SiteCard({
           >
             <Edit3 size={11} />
             Editar inicio
-          </Link>
+          </EditSiteLink>
 
           <EditRequestDialog siteId={site.id} siteName={site.name} accent={accent} />
 

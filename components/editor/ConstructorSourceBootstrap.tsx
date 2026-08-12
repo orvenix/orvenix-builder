@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { loadSavedTree } from "@/hooks/useAutosave";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { getConstructorPresetTree } from "@/lib/constructorPresets";
 import { editorDebug, editorError, editorWarn } from "@/components/editor/logger";
 

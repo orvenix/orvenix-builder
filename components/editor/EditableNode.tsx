@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 import type { NodeId } from "@/types/editor";
 import { useSortable } from "@dnd-kit/sortable";
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { blockRegistry } from "@/blocks/registry";
 import { getEditorVisualStyle, resolveResponsiveProps } from "@/components/editor/responsive";
+import { useEditorExperience } from "@/components/editor/experience/ExperienceContext";
 
 // Map block category → accent color
 const CATEGORY_COLORS: Record<string, string> = {
@@ -35,6 +36,7 @@ interface EditableNodeProps {
 }
 
 export const EditableNode = ({ id, children }: EditableNodeProps) => {
+  const { isClient, capabilities } = useEditorExperience();
   const selectedId  = useEditorStore((s) => s.selectedId);
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const editingNodeId = useEditorStore((s) => s.editingNodeId);
@@ -70,7 +72,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
     : false;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id, disabled: isEditing || isLocked });
+    useSortable({ id, disabled: isEditing || isLocked || !capabilities.allowStructureEditing });
 
   const isSelected    = selectedId === id || selectedIds.includes(id);
   const isPrimarySelection = selectedId === id;
@@ -106,8 +108,8 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         }
       : {}),
   } satisfies React.CSSProperties;
-  const freeDragProps = isFreePosition && !isEditing && !isLocked ? { ...attributes, ...listeners } : {};
-  const toolbarDragProps = isFreePosition || isLocked ? {} : { ...attributes, ...listeners };
+  const freeDragProps = isFreePosition && capabilities.allowFreePosition && !isEditing && !isLocked ? { ...attributes, ...listeners } : {};
+  const toolbarDragProps = !capabilities.allowStructureEditing || isFreePosition || isLocked ? {} : { ...attributes, ...listeners };
   const dragPreview = isFreePosition && isDragging
     ? {
         x: Math.max(0, Math.round(freeX + (transform?.x ?? 0) / (canvasZoom / 100 || 1))),
@@ -122,8 +124,15 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
       {...freeDragProps}
       onClick={(e) => {
         e.stopPropagation();
-        if (isFreePosition && !isLocked && !(e.shiftKey || e.ctrlKey || e.metaKey)) bringNodeToFront(id);
-        select(id, { additive: e.shiftKey || e.ctrlKey || e.metaKey });
+        if (isFreePosition && capabilities.allowFreePosition && !isLocked && !(e.shiftKey || e.ctrlKey || e.metaKey)) bringNodeToFront(id);
+        if (isClient) {
+          window.dispatchEvent(
+            new CustomEvent("orvenix:client-panel-request", {
+              detail: { panel: node?.type === "siteNav" ? "menu" : "content" },
+            }),
+          );
+        }
+        select(id, { additive: !isClient && (e.shiftKey || e.ctrlKey || e.metaKey) });
       }}
       onDoubleClick={(e) => {
         e.stopPropagation();
@@ -133,14 +142,16 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         e.preventDefault();
         e.stopPropagation();
         select(id);
-        openContextMenu(id, { x: e.clientX, y: e.clientY });
+        if (!isClient) {
+          openContextMenu(id, { x: e.clientX, y: e.clientY });
+        }
       }}
       onMouseEnter={(e) => { e.stopPropagation(); hover(id); }}
       onMouseLeave={() => hover(null)}
       className={cn(
         "outline-none group",
         "transition-[box-shadow] duration-150",
-        isFreePosition ? (isEditing ? "absolute cursor-text editor-free-node" : isLocked ? "absolute cursor-default editor-free-node" : "absolute cursor-move editor-free-node editor-free-node-draggable") : "relative",
+        isFreePosition ? (isEditing ? "absolute cursor-text editor-free-node" : isLocked || !capabilities.allowFreePosition ? "absolute cursor-default editor-free-node" : "absolute cursor-move editor-free-node editor-free-node-draggable") : "relative",
         isLocked ? "editor-node-locked" : "",
         isSelected
           ? "ring-2 ring-inset editor-glow-ring"
@@ -191,8 +202,19 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         </>
       )}
 
+      {/* ── Client editing hint ── */}
+      {isClient && isSelected && !isRoot && (
+        <div
+          className="absolute -top-8 left-0 z-50 flex items-center gap-2 rounded-full border border-cyan-400/25 bg-slate-950/90 px-3 py-1.5 text-[10px] font-bold text-cyan-100 shadow-xl shadow-black/35 backdrop-blur-xl editor-anim-fade-down"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
+          Doble clic para editar
+        </div>
+      )}
+
       {/* ── Floating toolbar ── */}
-      {(isSelected || isHovered) && (
+      {!isClient && (isSelected || isHovered) && (
         <div
           className="absolute -top-9 left-0 z-50 flex items-center gap-0 rounded-lg shadow-xl shadow-black/50 editor-anim-fade-down overflow-hidden"
           style={{
@@ -318,7 +340,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
       )}
 
       {/* ── Hover label (type indicator) ── */}
-      {isHovered && !isSelected && (
+      {!isClient && isHovered && !isSelected && (
         <div
           className="pointer-events-none absolute -top-5 left-0 z-40 flex items-center gap-1 px-1.5 py-0.5 rounded-t text-[9px] font-semibold uppercase tracking-wide editor-anim-fade-in"
           style={{ color: accentColor, background: `${accentColor}18`, borderTop: `1px solid ${accentColor}30` }}
@@ -330,7 +352,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
 
       {children}
 
-      {isFreePosition && isSelected && !isEditing && !isLocked && (
+      {capabilities.allowResize && isFreePosition && isSelected && !isEditing && !isLocked && (
         <ResizeHandles
           accentColor={accentColor}
           x={freeX}

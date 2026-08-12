@@ -1,0 +1,5 @@
+export { StudioSidebar } from "./StudioSidebar"
+export { StudioSidebarRail } from "./StudioSidebarRail"
+export { StudioSidebarPanel } from "./StudioSidebarPanel"
+export { StudioSidebarEmptyPanel } from "./StudioSidebarEmptyPanel"
+export type { StudioSidebarTab } from "./types"

@@ -35,6 +35,8 @@
     "node_modules",
     ".tmp",
     "tests",
-    ".next/dev"
+    ".next/dev",
+    "idea",
+    "idea/**/*"
   ]
 }

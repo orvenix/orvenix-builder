@@ -3,7 +3,17 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { produceWithPatches, applyPatches, enablePatches, type Patch, type Draft, setAutoFreeze } from "immer";
-import type { EditorAsset, EditorTree, NodeId, NodeProps, DeviceMode, SaveStatus, PublishStatus, AssetPickerTarget } from "@/types/editor";
+import type {
+  AssetPickerTarget,
+  BrandKit,
+  DeviceMode,
+  EditorAsset,
+  EditorTree,
+  NodeId,
+  NodeProps,
+  PublishStatus,
+  SaveStatus,
+} from "@/types/editor";
 import { shouldCoalesce, coalesce, type HistoryEntry, HISTORY_LIMIT } from "@/components/editor/history";
 import { editorDebug, editorError, editorWarn } from "@/components/editor/logger";
 import { validateTree } from "@/types/validateTree";
@@ -24,6 +34,7 @@ export type SmartGuide =
 export type CanvasGridSize = 8 | 16 | 24 | 0;
 
 export type UserRole = "admin" | "client";
+export type BuilderTier = "basic" | "pro";
 export type PurchaseType = "buy" | "rent" | null;
 export type AlignAxis = "horizontal" | "vertical";
 export type AlignMode = "start" | "center" | "end";
@@ -116,6 +127,7 @@ export interface EditorState {
   contextMenu: EditorContextMenuState;
   clipboardTree: EditorTree | null;
   userRole: UserRole;
+  builderTier: BuilderTier;
   purchaseType: PurchaseType;
   
   // Asset Picker
@@ -147,6 +159,7 @@ export interface EditorState {
   setWebsiteId: (id: string) => void;
   setActivePageContext: (pageContext: { activePageSlug: string; activePageName: string; availablePages?: SitePageListItem[] }) => void;
   setUserRole: (role: UserRole) => void;
+  setBuilderTier: (tier: BuilderTier) => void;
   select: (id: NodeId | null, options?: { additive?: boolean }) => void;
   selectMany: (ids: NodeId[]) => void;
   selectNodesInRect: (rect: { x: number; y: number; width: number; height: number }) => void;
@@ -189,7 +202,12 @@ export interface EditorState {
   toggleNodeLocked: (id: NodeId) => void;
   toggleSelectedHidden: () => void;
   toggleSelectedLocked: () => void;
-  updateGlobalTheme: (patch: Partial<GlobalTheme> | ((t: GlobalTheme) => void)) => void;
+  updateGlobalTheme: (patch: Partial<GlobalTheme> | ((t: GlobalTheme) => Partial<GlobalTheme> | GlobalTheme | void)) => void;
+  updateBrandKit: (
+  patch:
+    | Partial<BrandKit>
+    | ((brand: BrandKit) => BrandKit),
+) => void;
   updateSEO: (patch: Partial<SEOMetadata>) => void;
   execute: (label: string, recipe: (draft: Draft<EditorState>) => void) => void;
 
@@ -222,7 +240,7 @@ export interface EditorState {
   addComment: (x: number, y: number, text: string) => void;
   resolveComment: (id: string) => void;
   requestReview: () => Promise<void>;
-  publishWebsite: () => Promise<void>;
+  publishWebsite: () => Promise<string | null>;
   
   // Historial Acciones
   undo: () => void;
@@ -423,6 +441,27 @@ function createSubtree(tree: EditorTree, rootId: NodeId): EditorTree | null {
   return { rootId, nodes };
 }
 
+const DEFAULT_BRAND_KIT: BrandKit = {
+  businessName: "Mi negocio",
+  tagline: "",
+  description: "",
+  logoUrl: "",
+  faviconUrl: "",
+  contact: {
+    phone: "",
+    whatsapp: "",
+    email: "",
+    address: "",
+  },
+  social: {
+    facebook: "",
+    instagram: "",
+    tiktok: "",
+    youtube: "",
+    linkedin: "",
+  },
+};
+
 export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, get) => ({
   websiteId: null,
   activePageSlug: "home",
@@ -438,6 +477,7 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   isResponsivePreviewMode: false,
   isCommentMode: false,
   userRole: "client", // Por defecto entramos como cliente
+  builderTier: "basic",
   purchaseType: null,
   canvasZoom: 100,
   lastCanvasPoint: null,
@@ -509,6 +549,7 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     }),
 
   setUserRole: (role: UserRole) => set({ userRole: role }),
+  setBuilderTier: (builderTier: BuilderTier) => set({ builderTier }),
 
   saveToLocalStorage: () => {
     const { tree, websiteId, activePageSlug } = get();
@@ -838,36 +879,110 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   },
 
   requestReview: async () => {
-    const { websiteId, saveToServer } = get();
-    if (!websiteId) return;
+  const {
+    websiteId,
+    saveToServer,
+    markError,
+  } = get();
 
-    // Primero nos aseguramos de que los cambios actuales se guarden
-    await saveToServer();
+  if (!websiteId) return;
 
-    set({ publishStatus: "review" });
-    // Aquí llamarías a una API que cambie el estado en la base de datos
-    await fetch(`/api/editor/${websiteId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "review" }),
-    });
-    editorDebug("[EditorStore] Revisión solicitada al equipo Orvenix.");
-  },
+  const saveResult = await saveToServer();
+
+  if (!saveResult.success) {
+    markError(
+      saveResult.error ??
+        "No se pudieron guardar los cambios antes de solicitar revisión"
+    );
+    return;
+  }
+
+  set({
+    publishStatus: "review",
+  });
+
+  editorDebug(
+    "[EditorStore] Cambios guardados y marcados para revisión."
+  );
+},
 
   publishWebsite: async () => {
-    const { websiteId, saveToServer } = get();
-    if (!websiteId) return;
+  const {
+    websiteId,
+    saveToServer,
+    markError,
+  } = get();
 
-    await saveToServer();
+  if (!websiteId) return null;
 
-    set({ publishStatus: "published" });
-    await fetch(`/api/editor/${websiteId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "published" }),
+  // 1. Guardar primero la versión más reciente.
+  const saveResult = await saveToServer();
+
+  if (!saveResult.success) {
+    markError(
+      saveResult.error ??
+        "No se pudieron guardar los cambios antes de publicar"
+    );
+    return null;
+  }
+
+  try {
+    // 2. Publicar únicamente después de guardar correctamente.
+    const response = await fetch(
+      `/api/editor/${websiteId}/publish`,
+      {
+        method: "POST",
+      }
+    );
+
+    if (!response.ok) {
+      let message = "No se pudo publicar el sitio";
+
+      try {
+        const body = await response.json();
+
+        if (
+          body &&
+          typeof body.error === "string" &&
+          body.error.trim()
+        ) {
+          message = body.error;
+        }
+      } catch {
+        // Conservamos el mensaje genérico.
+      }
+
+      throw new Error(message);
+    }
+
+    const body = (await response.json()) as { url?: string };
+
+    // 3. Solo el servidor puede confirmar que está publicado.
+    set({
+      publishStatus: "published",
     });
-    editorDebug("[EditorStore] Sitio publicado oficialmente.");
-  },
+
+    editorDebug(
+      "[EditorStore] Sitio publicado oficialmente."
+    );
+
+    return body.url ?? `/p/${websiteId}`;
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "No se pudo publicar el sitio";
+
+    markError(message);
+
+    editorError(
+      "[EditorStore] Error publicando sitio",
+      error
+    );
+
+    return null;
+  }
+},
 
   updateNodeProps: (id: NodeId, props: NodeProps) => 
     get().execute(`edit-prop:${id}:${Object.keys(props)[0]}`, (draft) => {
@@ -1670,6 +1785,51 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     get().closeAssetPicker();
   },
 
+  updateBrandKit: (patch) => {
+  set((state) => {
+    const currentBrand: BrandKit = {
+      ...DEFAULT_BRAND_KIT,
+      ...(state.tree.brand ?? {}),
+      contact: {
+        ...DEFAULT_BRAND_KIT.contact,
+        ...(state.tree.brand?.contact ?? {}),
+      },
+      social: {
+        ...DEFAULT_BRAND_KIT.social,
+        ...(state.tree.brand?.social ?? {}),
+      },
+    };
+
+    const nextBrand =
+      typeof patch === "function"
+        ? patch(currentBrand)
+        : {
+            ...currentBrand,
+            ...patch,
+            contact: patch.contact
+              ? {
+                  ...currentBrand.contact,
+                  ...patch.contact,
+                }
+              : currentBrand.contact,
+            social: patch.social
+              ? {
+                  ...currentBrand.social,
+                  ...patch.social,
+                }
+              : currentBrand.social,
+          };
+
+    return {
+      tree: {
+        ...state.tree,
+        brand: nextBrand,
+      },
+      saveStatus: "dirty",
+    };
+  });
+},
+
   updateGlobalTheme: (patch) => {
     get().execute("update-theme", (draft) => {
       if (!draft.tree.theme) {
@@ -1704,10 +1864,14 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
       }
       const theme = draft.tree.theme as GlobalTheme;
       if (typeof patch === "function") {
-        patch(theme);
+        const result = patch(theme);
+        if (result) {
+          draft.tree.theme = { ...theme, ...result };
+        }
       } else {
         draft.tree.theme = { ...theme, ...patch };
       }
+      draft.tree.globalTheme = draft.tree.theme;
       draft.rev += 1;
     });
   },
