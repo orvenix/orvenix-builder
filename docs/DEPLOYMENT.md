@@ -42,16 +42,16 @@ ANTHROPIC_API_KEY=
 3. Compila: `npm run build`
 4. Arranca: `npm run start`
 
-## Con PM2
+## Producción con systemd
 
-Ya existe [ecosystem.config.cjs](/c:/Users/nv_on/OneDrive/Escritorio/ORVENIX/ecosystem.config.cjs:1).
+Producción se ejecuta mediante `orvenix-builder.service`.
 
 Comandos:
 
 ```bash
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 status
+sudo systemctl start orvenix-builder.service
+sudo systemctl enable orvenix-builder.service
+systemctl status orvenix-builder.service
 ```
 
 ## Trabajar en servidor real sin afectar producción
@@ -62,25 +62,25 @@ Recomendación:
 
 - Producción sigue en `orvenix.com.mx`
 - Staging vive en un subdominio aparte, por ejemplo `staging.orvenix.com.mx`
-- Staging corre en otro proceso PM2 y otro puerto interno
+- Staging debe ejecutarse como un servicio separado y usar otro puerto interno
 - Staging usa sus propias variables de entorno
 - Staging debe usar almacenamiento separado del principal
 
 ### Configuración sugerida
 
-Ya existe un archivo dedicado: [ecosystem.staging.config.cjs](/c:/Users/nv_on/OneDrive/Escritorio/ORVENIX/ecosystem.staging.config.cjs:1)
+Si se habilita staging, debe usar su propia unidad de systemd.
 
 Usa:
 
 ```bash
 npm run build
-pm2 start ecosystem.staging.config.cjs
-pm2 save
+sudo systemctl start orvenix-builder.service
+sudo systemctl enable orvenix-builder.service
 ```
 
 Ese proceso arranca como:
 
-- app PM2: `orvenix-staging`
+- servicio independiente de producción
 - puerto interno: `3001`
 - script: `npm run start:staging`
 
