@@ -47,3 +47,11 @@ editor-dev.db
 next-env.d.ts
 
 /public/published-sites/
+
+# local Orvenix diagnostic artifacts
+/orvenix-*.txt
+/orvenix-*.diff
+/gemini-code-*.txt
+/gemini-code-*.js
+/orvenix-landing.html
+/Guia_Especificaciones_Prompt_Sistema_Editor_IA.pdf
