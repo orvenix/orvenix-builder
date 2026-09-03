@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getSitesForRole, type UserRole } from "@/lib/auth";
 import { getEditRequestsForRole, type EditRequest, type EditRequestStatus } from "@/lib/editRequests";
 import { CreateSiteDialog } from "./CreateSiteDialog";
+import { CreateSiteWithAI } from "./CreateSiteWithAI";
 import { EditRequestDialog } from "./EditRequestDialog";
 import { ExportDropdown } from "./ExportDropdown";
 import { EditSiteLink } from "./EditSiteLink";
@@ -222,6 +223,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              <CreateSiteWithAI />
               <Link
                 href="/constructor?source=blank"
                 className="relative flex h-11 items-center gap-2 overflow-hidden rounded-2xl px-4 text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:scale-[0.98]"
@@ -251,6 +253,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           entitlements={planAccess.entitlements}
           subscription={subscription ? {
             status: subscription.status,
+            planId: subscription.planId,
             interval: subscription.interval,
             currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? null,
             canceledAt: subscription.canceledAt?.toISOString() ?? null,

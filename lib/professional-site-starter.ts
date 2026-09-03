@@ -141,21 +141,21 @@ export async function seedProfessionalStarterPages(
 
 
 const IDEA_COLORS = {
-  paper: "#f8f6f1",
-  paperAlt: "#ede8df",
+  paper: "#f7fcff",
+  paperAlt: "#eaf7ff",
   surface: "#ffffff",
-  border: "#ded7cb",
-  borderStrong: "#c7bcae",
-  ink: "#1f2933",
-  muted: "#626a72",
-  faint: "#8b9298",
-  coral: "#315c57",
-  coralDim: "#244742",
-  coralTint: "#e8f1ee",
-  teal: "#28415e",
-  tealTint: "#e9eef4",
-  amber: "#c48b5f",
-  amberTint: "#fbefe6",
+  border: "#c8e8f7",
+  borderStrong: "#8fd6f5",
+  ink: "#062f44",
+  muted: "#426b7d",
+  faint: "#7aa6ba",
+  coral: "#1BB3FA",
+  coralDim: "#075985",
+  coralTint: "#e5f6ff",
+  teal: "#1379A8",
+  tealTint: "#edf9ff",
+  amber: "#1794CC",
+  amberTint: "#dff4ff",
 }
 
 const IDEA_BRAND = {
@@ -202,8 +202,8 @@ function ideaTheme(homeTree?: EditorTree) {
     },
     shadow: {
       ...base.theme?.shadow,
-      soft: "0 12px 32px -12px rgba(36, 38, 47, 0.16)",
-      strong: "0 24px 48px -16px rgba(36, 38, 47, 0.20)",
+      soft: "0 18px 46px -22px rgba(23, 148, 204, 0.22)",
+      strong: "0 28px 74px -28px rgba(7, 89, 133, 0.26)",
       ...(homeTree?.theme?.shadow ?? {}),
     },
   }
@@ -221,20 +221,25 @@ function buildProfessionalHomeTree(homeTree?: EditorTree): EditorTree {
     root: sectionNode("root", "Sitio Orvenix editable", "none", "none", "left", IDEA_COLORS.paper, [
       "home-nav-shell",
       "home-hero",
+      "pro-experience-section",
       "proof-strip",
+      "premium-detail-section",
       "features-section",
       "solutions-section",
       "showcase-section",
+      "conversion-section",
       "gallery-section",
       "workflow-section",
+      "pro-conversion-section",
       "pricing-section",
+      "executive-summary-section",
       "clients-section",
       "faq-section",
       "lead-section",
       "home-cta-section",
       "home-footer",
     ], "full"),
-    "home-nav-shell": sectionNode("home-nav-shell", "Barra de navegacion", "sm", "md", "center", "rgba(248,246,241,0.94)", ["home-nav"], "full"),
+    "home-nav-shell": sectionNode("home-nav-shell", "Header profesional", "none", "none", "center", "transparent", ["home-nav"], "full"),
     "home-nav": navNode("home-nav", "Orvenix", "light"),
     "home-hero": sectionNode(
       "home-hero",
@@ -242,20 +247,20 @@ function buildProfessionalHomeTree(homeTree?: EditorTree): EditorTree {
       "xl",
       "md",
       "left",
-      "radial-gradient(circle at 8% 6%, rgba(49,92,87,0.18), transparent 30%), radial-gradient(circle at 86% 22%, rgba(196,139,95,0.18), transparent 34%), linear-gradient(135deg,#f8f6f1 0%,#efe8db 100%)",
+      "linear-gradient(135deg, rgba(27,179,250,0.18) 0%, rgba(255,255,255,0.92) 42%, rgba(19,121,168,0.12) 100%), #f7fcff",
       ["hero-layout"],
       "xl",
     ),
-    "hero-layout": wrapperNode("hero-layout", "Hero en dos columnas", "div", "grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_440px]", {}, ["hero-content", "hero-mockup"]),
-    "hero-content": wrapperNode("hero-content", "Contenido hero", "div", "idea-site-enter max-w-2xl", {}, ["hero-eyebrow", "hero-title", "hero-copy", "hero-actions", "hero-note"]),
-    "hero-eyebrow": textNode("hero-eyebrow", "Etiqueta", "Constructor de sitios web · Hecho para Mexico", IDEA_COLORS.coralDim, "left", "sm"),
-    "hero-title": headingNode("hero-title", "Titulo principal", "Crea un sitio web profesional que ya se siente tuyo", IDEA_COLORS.ink, "left", "5xl"),
-    "hero-copy": textNode("hero-copy", "Descripcion principal", "Una base completa para negocios que quieren verse serios desde el primer dia: secciones editables, paginas conectadas, mensajes claros, precios, confianza y llamados a la accion listos para personalizar.", IDEA_COLORS.muted, "left", "lg"),
+    "hero-layout": wrapperNode("hero-layout", "Hero en dos columnas", "div", "pro-premium-hero grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_460px]", {}, ["hero-content", "hero-mockup"]),
+    "hero-content": wrapperNode("hero-content", "Contenido hero", "div", "idea-site-enter premium-copy-stack max-w-2xl", {}, ["hero-eyebrow", "hero-title", "hero-copy", "hero-actions", "hero-note"]),
+    "hero-eyebrow": textNode("hero-eyebrow", "Etiqueta", "SITIO PRO / MULTIPAGINA EDITABLE", IDEA_COLORS.coralDim, "left", "sm"),
+    "hero-title": headingNode("hero-title", "Titulo principal", "Un sitio completo, elegante y listo para convertir visitantes en clientes", IDEA_COLORS.ink, "left", "5xl"),
+    "hero-copy": textNode("hero-copy", "Descripcion principal", "Cinco paginas conectadas, menu editable, secciones de confianza, precios, servicios, contacto y una narrativa profesional. El cliente cambia lo basico y obtiene una presencia digital que se siente hecha a medida.", IDEA_COLORS.muted, "left", "lg"),
     "hero-actions": wrapperNode("hero-actions", "Botones hero", "div", "mt-8 flex flex-wrap gap-3", {}, ["hero-primary", "hero-secondary"]),
     "hero-primary": buttonNode("hero-primary", "Empezar gratis", "page:precios"),
     "hero-secondary": buttonNode("hero-secondary", "Ver una demo en vivo", "page:servicios", "secondary"),
     "hero-note": textNode("hero-note", "Nota", "Sin tarjeta de credito · Cancela cuando quieras", IDEA_COLORS.faint, "left", "sm"),
-    "hero-mockup": wrapperNode("hero-mockup", "Mockup editable del constructor", "div", "idea-canvas-frame idea-floating-panel relative overflow-hidden rounded-[30px] border bg-white p-5 shadow-2xl", { borderColor: IDEA_COLORS.border }, ["mockup-top", "mockup-grid", "mockup-metric"]),
+    "hero-mockup": wrapperNode("hero-mockup", "Mockup editable del constructor", "div", "idea-canvas-frame idea-floating-panel premium-live-preview relative overflow-hidden rounded-[34px] border bg-white p-5 shadow-2xl", { borderColor: IDEA_COLORS.border }, ["mockup-top", "mockup-grid", "mockup-metric"]),
     "mockup-top": wrapperNode("mockup-top", "Barra mockup", "div", "mb-5 flex items-center justify-between", {}, ["mockup-domain", "mockup-label"]),
     "mockup-domain": textNode("mockup-domain", "Dominio", "tunegocio.mx", IDEA_COLORS.ink, "left", "sm"),
     "mockup-label": textNode("mockup-label", "Panel", "Secciones", IDEA_COLORS.coralDim, "right", "sm"),
@@ -265,27 +270,37 @@ function buildProfessionalHomeTree(homeTree?: EditorTree): EditorTree {
     "mockup-block-2": ideaBlockNode("mockup-block-2", ["mockup-block-2-text"], IDEA_COLORS.tealTint),
     "mockup-block-2-text": textNode("mockup-block-2-text", "Bloque texto", "Texto", IDEA_COLORS.teal, "left", "sm"),
     "mockup-block-3": ideaBlockNode("mockup-block-3", ["mockup-block-3-text"], IDEA_COLORS.amberTint),
-    "mockup-block-3-text": textNode("mockup-block-3-text", "Bloque galeria", "Galeria", "#6f684f", "left", "sm"),
+    "mockup-block-3-text": textNode("mockup-block-3-text", "Bloque galeria", "Galeria", IDEA_COLORS.teal, "left", "sm"),
     "mockup-block-4": ideaBlockNode("mockup-block-4", ["mockup-block-4-text"], IDEA_COLORS.coralTint),
     "mockup-block-4-text": textNode("mockup-block-4-text", "Bloque CTA", "Boton de contacto", IDEA_COLORS.coralDim, "left", "sm"),
     "mockup-metric": wrapperNode("mockup-metric", "Dato flotante del mockup", "div", "idea-mini-metric absolute bottom-5 right-5 rounded-2xl border bg-white/90 px-4 py-3 shadow-xl", { borderColor: IDEA_COLORS.borderStrong }, ["mockup-metric-number", "mockup-metric-label"]),
     "mockup-metric-number": headingNode("mockup-metric-number", "Metrica", "92%", IDEA_COLORS.coralDim, "left", "xl"),
     "mockup-metric-label": textNode("mockup-metric-label", "Etiqueta metrica", "listo para publicar", IDEA_COLORS.muted, "left", "sm"),
 
-    "proof-strip": sectionNode("proof-strip", "Banda de confianza", "md", "md", "center", "linear-gradient(135deg,#1f2933 0%,#28415e 55%,#315c57 100%)", ["proof-grid"], "xl"),
+    "proof-strip": sectionNode("proof-strip", "Banda de confianza", "md", "md", "center", "linear-gradient(135deg,#075985 0%,#1379A8 55%,#1BB3FA 130%)", ["proof-grid"], "xl"),
+    "pro-experience-section": sectionNode("pro-experience-section", "Experiencia premium", "xl", "md", "left", "linear-gradient(135deg,#ffffff 0%,#eaf7ff 52%,rgba(27,179,250,0.14) 100%)", ["pro-experience-shell"], "xl"),
+    "pro-experience-shell": wrapperNode("pro-experience-shell", "Suite profesional", "div", "pro-experience-shell grid gap-6 rounded-[36px] border bg-white/88 p-6 shadow-[0_34px_105px_-56px_rgba(7,89,133,0.54)] backdrop-blur lg:grid-cols-[0.9fr_1.1fr] lg:p-8", { borderColor: IDEA_COLORS.border }, ["pro-experience-copy", "pro-experience-grid"]),
+    "pro-experience-copy": wrapperNode("pro-experience-copy", "Texto experiencia Pro", "div", "premium-copy-stack space-y-5 self-center", {}, ["pro-experience-eyebrow", "pro-experience-title", "pro-experience-copy-text", "pro-experience-actions"]),
+    "pro-experience-eyebrow": textNode("pro-experience-eyebrow", "Etiqueta experiencia", "EXPERIENCIA DE AGENCIA", IDEA_COLORS.coralDim, "left", "sm"),
+    "pro-experience-title": headingNode("pro-experience-title", "Titulo experiencia", "Mas paginas, mejor narrativa y una estructura que escala", IDEA_COLORS.ink, "left", "4xl"),
+    "pro-experience-copy-text": textNode("pro-experience-copy-text", "Texto experiencia", "El modo Pro no solo desbloquea opciones: entrega un sitio completo con rutas claras para explicar servicios, generar confianza, comparar planes y cerrar contactos.", IDEA_COLORS.muted, "left", "md"),
+    "pro-experience-actions": wrapperNode("pro-experience-actions", "Acciones experiencia", "div", "mt-6 flex flex-wrap gap-3", {}, ["pro-experience-primary", "pro-experience-secondary"]),
+    "pro-experience-primary": buttonNode("pro-experience-primary", "Editar sitio Pro", "page:servicios"),
+    "pro-experience-secondary": buttonNode("pro-experience-secondary", "Ver contacto", "page:contacto", "secondary"),
+    "pro-experience-grid": wrapperNode("pro-experience-grid", "Modulos Pro", "div", "grid gap-4 sm:grid-cols-2", {}, ["pro-experience-1", "pro-experience-2", "pro-experience-3", "pro-experience-4"]),
     "proof-grid": wrapperNode("proof-grid", "Datos de confianza", "div", "grid gap-4 text-white md:grid-cols-4", {}, ["proof-1", "proof-2", "proof-3", "proof-4"]),
     "proof-1": statCardNode("proof-1", ["proof-1-number", "proof-1-label"]),
     "proof-1-number": headingNode("proof-1-number", "Dato 1", "+5", "#ffffff", "center", "2xl"),
-    "proof-1-label": textNode("proof-1-label", "Etiqueta dato 1", "paginas listas", "#dbe7e4", "center", "sm"),
+    "proof-1-label": textNode("proof-1-label", "Etiqueta dato 1", "paginas listas", "#dff4ff", "center", "sm"),
     "proof-2": statCardNode("proof-2", ["proof-2-number", "proof-2-label"]),
     "proof-2-number": headingNode("proof-2-number", "Dato 2", "24h", "#ffffff", "center", "2xl"),
-    "proof-2-label": textNode("proof-2-label", "Etiqueta dato 2", "para adaptar contenido", "#dbe7e4", "center", "sm"),
+    "proof-2-label": textNode("proof-2-label", "Etiqueta dato 2", "para adaptar contenido", "#dff4ff", "center", "sm"),
     "proof-3": statCardNode("proof-3", ["proof-3-number", "proof-3-label"]),
     "proof-3-number": headingNode("proof-3-number", "Dato 3", "100%", "#ffffff", "center", "2xl"),
-    "proof-3-label": textNode("proof-3-label", "Etiqueta dato 3", "editable por el cliente", "#dbe7e4", "center", "sm"),
+    "proof-3-label": textNode("proof-3-label", "Etiqueta dato 3", "editable por el cliente", "#dff4ff", "center", "sm"),
     "proof-4": statCardNode("proof-4", ["proof-4-number", "proof-4-label"]),
     "proof-4-number": headingNode("proof-4-number", "Dato 4", "SEO", "#ffffff", "center", "2xl"),
-    "proof-4-label": textNode("proof-4-label", "Etiqueta dato 4", "base preparada", "#dbe7e4", "center", "sm"),
+    "proof-4-label": textNode("proof-4-label", "Etiqueta dato 4", "base preparada", "#dff4ff", "center", "sm"),
 
     "features-section": sectionNode("features-section", "Caracteristicas", "xl", "md", "left", IDEA_COLORS.paper, ["features-intro", "features-grid"], "xl"),
     "features-intro": introNode("features-intro", ["features-eyebrow", "features-title", "features-copy"]),
@@ -321,7 +336,7 @@ function buildProfessionalHomeTree(homeTree?: EditorTree): EditorTree {
     "solution-4-title": headingNode("solution-4-title", "Solucion 4", "Base multipagina", IDEA_COLORS.ink, "left", "xl"),
     "solution-4-copy": textNode("solution-4-copy", "Texto solucion 4", "Menu conectado y paginas listas para crecer con nuevas secciones sin perder coherencia.", IDEA_COLORS.muted, "left", "sm"),
     "solution-4-link": buttonNode("solution-4-link", "Contactar", "page:contacto", "ghost"),
-    "showcase-section": sectionNode("showcase-section", "Presentacion visual", "xl", "md", "left", "linear-gradient(180deg,#ffffff 0%,#f8f6f1 100%)", ["showcase-layout"], "xl"),
+    "showcase-section": sectionNode("showcase-section", "Presentacion visual", "xl", "md", "left", "linear-gradient(180deg,#ffffff 0%,#f7fcff 100%)", ["showcase-layout"], "xl"),
     "showcase-layout": wrapperNode("showcase-layout", "Bloque visual editable", "div", "grid items-center gap-10 lg:grid-cols-[0.92fr_1.08fr]", {}, ["showcase-image-wrap", "showcase-copy-wrap"]),
     "showcase-image-wrap": wrapperNode("showcase-image-wrap", "Imagen profesional", "div", "idea-image-frame overflow-hidden rounded-[28px] border bg-white p-3 shadow-2xl", { borderColor: IDEA_COLORS.border }, ["showcase-image"]),
     "showcase-image": imageNode("showcase-image", "https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1200", "Equipo profesional revisando un sitio web"),
@@ -359,23 +374,23 @@ function buildProfessionalHomeTree(homeTree?: EditorTree): EditorTree {
     "gallery-3-title": headingNode("gallery-3-title", "Caso 3", "Marca en crecimiento", IDEA_COLORS.ink, "left", "xl"),
     "gallery-3-copy": textNode("gallery-3-copy", "Texto caso 3", "Escala de landing simple a sitio multipagina con mensajes consistentes.", IDEA_COLORS.muted, "left", "sm"),
 
-    "workflow-section": sectionNode("workflow-section", "Proceso profesional", "xl", "md", "center", "linear-gradient(135deg,#28415e 0%,#1f2933 100%)", ["workflow-eyebrow", "workflow-title", "workflow-copy", "workflow-grid"], "xl"),
-    "workflow-eyebrow": textNode("workflow-eyebrow", "Etiqueta proceso", "Proceso", "#d6b287", "center", "sm"),
+    "workflow-section": sectionNode("workflow-section", "Proceso profesional", "xl", "md", "center", "linear-gradient(135deg,#075985 0%,#1379A8 100%)", ["workflow-eyebrow", "workflow-title", "workflow-copy", "workflow-grid"], "xl"),
+    "workflow-eyebrow": textNode("workflow-eyebrow", "Etiqueta proceso", "Proceso", "#9ae5ff", "center", "sm"),
     "workflow-title": headingNode("workflow-title", "Titulo proceso", "De plantilla profesional a sitio propio en tres pasos", "#ffffff", "center", "4xl"),
-    "workflow-copy": textNode("workflow-copy", "Texto proceso", "Un recorrido simple para clientes nuevos: cambian marca, ajustan contenido y publican con confianza.", "#dbe7e4", "center", "md"),
+    "workflow-copy": textNode("workflow-copy", "Texto proceso", "Un recorrido simple para clientes nuevos: cambian marca, ajustan contenido y publican con confianza.", "#dff4ff", "center", "md"),
     "workflow-grid": wrapperNode("workflow-grid", "Pasos de edicion", "div", "mt-10 grid gap-4 md:grid-cols-3", {}, ["workflow-1", "workflow-2", "workflow-3"]),
     "workflow-1": premiumStepNode("workflow-1", ["workflow-1-number", "workflow-1-title", "workflow-1-copy"]),
-    "workflow-1-number": headingNode("workflow-1-number", "Numero paso 1", "01", "#d6b287", "left", "xl"),
+    "workflow-1-number": headingNode("workflow-1-number", "Numero paso 1", "01", "#9ae5ff", "left", "xl"),
     "workflow-1-title": headingNode("workflow-1-title", "Paso 1", "Cambia marca y portada", "#ffffff", "left", "xl"),
-    "workflow-1-copy": textNode("workflow-1-copy", "Texto paso 1", "Actualiza nombre, descripcion principal, colores y primer llamado a la accion.", "#dbe7e4", "left", "sm"),
+    "workflow-1-copy": textNode("workflow-1-copy", "Texto paso 1", "Actualiza nombre, descripcion principal, colores y primer llamado a la accion.", "#dff4ff", "left", "sm"),
     "workflow-2": premiumStepNode("workflow-2", ["workflow-2-number", "workflow-2-title", "workflow-2-copy"]),
-    "workflow-2-number": headingNode("workflow-2-number", "Numero paso 2", "02", "#d6b287", "left", "xl"),
+    "workflow-2-number": headingNode("workflow-2-number", "Numero paso 2", "02", "#9ae5ff", "left", "xl"),
     "workflow-2-title": headingNode("workflow-2-title", "Paso 2", "Ajusta secciones clave", "#ffffff", "left", "xl"),
-    "workflow-2-copy": textNode("workflow-2-copy", "Texto paso 2", "Personaliza beneficios, servicios, precios, testimonios y preguntas frecuentes.", "#dbe7e4", "left", "sm"),
+    "workflow-2-copy": textNode("workflow-2-copy", "Texto paso 2", "Personaliza beneficios, servicios, precios, testimonios y preguntas frecuentes.", "#dff4ff", "left", "sm"),
     "workflow-3": premiumStepNode("workflow-3", ["workflow-3-number", "workflow-3-title", "workflow-3-copy"]),
-    "workflow-3-number": headingNode("workflow-3-number", "Numero paso 3", "03", "#d6b287", "left", "xl"),
+    "workflow-3-number": headingNode("workflow-3-number", "Numero paso 3", "03", "#9ae5ff", "left", "xl"),
     "workflow-3-title": headingNode("workflow-3-title", "Paso 3", "Conecta y publica", "#ffffff", "left", "xl"),
-    "workflow-3-copy": textNode("workflow-3-copy", "Texto paso 3", "Revisa paginas internas, enlaces, botones de contacto y prepara el sitio para salir al publico.", "#dbe7e4", "left", "sm"),
+    "workflow-3-copy": textNode("workflow-3-copy", "Texto paso 3", "Revisa paginas internas, enlaces, botones de contacto y prepara el sitio para salir al publico.", "#dff4ff", "left", "sm"),
 
     "pricing-section": sectionNode("pricing-section", "Precios", "xl", "md", "center", IDEA_COLORS.paperAlt, ["pricing-eyebrow", "pricing-title", "pricing-copy", "pricing-grid"], "xl"),
     "pricing-eyebrow": textNode("pricing-eyebrow", "Etiqueta precios", "Precios", IDEA_COLORS.coralDim, "center", "sm"),
@@ -390,7 +405,7 @@ function buildProfessionalHomeTree(homeTree?: EditorTree): EditorTree {
     "faq-eyebrow": textNode("faq-eyebrow", "Etiqueta FAQ", "Preguntas frecuentes", IDEA_COLORS.coralDim, "center", "sm"),
     "faq-title": headingNode("faq-title", "Titulo FAQ", "Antes de que preguntes", IDEA_COLORS.ink, "center", "4xl"),
     "faq-grid": wrapperNode("faq-grid", "Lista de preguntas", "div", "mt-10 grid gap-4", {}, ["faq-1", "faq-2", "faq-3", "faq-4"]),
-    "lead-section": sectionNode("lead-section", "Panel de contacto", "xl", "md", "left", "linear-gradient(135deg,#f8f6f1 0%,#e9eef4 100%)", ["lead-layout"], "xl"),
+    "lead-section": sectionNode("lead-section", "Panel de contacto", "xl", "md", "left", "linear-gradient(135deg,#f7fcff 0%,#e5f6ff 100%)", ["lead-layout"], "xl"),
     "lead-layout": wrapperNode("lead-layout", "Contacto y brief", "div", "grid gap-6 lg:grid-cols-[0.9fr_1.1fr]", {}, ["lead-copy-card", "lead-brief-card"]),
     "lead-copy-card": wrapperNode("lead-copy-card", "Mensaje contacto", "div", "idea-lead-card rounded-[28px] border bg-white p-8 shadow-xl", { borderColor: IDEA_COLORS.border }, ["lead-eyebrow", "lead-title", "lead-copy", "lead-actions"]),
     "lead-eyebrow": textNode("lead-eyebrow", "Etiqueta contacto", "Contacto", IDEA_COLORS.coralDim, "left", "sm"),
@@ -416,14 +431,84 @@ function buildProfessionalHomeTree(homeTree?: EditorTree): EditorTree {
     "brief-note": textNode("brief-note", "Nota brief", "Acordeones interactivos: el cliente puede abrir, revisar y editar cada punto.", IDEA_COLORS.faint, "left", "sm"),
 
     "home-cta-section": sectionNode("home-cta-section", "CTA final", "xl", "md", "center", IDEA_COLORS.paper, ["home-cta-card"], "xl"),
-    "home-cta-card": wrapperNode("home-cta-card", "Banner CTA editable", "div", "idea-cta-card relative overflow-hidden rounded-[32px] border px-8 py-16 text-center shadow-2xl", { borderColor: IDEA_COLORS.border, background: "linear-gradient(135deg,#ffffff 0%,#f6efe5 55%,#e8f1ee 100%)" }, ["home-cta-title", "home-cta-copy", "home-cta-button"]),
+    "home-cta-card": wrapperNode("home-cta-card", "Banner CTA editable", "div", "idea-cta-card relative overflow-hidden rounded-[32px] border px-8 py-16 text-center shadow-2xl", { borderColor: IDEA_COLORS.border, background: "linear-gradient(135deg,#ffffff 0%,#eaf7ff 52%,#dff4ff 100%)" }, ["home-cta-title", "home-cta-copy", "home-cta-button"]),
     "home-cta-title": headingNode("home-cta-title", "Titulo CTA", "Tu proximo sitio puede estar publicado hoy", IDEA_COLORS.ink, "center", "4xl"),
     "home-cta-copy": textNode("home-cta-copy", "Texto CTA", "Empieza gratis, arma tu primer bloque en minutos y decide despues si quieres seguir.", IDEA_COLORS.muted, "center", "md"),
     "home-cta-button": buttonNode("home-cta-button", "Crear mi sitio gratis", "/register"),
     "home-footer": footerSection("home-footer", "Orvenix", "Hecho en Mexico · Sitio profesional editable con Orvenix"),
     "home-footer-title": headingNode("home-footer-title", "Marca footer", "Orvenix", "#ffffff", "center", "xl"),
-    "home-footer-copy": textNode("home-footer-copy", "Texto footer", "Hecho en Mexico · Sitio profesional editable con Orvenix", "#ede8df", "center", "sm"),
+    "home-footer-copy": textNode("home-footer-copy", "Texto footer", "Hecho en Mexico · Sitio profesional editable con Orvenix", "#dff4ff", "center", "sm"),
   }
+
+  nodes["premium-detail-section"] = sectionNode("premium-detail-section", "Detalles premium", "xl", "md", "left", "linear-gradient(180deg,#ffffff 0%,#eaf7ff 100%)", ["premium-detail-header", "premium-detail-grid"], "xl")
+  nodes["premium-detail-header"] = wrapperNode("premium-detail-header", "Encabezado premium", "div", "mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between", {}, ["premium-detail-copy-wrap", "premium-detail-button"])
+  nodes["premium-detail-copy-wrap"] = wrapperNode("premium-detail-copy-wrap", "Texto premium", "div", "max-w-3xl", {}, ["premium-detail-eyebrow", "premium-detail-title", "premium-detail-copy"])
+  nodes["premium-detail-eyebrow"] = textNode("premium-detail-eyebrow", "Etiqueta premium", "Experiencia Pro", IDEA_COLORS.coralDim, "left", "sm")
+  nodes["premium-detail-title"] = headingNode("premium-detail-title", "Titulo premium", "Una presencia digital con detalles que parecen de agencia", IDEA_COLORS.ink, "left", "4xl")
+  nodes["premium-detail-copy"] = textNode("premium-detail-copy", "Descripcion premium", "El paquete Pro no solo agrega paginas: entrega una estructura con jerarquia, confianza, rutas de conversion y secciones listas para que el negocio se vea mas serio desde el primer clic.", IDEA_COLORS.muted, "left", "md")
+  nodes["premium-detail-button"] = buttonNode("premium-detail-button", "Ver planes Pro", "page:precios", "secondary")
+  nodes["premium-detail-grid"] = wrapperNode("premium-detail-grid", "Grid premium", "div", "grid gap-4 md:grid-cols-2 lg:grid-cols-4", {}, ["premium-detail-1", "premium-detail-2", "premium-detail-3", "premium-detail-4"])
+
+
+  const proExperienceCards = [
+    ["Menu", "Navegacion editable", "Paginas conectadas, CTA visible y labels personalizables desde el panel lateral."],
+    ["Contenido", "Secciones con proposito", "Cada franja ayuda a explicar, probar, comparar o convertir al visitante."],
+    ["Venta", "CTA mejor distribuidos", "El sitio conserva llamadas claras sin parecer agresivo o generico."],
+    ["Escala", "Base para crecer", "Puedes agregar paginas, servicios, casos, precios y contenido nuevo sin perder coherencia."],
+  ]
+  proExperienceCards.forEach(([tag, title, copy], index) => addCopyCard(nodes, "pro-experience-" + (index + 1), tag, title, copy))
+
+  nodes["pro-conversion-section"] = sectionNode("pro-conversion-section", "Ruta de conversion Pro", "xl", "md", "left", "linear-gradient(135deg,#075985 0%,#0E5C80 52%,#1794CC 130%)", ["pro-conversion-shell"], "xl")
+  nodes["pro-conversion-shell"] = wrapperNode("pro-conversion-shell", "Sistema de conversion Pro", "div", "pro-conversion-shell grid gap-5 lg:grid-cols-4", {}, ["pro-route-1", "pro-route-2", "pro-route-3", "pro-route-4"])
+  ;[
+    ["01", "Home que vende", "Presenta la promesa, la autoridad y el primer CTA sin esfuerzo."],
+    ["02", "Servicios claros", "Ordena paquetes, entregables y beneficios para decidir rapido."],
+    ["03", "Confianza real", "Cuenta historia, metodologia, prueba social y preguntas frecuentes."],
+    ["04", "Contacto directo", "Cierra con formulario, WhatsApp, correo o agenda segun el negocio."],
+  ].forEach(([tag, title, copy], index) => {
+    const id = "pro-route-" + (index + 1)
+    nodes[id] = premiumStepNode(id, [id + "-number", id + "-title", id + "-copy"])
+    nodes[id + "-number"] = headingNode(id + "-number", "Paso ruta " + tag, tag, "#9ae5ff", "left", "xl")
+    nodes[id + "-title"] = headingNode(id + "-title", "Titulo ruta " + tag, title, "#ffffff", "left", "xl")
+    nodes[id + "-copy"] = textNode(id + "-copy", "Texto ruta " + tag, copy, "#dff4ff", "left", "sm")
+  })
+
+  const premiumDetails = [
+    ["Direccion", "Narrativa lista para vender", "Hero, beneficios, proceso, precios y cierres conectados para guiar al visitante."],
+    ["Confianza", "Prueba y credibilidad", "Metricas, testimonios, FAQs y bloques de autoridad que reducen dudas."],
+    ["Edicion", "Control sin abrumar", "El cliente cambia lo esencial sin tocar decisiones complejas de diseno."],
+    ["Escala", "Base multipagina", "Menu, paginas internas y enlaces preparados para crecer como sitio profesional."],
+  ]
+  premiumDetails.forEach(([tag, title, copy], index) => addCopyCard(nodes, "premium-detail-" + (index + 1), tag, title, copy))
+
+  nodes["conversion-section"] = sectionNode("conversion-section", "Sistema de conversion", "xl", "md", "left", "#ffffff", ["conversion-layout"], "xl")
+  nodes["conversion-layout"] = wrapperNode("conversion-layout", "Layout conversion", "div", "grid gap-8 lg:grid-cols-[0.86fr_1.14fr] lg:items-center", {}, ["conversion-copy", "conversion-board"])
+  nodes["conversion-copy"] = wrapperNode("conversion-copy", "Texto conversion", "div", "idea-site-enter", {}, ["conversion-eyebrow", "conversion-title", "conversion-copy-text", "conversion-button"])
+  nodes["conversion-eyebrow"] = textNode("conversion-eyebrow", "Etiqueta conversion", "Conversion", IDEA_COLORS.coralDim, "left", "sm")
+  nodes["conversion-title"] = headingNode("conversion-title", "Titulo conversion", "Cada pagina tiene una accion clara, no solo informacion", IDEA_COLORS.ink, "left", "4xl")
+  nodes["conversion-copy-text"] = textNode("conversion-copy-text", "Texto conversion", "El visitante encuentra rutas visibles para comparar planes, revisar servicios, conocer la marca y contactar. Eso hace que el sitio se sienta pensado para vender, no solo para verse bonito.", IDEA_COLORS.muted, "left", "md")
+  nodes["conversion-button"] = buttonNode("conversion-button", "Optimizar mi sitio", "page:contacto")
+  nodes["conversion-board"] = wrapperNode("conversion-board", "Tablero de conversion", "div", "grid gap-4 rounded-[30px] border bg-[#f7fcff] p-5 shadow-2xl md:grid-cols-2", { borderColor: IDEA_COLORS.border }, ["conversion-card-1", "conversion-card-2", "conversion-card-3", "conversion-card-4"])
+  const conversionCards = [
+    ["Ruta 1", "Descubre", "Hero + confianza inicial"],
+    ["Ruta 2", "Compara", "Servicios + planes"],
+    ["Ruta 3", "Confirma", "Testimonios + FAQ"],
+    ["Ruta 4", "Convierte", "Contacto + CTA final"],
+  ]
+  conversionCards.forEach(([tag, title, copy], index) => addCopyCard(nodes, "conversion-card-" + (index + 1), tag, title, copy))
+
+  nodes["executive-summary-section"] = sectionNode("executive-summary-section", "Resumen ejecutivo", "xl", "md", "center", "linear-gradient(135deg,#eaf7ff 0%,#ffffff 100%)", ["executive-eyebrow", "executive-title", "executive-copy", "executive-grid"], "xl")
+  nodes["executive-eyebrow"] = textNode("executive-eyebrow", "Etiqueta resumen", "Resumen Pro", IDEA_COLORS.coralDim, "center", "sm")
+  nodes["executive-title"] = headingNode("executive-title", "Titulo resumen", "Mas que una plantilla: una base comercial completa", IDEA_COLORS.ink, "center", "4xl")
+  nodes["executive-copy"] = textNode("executive-copy", "Texto resumen", "Ideal para clientes que quieren verse profesionales sin redisenar todo. Cambian marca, fotos, precios y datos; la estructura ya hace el trabajo pesado.", IDEA_COLORS.muted, "center", "md")
+  nodes["executive-grid"] = wrapperNode("executive-grid", "Grid resumen", "div", "mt-10 grid gap-4 md:grid-cols-4", {}, ["executive-1", "executive-2", "executive-3", "executive-4"])
+  const executiveCards = [
+    ["5", "Paginas conectadas", "Inicio, servicios, nosotros, precios y contacto."],
+    ["12+", "Secciones listas", "Bloques comerciales para explicar, probar y convertir."],
+    ["100%", "Editable", "Textos, imagenes, botones, precios y enlaces."],
+    ["1", "Flujo claro", "Desde primer impacto hasta contacto o compra."],
+  ]
+  executiveCards.forEach(([tag, title, copy], index) => addCopyCard(nodes, "executive-" + (index + 1), tag, title, copy))
 
   const features = [
     ["Editor", "Editor de bloques en vivo", "Arrastra, suelta y reordena secciones sobre un lienzo real. Cada cambio se ve al instante."],
@@ -495,10 +580,10 @@ function withProfessionalChrome(tree: EditorTree, currentPageName: string): Edit
   const footerId = "site-footer"
 
   nextTree.nodes[navId] = navNode(navId, "Orvenix", "light")
-  nextTree.nodes[navShellId] = sectionNode(navShellId, "Barra de navegacion", "sm", "md", "center", "rgba(248,246,241,0.94)", [navId], "full")
+  nextTree.nodes[navShellId] = sectionNode(navShellId, "Header profesional", "none", "none", "center", "transparent", [navId], "full")
   nextTree.nodes[footerId] = footerSection(footerId, "Orvenix", currentPageName + " · Sitio profesional editable con Orvenix")
   nextTree.nodes[footerId + "-title"] = headingNode(footerId + "-title", "Marca footer", "Orvenix", "#ffffff", "center", "xl")
-  nextTree.nodes[footerId + "-copy"] = textNode(footerId + "-copy", "Texto footer", currentPageName + " · Sitio profesional editable con Orvenix", "#ede8df", "center", "sm")
+  nextTree.nodes[footerId + "-copy"] = textNode(footerId + "-copy", "Texto footer", currentPageName + " · Sitio profesional editable con Orvenix", "#dff4ff", "center", "sm")
 
   root.children = [
     navShellId,
@@ -533,7 +618,7 @@ function buildProfessionalPageTree({
       "xl",
       "md",
       "center",
-      "radial-gradient(circle at 10% 10%, rgba(49,92,87,0.16), transparent 30%), radial-gradient(circle at 90% 40%, rgba(196,139,95,0.15), transparent 30%), linear-gradient(135deg,#f8f6f1 0%,#efe8db 100%)",
+      "linear-gradient(135deg, rgba(27,179,250,0.16) 0%, #ffffff 48%, rgba(19,121,168,0.14) 100%)",
       [slug + "-eyebrow", slug + "-title", slug + "-copy", slug + "-hero-cta"],
       "lg",
     ),
@@ -627,11 +712,16 @@ function navNode(id: string, title: string, surface: "dark" | "light") {
     displayName: "Menu profesional del sitio",
     props: {
       title,
+      subtitle: "Sitio profesional",
       showHome: true,
+      showCta: true,
+      ctaLabel: "Contactar",
+      ctaHref: "page:contacto",
       layout: "row",
       justify: "end",
       variant: "pill",
       surface,
+      chrome: "integrated",
     },
     children: [],
     version: 1,

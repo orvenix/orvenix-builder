@@ -11,6 +11,7 @@
     "incremental": false
   },
   "include": [
+    "types/next-auth.d.ts",
     "tests/unit/**/*.ts",
     "lib/billing-config.ts",
     "lib/stripe.ts",

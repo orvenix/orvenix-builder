@@ -6,10 +6,8 @@ import Link from "next/link"
 import {
   ChevronLeft,
   CheckCircle2,
-  CreditCard,
   Eye,
   Loader2,
-  Repeat,
   Rocket,
   Save,
 } from "lucide-react"
@@ -35,9 +33,9 @@ export function ClientTopbar() {
   )
   const saveToLocalStorage = useEditorStore((state) => state.saveToLocalStorage)
   const publishWebsite = useEditorStore((state) => state.publishWebsite)
+  const markError = useEditorStore((state) => state.markError)
   const { startCheckout, isCheckingSession } = useCheckoutRegistrationFlow()
-  const [showDraftPublishOptions, setShowDraftPublishOptions] = useState(false)
-  const [draftPublishAction, setDraftPublishAction] = useState<"buy" | "rent" | null>(null)
+  const [draftPublishAction, setDraftPublishAction] = useState<"rent" | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
 
   const status = getSaveStatus(saveStatus)
@@ -45,8 +43,7 @@ export function ClientTopbar() {
 
   async function handlePublishAction() {
     if (isDraft) {
-      saveToLocalStorage()
-      setShowDraftPublishOptions((value) => !value)
+      await handleDraftPublish()
       return
     }
 
@@ -65,13 +62,15 @@ export function ClientTopbar() {
     }
   }
 
-  async function handleDraftPublish(action: "buy" | "rent") {
+  async function handleDraftPublish() {
     if (draftPublishAction || isCheckingSession) return
 
     saveToLocalStorage()
-    setDraftPublishAction(action)
+    setDraftPublishAction("rent")
     try {
-      await startCheckout({ action })
+      await startCheckout({ action: "rent" })
+    } catch (error) {
+      markError(error instanceof Error ? error.message : "No se pudo iniciar la publicación.")
     } finally {
       setDraftPublishAction(null)
     }
@@ -144,42 +143,16 @@ export function ClientTopbar() {
           <button
             type="button"
             onClick={handlePublishAction}
-            disabled={isPublishing}
+            disabled={isPublishing || draftPublishAction !== null || isCheckingSession}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-xs font-black text-slate-950 shadow-lg shadow-cyan-950/25 transition hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-70"
           >
-            {isPublishing ? (
+            {isPublishing || draftPublishAction !== null || isCheckingSession ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
               <Rocket className="h-4 w-4" aria-hidden="true" />
             )}
-            <span>{isDraft ? "Publicar" : publishStatus === "published" ? "Publicado" : "Publicar"}</span>
+            <span>{publishStatus === "published" ? "Publicado" : "Publicar"}</span>
           </button>
-
-          {isDraft && showDraftPublishOptions && (
-            <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-2xl border border-white/[0.10] bg-slate-950 p-2 shadow-2xl shadow-black/45">
-              <p className="px-3 py-2 text-[11px] font-semibold leading-5 text-slate-400">
-                Para publicar este constructor primero activa el sitio.
-              </p>
-              <button
-                type="button"
-                disabled={isCheckingSession || draftPublishAction !== null}
-                onClick={() => void handleDraftPublish("rent")}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-cyan-100 transition hover:bg-cyan-400/[0.10] disabled:opacity-60"
-              >
-                {draftPublishAction === "rent" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat className="h-4 w-4" />}
-                Rentar y publicar
-              </button>
-              <button
-                type="button"
-                disabled={isCheckingSession || draftPublishAction !== null}
-                onClick={() => void handleDraftPublish("buy")}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-emerald-100 transition hover:bg-emerald-400/[0.10] disabled:opacity-60"
-              >
-                {draftPublishAction === "buy" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                Comprar y publicar
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </header>

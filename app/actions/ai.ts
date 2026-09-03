@@ -3,11 +3,50 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { EditorTree } from "@/types/editor";
 import { validateTree } from "@/types/validateTree";
+import { revalidatePath } from "next/cache";
 import { getAuthSession } from "@/lib/auth-session";
-import { requireAIPlan } from "@/lib/plan-guard";
+import { requireAIPlan, requireCanCreateWebsite } from "@/lib/plan-guard";
 import { extractFirstJsonObject, normalizeGeneratedTreeCandidate } from "@/lib/ai/generationSchema";
 import { runAIGenerationJob } from "@/lib/ai/jobs";
 import { buildAuditFixPlan } from "@/lib/audit/fixPlan";
+import {
+  buildArtisanInspiredFallbackTree,
+  buildArtisanSectionReferenceContext,
+} from "@/lib/orvenix-ai/section/artisan-section-references";
+import {
+  buildSiteGenerationGuideContext,
+} from "@/lib/orvenix-ai/guidelines/site-generation-guidelines";
+
+import {
+  canManageSite,
+  type UserRole,
+} from "@/lib/auth";
+
+import {
+  hashEditorTree,
+  runOrvenixAgent,
+  type OrvenixAgentMode,
+  type OrvenixAgentResponse,
+} from "@/lib/orvenix-ai";
+
+import {
+  createSitePublicationCapability,
+} from "@/lib/site-publication";
+
+import {
+  getEditorTreeFromDb,
+} from "@/lib/editorPersistence";
+
+import {
+  createDraftSiteFromPersistedPreview,
+  getSiteCreationPreviewFailureMessage,
+  getSiteCreationPreviewForExecute,
+  rememberSiteCreationPreview,
+} from "@/lib/orvenix-ai/site-creation/preview-store";
+import {
+  registerAIUndoForExecutedResult,
+  rollbackOrvenixAIChange,
+} from "@/lib/orvenix-ai/mutation/undo-service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -78,95 +117,17 @@ async function requireAIActionAccess(): Promise<string | null> {
 
 // ─── Rule-based fallback ──────────────────────────────────────────────────────
 
-const INTENT_COPY: Record<SectionIntent, {
-  title: string; subtitle: string; cta: string;
-  background: string; titleColor: string; textColor: string;
-  buttonVariant: "primary" | "secondary";
-}> = {
-  hero: {
-    title: "Convierte visitantes en clientes con una web lista para crecer",
-    subtitle: "Una sección clara, moderna y enfocada en conversión para presentar tu oferta en segundos.",
-    cta: "Empezar ahora",
-    background: "linear-gradient(135deg,#0f172a 0%,#312e81 55%,#111827 100%)",
-    titleColor: "#ffffff", textColor: "#c7d2fe", buttonVariant: "secondary",
-  },
-  services: {
-    title: "Servicios diseñados para acelerar tu siguiente etapa",
-    subtitle: "Presenta tu propuesta con beneficios concretos, lenguaje directo y una llamada a la acción fácil de seguir.",
-    cta: "Ver servicios",
-    background: "#f8fafc", titleColor: "#0f172a", textColor: "#475569", buttonVariant: "primary",
-  },
-  pricing: {
-    title: "Planes simples para lanzar sin fricción",
-    subtitle: "Comunica valor, confianza y el siguiente paso ideal para que cada cliente elija con seguridad.",
-    cta: "Comparar planes",
-    background: "#ffffff", titleColor: "#111827", textColor: "#4b5563", buttonVariant: "primary",
-  },
-  contact: {
-    title: "Hablemos de lo que quieres construir",
-    subtitle: "Abre una conversación directa con tus visitantes y convierte interés en oportunidades reales.",
-    cta: "Contactar",
-    background: "#ecfeff", titleColor: "#164e63", textColor: "#155e75", buttonVariant: "primary",
-  },
-  testimonials: {
-    title: "Resultados reales que construyen confianza",
-    subtitle: "Refuerza tu propuesta con testimonios claros, credibilidad visual y mensajes orientados a decisión.",
-    cta: "Ver casos de exito",
-    background: "#f8fafc", titleColor: "#0f172a", textColor: "#475569", buttonVariant: "primary",
-  },
-};
-
 function detectIntent(prompt: string): SectionIntent {
-  const text = prompt.toLowerCase();
-  if (/(precio|pricing|plan|mensual|suscripcion|pago)/.test(text)) return "pricing";
-  if (/(testimonio|testimonial|caso de exito|prueba social|reseña|review)/.test(text)) return "testimonials";
-  if (/(contact|whatsapp|formulario|agenda|llamada|demo)/.test(text)) return "contact";
-  if (/(servicio|beneficio|feature|caracteristica|solucion)/.test(text)) return "services";
+  const text = prompt
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (/(precio|pricing|plan|planes|paquete|paquetes|mensual|suscripcion|pago|comprar|producto)/.test(text)) return "pricing";
+  if (/(testimonio|testimonial|caso de exito|prueba social|resena|review|opinion|cliente feliz)/.test(text)) return "testimonials";
+  if (/(contact|whatsapp|formulario|agenda|agendar|llamada|demo|ubicacion|telefono|correo)/.test(text)) return "contact";
+  if (/(servicio|servicios|beneficio|feature|caracteristica|solucion|especialidad|areas|categoria)/.test(text)) return "services";
   return "hero";
-}
-
-function buildFallbackTree(id: string, prompt: string, intent: SectionIntent): EditorTree {
-  const copy = INTENT_COPY[intent];
-  const subject = prompt
-    .replace(/^(crea|genera|haz|quiero|necesito|diseña?)\s+/i, "")
-    .replace(/\b(una|un|seccion|sección|bloque|hero|landing)\b/gi, "")
-    .trim() || "tu negocio";
-
-  const title = intent === "hero"
-    ? `Impulsa ${subject} con una presencia digital memorable`
-    : copy.title;
-
-  return {
-    rootId: `${id}-section`,
-    nodes: {
-      [`${id}-section`]: {
-        id: `${id}-section`, type: "section",
-        props: { paddingY: "xl", paddingX: "md", align: intent === "services" ? "left" : "center", background: copy.background, maxWidth: "lg" },
-        children: [`${id}-eyebrow`, `${id}-heading`, `${id}-text`, `${id}-cta`],
-        version: 1,
-      },
-      [`${id}-eyebrow`]: {
-        id: `${id}-eyebrow`, type: "text",
-        props: { content: `Generado por Orvenix AI · ${subject}`, size: "sm", align: intent === "services" ? "left" : "center", color: copy.textColor },
-        children: [], version: 1,
-      },
-      [`${id}-heading`]: {
-        id: `${id}-heading`, type: "heading",
-        props: { text: title, level: 2, size: "5xl", weight: "extrabold", align: intent === "services" ? "left" : "center", color: copy.titleColor },
-        children: [], version: 1,
-      },
-      [`${id}-text`]: {
-        id: `${id}-text`, type: "text",
-        props: { content: copy.subtitle, size: "lg", align: intent === "services" ? "left" : "center", color: copy.textColor, maxWidth: "md" },
-        children: [], version: 1,
-      },
-      [`${id}-cta`]: {
-        id: `${id}-cta`, type: "ctaButton",
-        props: { label: copy.cta, href: "#", variant: copy.buttonVariant },
-        children: [], version: 1,
-      },
-    },
-  };
 }
 
 function pickAvailableType(blocks: BlockContext[], preferredTypes: string[]): string | null {
@@ -177,6 +138,7 @@ function pickAvailableType(blocks: BlockContext[], preferredTypes: string[]): st
 function buildFewShotExamples(blocks: BlockContext[], prompt: string): string {
   const examples: string[] = [];
   const intent = detectIntent(prompt);
+  const artisanReferenceContext = buildArtisanSectionReferenceContext(prompt, intent);
 
   const completeExamples = [
     {
@@ -223,7 +185,7 @@ function buildFewShotExamples(blocks: BlockContext[], prompt: string): string {
     );
   }
 
-  return examples.join("\n\n");
+  return [artisanReferenceContext, examples.join("\n\n")].filter(Boolean).join("\n\n");
 }
 
 // ─── Orvenix AI (Claude) ──────────────────────────────────────────────────────
@@ -255,12 +217,19 @@ async function generateWithOrveniXAI(
     : "  (página vacía)";
   const allowedTypes = blocks.map((block) => block.type);
   const fewShotExamples = buildFewShotExamples(blocks, prompt);
+  const generationGuide = buildSiteGenerationGuideContext({
+    request: prompt,
+    mode: "section",
+  });
 
   const systemPrompt = `Eres Orvenix AI, el asistente de diseño web de Orvenix Builder.
 Tu tarea: generar secciones web como árboles de bloques JSON válidos.
 
 BLOQUES DISPONIBLES:
 ${buildBlockList(blocks)}
+
+GUIA DE CREACION ORVENIX:
+${generationGuide}
 
 REGLAS:
 1. Responde SOLO un objeto JSON valido con esta forma exacta:
@@ -272,6 +241,10 @@ REGLAS:
 6. No repitas tipos ya existentes en la página salvo que el usuario lo pida
 7. Mantén el árbol compacto y coherente: una raíz real, children válidos y sin nodos huérfanos
 8. Si dudas entre varios bloques, prioriza el que mejor represente la intención principal del pedido
+9. Usa las referencias artesanales como guía de estructura, ritmo visual, copy y paleta. No copies literalmente todo: adapta el contenido al pedido del usuario.
+10. Si el pedido menciona restaurante, clínica, abogados, contabilidad, inmobiliaria o tienda, genera una sección con intención de negocio real, no una sección SaaS genérica.
+11. Diseña con arquitectura de conversion: promesa, confianza, beneficio, evidencia visual, CTA y objeciones resueltas cuando aplique.
+12. Todo debe quedar editable desde props; evita contenido duro que el cliente no pueda modificar.
 
 EJEMPLOS:
 ${fewShotExamples}`;
@@ -333,7 +306,7 @@ export async function generateSectionAI(
           success: true,
           tree: aiTree,
           title: normalized,
-          message: "✦ Generado por Orvenix AI con los bloques de tu proyecto.",
+          message: "✦ Generado por Orvenix AI usando referencias artesanales de Orvenix.",
           usedAI: true,
         };
       }
@@ -351,7 +324,9 @@ export async function generateSectionAI(
           max_tokens: 300,
           messages: [{
             role: "user",
-            content: `Genera copy para una sección web tipo "${intent}" sobre: "${normalized}". Responde SOLO con JSON: {"title":"...","subtitle":"...","cta":"..."}`,
+            content: `${buildSiteGenerationGuideContext({ request: normalized, mode: "section" })}
+
+Genera copy para una sección web tipo "${intent}" sobre: "${normalized}". Responde SOLO con JSON: {"title":"...","subtitle":"...","cta":"..."}`,
           }],
         });
         const text = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : null;
@@ -360,7 +335,7 @@ export async function generateSectionAI(
           if (jsonMatch) {
             const copy = JSON.parse(jsonMatch[0]) as { title?: string; subtitle?: string; cta?: string };
             if (copy.title && copy.subtitle && copy.cta) {
-              const tree = buildFallbackTree(id, normalized, intent);
+              const tree = buildArtisanInspiredFallbackTree(id, normalized, intent);
               const headingNode = tree.nodes[`${id}-heading`];
               const textNode = tree.nodes[`${id}-text`];
               const ctaNode = tree.nodes[`${id}-cta`];
@@ -378,9 +353,9 @@ export async function generateSectionAI(
 
     return {
       success: true,
-      tree: buildFallbackTree(id, normalized, intent),
+      tree: buildArtisanInspiredFallbackTree(id, normalized, intent),
       title: normalized,
-      message: "Sección generada y lista para insertar.",
+      message: "Sección generada con referencias artesanales de Orvenix y lista para insertar.",
       usedAI: false,
     };
   };
@@ -654,4 +629,522 @@ export async function applyAuditFixesAI(
       } satisfies AuditFixResult;
     }
   );
+}
+
+export interface OrvenixAgentActionInput {
+  siteId: string;
+  pageSlug?: string;
+
+  message: string;
+  mode?: OrvenixAgentMode;
+
+  targetNodeId?: string;
+  targetSectionId?: string;
+
+  confirmed?: boolean;
+
+  expectedTreeHash?: string;
+}
+
+export type OrvenixAgentActionResult =
+    | {
+      success: true;
+      result: OrvenixAgentResponse;
+      previewId?: string;
+      previewHash?: string;
+      undo?: {
+        id: string;
+        siteId: string;
+        pageSlug: string;
+        expiresAt: string;
+      };
+      undoWarning?: string;
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
+export interface OrvenixSiteCreationActionInput {
+  message?: string;
+  mode?: OrvenixAgentMode;
+  confirmed?: boolean;
+  previewId?: string;
+  expectedPreviewHash?: string;
+  business?: {
+    name?: string;
+    industry?: string;
+    location?: string;
+    objective?: string;
+    description?: string;
+    preferredStyle?: string;
+    services?: Array<{ name: string; description?: string }>;
+  };
+}
+
+export type OrvenixSiteCreationActionResult =
+  | {
+      success: true;
+      result: OrvenixAgentResponse;
+      previewId?: string;
+      previewHash?: string;
+      nextRoute?: string;
+      siteId?: string;
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
+function normalizeSiteCreationBusiness(
+  input: OrvenixSiteCreationActionInput["business"] | undefined,
+  message: string,
+) {
+  const normalizedServices = Array.isArray(input?.services)
+    ? input.services
+        .map((service) => ({
+          name: String(service?.name ?? "").trim().slice(0, 90),
+          description: String(service?.description ?? "").trim().slice(0, 180),
+        }))
+        .filter((service) => service.name)
+        .slice(0, 8)
+    : undefined;
+
+  return {
+    name: input?.name?.trim().slice(0, 120) || "Sitio creado con Orvenix AI",
+    industry: input?.industry?.trim().slice(0, 90) || "negocio profesional",
+    location: input?.location?.trim().slice(0, 120),
+    objective: input?.objective?.trim().slice(0, 180) || "Generar prospectos y contactos",
+    description: input?.description?.trim().slice(0, 600) || message,
+    services: normalizedServices,
+  };
+}
+
+export async function runOrvenixSiteCreationAction(
+  input: OrvenixSiteCreationActionInput,
+): Promise<OrvenixSiteCreationActionResult> {
+  const mode = input.mode ?? "preview";
+  const message = input.message?.trim().replace(/\s+/g, " ").slice(0, 1000) ?? "";
+  const siteCreationRequest = `Crea un sitio desde cero. ${message}`.trim().slice(0, 1000);
+
+  if (mode !== "execute" && !message) {
+    return { success: false, message: "Describe el negocio para que Orvenix AI cree el sitio." };
+  }
+
+  const session = await getAuthSession();
+
+  if (!session?.user?.id) {
+    return { success: false, message: "Inicia sesión para crear sitios con Orvenix AI." };
+  }
+
+  if (mode !== "execute") {
+    try {
+      await requireAIPlan(session.user.id);
+      await requireCanCreateWebsite(session.user.id);
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Tu plan no permite crear otro sitio con Orvenix AI.",
+      };
+    }
+  }
+
+  const business = normalizeSiteCreationBusiness(input.business, message);
+
+  try {
+    if (mode === "execute") {
+      if (!input.confirmed) {
+        return { success: false, message: "Confirma la creación antes de guardar el sitio borrador." };
+      }
+
+      const previewId = input.previewId?.trim();
+      const expectedPreviewHash = input.expectedPreviewHash?.trim().toLowerCase();
+
+      if (!previewId || previewId.length > 80 || !expectedPreviewHash || !/^[a-f0-9]{64}$/.test(expectedPreviewHash)) {
+        return { success: false, message: "La previsualización ya no es válida. Genera un Preview nuevo." };
+      }
+
+      const preview = await getSiteCreationPreviewForExecute({
+        userId: session.user.id,
+        previewId,
+        expectedPreviewHash,
+      });
+
+      if (!preview) {
+        return { success: false, message: "El Preview expiró o ya fue aplicado. Genera uno nuevo antes de crear el sitio." };
+      }
+
+      if (preview.status === "consumed" && preview.output) {
+        const result: OrvenixAgentResponse = {
+          ok: true,
+          action: "executed",
+          scope: "site_creation",
+          message: "Sitio borrador recuperado. Puedes abrirlo en el editor para revisarlo antes de publicar.",
+          createdSite: {
+            siteId: preview.output.siteId,
+            nextRoute: preview.output.nextRoute,
+            verified: true,
+            rollbackApplied: false,
+          },
+          warnings: [],
+        };
+
+        return {
+          success: true,
+          result,
+          previewId,
+          previewHash: expectedPreviewHash,
+          siteId: preview.output.siteId,
+          nextRoute: preview.output.nextRoute,
+        };
+      }
+
+      try {
+        await requireAIPlan(session.user.id);
+      } catch (error) {
+        return {
+          success: false,
+          message: error instanceof Error ? error.message : "Actualiza tu plan para acceder a Orvenix AI.",
+        };
+      }
+
+      const result = await runOrvenixAgent(
+        {
+          siteId: preview.reservedSiteId,
+          message: preview.request,
+          mode: "execute",
+          confirmed: true,
+          business: preview.business,
+          siteCreationPlan: preview.plan,
+        },
+        {
+          createDraftSite: () =>
+            createDraftSiteFromPersistedPreview({
+              userId: session.user.id,
+              previewId,
+              expectedPreviewHash,
+            }),
+        },
+      );
+
+      if (!result.ok) {
+        return {
+          success: false,
+          message: result.message || getSiteCreationPreviewFailureMessage(result.warnings[0]),
+        };
+      }
+
+      if (result.createdSite?.verified) {
+        revalidatePath("/dashboard");
+      }
+
+      return {
+        success: true,
+        result,
+        previewId,
+        previewHash: expectedPreviewHash,
+        siteId: result.createdSite?.siteId,
+        nextRoute: result.createdSite?.nextRoute,
+      };
+    }
+
+    const result = await runOrvenixAgent({
+      siteId: "draft:site-creation:" + session.user.id,
+      message: siteCreationRequest,
+      mode: "preview",
+      business,
+    });
+
+    if (
+      !result.ok ||
+      result.scope !== "site_creation" ||
+      result.action !== "preview" ||
+      !result.plan?.after
+    ) {
+      return {
+        success: false,
+        message: "Orvenix AI no pudo generar un Preview de sitio completo. Intenta de nuevo con una descripcion mas clara.",
+      };
+    }
+
+    const previewHash = hashEditorTree(result.plan.after);
+
+    const preview = await rememberSiteCreationPreview({
+      userId: session.user.id,
+      previewHash,
+      request: siteCreationRequest,
+      business,
+      plan: result.plan,
+    });
+
+    return {
+      success: true,
+      result: {
+        ...result,
+        plan: preview.plan,
+        snapshot: preview.plan.snapshot,
+      },
+      previewId: preview.id,
+      previewHash: preview.previewHash,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: getSiteCreationPreviewFailureMessage(error),
+    };
+  }
+}
+
+
+export async function runOrvenixAgentAction(
+  input: OrvenixAgentActionInput,
+): Promise<OrvenixAgentActionResult> {
+  const siteId =
+    input.siteId?.trim();
+
+  const message =
+    input.message
+      ?.trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 1000);
+
+  const pageSlug =
+    input.pageSlug
+      ?.trim()
+      .slice(0, 120) ||
+    "home";
+
+  const expectedTreeHash =
+    input.expectedTreeHash
+      ?.trim()
+      .toLowerCase();
+
+  if (!siteId) {
+    return {
+      success: false,
+      message:
+        "Selecciona un sitio antes de usar Orvenix AI.",
+    };
+  }
+
+  if (!message) {
+    return {
+      success: false,
+      message:
+        "Escribe una instrucción para Orvenix AI.",
+    };
+  }
+
+  const session =
+    await getAuthSession();
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      message:
+        "Inicia sesión para usar Orvenix AI.",
+    };
+  }
+
+  try {
+    await requireAIPlan(
+      session.user.id,
+    );
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Actualiza tu plan para acceder a Orvenix AI.",
+    };
+  }
+
+  const role =
+    (
+      session.user.role ??
+      "CLIENT"
+    ) as UserRole;
+
+  const allowed =
+    await canManageSite(
+      siteId,
+      session.user.id,
+      role,
+    );
+
+  if (!allowed) {
+    return {
+      success: false,
+      message:
+        "No tienes permiso para modificar este sitio.",
+    };
+  }
+
+   try {
+    /*
+     * Protección contra Preview vencido.
+     */
+    if (input.mode === "execute") {
+      if (
+        !expectedTreeHash ||
+        !/^[a-f0-9]{64}$/.test(
+          expectedTreeHash,
+        )
+      ) {
+        return {
+          success: false,
+          message:
+            "La previsualización ya no es válida. Genera un Preview nuevo antes de aplicar.",
+        };
+      }
+
+      const currentTree =
+        await getEditorTreeFromDb(
+          siteId,
+          pageSlug,
+        );
+
+      const currentTreeHash =
+        hashEditorTree(
+          currentTree,
+        );
+
+      if (
+        currentTreeHash !==
+        expectedTreeHash
+      ) {
+        return {
+          success: false,
+          message:
+            "El sitio cambió después del Preview. Revisa una previsualización nueva antes de aplicar.",
+        };
+      }
+    }
+
+    const result =
+      await runOrvenixAgent(
+        {
+          siteId,
+          pageSlug,
+          message,
+
+          mode:
+            input.mode,
+
+          targetNodeId:
+            input.targetNodeId
+              ?.trim()
+              .slice(0, 200),
+
+          targetSectionId:
+            input.targetSectionId
+              ?.trim()
+              .slice(0, 200),
+
+          confirmed:
+            input.confirmed ===
+            true,
+        },
+
+        {
+          publishSite:
+            createSitePublicationCapability({
+              userId:
+                session.user.id,
+
+              role,
+            }),
+        },
+      );
+
+    const undoMetadata =
+      await registerAIUndoForExecutedResult({
+        result,
+        userId: session.user.id,
+        siteId,
+        pageSlug,
+        readCanonicalTree: getEditorTreeFromDb,
+      });
+
+    const undo = undoMetadata.undo;
+    const undoWarning = undoMetadata.undoWarning;
+
+    return {
+      success: true,
+      result,
+      undo,
+      undoWarning,
+
+      previewHash:
+        result.action === "preview" &&
+        result.plan?.before
+          ? hashEditorTree(
+              result.plan.before,
+            )
+          : undefined,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Orvenix AI no pudo procesar la operación.",
+    };
+  }
+}
+
+export async function rollbackOrvenixAIChangeAction(input: {
+  undoId?: string;
+}) {
+  const undoId = input.undoId?.trim() ?? "";
+
+  if (!undoId) {
+    return {
+      success: false,
+      message: "No encontré un cambio de IA para deshacer.",
+    };
+  }
+
+  const session = await getAuthSession();
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      message: "Inicia sesión para deshacer cambios de Orvenix AI.",
+    };
+  }
+
+  const role = (session.user.role ?? "CLIENT") as UserRole;
+
+  const result = await rollbackOrvenixAIChange({
+    undoId,
+    actor: {
+      userId: session.user.id,
+      role,
+    },
+    deps: {
+      canManageSite,
+    },
+  });
+
+  if (!result.ok || !result.tree) {
+    return {
+      success: false,
+      message: result.message,
+      code: result.code,
+    };
+  }
+
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: result.message,
+    undoId: result.undoId,
+    siteId: result.siteId,
+    pageSlug: result.pageSlug,
+    tree: result.tree,
+  };
 }

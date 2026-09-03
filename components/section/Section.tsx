@@ -15,6 +15,7 @@ export interface SectionProps {
   shadow?: "none" | "sm" | "md" | "lg" | "xl";
   borderRadius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
   as?: "section" | "div" | "header" | "footer" | "main" | "article";
+  htmlId?: string;
   /** CSS border shorthand — e.g. "1px solid rgba(0,181,246,0.14)" */
   border?: string;
   /** CSS box-shadow — e.g. "0 25px 60px rgba(0,0,0,0.5)" */
@@ -49,6 +50,7 @@ export function Section({
   shadow = "none",
   borderRadius = "none",
   as = "section",
+  htmlId,
   border,
   boxShadow,
   backdropFilter,
@@ -107,6 +109,7 @@ export function Section({
 
   return (
     <Tag
+      id={htmlId || undefined}
       className="w-full"
       style={outerSpacingStyle}
     >

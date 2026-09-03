@@ -263,6 +263,8 @@ export function getNodeStyle(node: EditorNode, theme: GlobalTheme) {
 export function getNodeAttributes(node: EditorNode, theme: GlobalTheme) {
   const attrs: string[] = []
   const style = getNodeStyle(node, theme)
+  const htmlId = readString(node.props.htmlId)
+  if (htmlId) attrs.push('id="' + escapeHtmlAttribute(htmlId.replace(/[^a-zA-Z0-9_-]/g, "")) + '"')
   if (style) attrs.push(`style="${escapeHtmlAttribute(style)}"`)
 
   if (node.type === "ctaButton") {

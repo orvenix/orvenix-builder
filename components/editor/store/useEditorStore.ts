@@ -157,6 +157,8 @@ export interface EditorState {
     pageContext?: { activePageSlug?: string; activePageName?: string; availablePages?: SitePageListItem[] }
   ) => void;
   setWebsiteId: (id: string) => void;
+    syncTreeFromServer:
+    (tree: EditorTree) => void;
   setActivePageContext: (pageContext: { activePageSlug: string; activePageName: string; availablePages?: SitePageListItem[] }) => void;
   setUserRole: (role: UserRole) => void;
   setBuilderTier: (tier: BuilderTier) => void;
@@ -540,6 +542,93 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   },
 
   setWebsiteId: (id: string) => set({ websiteId: id, assetLibrary: loadAssetLibrary(id) }),
+
+    syncTreeFromServer:
+    (incomingTree: EditorTree) => {
+      let safeTree:
+        EditorTree;
+
+      try {
+        safeTree =
+          validateTree(
+            structuredClone(
+              incomingTree,
+            ),
+          );
+      } catch {
+        safeTree =
+          structuredClone(
+            incomingTree,
+          );
+      }
+
+      set(
+        (
+          state:
+            EditorState,
+        ) => {
+          const syncedRev =
+            state.rev + 1;
+
+          return {
+            tree:
+              safeTree,
+
+            selectedId:
+              null,
+
+            selectedIds:
+              [],
+
+            editingNodeId:
+              null,
+
+            hoveredId:
+              null,
+
+            smartGuides:
+              [],
+
+            contextMenu: {
+              isOpen:
+                false,
+
+              nodeId:
+                null,
+
+              x:
+                0,
+
+              y:
+                0,
+            },
+
+            rev:
+              syncedRev,
+
+            lastSavedRev:
+              syncedRev,
+
+            saveStatus:
+              "saved" as const,
+
+            lastError:
+              null,
+
+            undoStack:
+              [],
+
+            redoStack:
+              [],
+
+            isApplyingHistory:
+              false,
+          };
+        },
+      );
+
+      get().saveToLocalStorage();
+    },
 
   setActivePageContext: ({ activePageSlug, activePageName, availablePages }) =>
     set({

@@ -6,13 +6,17 @@ import {
   unpublishSite,
   type UserRole,
 } from "@/lib/auth";
-import { listResolvedSiteRuntimePages } from "@/lib/builder-core/tree/siteRuntimeContext";
+
 import {
-  canPublishAsStaticHtml,
   removePublishedSiteArtifact,
-  writePublishedSiteArtifacts,
 } from "@/lib/publishedSiteArtifacts";
+
 import { serverError } from "@/lib/server-log";
+
+import {
+  publishSiteForActor,
+  SitePublicationError,
+} from "@/lib/site-publication";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -108,77 +112,54 @@ export async function POST(_request: Request, context: RouteContext) {
       return authorization.error;
     }
 
-    const runtimePages = await listResolvedSiteRuntimePages(id);
+        const publication =
+      await publishSiteForActor({
+        siteId: id,
 
-    if (runtimePages.length === 0) {
-      return jsonError(
-        "Sitio no encontrado",
-        404,
-        "SITE_NOT_FOUND",
-      );
-    }
+        actor: {
+          userId:
+            authorization.userId,
 
-    const publishablePages = runtimePages.map((page) => ({
-      slug: page.activePageSlug,
-      name: page.activePageName,
-      isHome: page.isHome,
-      tree: page.tree,
-    }));
-
-    const staticArtifactReady = publishablePages.every((page) =>
-      canPublishAsStaticHtml(page.tree),
-    );
-
-    /*
-     * Primero se genera o ajusta el artefacto.
-     * Solo después se marca el sitio como publicado.
-     */
-    if (staticArtifactReady) {
-      await writePublishedSiteArtifacts(
-        id,
-        publishablePages,
-        runtimePages[0]?.pages,
-      );
-    } else {
-      await removePublishedSiteArtifact(id);
-    }
-
-    const updatedCount = await updatePublishedStatus(
-      id,
-      authorization.userId,
-      authorization.role,
-      true,
-    );
-
-    if (updatedCount === 0) {
-      /*
-       * Evita dejar un artefacto publicado si el registro ya no existe
-       * o cambió de propietario durante la operación.
-       */
-      await removePublishedSiteArtifact(id);
-
-      return jsonError(
-        "Sitio no encontrado o acceso revocado",
-        404,
-        "SITE_NOT_FOUND",
-      );
-    }
+          role:
+            authorization.role,
+        },
+      });
 
     return NextResponse.json(
       {
         ok: true,
-        url: `/p/${id}`,
-        publicationMode: staticArtifactReady
-          ? "static-artifact"
-          : "dynamic-renderer",
+        ...publication,
       },
       {
         headers: {
-          "Cache-Control": "no-store",
+          "Cache-Control":
+            "no-store",
         },
       },
     );
   } catch (error) {
+        if (
+      error instanceof
+      SitePublicationError
+    ) {
+      const status =
+        error.code ===
+          "SITE_ID_REQUIRED"
+          ? 400
+          : error.code ===
+              "FORBIDDEN"
+            ? 403
+            : error.code ===
+                "SITE_NOT_FOUND"
+              ? 404
+              : 500;
+
+      return jsonError(
+        error.message,
+        status,
+        error.code,
+      );
+    }
     serverError(`Error publishing site ${id}`, error);
 
     return jsonError(

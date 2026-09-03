@@ -5,6 +5,7 @@ import { canCreateWebsite } from "@/lib/billing/plan-entitlements"
 import { getUserPlanAccess } from "@/lib/plan-guard"
 import { isAdvancedBuilderPlan } from "@/lib/pro-plan"
 import { seedProfessionalStarterPages } from "@/lib/professional-site-starter"
+import { HOME_PAGE_NAME, HOME_PAGE_SLUG } from "@/lib/builder-core/tree/sitePages"
 import type { Prisma } from "@/generated/editor-prisma";
 import type { EditorTree } from "@/types/editor";
 
@@ -145,8 +146,8 @@ export async function createSite(
   return site
 }
 
-function toPrismaJson(tree: EditorTree): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(tree)) as Prisma.InputJsonValue;
+function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
 export async function createSiteFromTree({
@@ -154,28 +155,69 @@ export async function createSiteFromTree({
   description,
   userId,
   tree,
+  id,
+  tx,
+  access,
+  createHomePage = false,
+  syncTheme = false,
+  seedProfessionalPages = true,
 }: {
   name: string;
   description: string;
   userId: string;
   tree: EditorTree;
+  id?: string;
+  tx?: Pick<Prisma.TransactionClient, "editorWebsite" | "sitePage" | "siteTheme">;
+  access?: Awaited<ReturnType<typeof requireCanCreateWebsite>>;
+  createHomePage?: boolean;
+  syncTheme?: boolean;
+  seedProfessionalPages?: boolean;
 }) {
 
-   const access = await requireCanCreateWebsite(userId)
+  const resolvedAccess = access ?? await requireCanCreateWebsite(userId)
 
-  const id = `site_${randomBytes(6).toString("hex")}`;
+  const siteId = id ?? `site_${randomBytes(6).toString("hex")}`;
+  const db = tx ?? editorPrisma
 
-  const site = await editorPrisma.editorWebsite.create({
+  const site = await db.editorWebsite.create({
     data: {
-      id,
+      id: siteId,
       name,
       description,
       tree: toPrismaJson(tree),
+      published: false,
       userId,
     },
   });
 
-  if (isAdvancedBuilderPlan(access.plan?.id) && !isArtisanEditableTree(tree)) {
+  if (createHomePage) {
+    await db.sitePage.create({
+      data: {
+        siteId: site.id,
+        name: HOME_PAGE_NAME,
+        slug: HOME_PAGE_SLUG,
+        tree: toPrismaJson(tree),
+        isHome: true,
+        published: false,
+      },
+    })
+  }
+
+  const theme = tree.theme ?? tree.globalTheme
+  if (syncTheme && theme) {
+    await db.siteTheme.upsert({
+      where: { siteId: site.id },
+      update: {
+        tokens: toPrismaJson(theme),
+      },
+      create: {
+        siteId: site.id,
+        tokens: toPrismaJson(theme),
+      },
+    })
+  }
+
+  if (!tx && seedProfessionalPages && isAdvancedBuilderPlan(resolvedAccess.plan?.id) && !isArtisanEditableTree(tree)) {
     await seedProfessionalStarterPages(site.id, tree)
   }
 

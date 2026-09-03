@@ -7,10 +7,10 @@ import {
   ChevronRight,
   Eye,
   FilePenLine,
+  Loader2,
   Globe2,
   History,
   MessageSquareText,
-  Menu,
   MoreHorizontal,
   Palette,
   Rocket,
@@ -22,7 +22,12 @@ import {
   Redo2,
 } from "lucide-react"
 
+import {
+  AiAssistantPanel,
+} from "@/components/editor/sidebar/AiAssistantPanel"
+
 import { useEditorStore } from "@/store/useEditorStore"
+import { useCheckoutRegistrationFlow } from "@/hooks/useCheckoutRegistrationFlow"
 import {
   closePendingPublishedSiteTab,
   navigatePublishedSiteTab,
@@ -31,7 +36,14 @@ import {
 import { ClientBrandPanel } from "./ClientBrandPanel"
 import { ClientContentPanel } from "./ClientContentPanel"
 
-type ClientPanel = "brand" | "menu" | "content" | "actions" | "pages" | "design" | "advanced"
+type ClientPanel =
+  | "brand"
+  | "content"
+  | "ai"
+  | "actions"
+  | "pages"
+  | "design"
+  | "advanced"
 
 export function ClientWorkspaceSidebar() {
   const builderTier = useEditorStore((state) => state.builderTier)
@@ -42,7 +54,7 @@ export function ClientWorkspaceSidebar() {
   useEffect(() => {
     function handlePanelRequest(event: Event) {
       const panel = (event as CustomEvent<{ panel?: ClientPanel }>).detail?.panel
-      if (panel !== "content" && panel !== "menu") return
+      if (panel !== "content") return
 
       setShowMore(false)
       setActivePanel(panel)
@@ -55,8 +67,8 @@ export function ClientWorkspaceSidebar() {
   const primaryTabs = useMemo(
     () => [
       { id: "brand" as const, label: "Marca", icon: Building2 },
-      { id: "menu" as const, label: "Menú", icon: Menu },
       { id: "content" as const, label: "Contenido", icon: FilePenLine },
+      { id: "ai" as const, label: "Orvenix", icon: Sparkles },
       { id: "actions" as const, label: "Acciones", icon: Rocket },
       ...(isPro
         ? [
@@ -109,151 +121,14 @@ export function ClientWorkspaceSidebar() {
 
       <div className="min-w-0 flex-1 overflow-hidden">
         {activePanel === "brand" && <ClientBrandPanel embedded mode={isPro ? "pro" : "basic"} />}
-        {activePanel === "menu" && <ClientMenuPanel isPro={isPro} />}
         {activePanel === "content" && <ClientContentPanel />}
+        {activePanel === "ai" && <AiAssistantPanel />}
         {activePanel === "actions" && <ClientActionsPanel isPro={isPro} />}
         {activePanel === "pages" && isPro && <ClientPagesPanel />}
         {activePanel === "design" && isPro && <ClientDesignPanel />}
         {activePanel === "advanced" && isPro && <ClientAdvancedPanel />}
       </div>
     </aside>
-  )
-}
-
-function ClientMenuPanel({ isPro }: { isPro: boolean }) {
-  const tree = useEditorStore((state) => state.tree)
-  const availablePages = useEditorStore((state) => state.availablePages)
-  const updateNodeProps = useEditorStore((state) => state.updateNodeProps)
-  const select = useEditorStore((state) => state.select)
-
-  const navEntry = useMemo(
-    () => Object.entries(tree.nodes).find(([, node]) => node.type === "siteNav") ?? null,
-    [tree.nodes],
-  )
-  const navId = navEntry?.[0] ?? null
-  const navProps = navEntry?.[1].props ?? {}
-  const labels = useMemo(
-    () => parseMenuLabels(String(navProps.labelOverrides ?? "")),
-    [navProps.labelOverrides],
-  )
-
-  function updateNav(patch: Record<string, unknown>) {
-    if (!navId) return
-    updateNodeProps(navId, patch)
-  }
-
-  function updateLabel(slug: string, value: string) {
-    const next = new Map(labels)
-    const originalName = availablePages.find((page) => page.slug === slug)?.name ?? ""
-    if (!value.trim() || value.trim() === originalName) next.delete(slug)
-    else next.set(slug, value.trim())
-    updateNav({ labelOverrides: serializeMenuLabels(next) })
-  }
-
-  if (!navId) {
-    return (
-      <PanelShell eyebrow="Menú" title="Menú del sitio" description="Este sitio todavía no tiene un bloque de navegación editable.">
-        <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.055] p-3 text-xs leading-5 text-amber-100">
-          Agrega una navegación al sitio para poder editar el menú desde aquí.
-        </div>
-      </PanelShell>
-    )
-  }
-
-  return (
-    <PanelShell eyebrow="Menú" title="Navegación del sitio" description="Edita lo que el cliente ve en el menú sin tocar configuraciones técnicas.">
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => select(navId)}
-          className="flex w-full items-center justify-between rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.075] px-3 py-3 text-left text-cyan-100 transition hover:bg-cyan-300/[0.11]"
-        >
-          <span>
-            <span className="block text-xs font-black">Seleccionar menú en lienzo</span>
-            <span className="mt-0.5 block text-[10px] text-cyan-100/60">Resalta el bloque para moverlo o revisar su marco.</span>
-          </span>
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </button>
-
-        <SidebarField label="Nombre visible">
-          <input
-            type="text"
-            value={String(navProps.title ?? "")}
-            placeholder="Nombre del negocio"
-            onChange={(event) => updateNav({ title: event.target.value })}
-            className={SIDEBAR_INPUT_CLASS}
-          />
-        </SidebarField>
-
-        <SidebarField label="Subtítulo">
-          <input
-            type="text"
-            value={String(navProps.subtitle ?? "")}
-            placeholder="Sitio profesional"
-            onChange={(event) => updateNav({ subtitle: event.target.value })}
-            className={SIDEBAR_INPUT_CLASS}
-          />
-        </SidebarField>
-
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3">
-          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-300">Enlaces visibles</p>
-          <div className="mt-3 space-y-3">
-            {availablePages.map((page) => (
-              <SidebarField key={page.slug} label={`/${page.slug === "home" ? "" : page.slug}`}>
-                <input
-                  type="text"
-                  value={labels.get(page.slug) ?? page.name}
-                  onChange={(event) => updateLabel(page.slug, event.target.value)}
-                  className={SIDEBAR_INPUT_CLASS}
-                />
-              </SidebarField>
-            ))}
-          </div>
-        </div>
-
-        <SidebarField label="Ocultar páginas">
-          <input
-            type="text"
-            value={String(navProps.hiddenSlugs ?? "")}
-            placeholder="blog, contacto-interno"
-            onChange={(event) => updateNav({ hiddenSlugs: event.target.value })}
-            className={SIDEBAR_INPUT_CLASS}
-          />
-        </SidebarField>
-
-        <label className="flex items-center justify-between rounded-2xl border border-white/[0.07] bg-white/[0.035] px-3 py-3 text-xs font-bold text-slate-200">
-          Mostrar botón
-          <input
-            type="checkbox"
-            checked={navProps.showCta !== false}
-            onChange={(event) => updateNav({ showCta: event.target.checked })}
-            className="h-4 w-4 accent-cyan-300"
-          />
-        </label>
-
-        <SidebarField label="Texto del botón">
-          <input
-            type="text"
-            value={String(navProps.ctaLabel ?? "Contactar")}
-            placeholder="Contactar"
-            onChange={(event) => updateNav({ ctaLabel: event.target.value })}
-            className={SIDEBAR_INPUT_CLASS}
-          />
-        </SidebarField>
-
-        {isPro && (
-          <SidebarField label="Enlace del botón">
-            <input
-              type="text"
-              value={String(navProps.ctaHref ?? "#contacto")}
-              placeholder="#contacto"
-              onChange={(event) => updateNav({ ctaHref: event.target.value })}
-              className={SIDEBAR_INPUT_CLASS}
-            />
-          </SidebarField>
-        )}
-      </div>
-    </PanelShell>
   )
 }
 
@@ -270,6 +145,9 @@ function ClientActionsPanel({ isPro }: { isPro: boolean }) {
   const canUndo = useEditorStore((state) => state.undoStack.length > 0)
   const canRedo = useEditorStore((state) => state.redoStack.length > 0)
   const publishWebsite = useEditorStore((state) => state.publishWebsite)
+  const markError = useEditorStore((state) => state.markError)
+  const { startCheckout, isCheckingSession } = useCheckoutRegistrationFlow()
+  const [draftPublishAction, setDraftPublishAction] = useState<"rent" | null>(null)
   const isDraft = !websiteId || websiteId.startsWith("draft:")
 
   async function handleSave() {
@@ -279,8 +157,17 @@ function ClientActionsPanel({ isPro }: { isPro: boolean }) {
 
   async function handlePublishAction() {
     if (isDraft) {
+      if (draftPublishAction || isCheckingSession) return
+
       saveToLocalStorage()
-      setPreviewMode(true)
+      setDraftPublishAction("rent")
+      try {
+        await startCheckout({ action: "rent" })
+      } catch (error) {
+        markError(error instanceof Error ? error.message : "No se pudo iniciar la publicación.")
+      } finally {
+        setDraftPublishAction(null)
+      }
       return
     }
 
@@ -309,13 +196,18 @@ function ClientActionsPanel({ isPro }: { isPro: boolean }) {
       <button
         type="button"
         onClick={handlePublishAction}
-        className="mt-3 flex w-full items-center justify-between rounded-2xl bg-cyan-400 px-4 py-3 text-left text-slate-950 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-300 active:scale-[0.99]"
+        disabled={draftPublishAction !== null || isCheckingSession}
+        className="mt-3 flex w-full items-center justify-between rounded-2xl bg-cyan-400 px-4 py-3 text-left text-slate-950 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-300 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
       >
         <span>
-          <span className="block text-sm font-black">{isDraft ? "Activar para publicar" : "Publicar sitio"}</span>
-          <span className="mt-0.5 block text-[11px] font-bold text-slate-800/70">{publishStatus === "published" ? "Publicado" : isDraft ? "Comprar o rentar antes de publicar" : "Guardar y publicar"}</span>
+          <span className="block text-sm font-black">{isDraft ? "Publicar sitio" : "Publicar sitio"}</span>
+          <span className="mt-0.5 block text-[11px] font-bold text-slate-800/70">{publishStatus === "published" ? "Publicado" : isDraft ? "Activar y publicar" : "Guardar y publicar"}</span>
         </span>
-        <Rocket className="h-5 w-5" aria-hidden="true" />
+        {draftPublishAction !== null || isCheckingSession ? (
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+        ) : (
+          <Rocket className="h-5 w-5" aria-hidden="true" />
+        )}
       </button>
 
       {!isPro && (
@@ -483,36 +375,4 @@ function saveLabel(status: string) {
   if (status === "dirty") return "Pendiente"
   if (status === "error") return "Revisar"
   return "Local y nube"
-}
-
-const SIDEBAR_INPUT_CLASS =
-  "w-full rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2.5 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400/35 focus:bg-white/[0.05]"
-
-function SidebarField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-[11px] font-semibold text-slate-400">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-function parseMenuLabels(value: string) {
-  return new Map(
-    String(value ?? "")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [slug, ...labelParts] = line.includes("=") ? line.split("=") : line.split(":")
-        return [slug.trim(), labelParts.join("=").trim()] as const
-      })
-      .filter(([slug, label]) => slug && label),
-  )
-}
-
-function serializeMenuLabels(labels: Map<string, string>) {
-  return Array.from(labels.entries())
-    .map(([slug, label]) => `${slug}=${label}`)
-    .join("\n")
 }

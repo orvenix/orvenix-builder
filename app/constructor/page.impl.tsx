@@ -101,7 +101,7 @@ function getInitialTree(source: string): EditorTree {
 }
 
 function createDraftId(source: string) {
-  if (source === "blank") return "draft:constructor:starter-landing-v2-simple";
+  if (source === "blank") return "draft:constructor:orvenix-reference-v12-pure-blue-buttons";
   return "draft:constructor:" + encodeURIComponent(source);
 }
 
@@ -136,7 +136,7 @@ export default async function ConstructorPage({ searchParams }: ConstructorPageP
     : null;
   const isAdvancedExperience = isAdvancedBuilderPlan(planAccess?.plan?.id);
   const websiteId = isAdvancedExperience && sourceFile === "blank"
-    ? "draft:constructor:starter-site-pro-v12-interactive-scalable"
+    ? "draft:constructor:starter-site-pro-v18-real-header"
     : baseWebsiteId;
   const proStarterPages = isAdvancedExperience && sourceFile === "blank"
     ? buildProfessionalStarterPages(initialTree)

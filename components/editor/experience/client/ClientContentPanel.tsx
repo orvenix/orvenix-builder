@@ -5,6 +5,7 @@ import {
   FileText,
   LayoutTemplate,
   MousePointerClick,
+  Trash2,
   Type,
 } from "lucide-react"
 
@@ -25,6 +26,7 @@ export function ClientContentPanel() {
   const select = useEditorStore((state) => state.select)
   const setEditingNode = useEditorStore((state) => state.setEditingNode)
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps)
+  const removeNode = useEditorStore((state) => state.removeNode)
 
   const root = tree.nodes[tree.rootId]
   const selectedNode = selectedId ? tree.nodes[selectedId] : null
@@ -39,6 +41,35 @@ export function ClientContentPanel() {
   const editableFields = selectedSection
     ? collectEditableFields(selectedSection.id, tree.nodes)
     : []
+  const canDeleteSelectedSection = Boolean(
+    selectedSection && selectedSection.id !== tree.rootId && !selectedSection.locked,
+  )
+
+  function deleteSelectedSection() {
+    if (!selectedSection || !canDeleteSelectedSection) return
+
+    const confirmed = window.confirm(
+      `Eliminar ${friendlyLabel(selectedSection.type, selectedSection.displayName ?? "esta sección", 0)} de esta página?`,
+    )
+
+    if (!confirmed) return
+
+    removeNode(selectedSection.id)
+    setEditingNode(null)
+  }
+
+  function deleteSectionFromList(node: EditorNode, index: number) {
+    if (node.id === tree.rootId || node.locked) return
+
+    const confirmed = window.confirm(
+      `Eliminar ${friendlyLabel(node.type, node.displayName ?? `Sección ${index + 1}`, index)} de esta página?`,
+    )
+
+    if (!confirmed) return
+
+    removeNode(node.id)
+    setEditingNode(null)
+  }
 
   return (
     <section className="flex h-full min-h-0 flex-col bg-[#091321] text-slate-200">
@@ -61,17 +92,29 @@ export function ClientContentPanel() {
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {selectedSection ? (
           <div className="space-y-3">
-            <button
-              type="button"
-              onClick={() => {
-                select(null)
-                setEditingNode(null)
-              }}
-              className="flex w-full items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2.5 text-left text-xs font-bold text-slate-300 transition hover:border-cyan-300/20 hover:bg-white/[0.055] hover:text-white"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-              Ver secciones
-            </button>
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <button
+                type="button"
+                onClick={() => {
+                  select(null)
+                  setEditingNode(null)
+                }}
+                className="flex w-full items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-left text-xs font-bold text-slate-300 shadow-sm shadow-black/10 transition hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.065] hover:text-white"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                Ver secciones
+              </button>
+
+              <button
+                type="button"
+                disabled={!canDeleteSelectedSection}
+                onClick={deleteSelectedSection}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-red-300/15 bg-red-400/[0.08] px-3 py-2.5 text-xs font-black text-red-100 shadow-sm shadow-black/10 transition hover:-translate-y-0.5 hover:border-red-300/30 hover:bg-red-400/[0.14] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                Eliminar
+              </button>
+            </div>
 
             {editableFields.length === 0 ? (
               <EmptyNotice
@@ -108,33 +151,51 @@ export function ClientContentPanel() {
                 `Sección ${index + 1}`
 
               return (
-                <button
+                <div
                   key={node.id}
-                  type="button"
-                  onClick={() => {
-                    select(node.id)
-                    setEditingNode(null)
-                  }}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-3 text-left transition hover:border-cyan-300/20 hover:bg-white/[0.045]"
+                  className="group flex w-full items-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-1.5 shadow-sm shadow-black/10 transition hover:-translate-y-0.5 hover:border-cyan-300/20 hover:bg-white/[0.05]"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/[0.05] text-cyan-300">
-                    <LayoutTemplate className="h-4 w-4" />
-                  </span>
-
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-bold text-slate-200">
-                      {friendlyLabel(node.type, label, index)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      select(node.id)
+                      setEditingNode(null)
+                    }}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cyan-300/[0.09] text-cyan-200 ring-1 ring-cyan-300/10">
+                      <LayoutTemplate className="h-4 w-4" />
                     </span>
 
-                    <span className="mt-0.5 block text-[10px] text-emerald-400">
-                      Abrir campos editables
-                    </span>
-                  </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-bold text-slate-200">
+                        {friendlyLabel(node.type, label, index)}
+                      </span>
 
-                  <span className="text-sm text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-cyan-300">
-                    ›
-                  </span>
-                </button>
+                      <span className="mt-0.5 block text-[10px] text-cyan-300/80">
+                        Abrir campos editables
+                      </span>
+                    </span>
+
+                    <span className="text-sm text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-cyan-300">
+                      ›
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    aria-label="Eliminar sección"
+                    title="Eliminar sección"
+                    disabled={node.locked}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      deleteSectionFromList(node, index)
+                    }}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-slate-500 opacity-0 transition hover:bg-red-400/[0.12] hover:text-red-200 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-20"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
               )
             })}
           </div>
@@ -158,7 +219,7 @@ function EditableContentField({
   const Icon = field.key === "label" ? MousePointerClick : Type
 
   return (
-    <label className="block rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3">
+    <label className="block rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 shadow-sm shadow-black/10 transition hover:border-cyan-300/15 hover:bg-white/[0.055]">
       <span className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
         <Icon className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
         {field.label}
@@ -187,7 +248,7 @@ function EditableContentField({
 
 function EmptyNotice({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4 text-center">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 text-center shadow-sm shadow-black/10">
       <FileText className="mx-auto h-5 w-5 text-slate-500" />
       <p className="mt-3 text-xs font-bold text-slate-300">{title}</p>
       <p className="mt-1 text-[11px] leading-5 text-slate-500">{detail}</p>

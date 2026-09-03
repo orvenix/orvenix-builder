@@ -128,7 +128,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         if (isClient) {
           window.dispatchEvent(
             new CustomEvent("orvenix:client-panel-request", {
-              detail: { panel: node?.type === "siteNav" ? "menu" : "content" },
+              detail: { panel: "content" },
             }),
           );
         }
@@ -150,7 +150,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
       onMouseLeave={() => hover(null)}
       className={cn(
         "outline-none group",
-        "transition-[box-shadow] duration-150",
+        "transition-[box-shadow,filter,transform] duration-200",
         isFreePosition ? (isEditing ? "absolute cursor-text editor-free-node" : isLocked || !capabilities.allowFreePosition ? "absolute cursor-default editor-free-node" : "absolute cursor-move editor-free-node editor-free-node-draggable") : "relative",
         isLocked ? "editor-node-locked" : "",
         isSelected
@@ -202,14 +202,44 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         </>
       )}
 
-      {/* ── Client editing hint ── */}
+      {/* ── Client quick actions ── */}
       {isClient && isSelected && !isRoot && (
         <div
-          className="absolute -top-8 left-0 z-50 flex items-center gap-2 rounded-full border border-cyan-400/25 bg-slate-950/90 px-3 py-1.5 text-[10px] font-bold text-cyan-100 shadow-xl shadow-black/35 backdrop-blur-xl editor-anim-fade-down"
+          className="absolute -top-11 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-cyan-300/20 bg-slate-950/90 p-1 text-[10px] font-black text-cyan-100 shadow-2xl shadow-black/35 backdrop-blur-xl editor-anim-fade-down"
           onClick={(e) => e.stopPropagation()}
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
-          Doble clic para editar
+          <button
+            type="button"
+            className="flex h-8 items-center gap-1.5 rounded-full px-3 transition hover:bg-cyan-300/10 hover:text-white"
+            onClick={() => !isLocked && setEditingNode(id)}
+            disabled={isLocked}
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            title="Duplicar bloque"
+            aria-label="Duplicar bloque"
+            className="grid h-8 w-8 place-items-center rounded-full text-cyan-100/75 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            onClick={() => !isLocked && duplicateNode(id)}
+            disabled={isLocked}
+          >
+            <Copy size={13} />
+          </button>
+          <button
+            type="button"
+            title="Eliminar bloque"
+            aria-label="Eliminar bloque"
+            className="grid h-8 w-8 place-items-center rounded-full text-red-200/80 transition hover:bg-red-400/15 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-30"
+            onClick={() => {
+              if (isLocked) return;
+              const confirmed = window.confirm("Eliminar este bloque de la página?");
+              if (confirmed) removeNode(id);
+            }}
+            disabled={isLocked}
+          >
+            <Trash2 size={13} />
+          </button>
         </div>
       )}
 

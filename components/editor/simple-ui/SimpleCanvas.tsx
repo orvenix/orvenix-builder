@@ -171,8 +171,8 @@ function handleDragEnd(event: DragEndEvent) {
 
   return (
     <>
-      <main className="min-w-0 flex-1 overflow-auto bg-[#0b1220] p-5 md:p-7">
-        <div className="mx-auto min-h-[900px] max-w-5xl overflow-hidden rounded-[22px] border border-slate-200/80 bg-[#f8fafc] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+      <main className="min-w-0 flex-1 overflow-auto bg-[radial-gradient(circle_at_top_left,rgba(27,179,250,0.16),transparent_34%),linear-gradient(135deg,#07111f_0%,#0b1728_48%,#0a1020_100%)] p-4 md:p-7">
+        <div className="mx-auto min-h-[900px] max-w-5xl overflow-hidden rounded-[32px] border border-white/70 bg-[#f8fafc] p-5 shadow-[0_28px_90px_rgba(2,8,23,0.34)] md:p-8">
           {sections.length === 0 ? (
             <section className="flex min-h-[720px] items-center justify-center">
               <div className="max-w-xl text-center">
@@ -192,7 +192,7 @@ function handleDragEnd(event: DragEndEvent) {
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
                   <button
                     type="button"
-                    className="rounded-2xl border border-slate-200 bg-white p-5 text-left transition hover:border-sky-400 hover:shadow-lg"
+                    className="rounded-[24px] border border-slate-200 bg-white p-5 text-left shadow-sm shadow-slate-900/5 transition hover:-translate-y-1 hover:border-sky-300 hover:shadow-xl hover:shadow-sky-950/10"
                     onClick={createBusinessPage}
                   >
                     <span className="font-bold text-slate-950">
@@ -207,7 +207,7 @@ function handleDragEnd(event: DragEndEvent) {
                   <button
                     type="button"
                     disabled
-                    className="cursor-not-allowed rounded-2xl border border-slate-200 bg-white p-5 text-left opacity-50"
+                    className="cursor-not-allowed rounded-[24px] border border-slate-200 bg-white p-5 text-left opacity-50 shadow-sm shadow-slate-900/5"
                   >
                     <span className="font-bold text-slate-950">
                       Tienda en línea
@@ -291,7 +291,7 @@ function handleDragEnd(event: DragEndEvent) {
 
               <button
                 type="button"
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white px-5 py-6 text-sm font-bold text-slate-500 transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-[26px] border-2 border-dashed border-slate-300 bg-white/85 px-5 py-6 text-sm font-bold text-slate-500 shadow-sm shadow-slate-900/5 transition hover:-translate-y-0.5 hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700 hover:shadow-lg hover:shadow-sky-950/10"
                 onClick={() => setLibraryOpen(true)}
               >
                 <Plus className="h-4 w-4" />
