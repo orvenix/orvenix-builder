@@ -15,20 +15,20 @@ import { serverWarn } from '@/lib/server-log';
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: 'Planes y Precios 2026 — Orvenix SaaS desde 15 USD/mes',
-  description: 'Planes oficiales Orvenix 2026 en USD + IVA: Starter, Pro, Business y Enterprise. Hosting administrado, editor visual, IA, CRM, eCommerce y soporte segun plan.',
+  title: 'Precios Orvenix — Activa tu sitio desde 15 USD/mes',
+  description: 'Elige tu plan Orvenix y publica tu sitio con hosting, editor visual, soporte y pagos seguros en minutos.',
   openGraph: {
     url: 'https://orvenix.com.mx/precios/',
-    title: 'Planes y Precios — Orvenix SaaS',
-    description: 'Planes oficiales 2026 en USD + IVA. Editor visual, hosting administrado, IA, CRM, eCommerce y soporte segun plan.',
+    title: 'Precios Orvenix — Activa tu sitio',
+    description: 'Planes claros para publicar, vender y administrar tu sitio con Orvenix.',
     images: ['/img/logo-main.png'],
   },
 };
 
 const guaranteeItems = [
-  { icon: '🔒', title: 'Infraestructura gestionada', desc: 'Hosting premium, SSL/TLS, monitoreo Core Web Vitals y soporte tecnico de continuidad operativa.' },
-  { icon: '📦', title: 'Datos exportables', desc: 'En planes Pro, Business y Enterprise puedes exportar codigo y datos en formatos estandar.' },
-  { icon: '⚡', title: 'Marco legal claro', desc: 'Condiciones 2026 documentadas: facturacion, renovaciones, SLA, backups, reembolsos y compra definitiva.' },
+  { icon: '🔒', title: 'Sitio listo para publicar', desc: 'Hosting, SSL, velocidad y soporte incluidos desde el primer dia.' },
+  { icon: '📦', title: 'Control de tu negocio', desc: 'Administra contenido, contactos, ventas e imagenes desde tu panel.' },
+  { icon: '⚡', title: 'Sin complicarte', desc: 'Paga, entra al constructor, edita lo basico y publica cuando estes listo.' },
 ];
 
 const comparisonRows = officialPlanComparison2026.map(([feature, , pro, business, enterprise]) => ({
@@ -203,21 +203,21 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-5">
               <span className="mk-eyebrow-dot" aria-hidden="true" />
-              <span className="text-sm font-medium text-orvenix-secondary">Planes oficiales 2026</span>
+              <span className="text-sm font-medium text-orvenix-secondary">Elige tu plan</span>
             </div>
             <h1 className="mk-hero-title mb-5 text-orvenix-text">
-              Planes Orvenix,<br />marco 2026
+              Publica tu sitio con<br />Orvenix
             </h1>
             <p className="text-base leading-relaxed mb-6 text-orvenix-secondary">
-              Elige Starter, Pro, Business o Enterprise con precios oficiales en USD + IVA, infraestructura gestionada, SLA, backups y reglas comerciales claras.
+              Escoge el plan que necesitas, paga con Stripe y entra al constructor para editar y publicar sin tocar codigo.
             </p>
             <div className="flex flex-wrap gap-3">
               <span className="mk-urgency-pill">
                 <span className="mk-live-dot" aria-hidden="true" />
-                <strong>2026</strong> dossier oficial publicado
+                <strong>30 dias</strong> para probar tu plan
               </span>
               <span className="mk-urgency-pill mk-urgency-pill-red">
-                SLA, contrato y facturacion documentados
+                Pago seguro, hosting y soporte incluidos
               </span>
             </div>
           </div>
@@ -254,9 +254,9 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
       <section className="mk-section bg-orvenix-bg">
         <div className="mk-container">
           <SectionHeader
-            tag="¿Por qué Orvenix?"
-            title="Comparativa oficial de planes"
-            description="Starter, Pro, Business y Enterprise comparados con los criterios del dossier corporativo 2026."
+            tag="Elige con confianza"
+            title="Qué plan te conviene"
+            description="Starter para empezar, Pro para negocios que quieren crecer y Business para vender con automatizaciones."
             center
           />
           <div className="mt-10 overflow-x-auto">
@@ -282,7 +282,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
             </table>
           </div>
           <div className="text-center mt-8">
-            <Link href="#planes" className="mk-btn-primary">Ver planes de Orvenix →</Link>
+            <Link href="#planes" className="mk-btn-primary">Elegir mi plan →</Link>
           </div>
         </div>
       </section>

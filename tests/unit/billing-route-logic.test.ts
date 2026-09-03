@@ -77,7 +77,10 @@ test("buildBillingSubscribeResponse prefers Stripe when configured and a price i
     planId: "pro",
     interval: "year",
     status: "pending",
+    stripeSubscriptionId: null,
+    stripeCustomerId: null,
     mpSubscriptionId: null,
+    canceledAt: null,
   })
 })
 

@@ -61,10 +61,10 @@ export function CheckoutConfirmButton({ action, siteId, templateId, priceMxn }: 
         type="button"
         onClick={handleConfirm}
         disabled={loading}
-        className="relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl text-sm font-bold text-white shadow-xl transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+        className="relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl text-sm font-extrabold text-white shadow-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_48px_-24px_rgba(27,179,250,0.9)] disabled:cursor-not-allowed disabled:opacity-60"
         style={{
-          background: "linear-gradient(135deg, #009ee3 0%, #0070f3 100%)",
-          boxShadow: "0 18px 48px rgba(0,158,227,0.25)",
+          background: "linear-gradient(135deg, #1BB3FA 0%, #1794CC 52%, #075985 100%)",
+          boxShadow: "0 18px 44px rgba(7,89,133,0.28)",
         }}
       >
         {loading
@@ -74,14 +74,14 @@ export function CheckoutConfirmButton({ action, siteId, templateId, priceMxn }: 
       </button>
 
       {priceMxn && (
-        <p className="text-center text-[11px] text-white/25 flex items-center justify-center gap-1.5">
-          <ShieldCheck size={11} className="text-white/30" />
+        <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-[#7aa6ba]">
+          <ShieldCheck size={11} className="text-[#1794CC]" />
           Pago procesado de forma segura por Mercado Pago
         </p>
       )}
 
       {error && (
-        <div className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}

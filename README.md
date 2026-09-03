@@ -31,6 +31,7 @@ Variables Stripe:
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
 STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_BILLING_PORTAL_CONFIGURATION_ID="bpc_..." # opcional si no usas el portal default de Stripe
 
 STRIPE_PRICE_STARTER_MONTH="price_..."
 STRIPE_PRICE_STARTER_YEAR="price_..."
@@ -95,7 +96,7 @@ La configuración de pasarelas se puede revisar sin exponer secretos en `/admin/
 
 - El frontend público compila y responde en producción.
 - Los flujos de auth, dashboard y editor requieren una base de datos real.
-- El checkout de suscripciones usa Stripe si están configurados `STRIPE_SECRET_KEY` y los `STRIPE_PRICE_*`; si no, intenta MercadoPago.
+- El checkout de suscripciones usa Stripe si están configurados `STRIPE_SECRET_KEY` y los `STRIPE_PRICE_*`; si no, intenta MercadoPago. Para abrir el portal de facturación, activa Customer Portal en Stripe o define `STRIPE_BILLING_PORTAL_CONFIGURATION_ID`.
 - Los webhooks de Stripe/MercadoPago quedan auditados en `/admin/webhooks`.
 - El chat de IA requiere `ANTHROPIC_API_KEY`.
 

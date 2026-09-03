@@ -18,6 +18,7 @@ interface DashboardBillingPanelProps {
   entitlements: PlanEntitlements | null;
   subscription: {
     status: string;
+    planId?: string | null;
     interval: string;
     currentPeriodEnd: string | null;
     canceledAt?: string | null;
@@ -121,6 +122,7 @@ export function DashboardBillingPanel({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [billingErrorCode, setBillingErrorCode] = useState<string | null>(null);
 
   async function cancelSubscription() {
     if (!window.confirm("¿Cancelar tu suscripción? Tu acceso puede cambiar según el estado del ciclo actual.")) {
@@ -129,6 +131,7 @@ export function DashboardBillingPanel({
 
     setLoading(true);
     setError(null);
+    setBillingErrorCode(null);
 
     try {
       const res = await fetch("/api/billing/cancel", { method: "POST" });
@@ -153,6 +156,7 @@ export function DashboardBillingPanel({
 
     setLoading(true);
     setError(null);
+    setBillingErrorCode(null);
 
     try {
       const res = await fetch("/api/billing/reactivate", { method: "POST" });
@@ -173,12 +177,14 @@ export function DashboardBillingPanel({
   async function openBillingPortal() {
     setLoading(true);
     setError(null);
+    setBillingErrorCode(null);
 
     try {
       const res = await fetch("/api/billing/portal", { method: "POST" });
-      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; code?: string };
 
       if (!res.ok || !data.url) {
+        setBillingErrorCode(data.code ?? null);
         throw new Error(data.error ?? "No se pudo abrir el portal de facturación.");
       }
 
@@ -354,9 +360,17 @@ export function DashboardBillingPanel({
       </div>
 
       {error && (
-        <p className="mt-4 rounded-2xl border border-red-300/15 bg-red-300/[0.08] px-4 py-3 text-xs font-semibold text-red-100">
-          {error}
-        </p>
+        <div className="mt-4 rounded-2xl border border-red-300/15 bg-red-300/[0.08] px-4 py-3 text-xs font-semibold text-red-100">
+          <p>{error}</p>
+          {billingErrorCode === "STRIPE_MODE_MISMATCH" && (
+            <Link
+              href={`/precios?checkout=${encodeURIComponent(subscription.planId ?? plan.id)}&interval=${subscription.interval === "year" ? "year" : "month"}&billingRepair=1`}
+              className="mt-3 inline-flex h-9 items-center rounded-xl bg-red-100 px-3 text-xs font-black text-red-900 transition hover:bg-white"
+            >
+              Activar plan en producción
+            </Link>
+          )}
+        </div>
       )}
     </section>
   );

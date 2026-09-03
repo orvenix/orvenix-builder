@@ -47,6 +47,15 @@ export function isStripeConfigured() {
   return Boolean(process.env.STRIPE_SECRET_KEY)
 }
 
+export function getStripeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : ""
+}
+
+export function isStripeModeMismatchError(error: unknown) {
+  const message = getStripeErrorMessage(error).toLowerCase()
+  return message.includes("exists in test mode") || message.includes("live mode key was used")
+}
+
 export function getStripeWebhookSecret() {
   return process.env.STRIPE_WEBHOOK_SECRET ?? ""
 }
@@ -135,6 +144,12 @@ async function stripeRequest<T>(path: string, init: RequestInit = {}): Promise<T
   }
 
   return payload as T
+}
+
+export async function retrieveStripeCustomer(customerId: string) {
+  return stripeRequest<{ id: string; deleted?: boolean }>(
+    `/customers/${encodeURIComponent(customerId)}`
+  )
 }
 
 export async function retrieveStripeSubscription(subscriptionId: string) {
@@ -233,6 +248,10 @@ export async function createStripeBillingPortalSession(params: {
     customer: params.customerId,
     return_url: `${appUrl}${params.returnPath ?? "/dashboard"}`,
   })
+
+  if (process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID) {
+    body.set("configuration", process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID)
+  }
 
   const session = await stripeRequest<{ id: string; url: string }>("/billing_portal/sessions", {
     method: "POST",

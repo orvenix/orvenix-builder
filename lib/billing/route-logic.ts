@@ -43,6 +43,7 @@ type PlanRecord = {
 type SubscribeRequestBody = {
   planId?: string
   interval?: string
+  repairActiveSubscription?: boolean
 }
 
 const ACTIVE_STATUSES = new Set(["active", "authorized"])
@@ -141,6 +142,7 @@ export async function buildBillingSubscribeResponse(params: {
     interval: "month" | "year"
     priceId: string
   }) => Promise<{ checkoutUrl: string; sessionId: string }>
+  canReplaceActiveSubscription?: (subscription: SubscriptionRecord) => Promise<boolean>
   upsertSubscription: (params: {
     where: { userId: string }
     update: Record<string, unknown>
@@ -191,13 +193,19 @@ export async function buildBillingSubscribeResponse(params: {
   }
 
   if (existingSubscription && ACTIVE_STATUSES.has(existingSubscription.status)) {
-    return jsonError(
-      existingSubscription.planId === planId
-        ? "Ya tienes este plan activo"
-        : "Ya tienes una suscripción activa. Cámbiala desde el dashboard.",
-      409,
-      "ACTIVE_SUBSCRIPTION_EXISTS"
-    )
+    const canReplaceActive = params.body.repairActiveSubscription === true && params.canReplaceActiveSubscription
+      ? await params.canReplaceActiveSubscription(existingSubscription)
+      : false
+
+    if (!canReplaceActive) {
+      return jsonError(
+        existingSubscription.planId === planId
+          ? "Ya tienes este plan activo"
+          : "Ya tienes una suscripción activa. Cámbiala desde el dashboard.",
+        409,
+        "ACTIVE_SUBSCRIPTION_EXISTS"
+      )
+    }
   }
 
   if (hasScheduledCancellationAccess(existingSubscription)) {
@@ -249,7 +257,10 @@ export async function buildBillingSubscribeResponse(params: {
         planId,
         interval,
         status: "pending",
+        stripeSubscriptionId: null,
+        stripeCustomerId: null,
         mpSubscriptionId: null,
+        canceledAt: null,
       },
       create: {
         userId,
