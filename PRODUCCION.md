@@ -5,7 +5,7 @@
 - **OS**: Ubuntu 22.04 LTS (recomendado)
 - **RAM**: 2 GB mínimo (4 GB recomendado)
 - **Node.js**: v20 LTS o superior
-- **PM2**: `npm install -g pm2`
+- **systemd**: incluido con Ubuntu y usado para supervisar Orvenix
 - **Nginx**: `apt install nginx`
 - **Certbot**: para SSL gratuito con Let's Encrypt
 
@@ -21,8 +21,8 @@ sudo apt update && sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# Instalar PM2 globalmente
-sudo npm install -g pm2
+# Verificar systemd
+systemctl --version
 
 # Instalar Nginx
 sudo apt install -y nginx
@@ -130,36 +130,36 @@ mkdir -p /var/www/orvenix/sistema
 
 # El proceso Node necesita escribir en estos dirs
 chown -R www-data:www-data /var/www/orvenix/data /var/www/orvenix/sistema
-# O si PM2 corre con tu usuario:
+# O si systemd corre con tu usuario:
 chown -R $USER:$USER /var/www/orvenix/data /var/www/orvenix/sistema
 ```
 
 ---
 
-## Paso 6 — Iniciar con PM2
+## Paso 6 — Iniciar con systemd
 
 ```bash
 cd /var/www/orvenix
 
 # Iniciar la app
-pm2 start ecosystem.config.cjs
+sudo systemctl start orvenix-builder.service
 
 # Ver logs en tiempo real
-pm2 logs orvenix
+journalctl -u orvenix-builder.service -f
 
 # Guardar configuración para reiniciar con el servidor
-pm2 save
-pm2 startup  # Sigue las instrucciones que imprime
+sudo systemctl enable orvenix-builder.service
+sudo systemctl daemon-reload
 ```
 
-### Comandos PM2 útiles:
+### Comandos systemd útiles:
 
 ```bash
-pm2 status          # Estado de todos los procesos
-pm2 restart orvenix # Reiniciar sin downtime
-pm2 reload orvenix  # Reload con zero downtime (recomendado)
-pm2 logs orvenix    # Ver logs en vivo
-pm2 monit           # Monitor visual
+systemctl status orvenix-builder.service
+sudo systemctl restart orvenix-builder.service
+sudo systemctl restart orvenix-builder.service
+journalctl -u orvenix-builder.service -f    # Ver logs en vivo
+systemctl status orvenix-builder.service
 ```
 
 ---
@@ -351,16 +351,16 @@ npx prisma generate --schema=prisma/editor.prisma
 npm run build
 
 # 5. Reiniciar sin downtime
-pm2 reload orvenix
+sudo systemctl restart orvenix-builder.service
 ```
 
 ---
 
 ## Solución de problemas comunes
 
-### La app no arranca (PM2)
+### La app no arranca (systemd)
 ```bash
-pm2 logs orvenix --lines 50
+journalctl -u orvenix-builder.service -f --lines 50
 # Buscar el error específico en los logs
 ```
 
@@ -372,10 +372,10 @@ chmod -R 755 /var/www/orvenix/sistema
 
 ### Nginx 502 Bad Gateway
 ```bash
-# Verificar que PM2 esté corriendo
-pm2 status
+# Verificar que systemd esté corriendo
+systemctl status orvenix-builder.service
 # Si está detenido:
-pm2 restart orvenix
+sudo systemctl restart orvenix-builder.service
 ```
 
 ### Prisma no conecta a MariaDB
@@ -394,7 +394,7 @@ mysql -u orvenix_user -p -h localhost orvenix_saas
 ## Checklist final antes de abrir al público
 
 - [ ] Build exitoso (`npm run build` sin errores)
-- [ ] PM2 corriendo (`pm2 status` → online)
+- [ ] systemd corriendo (`systemctl status orvenix-builder.service` → online)
 - [ ] HTTPS activo (candado en el navegador)
 - [ ] Variables de entorno configuradas
 - [ ] Email de bienvenida llegando al registrarse

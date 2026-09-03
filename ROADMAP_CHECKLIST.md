@@ -149,7 +149,7 @@
 - Prisma valido y migraciones al dia contra la DB actual.
 - `/constructor` responde `200 OK`; `/api/health` responde `operational`.
 - `System Certification Engine` ya existe en `lib/system-certification` con engine, tipos, script de prueba y certificadores para DB, Stripe, MercadoPago, auth, storage y builder.
-- Pendientes reales para anuncio publico: release limpio, proceso persistente PM2/systemd, auditoria de dependencias tras instalacion limpia y checklist operativo de monitoreo/backups.
+- Pendientes reales para anuncio publico: release limpio, proceso persistente systemd, auditoria de dependencias tras instalacion limpia y checklist operativo de monitoreo/backups.
 
 ---
 
@@ -181,7 +181,7 @@
 ### Amarillo — Pendiente real antes del anuncio amplio
 
 - Dejar un commit/tag de release limpio con el roadmap actualizado.
-- Registrar la app en un proceso persistente supervisado, idealmente PM2 o systemd.
+- Registrar la app en un proceso persistente supervisado por systemd.
 - Rehacer `npm ci` en instalacion limpia y cerrar `npm audit --omit=dev` cuando el arbol de paquetes quede normalizado.
 - Confirmar checklist operativo de monitoreo, backups, restauracion y alertas.
 - Mantener QA visual en pantallas secundarias y sitios pesados.
@@ -701,7 +701,7 @@
 
 ## L3. Deploy
 
-- [x] `ecosystem.config.cjs`
+- [x] Producción supervisada por systemd con `orvenix-builder.service`
 - [x] Script `build`
 - [x] Scripts `prisma:generate`, `prisma:migrate:deploy` y `prisma:deploy-schema`
 - [x] `PRODUCCION.md` actualizado para servidor Node
@@ -765,7 +765,7 @@
    - Revisar diff final, commitear el estado aprobado y etiquetar una version de anuncio.
 
 2. **Asegurar proceso persistente**
-   - Registrar la app en PM2 o systemd para evitar depender de un `npm start` manual.
+   - Registrar la app en systemd para evitar depender de un `npm start` manual.
 
 3. **Normalizar dependencias y auditoria**
    - Rehacer instalacion limpia con `npm ci` y cerrar `npm audit --omit=dev` cuando el arbol deje de reportar paquetes extraneous.
