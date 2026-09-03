@@ -27,6 +27,7 @@ function getDefaultWelcomeMessage() {
 
 const SUGGESTIONS = [
   "Que plan me conviene?",
+  "Crea un sitio de restaurante",
   "Como funciona el Super Builder?",
   "Que incluye Pro y Business?",
 ];
@@ -80,6 +81,46 @@ function parseSseText(raw: string) {
   });
 
   return output.trim();
+}
+
+
+type CreateSiteResponse = {
+  ok?: boolean;
+  templateName?: string;
+  nextRoute?: string;
+  error?: string;
+  code?: string;
+  loginUrl?: string;
+  upgradeUrl?: string;
+};
+
+function shouldGenerateSite(text: string) {
+  const normalized = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const hasCreateIntent = /(crea|crear|genera|generar|haz|hacer|arma|armar|construye|construir)/.test(normalized);
+  const hasSiteIntent = /(sitio|web|pagina|landing|template|plantilla)/.test(normalized);
+  const hasIndustry = /(restaurante|tienda|ecommerce|clinica|salud|inmobiliaria|gimnasio|fitness|abogado|legal|contador|contabilidad|hotel|barberia|viajes|arquitectura|servicios)/.test(normalized);
+
+  return hasCreateIntent && (hasSiteIntent || hasIndustry);
+}
+
+async function requestTemplateSite(prompt: string): Promise<CreateSiteResponse> {
+  const response = await fetch("/api/chat/create-site", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
+
+  const data = await response.json().catch(() => ({
+    error: "No pude leer la respuesta del generador de sitios.",
+    code: "INVALID_RESPONSE",
+  })) as CreateSiteResponse;
+
+  if (!response.ok) return data;
+  return data;
 }
 
 async function readAssistantResponse(response: Response, onText: (text: string) => void) {
@@ -219,6 +260,41 @@ export function Chatbot() {
     messagesRef.current = nextMessages;
 
     try {
+      if (shouldGenerateSite(text)) {
+        const data = await requestTemplateSite(text);
+
+        if (data.ok && data.nextRoute) {
+          setIsSending(false);
+          await typeAssistantMessage(
+            `Listo. Creé una copia editable basada en ${data.templateName ?? "un template profesional"}. Te llevo al editor para que cambies textos, imágenes, colores y secciones.`
+          );
+          window.setTimeout(() => {
+            window.location.href = data.nextRoute!;
+          }, 650);
+          return;
+        }
+
+        if (data.code === "UNAUTHENTICATED") {
+          setIsSending(false);
+          await typeAssistantMessage(
+            `Para crear el sitio necesito que inicies sesión. Después puedo abrir el editor con una plantilla editable. Entra aquí: ${data.loginUrl ?? "/login"}`
+          );
+          return;
+        }
+
+        if (data.code === "PLAN_LIMIT_REACHED") {
+          setIsSending(false);
+          await typeAssistantMessage(
+            `Tu plan ya llegó al límite de sitios. Puedes subir de plan para generar más sitios desde templates. Revisa: ${data.upgradeUrl ?? "/precios"}`
+          );
+          return;
+        }
+
+        setIsSending(false);
+        await typeAssistantMessage(data.error ?? "No encontré un template claro. Prueba con restaurante, tienda, clínica, inmobiliaria, gimnasio, abogados o contabilidad.");
+        return;
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

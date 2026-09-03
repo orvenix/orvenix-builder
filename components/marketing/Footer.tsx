@@ -96,7 +96,7 @@ export function Footer() {
               ))}
             </ul>
             <p className="footer-address">
-              <a href="mailto:hola@orvenix.com.mx">hola@orvenix.com.mx</a>
+              <a href="mailto:contacto@orvenix.com.mx">contacto@orvenix.com.mx</a>
               <br />
               Monterrey, México
             </p>

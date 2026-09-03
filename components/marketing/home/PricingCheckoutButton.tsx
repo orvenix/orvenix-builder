@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 interface Props {
   planId: string
@@ -10,13 +10,16 @@ interface Props {
   label: string
   featured?: boolean
   unavailable?: boolean
+  repairActiveSubscription?: boolean
 }
 
-export function PricingCheckoutButton({ planId, interval, label, featured, unavailable }: Props) {
+export function PricingCheckoutButton({ planId, interval, label, featured, unavailable, repairActiveSubscription }: Props) {
+  const searchParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isBillingRepair = repairActiveSubscription || searchParams?.get('billingRepair') === '1'
 
   async function handleClick() {
     setError(null)
@@ -28,7 +31,7 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
 
     // Si no hay sesión → registrar con el plan preseleccionado y volver al checkout
     if (!session) {
-      const checkoutReturn = `/precios?checkout=${encodeURIComponent(planId)}&interval=${interval}`
+      const checkoutReturn = "/precios?checkout=" + encodeURIComponent(planId) + "&interval=" + interval + (isBillingRepair ? "&billingRepair=1" : "")
       router.push(`/register?plan=${encodeURIComponent(planId)}&interval=${interval}&callbackUrl=${encodeURIComponent(checkoutReturn)}`)
       return
     }
@@ -38,7 +41,7 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
       const res = await fetch('/api/billing/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, interval }),
+        body: JSON.stringify({ planId, interval, repairActiveSubscription: isBillingRepair }),
       })
       const contentType = res.headers.get('content-type') ?? ''
       const data = contentType.includes('application/json')

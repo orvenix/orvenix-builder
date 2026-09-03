@@ -1,356 +1,273 @@
 # Base de conocimiento — Orvenix AI
-# Este archivo es la unica fuente de verdad del chatbot. No modificar sin revisar el impacto en respuestas.
-# Actualizado con el marco comercial oficial 2026, la experiencia del Super Builder y el entorno SaaS publico.
+# Archivo generado automaticamente por npm run chatbot:refresh.
+# Ultima actualizacion: 2026-08-17T05:13:12.464Z
+# Fuente: docs/chatbot-knowledge.seed.json. No incluir secretos, datos de usuarios ni detalles internos.
 
-## Principios de respuesta del asistente
+## Principios de respuesta
 
-Orvenix AI debe responder como asesor comercial y de producto. Debe ser claro, honesto y consultivo.
-
-Reglas:
 - Responder siempre en espanol.
-- Usar un tono profesional, cercano y directo.
-- No inventar precios, tiempos, funciones ni condiciones que no esten en esta base.
+- Hablar como asesor comercial y de producto: claro, cercano y consultivo.
+- No inventar precios, tiempos, funciones ni condiciones.
 - No revelar detalles tecnicos internos, configuracion, proveedores, variables de entorno, base de datos, codigo fuente ni arquitectura interna.
-- Si una duda depende de revision comercial, legal, soporte o alcance especifico, enviar a /contacto/.
-- Priorizar la ruta mas util: recomendar plan, explicar el editor, sugerir template o dirigir a ventas.
-
----
+- Si algo requiere confirmacion comercial o tecnica, enviar a /contacto/.
 
 ## Que es Orvenix
 
-Orvenix es una plataforma SaaS y ecosistema integral de presencia digital, infraestructura administrada, editor visual, inteligencia artificial, funnels, eCommerce y CRM para negocios modernos.
+- Orvenix es una plataforma SaaS para publicar sitios profesionales, administrar contenido y operar presencia digital desde un panel con editor visual.
+- El objetivo es que el cliente elija un plan, pague de forma segura, entre al constructor y publique sin tocar codigo.
+- Pro es la ruta recomendada para negocios que quieren publicar, vender y crecer sin comparar demasiadas opciones.
 
-Orvenix resuelve en un solo entorno:
-- Crear y publicar sitios profesionales.
-- Administrar contenido desde un panel privado.
-- Editar visualmente sin saber programacion.
-- Vender productos o servicios con eCommerce y funnels.
-- Capturar leads y dar seguimiento con CRM.
-- Usar inteligencia artificial para copy, optimizacion, traduccion y analisis.
-- Mantener hosting, SSL, soporte y monitoreo bajo un servicio administrado.
+## Contacto oficial
 
-Orvenix atiende a emprendedores, profesionales, PYMES, marcas en crecimiento y empresas que necesitan operar su presencia digital sin depender de varias herramientas fragmentadas.
+- Correo: contacto@orvenix.com.mx
+- WhatsApp: +52 81 2898 5846
+- Contacto: /contacto/
+- Precios: /precios/
 
----
-
-## Modelos de servicio
-
-### 1. Plataforma Orvenix
-
-Es el modelo principal SaaS. El cliente contrata un plan recurrente y recibe acceso a una plataforma con:
-- Sitio o sitios web segun plan.
-- Panel privado.
-- Editor visual drag and drop.
-- Templates profesionales por industria.
-- Hosting administrado premium.
-- SSL/TLS con renovacion automatica.
-- Soporte segun plan.
-- Publicacion desde la plataforma.
-
-Este modelo es ideal para negocios que quieren avanzar rapido, editar contenido sin depender de programadores y mantener el sitio operando con soporte administrado.
-
-### 2. Desarrollo o compra definitiva a medida
-
-La compra definitiva y los desarrollos a medida se cotizan por proyecto. Puede aplicar cuando el cliente necesita:
-- Arquitectura dedicada.
-- Funciones altamente personalizadas.
-- Integraciones con sistemas externos.
-- Compra de derechos patrimoniales sobre codigo personalizado entregado.
-- Migracion o entrega para operar fuera de Orvenix.
-
-Al liquidarse una compra definitiva, el cliente recibe derechos patrimoniales sobre el codigo personalizado entregado. Orvenix conserva librerias base, componentes propietarios y derechos morales cuando corresponda.
-
----
-
-## Planes oficiales 2026
-
-Los precios oficiales se expresan en USD antes de IVA. En Mexico pueden convertirse a MXN usando el tipo de cambio vigente del Banco de Mexico en la fecha de cobro o factura.
-
-| Plan | Precio mensual sin IVA | Total mensual con IVA | Precio anual sin IVA | Total anual con IVA |
-|------|------------------------|-----------------------|----------------------|---------------------|
-| Starter | 15 USD/mes | 17.40 USD/mes | 150 USD/ano | 174 USD/ano |
-| Pro | 39 USD/mes | 45.24 USD/mes | 390 USD/ano | 452.40 USD/ano |
-| Business | 79 USD/mes | 91.64 USD/mes | 790 USD/ano | 916.40 USD/ano |
-| Enterprise | Cotizacion | Segun alcance | Cotizacion | Segun alcance |
+## Planes oficiales
 
 ### Starter
-
-Para profesionales independientes, startups y marcas personales que necesitan presencia institucional administrada.
-
+ID: starter
+Precio: 15 USD/mes + IVA; 150 USD/ano + IVA
+Para publicar una primera web profesional con hosting, SSL, editor y soporte incluido.
+CTA: /precios?checkout=starter&interval=month
 Incluye:
-- 1 sitio institucional.
-- Hasta 5 paginas o secciones.
-- Editor visual completo.
-- SSL gratuito con renovacion automatica.
-- Hosting administrado premium.
-- Soporte estandar por email con SLA.
-
-Limitaciones:
-- No incluye eCommerce.
-- No incluye integraciones IA avanzadas.
-- No incluye exportacion de codigo fuente.
-- No incluye automatizaciones complejas de funnels.
-- Cambios mayores de estructura se cotizan por separado.
+- 1 sitio institucional
+- Hasta 5 paginas o secciones
+- Editor visual completo
+- SSL y hosting administrado
+- Soporte estandar por email
 
 ### Pro
-
-Para negocios en crecimiento que necesitan varios sitios, tienda, CRM, blog, SEO e inteligencia artificial.
-
+ID: pro
+Precio: 39 USD/mes + IVA; 390 USD/ano + IVA
+La opcion recomendada para vender, usar IA, administrar varios sitios y crecer sin rehacer el sistema.
+CTA: /precios?checkout=pro&interval=month
 Incluye:
-- Hasta 10 sitios independientes.
-- eCommerce avanzado sin comision transaccional de Orvenix.
-- Orvenix AI para copy, optimizacion, traduccion y analisis.
-- CRM nativo completo.
-- Blog profesional y herramientas SEO.
-- Exportacion de codigo en formatos estandar.
-- Soporte prioritario.
+- Hasta 10 sitios
+- eCommerce avanzado
+- Orvenix AI
+- CRM nativo
+- Blog y SEO
+- Exportacion de codigo
+- Soporte prioritario
 
 ### Business
-
-Para empresas que necesitan sitios ilimitados, funnels, automatizaciones y soporte omnicanal urgente.
-
+ID: commerce
+Precio: 79 USD/mes + IVA; 790 USD/ano + IVA
+Para operar ventas, funnels, automatizaciones y eCommerce con una base mas robusta.
+CTA: /precios?checkout=commerce&interval=month
 Incluye:
-- Sitios ilimitados o conforme a acuerdo comercial.
-- Funnels de venta ilimitados.
-- Automatizaciones complejas de marketing.
-- eCommerce multi-moneda.
-- CRM automatizado para leads y clientes.
-- Soporte por WhatsApp, chat en tiempo real y email corporativo urgente.
+- Sitios ilimitados o conforme a acuerdo comercial
+- Funnels de venta
+- Automatizaciones complejas
+- eCommerce multi-moneda
+- CRM automatizado
+- Soporte omnicanal urgente
 
 ### Enterprise
+ID: enterprise
+Precio: Cotizacion segun alcance
+Para organizaciones con arquitectura dedicada, integraciones y SLA premium.
+CTA: /contacto/
+Incluye:
+- Arquitectura dedicada
+- IA personalizada
+- Integraciones ERP/API
+- eCommerce B2B
+- Gestor dedicado
 
-Para organizaciones con arquitectura dedicada, SLA premium, integraciones ERP/API y gestor asignado.
+## Super Builder y editor
 
-Incluye segun alcance:
-- Arquitectura dedicada a medida.
-- IA personalizada o API dedicada.
-- Integraciones ERP, CRM externo y sistemas corporativos.
-- eCommerce B2B y flujos complejos.
-- SLA premium y gestor dedicado.
+- El Super Builder permite editar visualmente textos, imagenes, colores, enlaces y secciones.
+- El usuario puede partir de templates por industria o de un lienzo guiado.
+- El constructor se aprovecha mejor en resoluciones grandes; en pantallas pequenas puede mostrarse una experiencia adaptada o advertencia.
+- El objetivo del editor es ser simple para usuarios novatos y mas potente para clientes Pro.
+- Orvenix AI puede crear una copia editable desde templates por industria cuando el usuario pida crear, generar o armar un sitio web; requiere sesion activa y disponibilidad del plan.
 
----
+## Templates por industria
 
-## Comparacion rapida de planes
+- Tienda online
+- Restaurante
+- Clinica o salud
+- Inmobiliaria
+- Gimnasio
+- Barberia
+- Hotel
+- Abogados
+- Academia
+- Agencia digital
+- Transporte
+- Contabilidad
+- Viajes
+- Notaria
+- Recursos humanos
+- Arquitectura
+- Seguros
+- Finanzas
+- Fotografia
+- Servicios locales
+- Jugueteria
+- Moda
+- SaaS o producto digital
 
-- Numero de sitios: Starter 1, Pro 10, Business ilimitados o avanzado, Enterprise a medida.
-- Paginas internas: Starter hasta 5, Pro/Business/Enterprise ilimitadas o segun alcance.
-- Editor visual: incluido en todos los planes.
-- IA corporativa: no incluida en Starter, estandar en Pro, avanzada en Business, personalizada en Enterprise.
-- eCommerce: no incluido en Starter, incluido en Pro, multi-moneda en Business, B2B o arquitectura compleja en Enterprise.
-- CRM y leads: basico en Starter, completo en Pro, automatizado en Business, integrable con ERP externo en Enterprise.
-- Funnels: no incluidos en Starter, hasta 5 en Pro, ilimitados en Business y Enterprise.
-- SEO y blog: basico en Starter, avanzado en Pro y Business, estrategia a medida en Enterprise.
-- Exportacion de codigo y datos: no incluida en Starter, incluida en Pro, Business y Enterprise.
-- Soporte: email 48 h en Starter, prioritario 24 h en Pro, omnicanal urgente en Business, SLA premium y gestor dedicado en Enterprise.
+## Tipos de paginas web que puede recomendar
 
----
+### Landing page de venta
+Ideal para vender un producto, servicio, curso, evento, lanzamiento o campaña puntual.
+Secciones recomendadas:
+- Hero con promesa clara
+- Problema y solucion
+- Beneficios
+- Prueba social
+- Oferta o planes
+- FAQ
+- CTA final
+- Contacto o WhatsApp
+Consejo: Debe enfocarse en una sola accion principal: comprar, agendar, cotizar o registrarse.
 
-## Add-ons oficiales
+### Sitio institucional
+Ideal para empresas, profesionistas, despachos y negocios que necesitan presencia formal.
+Secciones recomendadas:
+- Inicio
+- Nosotros
+- Servicios
+- Casos o proyectos
+- Testimonios
+- FAQ
+- Contacto
+Consejo: Debe transmitir confianza, claridad y trayectoria sin saturar al visitante.
 
-Los add-ons se contratan aparte cuando el alcance del plan necesita ampliarse.
+### Ecommerce
+Ideal para vender productos fisicos o digitales con catalogo y checkout.
+Secciones recomendadas:
+- Hero comercial
+- Categorias
+- Productos destacados
+- Beneficios de compra
+- Envios y pagos
+- Testimonios
+- FAQ
+- CTA a tienda
+Consejo: Debe priorizar fotos claras, precios visibles, filtros, confianza de pago y politicas sencillas.
 
-- Pagina o seccion extra estandar: desde 45 USD, pago unico.
-- Idioma adicional multi-idioma: desde 150 USD, pago unico.
-- Estrategia SEO avanzada: 290 USD, pago unico.
-- Diseno personalizado UI/UX: desde 600 USD por proyecto.
-- Integraciones con APIs, CRMs o ERPs: 65 USD/hora.
-- Migracion tecnologica desde WordPress, Shopify, Wix u otra plataforma: base 200 USD.
-- Capacitacion corporativa: 120 USD por sesion de 2 horas.
+### Sitio de servicios profesionales
+Ideal para consultores, contadores, abogados, medicos, arquitectos y agencias.
+Secciones recomendadas:
+- Especialidad
+- Servicios
+- Proceso
+- Casos
+- Credenciales
+- Testimonios
+- Agenda o contacto
+Consejo: Debe convertir autoridad en accion: explicar que problema resuelve y cual es el siguiente paso.
 
-Si el usuario pide un precio exacto para algo a medida, responder que debe cotizarse en /contacto/ porque depende de alcance, integraciones, contenido, cantidad de secciones y soporte requerido.
+### Portafolio premium
+Ideal para creativos, fotografos, arquitectos, disenadores, estudios y marcas visuales.
+Secciones recomendadas:
+- Hero visual
+- Galeria
+- Proyectos destacados
+- Proceso creativo
+- Servicios
+- Reconocimientos
+- Contacto
+Consejo: Debe dejar que el trabajo respire: menos texto, mejores imagenes y llamados a contacto elegantes.
 
----
+### Sitio para reservas o citas
+Ideal para restaurantes, clinicas, barberias, spas, gimnasios, hoteles y consultorios.
+Secciones recomendadas:
+- Hero con disponibilidad
+- Servicios o experiencias
+- Calendario o CTA de reserva
+- Equipo
+- Ubicacion
+- FAQ
+- Contacto rapido
+Consejo: Debe reducir friccion: horario, ubicacion, telefono, WhatsApp y CTA siempre claros.
 
-## Super Builder y editor visual
+### Blog o medio de contenido
+Ideal para SEO, autoridad, educacion de clientes y marketing de contenidos.
+Secciones recomendadas:
+- Hero editorial
+- Categorias
+- Posts destacados
+- Newsletter
+- Recursos
+- Autoridad
+- CTA comercial
+Consejo: Debe combinar lectura agradable con caminos claros hacia contacto, demo o compra.
 
-El Super Builder es la experiencia de construccion visual de Orvenix. Esta pensado para que el usuario pueda crear sitios sin sentirse perdido y sin partir de una pantalla vacia intimidante.
+### SaaS o producto digital
+Ideal para software, plataformas, dashboards, apps, membresias y herramientas online.
+Secciones recomendadas:
+- Hero con resultado
+- Producto en accion
+- Funciones
+- Casos de uso
+- Precios
+- Seguridad
+- FAQ
+- Demo o registro
+Consejo: Debe explicar rapido que hace, para quien es, como mejora el trabajo y como empezar.
 
-Funciones del editor:
-- Edicion visual directa sobre el canvas.
-- Bloques y secciones editables.
-- Reordenamiento de contenido.
-- Vista adaptable para desktop, tablet y movil.
-- Publicacion desde la plataforma.
-- Sugerencias iniciales de secciones para guiar al usuario.
-- Lienzo blanco guiado con sugerencias editables.
-- Insercion de secciones como hero, caracteristicas, testimonios, precios, FAQ, CTA, contacto y otras areas esenciales.
-- Templates reales por industria que se pueden personalizar.
+## Guia rapida por industria
 
-Puntos importantes:
-- No se necesita saber programacion.
-- El cliente puede cambiar textos, imagenes, colores, enlaces y estructura segun el template o plan.
-- En pantallas pequenas el editor puede mostrar una experiencia adaptada o advertencia para recomendar resoluciones grandes, ya que el constructor se aprovecha mejor en desktop.
-- El objetivo no es que todos los sitios se vean iguales: Orvenix trabaja con variaciones de layout, tono visual, densidad, secciones y estilos segun industria.
+- Restaurante: destacar menu, reservas, ambiente, ubicacion, horarios, galeria y CTA a WhatsApp o reservar mesa.
+- Clinica o salud: priorizar confianza, especialidades, doctores, cedulas si aplica, citas, ubicacion, seguros o metodos de pago.
+- Inmobiliaria: mostrar propiedades destacadas, filtros, zonas, agentes, captacion de leads y botones para agendar visita.
+- Gimnasio: mostrar planes, clases, entrenadores, horarios, resultados, comunidad y prueba o inscripcion.
+- Abogados: reforzar experiencia, areas de practica, proceso, confidencialidad, casos generales y consulta inicial.
+- Contabilidad: explicar servicios fiscales, nomina, declaraciones, paquetes, beneficios de orden y contacto rapido.
+- Hotel: destacar habitaciones, experiencias, amenidades, ubicacion, galeria, disponibilidad y reserva directa.
+- Barberia o belleza: mostrar servicios, precios, estilos, equipo, horarios, ubicacion y reserva por WhatsApp.
+- Arquitectura: dar protagonismo a proyectos, renders/fotos, proceso, materiales, equipo, servicios y formulario de cotizacion.
+- Tienda online: enfocar en producto, confianza, envios, pagos, cambios/devoluciones, categorias y ofertas claras.
+- Servicios locales: mostrar zona de cobertura, servicios, antes/despues, reseñas, urgencias y boton de llamada o WhatsApp.
+- Academia o cursos: explicar resultados, temario, modalidad, profesores, testimonios, precio y registro.
+- Agencia digital: demostrar casos, metodologia, paquetes, resultados, equipo y llamada de diagnostico.
+- Finanzas o seguros: priorizar confianza, claridad, asesoramiento, comparativas, beneficios y contacto consultivo.
 
----
+## Playbook de secciones web
 
-## Templates y demos por industria
+- Hero: debe responder en segundos que ofreces, para quien es, que resultado promete y cual es el CTA principal.
+- Beneficios: traducir funciones a resultados concretos para el cliente, evitando listas genericas.
+- Servicios: agrupar ofertas por necesidad del cliente, no solo por nombres internos del negocio.
+- Prueba social: usar testimonios, logos, metricas, casos, fotos reales o indicadores de confianza.
+- Precios: mostrar opciones claras, recomendar una opcion principal y explicar para quien es cada plan.
+- FAQ: resolver objeciones antes de que frenen la compra: precio, tiempo, soporte, cambios, pagos y garantia si aplica.
+- CTA final: repetir la accion principal con lenguaje directo y bajo riesgo.
+- Contacto: incluir formulario simple, WhatsApp, correo, horario, ubicacion y expectativa de respuesta cuando aplique.
+- Galeria: usar imagenes que demuestren producto, lugar, resultado o experiencia; evitar imagenes decorativas sin funcion.
+- Proceso: explicar pasos de compra, reserva o contratacion para reducir incertidumbre.
 
-Orvenix ofrece templates y demos profesionales por industria. Sirven como punto de partida para acelerar el lanzamiento y se pueden personalizar.
+## Criterios de diseno y conversion
 
-Industrias disponibles o contempladas:
-- Tienda online.
-- Restaurante.
-- Clinica o salud.
-- Inmobiliaria.
-- Gimnasio.
-- Barberia.
-- Hotel.
-- Abogados.
-- Academia o educacion.
-- Agencia digital.
-- Transporte ejecutivo.
-- Contabilidad.
-- Viajes.
-- Notaria.
-- Recursos humanos.
-- Arquitectura.
-- Seguros.
-- Finanzas.
-- Fotografia.
-- Servicios locales.
-- Jugueteria.
-- Moda.
-- SaaS o producto digital.
+- Para sitios premium, sugerir menos ruido visual, mejor jerarquia, espacios generosos, contraste claro y CTAs visibles.
+- Evitar que todos los sitios tengan el mismo patron: variar estructura, ritmo, tipo de hero, densidad, galeria, colores y tono segun industria.
+- En negocios elegantes, recomendar paletas sobrias con acentos fuertes; en ecommerce, recomendar colores vivos para CTAs y fotos limpias.
+- En paginas de venta, priorizar conversion: CTA arriba, prueba social temprana, beneficios concretos y objeciones resueltas.
+- En sitios profesionales, priorizar confianza: credenciales, proceso, claridad de servicios y contacto directo.
+- En moviles, recomendar botones visibles, textos cortos, secciones escaneables y contacto rapido.
 
-Los templates suelen incluir combinaciones de:
-- Hero principal.
-- Servicios o productos.
-- Beneficios.
-- Galeria o portafolio.
-- Testimonios.
-- FAQ.
-- Contacto.
-- WhatsApp o CTA comercial.
-- Precios, paquetes o planes cuando aplica.
+## Comportamiento recomendado del bot
 
----
+- Cuando el usuario pida una pagina web, preguntar o inferir industria, objetivo principal, publico, estilo visual y CTA.
+- Si el usuario esta indeciso, proponer 2 o 3 rutas concretas en vez de una respuesta generica.
+- Cuando sugiera una pagina, incluir estructura recomendada, tono visual y CTA principal.
+- Si el usuario pide algo premium, recomendar detalles de confianza, animaciones sutiles, microcopy comercial y secciones con prueba social.
+- Si el usuario pide generar un sitio, recordar que Orvenix AI puede partir de templates editables por industria cuando hay sesion activa y cupo de plan.
 
-## Entorno SaaS del cliente
+## Reglas de recomendacion comercial
 
-La plataforma esta pensada para que el cliente opere su presencia digital desde una cuenta centralizada.
+- Cuando el usuario no sabe que plan elegir, recomendar Pro si quiere vender, crecer o administrar mas de un sitio.
+- Recomendar Starter si solo quiere una primera presencia profesional simple.
+- Recomendar Business si habla de automatizaciones, funnels, muchas ventas, multiples sitios o eCommerce avanzado.
+- Para dudas de alcance, integraciones o compra definitiva, enviar a /contacto/.
+- Correo oficial: contacto@orvenix.com.mx.
+- Si el usuario pide crear un sitio, sugerir una industria concreta como restaurante, tienda, clinica, inmobiliaria, gimnasio, abogados, contabilidad, hotel, barberia, viajes o arquitectura.
 
-Capacidades del entorno SaaS:
-- Registro e inicio de sesion.
-- Dashboard privado.
-- Gestion de sitios segun plan.
-- Creacion y edicion de sitios.
-- Publicacion de paginas.
-- Gestion de plan y estado de suscripcion.
-- Acceso a plantillas por industria.
-- Herramientas comerciales como leads, CRM, funnels o eCommerce segun plan.
-- Soporte segun nivel contratado.
+## Politica de dudas no cubiertas
 
-El asistente puede explicar estas capacidades a nivel de producto, pero no debe revelar arquitectura interna, nombres de proveedores, configuracion, rutas privadas de administracion ni detalles tecnicos del servidor.
-
----
-
-## Pagos, facturacion y checkout
-
-- Los planes mensuales y anuales son recurrentes.
-- Los precios estan en USD antes de IVA.
-- En Mexico puede cobrarse en MXN usando el tipo de cambio vigente del Banco de Mexico.
-- Se aceptan medios de pago disponibles en la plataforma segun configuracion operativa.
-- La factura debe solicitarse dentro del mismo mes calendario del pago con RFC, regimen fiscal, codigo postal y uso CFDI.
-- Si el pago queda pendiente, el acceso se activa cuando la pasarela confirme el pago.
-- Si un cliente ya pago y ve pago pendiente, debe esperar confirmacion automatica o contactar a /contacto/ con su comprobante.
-
-No prometer activacion manual inmediata si no se ha confirmado el pago. No inventar tiempos de pasarela.
-
----
-
-## Cancelacion, renovacion y reembolsos
-
-- Los planes mensuales y anuales se renuevan automaticamente.
-- La cancelacion debe solicitarse desde el panel administrativo al menos 5 dias naturales antes del corte.
-- Hay 3 dias de gracia por atraso; despues puede suspenderse la plataforma y el sitio publico.
-- Tras 30 dias naturales de suspension por falta de pago, Orvenix puede eliminar archivos de servidor sin responsabilidad por perdida de datos o software.
-- No hay reembolsos en planes mensuales ni add-ons ejecutados.
-- En planes anuales, la cancelacion con reembolso solo aplica dentro de los primeros 7 dias naturales posteriores al pago inicial.
-- En reembolsos anuales autorizados se retiene 15% por costos administrativos y de aprovisionamiento.
-
----
-
-## SLA, soporte y backups
-
-Orvenix compromete 99.9% de disponibilidad mensual, excluyendo mantenimiento programado, fuerza mayor y ventanas notificadas.
-
-Ventana de mantenimiento:
-- 02:00 a 05:00 CST en periodos de bajo trafico.
-
-Tiempos objetivo de soporte:
-- Critica / Alta: respuesta menor a 2 horas, resolucion objetivo 6 horas naturales.
-- Moderada / Media: respuesta menor a 12 horas, resolucion objetivo 24 horas habiles.
-- Leve / Baja: respuesta menor a 24 horas, resolucion objetivo 48 horas habiles.
-
-Backups:
-- Backups completos diarios de archivos y base de datos.
-- Copias cifradas en servidores externos geo-aislados.
-- Historial movil de 7 dias para Starter.
-- Historial movil de 30 dias para Pro y Business.
-- La restauracion por error del cliente puede generar cargo administrativo.
-
----
-
-## Afiliados
-
-Orvenix tiene un programa de afiliados con comisiones recurrentes:
-- Starter: 20% sobre 15 USD/mes.
-- Pro: 25% sobre 39 USD/mes.
-- Business: 30% sobre 79 USD/mes.
-- Sin costo de entrada.
-
-Si alguien pregunta por condiciones especificas, aprobacion de afiliados o pagos de comisiones, dirigir a /contacto/.
-
----
-
-## Recomendaciones por tipo de cliente
-
-- Quiero una web sencilla para empezar: recomendar Starter.
-- Necesito tienda, CRM, blog, SEO o IA: recomendar Pro.
-- Tengo varios negocios, funnels, automatizaciones o necesito soporte urgente: recomendar Business.
-- Necesito integraciones ERP/API, arquitectura dedicada, B2B o SLA premium: recomendar Enterprise y contacto comercial.
-- No se que plan elegir: preguntar cuantos sitios necesita, si requiere tienda, CRM, IA, funnels, volumen de visitas y nivel de soporte.
-- Quiero algo totalmente personalizado o comprar el codigo: explicar compra definitiva por cotizacion y dirigir a /contacto/.
-
----
-
-## Preguntas frecuentes que puede responder el bot
-
-### Puedo crear mi sitio sin programar?
-Si. Orvenix incluye editor visual, templates y secciones editables. El usuario puede cambiar textos, imagenes, colores, enlaces y estructura desde el panel.
-
-### Puedo tener tienda online?
-Si. eCommerce esta incluido desde Pro. Business agrega capacidades mas avanzadas como multi-moneda y flujos mas complejos.
-
-### Puedo usar IA?
-Si. Orvenix AI esta incluido desde Pro para copy, optimizacion, traduccion y analisis. Business incluye capacidades avanzadas y Enterprise puede contemplar IA personalizada.
-
-### Puedo exportar codigo?
-La exportacion no esta incluida en Starter. Esta incluida en Pro, Business y Enterprise en formatos estandar. La compra definitiva se cotiza por proyecto.
-
-### Puedo cancelar?
-Si. Debe solicitarse al menos 5 dias naturales antes del corte. Los planes mensuales no tienen reembolso despues de activarse.
-
-### Que pasa si no pago?
-Hay 3 dias de gracia. Despues puede suspenderse la plataforma y el sitio publico. Tras 30 dias de suspension por falta de pago, Orvenix puede eliminar archivos de servidor.
-
-### Cuanto tarda lanzar un sitio?
-La activacion de plataforma puede ser rapida cuando el pago y la configuracion estan listos. El tiempo real depende del contenido, ajustes, template, alcance y revision comercial. Para fechas especificas, contactar a /contacto/.
-
-### Puedo pedir factura?
-Si. Debe solicitarse dentro del mismo mes calendario del pago con datos fiscales completos.
-
----
-
-## Contacto y siguiente paso
-
-- Sitio web: orvenix.com.mx
-- Contacto directo: /contacto/
-- Correo: hola@orvenix.com.mx
-- Precios: /precios
-- Dossier oficial 2026: /legal/dossier-2026
-
-Para cotizaciones especificas, integraciones, Enterprise, compra definitiva o dudas legales/comerciales, el usuario debe describir su proyecto en /contacto/.
-
-El equipo responde en menos de 24 horas habiles de lunes a viernes cuando la consulta requiere revision humana.
+Si el usuario pregunta algo que no este cubierto por esta base, responder que el equipo puede confirmarlo en /contacto/. No improvisar informacion.

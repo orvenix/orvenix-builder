@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { PricingCheckoutButton } from './PricingCheckoutButton';
 
@@ -28,24 +28,24 @@ export interface PricingPlanView {
 const PLAN_META: Record<string, { icon: string; desc: string; featured?: boolean; cta: string }> = {
   starter: {
     icon: '🚀',
-    desc: 'Para presencia institucional administrada',
-    cta: 'Empezar con Starter →',
+    desc: 'Para lanzar tu primer sitio profesional',
+    cta: 'Suscribirme a Starter →',
   },
   pro: {
     icon: '⚡',
-    desc: 'Para negocios con tienda, CRM, IA y varios sitios',
+    desc: 'La mejor opcion para vender y crecer',
     featured: true,
-    cta: 'Activar plan Pro →',
+    cta: 'Suscribirme a Pro →',
   },
   commerce: {
     icon: '🏢',
-    desc: 'Para funnels, automatizaciones y soporte omnicanal',
-    cta: 'Activar Business →',
+    desc: 'Para empresas con ventas y automatizaciones',
+    cta: 'Suscribirme a Business →',
   },
   business: {
     icon: '🏢',
-    desc: 'Para funnels, automatizaciones y soporte omnicanal',
-    cta: 'Activar Business →',
+    desc: 'Para empresas con ventas y automatizaciones',
+    cta: 'Suscribirme a Business →',
   },
 };
 
@@ -97,10 +97,12 @@ function formatDate(value: string | null | undefined) {
 
 export function PricingSection({ plans, currentPlanId, currentInterval, currentStatus, currentEndsAt, autoCheckoutPlanId, autoCheckoutInterval = 'month' }: PricingSectionProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
   const autoCheckoutStartedRef = useRef(false);
   const [annual, setAnnual] = useState(autoCheckoutInterval === 'year');
   const [autoCheckoutError, setAutoCheckoutError] = useState<string | null>(null);
+  const isBillingRepair = searchParams?.get('billingRepair') === '1';
   const hasPendingSubscription = currentStatus === 'pending';
   const hasScheduledCancellation = currentStatus === 'cancelled' || currentStatus === 'canceled';
   const pendingPlan = hasPendingSubscription ? plans.find((plan) => plan.id === currentPlanId) : null;
@@ -132,7 +134,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
     if (sessionStatus === 'loading') return;
 
     if (!session) {
-      const checkoutReturn = '/precios?checkout=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval;
+      const checkoutReturn = '/precios?checkout=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + (isBillingRepair ? '&billingRepair=1' : '');
       router.replace('/register?plan=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + '&callbackUrl=' + encodeURIComponent(checkoutReturn));
       autoCheckoutStartedRef.current = true;
       return;
@@ -146,7 +148,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
         const res = await fetch('/api/billing/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planId: autoCheckoutPlanId, interval }),
+          body: JSON.stringify({ planId: autoCheckoutPlanId, interval, repairActiveSubscription: isBillingRepair }),
         });
         const data = await res.json() as { initPoint?: string; error?: string; code?: string };
 
@@ -156,6 +158,10 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
         }
 
         if (data.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
+          if (isBillingRepair) {
+            setAutoCheckoutError('La cuenta todavía tiene una suscripción activa que Stripe live no identificó como reparable. Revisa la suscripción desde admin o contacta soporte.');
+            return;
+          }
           router.replace('/dashboard');
           return;
         }
@@ -165,11 +171,16 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
         setAutoCheckoutError('No se pudo conectar con el checkout. Intenta desde el boton del plan.');
       }
     })();
-  }, [autoCheckoutInterval, autoCheckoutPlanId, plans, router, session, sessionStatus]);
+  }, [autoCheckoutInterval, autoCheckoutPlanId, isBillingRepair, plans, router, session, sessionStatus]);
 
   return (
     <section id="planes" className="mk-section bg-orvenix-bg">
       <div className="mk-container">
+        <div className="mb-8 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-orvenix-secondary md:grid-cols-3 md:p-5">
+          <div><strong className="block text-orvenix-text">Quiero empezar simple</strong>Elige Starter para publicar tu primera web profesional.</div>
+          <div><strong className="block text-orvenix-text">Quiero crecer</strong>Elige Pro para vender, usar IA y administrar mas de un sitio.</div>
+          <div><strong className="block text-orvenix-text">Quiero operar ventas</strong>Elige Business para e-commerce, funnels y automatizacion.</div>
+        </div>
         {autoCheckoutPlanId && !autoCheckoutError && (
           <div className="mb-8 rounded-xl border border-sky-400/30 bg-sky-400/10 px-4 py-3 text-sm text-sky-100">
             Preparando checkout seguro para tu plan seleccionado...
@@ -204,7 +215,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
             <span className={'mk-billing-thumb ' + (annual ? 'mk-billing-thumb-on' : '')} />
           </button>
           <span className={(annual ? 'mk-accent-text' : 'text-orvenix-secondary') + ' text-sm font-bold transition-colors'}>
-            Anual <span className="ml-1 rounded-full bg-orvenix-accent px-2 py-0.5 text-xs font-extrabold text-orvenix-bg">2 meses gratis</span>
+            Anual <span className="ml-1 rounded-full bg-orvenix-accent px-2 py-0.5 text-xs font-extrabold text-orvenix-bg">30 dias de prueba</span>
           </span>
         </div>
 
@@ -227,7 +238,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
               <div key={plan.id} className={'mk-plan-card relative ' + (featured ? 'mk-plan-card-featured lg:scale-[1.02]' : '')}>
                 {featured && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-orvenix-accent px-4 py-1.5 text-xs font-extrabold text-orvenix-bg">
-                    MAS POPULAR
+                    RECOMENDADO
                   </div>
                 )}
                 {isCurrentPlan && (
@@ -250,7 +261,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
                   )}
                 </div>
 
-                {isCurrentPlan ? (
+                {isCurrentPlan && !isBillingRepair ? (
                   <Link
                     href="/dashboard"
                     className={(featured ? 'mk-btn-primary' : 'mk-btn-outline') + ' mb-6 block w-full rounded-xl py-3 text-center text-sm font-bold transition-all duration-200'}
@@ -262,7 +273,8 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
                   <PricingCheckoutButton
                     planId={plan.id}
                     interval={annual ? 'year' : 'month'}
-                    label={available ? meta.cta : 'Configurar pagos →'}
+                    label={available ? (isBillingRepair && isCurrentPlan ? 'Activar plan en producción →' : meta.cta) : 'Configurar pagos →'}
+                    repairActiveSubscription={isBillingRepair}
                     featured={featured}
                     unavailable={!available}
                   />
@@ -282,22 +294,22 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
         </div>
 
         <p className="mt-6 text-center text-xs text-orvenix-secondary">
-          Precios oficiales en USD · IVA no incluido salvo donde se indique · Cancelacion con 5 dias naturales de anticipacion
+          Pago seguro con Stripe · Acceso inmediato al constructor · Puedes cancelar desde tu panel
         </p>
 
         <div className="mk-guarantee-banner mt-8">
           <span className="shrink-0 text-2xl" aria-hidden="true">🛡️</span>
           <div>
-            <p className="text-sm font-bold mk-accent-text">Condiciones oficiales 2026</p>
+            <p className="text-sm font-bold mk-accent-text">Despues de suscribirte</p>
             <p className="mt-0.5 text-xs text-orvenix-secondary">
-              Planes mensuales sin reembolso despues de activarse. En anual, la ventana de reembolso inicial es de 7 dias naturales con retencion administrativa del 15%.
+              Tu cuenta queda activa al confirmar el pago. Entras al panel, eliges tu sitio, editas textos e imagenes y publicas cuando este listo.
             </p>
           </div>
         </div>
 
         <div className="mt-6 text-center">
           <Link href="/contacto?plan=enterprise" className="text-sm font-bold mk-accent-text hover:underline">
-            ¿Necesitas Enterprise? Hablar con ventas →
+            Necesito un plan a medida →
           </Link>
         </div>
       </div>

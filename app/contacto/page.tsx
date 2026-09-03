@@ -6,13 +6,13 @@ import { MarketingLayout } from '@/components/marketing/MarketingLayout';
 import { CtaSection } from '@/components/marketing/sections/CtaSection';
 
 const servicios = [
-  'Sitio web completo',
-  'Landing page',
-  'E-commerce',
-  'App web',
-  'SaaS',
-  'SEO',
-  'Consultoría',
+  'Quiero activar un plan',
+  'Quiero una landing que venda',
+  'Quiero vender en línea',
+  'Quiero mejorar mi sitio actual',
+  'Necesito acompañamiento Pro',
+  'Quiero más clientes',
+  'Tengo dudas de qué plan elegir',
   'Otro',
 ];
 
@@ -81,11 +81,11 @@ export default function ContactoPage() {
             Contacto
           </p>
           <h1 className="mk-hero-title">
-            Cuéntanos tu{' '}
-            <span className="mk-gradient-text">proyecto ideal</span>
+            Hablemos de tu{' '}
+            <span className="mk-gradient-text">siguiente sitio</span>
           </h1>
           <p className="mk-section-desc mx-auto mt-6 max-w-xl">
-            Respondemos en menos de 24 horas hábiles. Sin compromisos, sin presiones.
+            Cuéntanos qué quieres vender, publicar o mejorar y te guiamos al plan correcto para empezar sin vueltas.
           </p>
         </div>
       </section>
@@ -99,14 +99,14 @@ export default function ContactoPage() {
               {sent ? (
                 <div className="text-center py-12">
                   <div className="text-5xl mb-4">✅</div>
-                  <h2 className="text-2xl font-bold text-orvenix-text mb-3">¡Mensaje enviado!</h2>
+                  <h2 className="text-2xl font-bold text-orvenix-text mb-3">¡Recibimos tu solicitud!</h2>
                   <p className="text-orvenix-secondary">
-                    Revisaremos tu proyecto y te responderemos en menos de 24 horas hábiles.
+                    Revisaremos tu caso y te responderemos con una ruta clara para activar tu sitio o elegir el plan ideal.
                   </p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <h2 className="text-xl font-bold text-orvenix-text mb-6">Envíanos un mensaje</h2>
+                  <h2 className="text-xl font-bold text-orvenix-text mb-6">Dinos qué necesitas activar</h2>
 
                   <div>
                     <label htmlFor="nombre" className="block text-sm font-medium text-orvenix-secondary mb-1">
@@ -157,7 +157,7 @@ export default function ContactoPage() {
 
                   <div>
                     <label htmlFor="servicio" className="block text-sm font-medium text-orvenix-secondary mb-1">
-                      Servicio de interés
+                      Qué quieres lograr
                     </label>
                     <select
                       id="servicio"
@@ -166,7 +166,7 @@ export default function ContactoPage() {
                       onChange={handleChange}
                       className="w-full px-4 py-3 rounded-lg bg-orvenix-surface border border-orvenix-border text-orvenix-text focus:outline-none focus:border-orvenix-accent transition-colors"
                     >
-                      <option value="">Selecciona un servicio</option>
+                      <option value="">Elige una opción</option>
                       {servicios.map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
@@ -175,7 +175,7 @@ export default function ContactoPage() {
 
                   <div>
                     <label htmlFor="mensaje" className="block text-sm font-medium text-orvenix-secondary mb-1">
-                      Mensaje <span className="text-red-400">*</span>
+                      Cuéntanos tu objetivo <span className="text-red-400">*</span>
                     </label>
                     <textarea
                       id="mensaje"
@@ -184,7 +184,7 @@ export default function ContactoPage() {
                       rows={5}
                       value={form.mensaje}
                       onChange={handleChange}
-                      placeholder="Cuéntanos sobre tu proyecto, objetivos y cualquier detalle relevante..."
+                      placeholder="Ejemplo: quiero publicar mi sitio, vender productos, mejorar mi imagen o saber qué plan me conviene..."
                       className="w-full px-4 py-3 rounded-lg bg-orvenix-surface border border-orvenix-border text-orvenix-text placeholder:text-orvenix-muted focus:outline-none focus:border-orvenix-accent transition-colors resize-none"
                     />
                   </div>
@@ -214,7 +214,7 @@ export default function ContactoPage() {
                     disabled={loading}
                     className="mk-btn-primary w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Enviando…' : 'Enviar mensaje →'}
+                    {loading ? 'Enviando…' : 'Quiero que me asesoren →'}
                   </button>
                 </form>
               )}
@@ -223,16 +223,16 @@ export default function ContactoPage() {
             {/* Contact info */}
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-bold text-orvenix-text mb-6">Información de contacto</h2>
+                <h2 className="text-xl font-bold text-orvenix-text mb-6">Contacto directo Orvenix</h2>
               </div>
 
               <div className="mk-glass-card p-6 space-y-5">
                 <div className="flex items-start gap-4">
                   <span className="text-2xl shrink-0">📧</span>
                   <div>
-                    <p className="text-sm font-semibold text-orvenix-secondary mb-1">Correo directo</p>
-                    <a href="mailto:hola@orvenix.com.mx" className="mk-accent-text font-medium hover:underline">
-                      hola@orvenix.com.mx
+                    <p className="text-sm font-semibold text-orvenix-secondary mb-1">Correo principal</p>
+                    <a href="mailto:contacto@orvenix.com.mx" className="mk-accent-text font-medium hover:underline">
+                      contacto@orvenix.com.mx
                     </a>
                   </div>
                 </div>
@@ -242,9 +242,9 @@ export default function ContactoPage() {
                 <div className="flex items-start gap-4">
                   <span className="text-2xl shrink-0">💼</span>
                   <div>
-                    <p className="text-sm font-semibold text-orvenix-secondary mb-1">Ventas</p>
-                    <a href="mailto:ventas@orvenix.com.mx" className="mk-accent-text font-medium hover:underline">
-                      ventas@orvenix.com.mx
+                    <p className="text-sm font-semibold text-orvenix-secondary mb-1">Planes y activación</p>
+                    <a href="mailto:contacto@orvenix.com.mx" className="mk-accent-text font-medium hover:underline">
+                      contacto@orvenix.com.mx
                     </a>
                   </div>
                 </div>
@@ -281,8 +281,8 @@ export default function ContactoPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">⚡</span>
                   <div>
-                    <p className="font-semibold text-orvenix-text">Tiempo de respuesta</p>
-                    <p className="text-sm text-orvenix-secondary">Respondemos en menos de 24 horas hábiles</p>
+                    <p className="font-semibold text-orvenix-text">Te guiamos rápido</p>
+                    <p className="text-sm text-orvenix-secondary">Respondemos con una ruta simple: plan recomendado, siguiente paso y forma de activación</p>
                   </div>
                 </div>
               </div>
@@ -292,9 +292,9 @@ export default function ContactoPage() {
       </section>
 
       <CtaSection
-        title="¿Prefieres hablar directamente?"
-        description="Escríbenos por WhatsApp y te atendemos de inmediato."
-        buttonLabel="Abrir WhatsApp →"
+        title="¿Quieres avanzar más rápido?"
+        description="Escríbenos por WhatsApp y te ayudamos a elegir el plan correcto para publicar cuanto antes."
+        buttonLabel="Hablar por WhatsApp →"
         buttonHref="https://wa.me/528128985846"
       />
     </MarketingLayout>
