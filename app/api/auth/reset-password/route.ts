@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server"
-import { pbkdf2Sync, randomBytes } from "crypto"
-import { editorPrisma } from "@/lib/editor-db"
-import { validateResetToken, consumeResetToken } from "@/lib/reset-tokens"
+import { hashPassword } from "@/lib/auth"
+import { validateResetToken, consumeResetTokenAndUpdatePassword } from "@/lib/reset-tokens"
 import { serverError } from "@/lib/server-log"
 
-function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString("hex")
-  const hash = pbkdf2Sync(password, salt, 100_000, 64, "sha512").toString("hex")
-  return `${salt}:${hash}`
-}
+const INVALID_TOKEN_MESSAGE = "El enlace no es válido o ya expiró."
 
 export async function POST(request: Request) {
   try {
@@ -23,20 +18,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "La contraseña debe tener al menos 8 caracteres." }, { status: 400 })
     }
 
-    const result = validateResetToken(token)
-    if (!result.valid) {
-      return NextResponse.json({ error: "El enlace no es válido o ya expiró." }, { status: 400 })
+    const result = await consumeResetTokenAndUpdatePassword(token, hashPassword(password))
+    if (!result.ok) {
+      return NextResponse.json({ error: INVALID_TOKEN_MESSAGE }, { status: 400 })
     }
-
-    const consumed = consumeResetToken(token)
-    if (!consumed) {
-      return NextResponse.json({ error: "El enlace no es válido o ya fue utilizado." }, { status: 400 })
-    }
-
-    await editorPrisma.user.update({
-      where: { email: result.email },
-      data: { password: hashPassword(password) },
-    })
 
     return NextResponse.json({ ok: true, message: "Contraseña actualizada correctamente." })
   } catch (err) {
@@ -45,10 +30,10 @@ export async function POST(request: Request) {
   }
 }
 
-// Validar token antes de mostrar el formulario
+// Validar token antes de mostrar el formulario.
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const token = searchParams.get("token") ?? ""
-  const result = validateResetToken(token)
+  const result = await validateResetToken(token)
   return NextResponse.json({ valid: result.valid })
 }
