@@ -56,3 +56,10 @@ next-env.d.ts
 /orvenix-landing.html
 /Guia_Especificaciones_Prompt_Sistema_Editor_IA.pdf
 /sistema/reset-tokens.json
+
+
+# Estado runtime y artefactos locales
+/sistema/ai-generation-jobs.json
+/proxy.ts.backup
+/idea/
+/orvenix_documento_oficial_2026.pdf
