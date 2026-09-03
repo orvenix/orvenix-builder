@@ -31,7 +31,9 @@
     "billing:sync-mp-plans": "node prisma/sync-mp-plans.mjs",
     "migrate:contacts": "node prisma/migrate-contacts.mjs",
     "secrets:check": "node scripts/check-secrets.mjs",
-    "preflight:public": "npm run secrets:check && npm run typecheck && npm run lint:api && npm run build"
+    "preflight:public": "npm run secrets:check && npm run typecheck && npm run lint:api && npm run build",
+    "chatbot:refresh": "node scripts/refresh-chatbot-knowledge.mjs",
+    "chatbot:watch": "while true; do npm run chatbot:refresh; sleep 1800; done"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
