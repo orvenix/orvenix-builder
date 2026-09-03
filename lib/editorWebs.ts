@@ -36,6 +36,35 @@ export function isEditorWebId(value: string): value is EditorWebId {
   return (WEB_IDS as readonly string[]).includes(value);
 }
 
+
+export const ARTISAN_WEB_IDS = [
+  "tienda",
+  "servicios-locales",
+  "arquitectura",
+  "contabilidad",
+  "viajes",
+  "notaria",
+  "rrhh",
+  "restaurante",
+  "clinica",
+  "inmobiliaria",
+  "agencia",
+  "academia",
+  "abogados",
+  "gimnasio",
+  "barberia",
+  "hotel",
+  "transporte",
+] as const satisfies readonly EditorWebId[];
+
+export function isArtisanWebId(value: string): value is (typeof ARTISAN_WEB_IDS)[number] {
+  return (ARTISAN_WEB_IDS as readonly string[]).includes(value);
+}
+
+export function isArtisanEditableTree(tree: Pick<EditorTree, "rootId"> | null | undefined) {
+  return Boolean(tree?.rootId?.includes("-artisan-root"));
+}
+
 export const WEB_LABELS: Record<EditorWebId, string> = {
   "ai-dashboard": "AI Analytics Dashboard",
   crm: "CRM Enterprise Platform",
@@ -96,181 +125,288 @@ function createPublicPageTree({
   proofTitle: string;
   proofCopy: string;
 }): EditorTree {
-  const root = `${id}-editor-root`;
-  const badgeId = `${id}-badge`;
-  const titleId = `${id}-title`;
-  const copyId = `${id}-copy`;
-  const ctaId = `${id}-cta`;
-  const imageId = `${id}-image`;
-  const servicesTitleId = `${id}-services-title`;
-  const servicesCopyId = `${id}-services-copy`;
-  const servicesId = `${id}-services`;
-  const proofTitleId = `${id}-proof-title`;
-  const proofCopyId = `${id}-proof-copy`;
-  const proofId = `${id}-proof`;
+  const root = `${id}-artisan-root`;
+  const nav = `${id}-nav`;
+  const hero = `${id}-hero`;
+  const heroCopy = `${id}-hero-copy`;
+  const heroMedia = `${id}-hero-media`;
+  const proof = `${id}-proof-strip`;
+  const services = `${id}-services-section`;
+  const process = `${id}-process-section`;
+  const pricing = `${id}-pricing-section`;
+  const testimonials = `${id}-testimonials-section`;
+  const contact = `${id}-contact-section`;
+  const footer = `${id}-footer`;
+
+  const nodes: EditorTree["nodes"] = {};
+
+  const addSection = (nodeId: string, displayName: string, children: string[], sectionBackground = "#ffffff") => {
+    nodes[nodeId] = {
+      id: nodeId,
+      type: "section",
+      displayName,
+      props: {
+        maxWidth: "full",
+        paddingY: "lg",
+        paddingX: "md",
+        align: "left",
+        background: sectionBackground,
+      },
+      children,
+      version: 1,
+    };
+  };
+
+  const addWrap = (nodeId: string, displayName: string, children: string[], className = "rounded-2xl border p-6", style: Record<string, unknown> = {}) => {
+    nodes[nodeId] = {
+      id: nodeId,
+      type: "genericWrapper",
+      displayName,
+      props: {
+        originalType: "article",
+        className,
+        style: {
+          borderColor: `${accent}24`,
+          background: "rgba(255,255,255,0.78)",
+          boxShadow: "0 18px 44px rgba(15,23,42,0.08)",
+          ...style,
+        },
+      },
+      children,
+      version: 1,
+    };
+  };
+
+  const addHeading = (nodeId: string, displayName: string, value: string, level: 1 | 2 | 3 = 2, size: "2xl" | "3xl" | "4xl" | "5xl" = "3xl", color = text) => {
+    nodes[nodeId] = {
+      id: nodeId,
+      type: "heading",
+      displayName,
+      props: {
+        text: value,
+        level,
+        size,
+        weight: "extrabold",
+        color,
+        align: "left",
+        marginBottom: "md",
+      },
+      children: [],
+      version: 1,
+    };
+  };
+
+  const addText = (nodeId: string, displayName: string, value: string, size: "sm" | "md" | "lg" = "md", color = muted) => {
+    nodes[nodeId] = {
+      id: nodeId,
+      type: "text",
+      displayName,
+      props: {
+        content: value,
+        size,
+        color,
+        align: "left",
+        maxWidth: "lg",
+      },
+      children: [],
+      version: 1,
+    };
+  };
+
+  const addButton = (nodeId: string, displayName: string, label: string, href = "#contacto", variant: "primary" | "secondary" | "ghost" = "primary") => {
+    nodes[nodeId] = {
+      id: nodeId,
+      type: "ctaButton",
+      displayName,
+      props: {
+        label,
+        href,
+        variant,
+        size: "md",
+      },
+      children: [],
+      version: 1,
+    };
+  };
+
+  nodes[root] = {
+    id: root,
+    type: "section",
+    displayName: "Sitio artesanal editable",
+    props: {
+      maxWidth: "full",
+      paddingY: "none",
+      paddingX: "none",
+      align: "left",
+      background,
+    },
+    children: [nav, hero, proof, services, process, pricing, testimonials, contact, footer],
+    version: 1,
+  };
+
+  nodes[nav] = {
+    id: nav,
+    type: "siteNav",
+    displayName: "Menú principal",
+    props: {
+      title,
+      subtitle: badge.split("·")[0]?.trim() || "Sitio profesional",
+      showHome: true,
+      hiddenSlugs: "",
+      showCta: true,
+      ctaLabel: "Contactar",
+      ctaHref: "#contacto",
+      variant: "pill",
+      surface: background === "#ffffff" || background.startsWith("#f") ? "light" : "dark",
+    },
+    children: [],
+    version: 1,
+  };
+
+  addSection(hero, "Portada", [`${id}-badge`, `${id}-title`, `${id}-copy`, `${id}-cta`, heroMedia], background);
+  addText(`${id}-badge`, "Etiqueta", badge, "sm", accent);
+  addHeading(`${id}-title`, "Título principal", title, 1, "5xl", text);
+  addText(`${id}-copy`, "Texto principal", copy, "lg", muted);
+  addButton(`${id}-cta`, "Botón principal", cta);
+  addWrap(heroMedia, "Imagen destacada", [`${id}-image`, heroCopy], "rounded-3xl border p-4", { background: `${accent}14` });
+  nodes[`${id}-image`] = {
+    id: `${id}-image`,
+    type: "image",
+    displayName: "Imagen principal",
+    props: { src: image, alt: title, objectFit: "cover" },
+    children: [],
+    version: 1,
+  };
+  addText(heroCopy, "Nota visual", "Imagen, textos y botones son reemplazables desde el editor. La estructura conserva una presencia artesanal y profesional.", "sm", muted);
+
+  addSection(proof, "Prueba rápida", [`${id}-proof-1`, `${id}-proof-2`, `${id}-proof-3`], "#f8fafc");
+  [
+    ["Experiencia", "Equipo especializado y proceso claro desde el primer contacto."],
+    ["Confianza", "Secciones listas para mostrar casos, credenciales y testimonios."],
+    ["Conversión", "CTA, formulario y mensaje comercial preparados para vender."],
+  ].forEach(([head, body], index) => {
+    const card = `${id}-proof-${index + 1}`;
+    addWrap(card, `Dato ${index + 1}`, [`${card}-h`, `${card}-p`]);
+    addHeading(`${card}-h`, `Título dato ${index + 1}`, head, 3, "2xl", text);
+    addText(`${card}-p`, `Texto dato ${index + 1}`, body, "md", muted);
+  });
+
+  addSection(services, "Servicios", [`${id}-services-title`, `${id}-services-copy`, `${id}-service-1`, `${id}-service-2`, `${id}-service-3`], "#ffffff");
+  addHeading(`${id}-services-title`, "Título servicios", servicesTitle, 2, "4xl", text);
+  addText(`${id}-services-copy`, "Descripción servicios", servicesCopy, "lg", muted);
+  [
+    ["Servicio principal", "Describe la oferta más importante, sus beneficios y el resultado que obtiene el cliente."],
+    ["Acompañamiento", "Explica el proceso de atención, tiempos, entregables y garantías de confianza."],
+    ["Solución premium", "Presenta una opción de mayor valor para clientes que necesitan atención completa."],
+  ].forEach(([head, body], index) => {
+    const card = `${id}-service-${index + 1}`;
+    addWrap(card, `Servicio ${index + 1}`, [`${card}-h`, `${card}-p`, `${card}-b`]);
+    addHeading(`${card}-h`, `Título servicio ${index + 1}`, head, 3, "2xl", text);
+    addText(`${card}-p`, `Texto servicio ${index + 1}`, body, "md", muted);
+    addButton(`${card}-b`, `Botón servicio ${index + 1}`, "Solicitar información", "#contacto", index === 0 ? "primary" : "secondary");
+  });
+
+  addSection(process, "Proceso", [`${id}-process-title`, `${id}-process-copy`, `${id}-step-1`, `${id}-step-2`, `${id}-step-3`], "#f8fafc");
+  addHeading(`${id}-process-title`, "Título proceso", "Proceso simple para empezar", 2, "4xl", text);
+  addText(`${id}-process-copy`, "Descripción proceso", "El cliente entiende qué sucederá después de pedir información, sin sentirse perdido ni presionado.", "lg", muted);
+  [
+    ["1. Diagnóstico", "Recibimos la solicitud y entendemos el objetivo del cliente."],
+    ["2. Propuesta", "Presentamos una recomendación clara con alcance y siguientes pasos."],
+    ["3. Ejecución", "Acompañamos el proceso hasta cerrar el resultado esperado."],
+  ].forEach(([head, body], index) => {
+    const card = `${id}-step-${index + 1}`;
+    addWrap(card, `Paso ${index + 1}`, [`${card}-h`, `${card}-p`], "rounded-2xl border p-5", { borderColor: `${accent}33` });
+    addHeading(`${card}-h`, `Título paso ${index + 1}`, head, 3, "2xl", accent);
+    addText(`${card}-p`, `Texto paso ${index + 1}`, body, "md", muted);
+  });
+
+  addSection(pricing, "Planes o paquetes", [`${id}-pricing-title`, `${id}-pricing-copy`, `${id}-plan-1`, `${id}-plan-2`, `${id}-plan-3`], "#ffffff");
+  addHeading(`${id}-pricing-title`, "Título planes", "Opciones claras para cada necesidad", 2, "4xl", text);
+  addText(`${id}-pricing-copy`, "Descripción planes", "Cambia nombres, precios y beneficios para adaptar esta sección a tu negocio real.", "lg", muted);
+  [
+    ["Inicial", "Desde $1,999", "Para clientes que necesitan empezar con lo esencial."],
+    ["Profesional", "Desde $4,999", "La opción más equilibrada para crecer con acompañamiento."],
+    ["Premium", "A cotizar", "Para proyectos completos con atención personalizada."],
+  ].forEach(([name, price, body], index) => {
+    const card = `${id}-plan-${index + 1}`;
+    addWrap(card, `Plan ${index + 1}`, [`${card}-h`, `${card}-price`, `${card}-p`, `${card}-b`], "rounded-2xl border p-6", { background: index === 1 ? `${accent}14` : "rgba(255,255,255,0.82)" });
+    addHeading(`${card}-h`, `Nombre plan ${index + 1}`, name, 3, "2xl", text);
+    addHeading(`${card}-price`, `Precio plan ${index + 1}`, price, 3, "3xl", accent);
+    addText(`${card}-p`, `Texto plan ${index + 1}`, body, "md", muted);
+    addButton(`${card}-b`, `Botón plan ${index + 1}`, "Elegir opción", "#contacto", index === 1 ? "primary" : "secondary");
+  });
+
+  addSection(testimonials, "Testimonios", [`${id}-proof-title`, `${id}-proof-copy`, `${id}-quote-1`, `${id}-quote-2`], "#f8fafc");
+  addHeading(`${id}-proof-title`, "Título testimonios", proofTitle, 2, "4xl", text);
+  addText(`${id}-proof-copy`, "Descripción testimonios", proofCopy, "lg", muted);
+  [
+    ["Cliente satisfecho", "La atención fue clara desde el inicio y el resultado transmitió mucha confianza."],
+    ["Proyecto exitoso", "Encontramos una solución profesional que nos ayudó a convertir más solicitudes."],
+  ].forEach(([name, body], index) => {
+    const card = `${id}-quote-${index + 1}`;
+    addWrap(card, `Testimonio ${index + 1}`, [`${card}-p`, `${card}-h`]);
+    addText(`${card}-p`, `Texto testimonio ${index + 1}`, `“${body}”`, "md", muted);
+    addHeading(`${card}-h`, `Autor testimonio ${index + 1}`, name, 3, "2xl", text);
+  });
+
+  addSection(contact, "Contacto", [`${id}-contact-title`, `${id}-contact-copy`, `${id}-contact-button`, `${id}-contact-note`], background);
+  addHeading(`${id}-contact-title`, "Título contacto", "Hablemos de tu proyecto", 2, "4xl", text);
+  addText(`${id}-contact-copy`, "Texto contacto", "Cuéntanos qué necesitas y te responderemos con una propuesta clara para avanzar.", "lg", muted);
+  addButton(`${id}-contact-button`, "Botón contacto", "Solicitar contacto", "mailto:contacto@orvenix.com");
+  addText(`${id}-contact-note`, "Nota contacto", "Puedes cambiar este correo, teléfono o llamada a la acción desde el editor.", "sm", muted);
+
+  addSection(footer, "Pie de página", [`${id}-footer-title`, `${id}-footer-copy`], "#0f172a");
+  addHeading(`${id}-footer-title`, "Marca footer", title, 2, "3xl", "#ffffff");
+  addText(`${id}-footer-copy`, "Texto footer", "Sitio artesanal editable creado con Orvenix Builder.", "md", "#cbd5e1");
 
   return {
     rootId: root,
-    nodes: {
-      [root]: {
-        id: root,
-        type: "section",
-        props: {
-          maxWidth: "full",
-          paddingY: "lg",
-          paddingX: "md",
-          align: "left",
-          background,
-        },
-        children: [
-          badgeId,
-          titleId,
-          copyId,
-          ctaId,
-          imageId,
-          servicesTitleId,
-          servicesCopyId,
-          servicesId,
-          proofTitleId,
-          proofCopyId,
-          proofId,
-        ],
-        version: 1,
+    theme: {
+      colors: {
+        primary: accent,
+        secondary: text,
+        background,
+        text,
+        accent,
       },
-      [badgeId]: {
-        id: badgeId,
-        type: "text",
-        props: {
-          content: badge,
-          size: "sm",
-          color: accent,
-          align: "left",
-          maxWidth: "lg",
-        },
-        children: [],
-        version: 1,
+      fontHeading: "system-ui, sans-serif",
+      fontBody: "system-ui, sans-serif",
+      spacing: { sectionX: "1.5rem", sectionY: "3rem", stack: "1.5rem" },
+      radius: { card: "1rem", button: "999px" },
+      shadow: {
+        soft: "0 12px 32px rgba(15,23,42,0.08)",
+        strong: "0 24px 60px rgba(15,23,42,0.18)",
       },
-      [titleId]: {
-        id: titleId,
-        type: "heading",
-        props: {
-          text: title,
-          level: 1,
-          size: "5xl",
-          weight: "extrabold",
-          color: text,
-          align: "left",
-        },
-        children: [],
-        version: 1,
-      },
-      [copyId]: {
-        id: copyId,
-        type: "text",
-        props: {
-          content: copy,
-          size: "lg",
-          color: muted,
-          align: "left",
-          maxWidth: "lg",
-        },
-        children: [],
-        version: 1,
-      },
-      [ctaId]: {
-        id: ctaId,
-        type: "ctaButton",
-        props: {
-          label: cta,
-          href: "#contacto",
-          variant: "primary",
-          size: "md",
-        },
-        children: [],
-        version: 1,
-      },
-      [imageId]: {
-        id: imageId,
-        type: "image",
-        props: {
-          src: image,
-          alt: title,
-          objectFit: "cover",
-        },
-        children: [],
-        version: 1,
-      },
-      [servicesTitleId]: {
-        id: servicesTitleId,
-        type: "heading",
-        props: {
-          text: servicesTitle,
-          level: 2,
-          size: "3xl",
-          weight: "extrabold",
-          color: text,
-          align: "left",
-        },
-        children: [],
-        version: 1,
-      },
-      [servicesCopyId]: {
-        id: servicesCopyId,
-        type: "text",
-        props: {
-          content: servicesCopy,
-          size: "md",
-          color: muted,
-          align: "left",
-          maxWidth: "lg",
-        },
-        children: [],
-        version: 1,
-      },
-      [servicesId]: {
-        id: servicesId,
-        type: "agency-services",
-        props: {},
-        children: [],
-        version: 1,
-      },
-      [proofTitleId]: {
-        id: proofTitleId,
-        type: "heading",
-        props: {
-          text: proofTitle,
-          level: 2,
-          size: "3xl",
-          weight: "extrabold",
-          color: text,
-          align: "left",
-        },
-        children: [],
-        version: 1,
-      },
-      [proofCopyId]: {
-        id: proofCopyId,
-        type: "text",
-        props: {
-          content: proofCopy,
-          size: "md",
-          color: muted,
-          align: "left",
-          maxWidth: "lg",
-        },
-        children: [],
-        version: 1,
-      },
-      [proofId]: {
-        id: proofId,
-        type: "agency-testimonials",
-        props: {},
-        children: [],
-        version: 1,
+      motion: {
+        duration: "240ms",
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
+    globalTheme: {
+      colors: {
+        primary: accent,
+        secondary: text,
+        background,
+        text,
+        accent,
+      },
+      fontHeading: "system-ui, sans-serif",
+      fontBody: "system-ui, sans-serif",
+      spacing: { sectionX: "1.5rem", sectionY: "3rem", stack: "1.5rem" },
+      radius: { card: "1rem", button: "999px" },
+      shadow: {
+        soft: "0 12px 32px rgba(15,23,42,0.08)",
+        strong: "0 24px 60px rgba(15,23,42,0.18)",
+      },
+      motion: {
+        duration: "240ms",
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+    },
+    nodes,
   };
 }
+
 
 export const WEB_EDITOR_TREES: Record<EditorWebId, EditorTree> = {
   "ai-dashboard": {
@@ -1484,6 +1620,50 @@ export const WEB_EDITOR_TREES: Record<EditorWebId, EditorTree> = {
 };
 
 export function getEditorTreeForWeb(id: EditorWebId): EditorTree {
+  if (id === "tienda") {
+    return createPublicPageTree({
+      id: "tienda",
+      badge: "Tienda online · catálogo, pedidos y checkout",
+      title: "Tienda Online Pro",
+      copy:
+        "Plantilla editable para tiendas online con portada comercial, productos destacados, paquetes, prueba social y contacto preparado para vender.",
+      cta: "Personalizar tienda",
+      image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&h=720&fit=crop&crop=center&q=85&auto=format",
+      background: "#f7f3ec",
+      text: "#1f2937",
+      muted: "#57534e",
+      accent: "#b45309",
+      servicesTitle: "Catálogo y secciones listas para convertir",
+      servicesCopy:
+        "Edita productos, beneficios, proceso de compra, garantías y llamados a la acción sin depender de bloques técnicos.",
+      proofTitle: "Confianza para comprar",
+      proofCopy:
+        "Usa testimonios, garantías y mensajes comerciales para convertir visitantes en pedidos.",
+    });
+  }
+
+  if (id === "servicios-locales") {
+    return createPublicPageTree({
+      id: "servicios-locales",
+      badge: "Servicios locales · agenda, cobertura y cotización",
+      title: "Servicios Locales Pro",
+      copy:
+        "Plantilla editable para negocios locales con servicios, cobertura, proceso, reseñas y contacto directo para recibir solicitudes.",
+      cta: "Personalizar servicios",
+      image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200&h=720&fit=crop&crop=center&q=85&auto=format",
+      background: "#f6f8fb",
+      text: "#0f172a",
+      muted: "#475569",
+      accent: "#0e7490",
+      servicesTitle: "Servicios claros para clientes locales",
+      servicesCopy:
+        "Edita paquetes, zonas de atención, beneficios y proceso para que el cliente pueda pedir cotización rápido.",
+      proofTitle: "Confianza cercana",
+      proofCopy:
+        "Presenta reseñas, experiencia y tiempos de respuesta para convertir visitas en solicitudes.",
+    });
+  }
+
   return WEB_EDITOR_TREES[id];
 }
 

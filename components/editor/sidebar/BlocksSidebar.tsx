@@ -11,13 +11,24 @@ import {
 } from "@/blocks/registry";
 import { getFreeInsertProps } from "@/components/editor/freeInsert";
 import { useEditorStore } from "@/store/useEditorStore";
-import { loadUserComponents, deleteUserComponent, type SavedComponent } from "@/lib/editor/userComponents";
+import { loadUserComponents, deleteUserComponent, renameUserComponent, type SavedComponent } from "@/lib/editor/userComponents";
+
+const FRIENDLY_CATEGORY_LABELS: Record<string, string> = {
+  layout: "Estructura",
+  content: "Contenido",
+  action: "Acciones",
+  marketing: "Promoción",
+  ecommerce: "Tienda",
+}
+const SIMPLE_BLOCK_CATEGORIES = new Set(["layout", "content", "action", "marketing", "ecommerce"]);
 
 export function BlocksSidebar() {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [userComponents, setUserComponents] = useState<SavedComponent[]>([]);
   const [showUserComponents, setShowUserComponents] = useState(true);
+  const [editingComponentId, setEditingComponentId] = useState<string | null>(null);
+  const [editingComponentName, setEditingComponentName] = useState("");
 
   const insertTree = useEditorStore((s) => s.insertTree);
   const rootId     = useEditorStore((s) => s.tree.rootId);
@@ -38,7 +49,28 @@ export function BlocksSidebar() {
 
   const handleDeleteUserComponent = (id: string) => {
     deleteUserComponent(id);
+    if (editingComponentId === id) {
+      setEditingComponentId(null);
+      setEditingComponentName("");
+    }
     refreshUserComponents();
+  };
+
+  const startRenameUserComponent = (component: SavedComponent) => {
+    setEditingComponentId(component.id);
+    setEditingComponentName(component.name);
+  };
+
+  const commitRenameUserComponent = () => {
+    if (!editingComponentId) return;
+    setUserComponents(renameUserComponent(editingComponentId, editingComponentName));
+    setEditingComponentId(null);
+    setEditingComponentName("");
+  };
+
+  const cancelRenameUserComponent = () => {
+    setEditingComponentId(null);
+    setEditingComponentName("");
   };
 
   const handleInsertUserComponent = (component: SavedComponent) => {
@@ -57,6 +89,15 @@ export function BlocksSidebar() {
 
   const query = search.trim().toLowerCase();
 
+  const filteredUserComponents = useMemo(() => {
+    if (!query) return userComponents;
+    return userComponents.filter((component) =>
+      `${component.name} ${component.blockType}`.toLowerCase().includes(query)
+    );
+  }, [query, userComponents]);
+
+  const quickUserComponents = useMemo(() => userComponents.slice(0, 3), [userComponents]);
+
   const filteredGroups = useMemo(() => {
     if (!query) return null;
     const result = new Map<string, EditorBlockDefinition[]>();
@@ -72,7 +113,15 @@ export function BlocksSidebar() {
     return result;
   }, [query, groups]);
 
-  const displayGroups = filteredGroups ?? groups;
+  const simpleGroups = useMemo(() => {
+    const result = new Map<string, EditorBlockDefinition[]>();
+    for (const [cat, items] of groups) {
+      if (SIMPLE_BLOCK_CATEGORIES.has(cat)) result.set(cat, items);
+    }
+    return result;
+  }, [groups]);
+
+  const displayGroups = filteredGroups ?? simpleGroups;
 
   const toggleCollapse = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
@@ -90,7 +139,7 @@ export function BlocksSidebar() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar bloques…"
+            placeholder="¿Qué quieres agregar?"
             className="motion-glass w-full rounded-lg border border-white/[0.06] bg-white/[0.04] py-2 pl-8 pr-3 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/40 focus:bg-white/[0.06] focus:outline-none transition-all duration-300"
           />
           {search && (
@@ -106,8 +155,31 @@ export function BlocksSidebar() {
         </div>
       </div>
 
+      {quickUserComponents.length > 0 && !query && (
+        <div className="border-b border-white/[0.05] px-3 pb-2">
+          <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+            <Icons.Clock3 size={10} />
+            Recientes
+          </div>
+          <div className="grid grid-cols-1 gap-1">
+            {quickUserComponents.map((component) => (
+              <button
+                key={component.id}
+                type="button"
+                onClick={() => handleInsertUserComponent(component)}
+                title={`Insertar ${component.name}`}
+                className="motion-button flex min-h-8 items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.025] px-2.5 py-1.5 text-left text-[11px] text-slate-300 hover:border-amber-400/20 hover:bg-amber-400/5 hover:text-amber-200"
+              >
+                <Icons.Plus size={10} className="shrink-0 text-amber-400/70" />
+                <span className="min-w-0 flex-1 truncate">{component.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Saved user components */}
-      {userComponents.length > 0 && (
+      {filteredUserComponents.length > 0 && (
         <div className="border-b border-white/[0.05] px-2 pb-2">
           <button
             type="button"
@@ -120,7 +192,7 @@ export function BlocksSidebar() {
                 Mis componentes
               </span>
               <span className="rounded-full bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-400/70">
-                {userComponents.length}
+                {filteredUserComponents.length}
               </span>
             </div>
             <Icons.ChevronRight
@@ -131,26 +203,55 @@ export function BlocksSidebar() {
 
           {showUserComponents && (
             <div className="grid grid-cols-1 gap-1 px-1 pb-1 mt-1">
-              {userComponents.map((comp) => (
+              {filteredUserComponents.map((comp) => (
                 <div
                   key={comp.id}
+                  onDoubleClick={() => handleInsertUserComponent(comp)}
                   className="group flex items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-1.5 transition-colors hover:border-amber-400/20 hover:bg-amber-400/5"
                 >
                   <Icons.Puzzle size={11} className="shrink-0 text-amber-400/50" />
-                  <span className="flex-1 truncate text-[11px] text-slate-300">{comp.name}</span>
+                  {editingComponentId === comp.id ? (
+                    <input
+                      autoFocus
+                      value={editingComponentName}
+                      onChange={(event) => setEditingComponentName(event.target.value)}
+                      onBlur={commitRenameUserComponent}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") commitRenameUserComponent();
+                        if (event.key === "Escape") cancelRenameUserComponent();
+                      }}
+                      className="min-w-0 flex-1 rounded-md border border-amber-400/20 bg-black/20 px-2 py-1 text-[11px] text-amber-100 outline-none focus:border-amber-300/40"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleInsertUserComponent(comp)}
+                      className="min-w-0 flex-1 truncate text-left text-[11px] text-slate-300 hover:text-amber-200"
+                    >
+                      {comp.name}
+                    </button>
+                  )}
                   <button
                     type="button"
                     title="Insertar"
                     onClick={() => handleInsertUserComponent(comp)}
-                    className="grid h-5 w-5 shrink-0 place-items-center rounded text-slate-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-amber-400/15 hover:text-amber-300"
+                    className="grid h-5 w-5 shrink-0 place-items-center rounded text-amber-400/70 transition-colors hover:bg-amber-400/15 hover:text-amber-200"
                   >
                     <Icons.Plus size={10} />
                   </button>
                   <button
                     type="button"
+                    title="Renombrar"
+                    onClick={() => startRenameUserComponent(comp)}
+                    className="grid h-5 w-5 shrink-0 place-items-center rounded text-slate-600 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
+                  >
+                    <Icons.Pencil size={10} />
+                  </button>
+                  <button
+                    type="button"
                     title="Eliminar"
                     onClick={() => handleDeleteUserComponent(comp.id)}
-                    className="grid h-5 w-5 shrink-0 place-items-center rounded text-slate-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/15 hover:text-red-400"
+                    className="grid h-5 w-5 shrink-0 place-items-center rounded text-slate-600 transition-colors hover:bg-red-500/15 hover:text-red-400"
                   >
                     <Icons.X size={10} />
                   </button>
@@ -170,7 +271,7 @@ export function BlocksSidebar() {
           </div>
         )}
 
-        {CATEGORY_ORDER.map((category) => {
+        {CATEGORY_ORDER.filter((category) => displayGroups.has(category)).map((category) => {
           const items = displayGroups.get(category);
           if (!items?.length) return null;
           const isCollapsed = collapsed[category];
@@ -184,7 +285,9 @@ export function BlocksSidebar() {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 group-hover:text-slate-400">
-                    {CATEGORY_LABELS[category]}
+                    {FRIENDLY_CATEGORY_LABELS[category] ??
+  CATEGORY_LABELS[category] ??
+  category}
                   </span>
                   <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[9px] font-medium text-slate-500">
                     {items.length}
@@ -208,7 +311,7 @@ export function BlocksSidebar() {
         })}
       </div>
 
-      <SidebarFooter />
+
     </aside>
   );
 }
@@ -297,35 +400,5 @@ function BlockCard({ definition }: { definition: EditorBlockDefinition }) {
         <div className="absolute inset-0 rounded-xl bg-linear-to-br from-indigo-500/0 via-transparent to-indigo-500/5" />
       </div>
     </button>
-  );
-}
-
-function SidebarFooter() {
-  const selectedId = useEditorStore((s) => s.selectedId);
-  const selectedType = useEditorStore((s) =>
-    s.selectedId ? s.tree.nodes[s.selectedId]?.type : null
-  );
-
-  return (
-    <div className="border-t border-white/[0.05] px-4 py-2.5">
-      <div className="text-[9px] font-semibold uppercase tracking-widest text-slate-600">
-        Selección
-      </div>
-      <div className="mt-0.5 truncate text-[11px] text-slate-400">
-        {selectedId && selectedType ? (
-          <>
-            <span className="text-indigo-300">
-              {blockRegistry[selectedType as keyof typeof blockRegistry]?.label ??
-                selectedType}
-            </span>
-            <span className="ml-2 font-mono text-[9px] text-slate-600">
-              #{selectedId.slice(-6)}
-            </span>
-          </>
-        ) : (
-          <span className="text-slate-600">Ningún bloque seleccionado</span>
-        )}
-      </div>
-    </div>
   );
 }

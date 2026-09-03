@@ -55,14 +55,12 @@ npm install
 npm run dev   # http://localhost:3000
 \`\`\`
 
-## Deploy en Vercel (1-click)
+## Deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/next.js/tree/canary/examples/hello-world)
-
-1. Sube este directorio a un repo GitHub
-2. Importa en vercel.com → **New Project**
-3. Framework: **Next.js** (auto-detectado)
-4. Haz clic en **Deploy**
+1. Instala dependencias: npm install
+2. Genera la build: npm run build
+3. Inicia la app: npm run start
+4. Configura tu proxy o servicio Node hacia el puerto 3000
 
 ## Deploy en cualquier servidor Node.js
 

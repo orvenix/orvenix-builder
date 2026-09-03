@@ -1,6 +1,6 @@
 import React from 'react';
 import { Layout, Rocket, ShieldCheck } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 
 const SERVICES = [
   { title: "Desarrollo SaaS", desc: "Plataformas robustas bajo demanda con arquitectura escalable.", icon: Rocket },

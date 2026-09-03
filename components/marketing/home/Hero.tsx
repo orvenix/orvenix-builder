@@ -1,126 +1,98 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { ArrowRight, CreditCard, LayoutTemplate, ShieldCheck, Sparkles } from 'lucide-react';
+import { OrvenixBuilderShowcase } from '@/components/marketing/home/OrvenixBuilderShowcase';
 
-function useCountUp(target: number, suffix: string, inView: boolean) {
-  const [value, setValue] = useState('0' + suffix);
-  const started = useRef(false);
-
-  useEffect(() => {
-    if (!inView || started.current) return;
-    started.current = true;
-    const steps = 60;
-    const increment = target / steps;
-    let current = 0;
-    const step = () => {
-      current += increment;
-      if (current < target) {
-        setValue(Math.ceil(current) + suffix);
-        requestAnimationFrame(step);
-      } else {
-        setValue(target + suffix);
-      }
-    };
-    requestAnimationFrame(step);
-  }, [inView, target, suffix]);
-
-  return value;
-}
-
-function StatItem({ target, suffix, label }: { target: number; suffix: string; label: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
-  const value = useCountUp(target, suffix, inView);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold: 0.4 });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
+function StatItem({ value, label }: { value: string; label: string }) {
   return (
-    <div ref={ref}>
+    <div className="home-hero-stat">
       <div className="mk-stat-num">{value}</div>
       <div className="text-sm text-orvenix-muted">{label}</div>
     </div>
   );
 }
 
+const trustItems = [
+  { icon: ShieldCheck, label: 'Hosting, SSL y soporte incluidos' },
+  { icon: LayoutTemplate, label: 'Templates reales por industria' },
+  { icon: CreditCard, label: 'Planes claros desde 15 USD/mes + IVA' },
+];
+
+const activationSteps = [
+  'Elige tu plan',
+  'Genera tu sitio',
+  'Edita lo basico',
+  'Publica con confianza',
+];
+
 export function Hero() {
   return (
-    <section className="mk-hero" aria-label="Portada">
+    <section className="mk-hero home-hero" aria-label="Portada Orvenix">
       <div className="mk-hero-glow mk-hero-glow-1" aria-hidden="true" />
       <div className="mk-hero-glow mk-hero-glow-2" aria-hidden="true" />
+      <div className="home-hero-orbit home-hero-orbit-1" aria-hidden="true" />
+      <div className="home-hero-orbit home-hero-orbit-2" aria-hidden="true" />
 
       <div className="mk-container relative">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-
-          {/* Left column */}
-          <div>
-            <div className="flex items-center gap-2 mb-5">
+        <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(390px,0.92fr)] lg:gap-12">
+          <div className="home-hero-copy">
+            <div className="home-hero-pill mb-5">
               <span className="mk-eyebrow-dot" aria-hidden="true" />
-              <span className="text-sm font-medium text-orvenix-secondary">
-                Plataforma SaaS · Activa ahora mismo
-              </span>
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              <span>Super Builder + IA para lanzar mas rapido</span>
             </div>
 
             <h1 className="mk-hero-title mb-5 text-orvenix-text">
-              Tu negocio digital,{' '}
-              <span className="mk-gradient-text">todo en un panel</span>
+              Vende con un sitio premium
+              <span className="block">que puedes editar</span>
+              <span className="mk-gradient-text block">sin depender de nadie</span>
             </h1>
 
-            <p className="text-base leading-relaxed mb-8 max-w-lg text-orvenix-secondary">
-              Web profesional + panel privado + gestión de clientes + almacenamiento en la nube.
-              Todo incluido, sin instalar nada, activo en menos de 24 horas.
+            <p className="home-hero-lead mb-7 max-w-xl text-orvenix-secondary">
+              Orvenix combina sitio profesional, editor visual, templates por industria, pagos y panel privado para que tu negocio se vea listo para comprar desde el primer clic.
             </p>
 
-            <div className="flex flex-wrap gap-3 mb-10">
-              <Link href="/precios" className="mk-btn-primary">Ver planes desde $349/mes ↗</Link>
-              <Link href="/webs" className="mk-btn-outline">Ver demos en vivo</Link>
+            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link href="/precios" className="mk-btn-primary home-hero-cta-primary">
+                Comenzar ahora
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link href="/webs" className="mk-btn-outline home-hero-cta-secondary">
+                Ver demostración
+              </Link>
             </div>
 
-            <div className="grid grid-cols-3 gap-6 pt-6 mk-divider">
-              <StatItem target={150} suffix="+" label="Proyectos completados" />
-              <StatItem target={99} suffix=".9%" label="Uptime garantizado" />
-              <StatItem target={24} suffix="h" label="Tiempo de activación" />
-            </div>
-          </div>
+            <p className="home-hero-proof mb-8">Sin código · Hosting incluido · Publica cuando quieras</p>
 
-          {/* Right column — code card */}
-          <div className="relative flex justify-center lg:justify-end">
-            <div className="mk-float-badge mk-float-badge-tl">
-              <span>🔐</span> Panel 100% privado
+            <div className="home-hero-trust-grid mb-8">
+              {trustItems.map(({ icon: Icon, label }) => (
+                <div key={label} className="home-hero-trust-item">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  <span>{label}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="mk-code-card w-full max-w-md" role="img" aria-label="Vista del panel de control Orvenix">
-              <div className="mk-code-bar">
-                <span className="w-3 h-3 rounded-full bg-orvenix-accent-3/80" />
-                <span className="w-3 h-3 rounded-full bg-orvenix-accent-2/75" />
-                <span className="w-3 h-3 rounded-full bg-orvenix-accent/80" />
-                <span className="ml-2 text-orvenix-muted font-mono text-xs">panel.tuempresa.com</span>
-              </div>
-              <div className="p-5 font-mono text-sm leading-7">
-                <p><span className="mk-c-purple">const</span> <span className="mk-c-blue">panel</span> = <span className="mk-c-yellow">await</span> <span className="mk-c-cyan">Orvenix</span>.<span className="mk-c-blue">init</span>{'({'}</p>
-                <p className="pl-4"><span className="mk-c-cyan">empresa</span>: <span className="mk-c-green">&apos;Tu Negocio&apos;</span>,</p>
-                <p className="pl-4"><span className="mk-c-cyan">dominio</span>: <span className="mk-c-green">&apos;panel.tuempresa.com&apos;</span>,</p>
-                <p className="pl-4"><span className="mk-c-cyan">plan</span>: <span className="mk-c-green">&apos;pro&apos;</span>,</p>
-                <p className="pl-4"><span className="mk-c-cyan">almacenamiento</span>: <span className="mk-c-orange">100</span>, <span className="mk-c-gray">{/* GB */}GB</span></p>
-                <p className="pl-4"><span className="mk-c-cyan">clientes</span>: <span className="mk-c-green">&apos;ilimitados&apos;</span>,</p>
-                <p>{'}'+')'}</p>
-                <p>&nbsp;</p>
-                <p className="mk-c-gray animate-pulse">{'// ✦ Panel activo en menos de 24h'}</p>
-                <p><span className="mk-c-purple">console</span>.<span className="mk-c-blue">log</span>(<span className="mk-c-green">&apos;¡Bienvenido a Orvenix!&apos;</span>)</p>
-              </div>
+            <div className="home-hero-activation mb-9" aria-label="Ruta de activacion">
+              {activationSteps.map((step, index) => (
+                <div key={step} className="home-hero-step">
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <strong>{step}</strong>
+                </div>
+              ))}
             </div>
 
-            <div className="mk-float-badge mk-float-badge-br">
-              <span>⚡</span> Activo en 24h
+            <div className="grid grid-cols-3 gap-4 pt-6 mk-divider">
+              <StatItem value="150+" label="Proyectos completados" />
+              <StatItem value="99.9%" label="Uptime objetivo" />
+              <StatItem value="24h" label="Activacion guiada" />
             </div>
           </div>
 
+          <div className="home-hero-showcase relative flex justify-center lg:justify-end">
+            <OrvenixBuilderShowcase />
+          </div>
         </div>
       </div>
     </section>

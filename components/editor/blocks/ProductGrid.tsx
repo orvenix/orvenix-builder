@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 
 interface Product {
   id: string;

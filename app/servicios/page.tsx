@@ -7,7 +7,7 @@ import { CtaSection } from '@/components/marketing/sections/CtaSection';
 
 export const metadata: Metadata = {
   title: 'Características de la Plataforma — Orvenix SaaS',
-  description: 'Conoce todas las características de la plataforma Orvenix: panel privado, dominio propio, tienda online, citas, almacenamiento, analíticas y más. Todo desde $349 MXN/mes.',
+  description: 'Conoce todas las características de la plataforma Orvenix: panel privado, dominio propio, tienda online, citas, almacenamiento, analíticas y más. Todo desde 15 USD/mes + IVA.',
   openGraph: {
     url: 'https://orvenix.com.mx/servicios/',
     title: 'Características de la Plataforma — Orvenix SaaS',
@@ -51,9 +51,9 @@ function GlassCard({
 }
 
 const storageRows = [
-  { plan: 'Plan Básico', capacity: '10 GB' },
-  { plan: 'Plan Pro', capacity: '50 GB' },
-  { plan: 'Plan Empresa', capacity: '200 GB' },
+  { plan: 'Plan Starter', capacity: '7 dias de backups' },
+  { plan: 'Plan Pro', capacity: '30 dias de backups' },
+  { plan: 'Plan Business', capacity: '30 dias de backups' },
 ];
 
 const comparisonRows = [
@@ -119,7 +119,7 @@ export default function ServiciosPage() {
               Activa tu plataforma en menos de 24 horas y empieza a operar desde el día uno.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Link href="/precios" className="mk-btn-primary">Ver planes desde $349 ↗</Link>
+              <Link href="/precios" className="mk-btn-primary">Ver planes desde 15 USD ↗</Link>
               <Link href="/plataforma" className="mk-btn-outline">Ver demo</Link>
             </div>
             <div className="grid sm:grid-cols-3 gap-3 mt-10">
@@ -172,7 +172,7 @@ export default function ServiciosPage() {
                 <CheckItem>Acceso seguro desde celular, tablet o computadora</CheckItem>
               </ul>
             </div>
-            <GlassCard icon="🖥️" title="Incluido desde el plan Básico">
+            <GlassCard icon="🖥️" title="Incluido desde el plan Starter">
               <p className="text-sm leading-relaxed text-orvenix-secondary mb-4">
                 El panel privado está activo desde el momento en que activas tu cuenta.
                 Sin configuraciones complejas, sin instalaciones.
@@ -194,7 +194,7 @@ export default function ServiciosPage() {
           <div className="mt-10 grid lg:grid-cols-2 gap-12 items-center">
             <GlassCard icon="🌐" title="Tu marca en línea">
               <ul className="space-y-2 text-sm text-orvenix-secondary">
-                {['Dominio .com.mx incluido en plan Pro y Empresa', 'SSL gratuito y renovación automática', 'Páginas: inicio, servicios, contacto, blog', 'Diseño adaptado a tu marca y colores', 'Optimizado para Google (SEO básico incluido)'].map((item) => (
+                {['Multi-dominio disponible desde Pro y Business', 'SSL gratuito y renovación automática', 'Páginas: inicio, servicios, contacto, blog', 'Diseño adaptado a tu marca y colores', 'Optimizado para Google (SEO básico incluido)'].map((item) => (
                   <li key={item}>✓ {item}</li>
                 ))}
               </ul>
@@ -230,7 +230,7 @@ export default function ServiciosPage() {
             </div>
             <GlassCard icon="🛒" title="Comisiones y disponibilidad">
               <p className="text-sm leading-relaxed text-orvenix-secondary mb-4">
-                Tienda disponible en plan Pro y Empresa. Sin comisión por venta de nuestra parte — solo pagas la tarifa de tu pasarela de pago.
+                Tienda disponible desde plan Pro. Sin comisión por venta de nuestra parte — solo pagas la tarifa de tu pasarela de pago.
               </p>
               <div className="flex flex-wrap gap-2">
                 {['Stripe', 'MercadoPago', 'Transferencia'].map((t) => (
@@ -319,7 +319,7 @@ export default function ServiciosPage() {
         <div className="mk-container">
           <SectionHeader tag="Resumen" title="¿Qué incluye cada plan?" description="Todas las características, distribuidas según el plan que elijas." center />
           <p className="text-center text-sm leading-relaxed text-orvenix-secondary max-w-2xl mx-auto mt-4">
-            Si hoy solo necesitas salir rápido, el plan Básico cubre lo esencial. Si ya vendes o atiendes clientes con frecuencia,
+            Si hoy necesitas presencia institucional administrada, Starter cubre lo esencial. Si ya vendes o atiendes clientes con frecuencia,
             Pro suele ser el mejor punto de equilibrio entre operación, imagen y crecimiento.
           </p>
           <div className="mt-10 overflow-x-auto">
@@ -327,9 +327,9 @@ export default function ServiciosPage() {
               <thead>
                 <tr>
                   <th scope="col">Característica</th>
-                  <th scope="col">Básico<br /><span className="mk-accent-text font-normal normal-case">$349/mes</span></th>
-                  <th scope="col" className="highlight">Pro<br /><span className="font-normal normal-case">$699/mes</span></th>
-                  <th scope="col">Empresa<br /><span className="mk-accent-text font-normal normal-case">$1,399/mes</span></th>
+                  <th scope="col">Starter<br /><span className="mk-accent-text font-normal normal-case">15 USD/mes</span></th>
+                  <th scope="col" className="highlight">Pro<br /><span className="font-normal normal-case">39 USD/mes</span></th>
+                  <th scope="col">Business<br /><span className="mk-accent-text font-normal normal-case">79 USD/mes</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -353,8 +353,8 @@ export default function ServiciosPage() {
 
       <CtaSection
         title="¿Listo para activar tu plataforma?"
-        description="Sin permanencia forzada. Tu panel listo en menos de 24 horas."
-        buttonLabel="Ver planes desde $349 →"
+        description="Planes oficiales en USD + IVA. Tu panel listo en menos de 24 horas."
+        buttonLabel="Ver planes desde 15 USD →"
         buttonHref="/precios"
       />
     </MarketingLayout>

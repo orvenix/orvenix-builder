@@ -20,7 +20,7 @@ export function PostLoginSync() {
     const data = localStorage.getItem(pendingDraft);
     if (data) {
       // El flujo actual de creación vive en /constructor; la ruta /editor/new ya no existe.
-      window.location.href = "/constructor";
+      window.location.href = "/constructor?source=blank";
     }
   };
 

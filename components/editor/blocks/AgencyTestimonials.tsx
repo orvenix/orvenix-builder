@@ -1,6 +1,6 @@
 import React from 'react';
 import { Quote } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 
 export function AgencyTestimonials() {
   const theme = useEditorStore((s) => s.tree.theme);

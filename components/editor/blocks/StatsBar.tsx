@@ -1,5 +1,5 @@
 import { ShoppingBag, Users, DollarSign } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 
 interface StatsBarProps {
   accentColor?: string;

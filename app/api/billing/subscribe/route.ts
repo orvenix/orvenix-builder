@@ -6,29 +6,54 @@ import {
   createStripeCheckoutSession,
   getStripePriceId,
   isStripeConfigured,
+  isStripeModeMismatchError,
+  retrieveStripeCustomer,
 } from "@/lib/stripe"
+import { serverError } from "@/lib/server-log"
 
 // POST /api/billing/subscribe
 // Body: { planId: "starter"|"pro"|"commerce", interval: "month"|"year" }
 export async function POST(request: Request) {
-  let body: { planId?: string; interval?: string }
+  let body: { planId?: string; interval?: string; repairActiveSubscription?: boolean }
   try {
-    body = await request.json() as { planId?: string; interval?: string }
+    body = await request.json() as { planId?: string; interval?: string; repairActiveSubscription?: boolean }
   } catch {
-    return NextResponse.json({ error: "Body JSON inválido", code: "INVALID_JSON" }, { status: 400 })
+    return NextResponse.json({ error: "Body JSON invalido", code: "INVALID_JSON" }, { status: 400 })
   }
 
-  const session = await getAuthSession()
-  const result = await buildBillingSubscribeResponse({
-    session,
-    body,
-    findPlan: (planId) => editorPrisma.plan.findUnique({ where: { id: planId } }),
-    findSubscription: (userId) => editorPrisma.subscription.findUnique({ where: { userId } }),
-    getStripePriceId,
-    isStripeConfigured,
-    createStripeCheckoutSession,
-    upsertSubscription: (params) => editorPrisma.subscription.upsert(params as never),
-  })
+  try {
+    const session = await getAuthSession()
+    const result = await buildBillingSubscribeResponse({
+      session,
+      body,
+      findPlan: (planId) => editorPrisma.plan.findUnique({ where: { id: planId } }),
+      findSubscription: (userId) => editorPrisma.subscription.findUnique({ where: { userId } }),
+      getStripePriceId,
+      isStripeConfigured,
+      createStripeCheckoutSession,
+      canReplaceActiveSubscription: async (subscription) => {
+        if (subscription.provider !== "stripe") return false
+        if (!subscription.stripeCustomerId) return true
 
-  return NextResponse.json(result.body, { status: result.status })
+        try {
+          await retrieveStripeCustomer(subscription.stripeCustomerId)
+          return true
+        } catch (error) {
+          return isStripeModeMismatchError(error)
+        }
+      },
+      upsertSubscription: (params) => editorPrisma.subscription.upsert(params as never),
+    })
+
+    return NextResponse.json(result.body, { status: result.status })
+  } catch (error) {
+    serverError("[billing:subscribe] Unexpected checkout error", error)
+    return NextResponse.json(
+      {
+        error: "No pudimos iniciar el checkout. Intenta de nuevo o contacta soporte.",
+        code: "CHECKOUT_UNEXPECTED_ERROR",
+      },
+      { status: 500 }
+    )
+  }
 }

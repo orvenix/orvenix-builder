@@ -3,7 +3,17 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { produceWithPatches, applyPatches, enablePatches, type Patch, type Draft, setAutoFreeze } from "immer";
-import type { EditorAsset, EditorTree, NodeId, NodeProps, DeviceMode, SaveStatus, PublishStatus, AssetPickerTarget } from "@/types/editor";
+import type {
+  AssetPickerTarget,
+  BrandKit,
+  DeviceMode,
+  EditorAsset,
+  EditorTree,
+  NodeId,
+  NodeProps,
+  PublishStatus,
+  SaveStatus,
+} from "@/types/editor";
 import { shouldCoalesce, coalesce, type HistoryEntry, HISTORY_LIMIT } from "@/components/editor/history";
 import { editorDebug, editorError, editorWarn } from "@/components/editor/logger";
 import { validateTree } from "@/types/validateTree";
@@ -24,6 +34,7 @@ export type SmartGuide =
 export type CanvasGridSize = 8 | 16 | 24 | 0;
 
 export type UserRole = "admin" | "client";
+export type BuilderTier = "basic" | "pro";
 export type PurchaseType = "buy" | "rent" | null;
 export type AlignAxis = "horizontal" | "vertical";
 export type AlignMode = "start" | "center" | "end";
@@ -116,6 +127,7 @@ export interface EditorState {
   contextMenu: EditorContextMenuState;
   clipboardTree: EditorTree | null;
   userRole: UserRole;
+  builderTier: BuilderTier;
   purchaseType: PurchaseType;
   
   // Asset Picker
@@ -145,8 +157,11 @@ export interface EditorState {
     pageContext?: { activePageSlug?: string; activePageName?: string; availablePages?: SitePageListItem[] }
   ) => void;
   setWebsiteId: (id: string) => void;
+    syncTreeFromServer:
+    (tree: EditorTree) => void;
   setActivePageContext: (pageContext: { activePageSlug: string; activePageName: string; availablePages?: SitePageListItem[] }) => void;
   setUserRole: (role: UserRole) => void;
+  setBuilderTier: (tier: BuilderTier) => void;
   select: (id: NodeId | null, options?: { additive?: boolean }) => void;
   selectMany: (ids: NodeId[]) => void;
   selectNodesInRect: (rect: { x: number; y: number; width: number; height: number }) => void;
@@ -189,7 +204,12 @@ export interface EditorState {
   toggleNodeLocked: (id: NodeId) => void;
   toggleSelectedHidden: () => void;
   toggleSelectedLocked: () => void;
-  updateGlobalTheme: (patch: Partial<GlobalTheme> | ((t: GlobalTheme) => void)) => void;
+  updateGlobalTheme: (patch: Partial<GlobalTheme> | ((t: GlobalTheme) => Partial<GlobalTheme> | GlobalTheme | void)) => void;
+  updateBrandKit: (
+  patch:
+    | Partial<BrandKit>
+    | ((brand: BrandKit) => BrandKit),
+) => void;
   updateSEO: (patch: Partial<SEOMetadata>) => void;
   execute: (label: string, recipe: (draft: Draft<EditorState>) => void) => void;
 
@@ -222,7 +242,7 @@ export interface EditorState {
   addComment: (x: number, y: number, text: string) => void;
   resolveComment: (id: string) => void;
   requestReview: () => Promise<void>;
-  publishWebsite: () => Promise<void>;
+  publishWebsite: () => Promise<string | null>;
   
   // Historial Acciones
   undo: () => void;
@@ -256,6 +276,60 @@ export interface EditorState {
 // Constantes de diseño profesional
 const GUIDE_THRESHOLD = 5; // Píxeles de proximidad para activar la guía
 const ASSET_LIBRARY_LIMIT = 24;
+
+const STYLE_CLIPBOARD_KEYS = new Set([
+  "align",
+  "alignItems",
+  "animation",
+  "background",
+  "border",
+  "borderColor",
+  "borderRadius",
+  "borderWidth",
+  "boxShadow",
+  "color",
+  "customCss",
+  "display",
+  "flexDirection",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "gap",
+  "gridTemplateColumns",
+  "justifyContent",
+  "lineHeight",
+  "margin",
+  "maxWidth",
+  "motion",
+  "opacity",
+  "padding",
+  "paddingX",
+  "paddingY",
+  "size",
+  "textAlign",
+  "weight",
+  "styleBackground",
+  "styleOpacity",
+  "stylePadding",
+  "styleRadius",
+  "styleBorderWidth",
+  "styleBorderColor",
+  "styleShadow",
+]);
+
+function pickStyleClipboardProps(props: NodeProps): NodeProps {
+  return Object.fromEntries(
+    Object.entries(props).filter(([key, value]) => {
+      if (value === undefined) return false;
+      return (
+        STYLE_CLIPBOARD_KEYS.has(key) ||
+        key.startsWith("style") ||
+        key.startsWith("motion") ||
+        key.startsWith("animation")
+      );
+    })
+  ) as NodeProps;
+}
 
 // Generador de IDs más robusto para producción
 const nid = (): string => 
@@ -369,6 +443,27 @@ function createSubtree(tree: EditorTree, rootId: NodeId): EditorTree | null {
   return { rootId, nodes };
 }
 
+const DEFAULT_BRAND_KIT: BrandKit = {
+  businessName: "Mi negocio",
+  tagline: "",
+  description: "",
+  logoUrl: "",
+  faviconUrl: "",
+  contact: {
+    phone: "",
+    whatsapp: "",
+    email: "",
+    address: "",
+  },
+  social: {
+    facebook: "",
+    instagram: "",
+    tiktok: "",
+    youtube: "",
+    linkedin: "",
+  },
+};
+
 export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, get) => ({
   websiteId: null,
   activePageSlug: "home",
@@ -384,6 +479,7 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   isResponsivePreviewMode: false,
   isCommentMode: false,
   userRole: "client", // Por defecto entramos como cliente
+  builderTier: "basic",
   purchaseType: null,
   canvasZoom: 100,
   lastCanvasPoint: null,
@@ -447,6 +543,93 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
 
   setWebsiteId: (id: string) => set({ websiteId: id, assetLibrary: loadAssetLibrary(id) }),
 
+    syncTreeFromServer:
+    (incomingTree: EditorTree) => {
+      let safeTree:
+        EditorTree;
+
+      try {
+        safeTree =
+          validateTree(
+            structuredClone(
+              incomingTree,
+            ),
+          );
+      } catch {
+        safeTree =
+          structuredClone(
+            incomingTree,
+          );
+      }
+
+      set(
+        (
+          state:
+            EditorState,
+        ) => {
+          const syncedRev =
+            state.rev + 1;
+
+          return {
+            tree:
+              safeTree,
+
+            selectedId:
+              null,
+
+            selectedIds:
+              [],
+
+            editingNodeId:
+              null,
+
+            hoveredId:
+              null,
+
+            smartGuides:
+              [],
+
+            contextMenu: {
+              isOpen:
+                false,
+
+              nodeId:
+                null,
+
+              x:
+                0,
+
+              y:
+                0,
+            },
+
+            rev:
+              syncedRev,
+
+            lastSavedRev:
+              syncedRev,
+
+            saveStatus:
+              "saved" as const,
+
+            lastError:
+              null,
+
+            undoStack:
+              [],
+
+            redoStack:
+              [],
+
+            isApplyingHistory:
+              false,
+          };
+        },
+      );
+
+      get().saveToLocalStorage();
+    },
+
   setActivePageContext: ({ activePageSlug, activePageName, availablePages }) =>
     set({
       activePageSlug,
@@ -455,6 +638,7 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     }),
 
   setUserRole: (role: UserRole) => set({ userRole: role }),
+  setBuilderTier: (builderTier: BuilderTier) => set({ builderTier }),
 
   saveToLocalStorage: () => {
     const { tree, websiteId, activePageSlug } = get();
@@ -640,11 +824,7 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   copyNodeStyles: (id) => {
     const node = get().tree.nodes[id];
     if (!node) return;
-    const STYLE_KEYS = ["styleBackground", "styleOpacity", "stylePadding", "styleRadius", "styleBorderWidth", "styleBorderColor", "styleShadow", "customCss"];
-    const styleProps = Object.fromEntries(
-      Object.entries(node.props).filter(([k]) => STYLE_KEYS.includes(k))
-    );
-    set({ styleClipboard: styleProps });
+    set({ styleClipboard: pickStyleClipboardProps(node.props) });
   },
 
   pasteNodeStyles: (id) => {
@@ -662,29 +842,47 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     if (ids.length === 0) return;
     const containerId = nid();
     get().execute(`wrap-in-${layout}`, (draft) => {
-      const parent = Object.values(draft.tree.nodes).find((n) => ids.every((id) => n.children.includes(id)));
+      const parent = Object.values(draft.tree.nodes).find((node) =>
+        ids.every((id) => id !== draft.tree.rootId && !draft.tree.nodes[id]?.locked && node.children.includes(id))
+      );
       if (!parent) return;
 
-      const firstIndex = Math.min(...ids.map((id) => parent.children.indexOf(id)).filter((i) => i >= 0));
+      const orderedIds = parent.children.filter((id) => ids.includes(id));
+      if (orderedIds.length === 0) return;
+
+      const firstIndex = Math.min(...orderedIds.map((id) => parent.children.indexOf(id)).filter((index) => index >= 0));
       const containerProps: NodeProps = layout === "grid"
-        ? { display: "grid", maxWidth: "lg", paddingY: "md", paddingX: "md" }
-        : { display: "flex", flexDirection: "column", maxWidth: "lg", paddingY: "md", paddingX: "md" };
+        ? { display: "grid", maxWidth: "lg", paddingY: "md", paddingX: "md", gap: "md" }
+        : { display: "flex", flexDirection: "column", maxWidth: "lg", paddingY: "md", paddingX: "md", gap: "md" };
 
       draft.tree.nodes[containerId] = {
-        id: containerId, type: "section",
-        props: containerProps, children: [...ids], version: 1,
+        id: containerId,
+        type: "section",
+        props: containerProps,
+        children: orderedIds,
+        version: 1,
       };
-      ids.forEach((id) => {
-        const idx = parent.children.indexOf(id);
-        if (idx >= 0) parent.children.splice(idx, 1);
+      orderedIds.forEach((id) => {
+        const index = parent.children.indexOf(id);
+        if (index >= 0) parent.children.splice(index, 1);
       });
       parent.children.splice(firstIndex, 0, containerId);
       draft.selectedId = containerId;
       draft.selectedIds = [containerId];
+      draft.layersHighlightId = containerId;
     });
   },
 
-  highlightInLayers: (id) => set({ layersHighlightId: id }),
+  highlightInLayers: (id) =>
+    set((state) => {
+      if (!state.tree.nodes[id]) return { layersHighlightId: null };
+      return {
+        layersHighlightId: id,
+        selectedId: id === state.tree.rootId ? null : id,
+        selectedIds: id === state.tree.rootId ? [] : [id],
+        editingNodeId: null,
+      };
+    }),
   clearLayersHighlight: () => set({ layersHighlightId: null }),
   openContextMenu: (nodeId: NodeId, position: { x: number; y: number }) =>
     set({ contextMenu: { isOpen: true, nodeId, x: position.x, y: position.y } }),
@@ -770,36 +968,110 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   },
 
   requestReview: async () => {
-    const { websiteId, saveToServer } = get();
-    if (!websiteId) return;
+  const {
+    websiteId,
+    saveToServer,
+    markError,
+  } = get();
 
-    // Primero nos aseguramos de que los cambios actuales se guarden
-    await saveToServer();
+  if (!websiteId) return;
 
-    set({ publishStatus: "review" });
-    // Aquí llamarías a una API que cambie el estado en la base de datos
-    await fetch(`/api/editor/${websiteId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "review" }),
-    });
-    editorDebug("[EditorStore] Revisión solicitada al equipo Orvenix.");
-  },
+  const saveResult = await saveToServer();
+
+  if (!saveResult.success) {
+    markError(
+      saveResult.error ??
+        "No se pudieron guardar los cambios antes de solicitar revisión"
+    );
+    return;
+  }
+
+  set({
+    publishStatus: "review",
+  });
+
+  editorDebug(
+    "[EditorStore] Cambios guardados y marcados para revisión."
+  );
+},
 
   publishWebsite: async () => {
-    const { websiteId, saveToServer } = get();
-    if (!websiteId) return;
+  const {
+    websiteId,
+    saveToServer,
+    markError,
+  } = get();
 
-    await saveToServer();
+  if (!websiteId) return null;
 
-    set({ publishStatus: "published" });
-    await fetch(`/api/editor/${websiteId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "published" }),
+  // 1. Guardar primero la versión más reciente.
+  const saveResult = await saveToServer();
+
+  if (!saveResult.success) {
+    markError(
+      saveResult.error ??
+        "No se pudieron guardar los cambios antes de publicar"
+    );
+    return null;
+  }
+
+  try {
+    // 2. Publicar únicamente después de guardar correctamente.
+    const response = await fetch(
+      `/api/editor/${websiteId}/publish`,
+      {
+        method: "POST",
+      }
+    );
+
+    if (!response.ok) {
+      let message = "No se pudo publicar el sitio";
+
+      try {
+        const body = await response.json();
+
+        if (
+          body &&
+          typeof body.error === "string" &&
+          body.error.trim()
+        ) {
+          message = body.error;
+        }
+      } catch {
+        // Conservamos el mensaje genérico.
+      }
+
+      throw new Error(message);
+    }
+
+    const body = (await response.json()) as { url?: string };
+
+    // 3. Solo el servidor puede confirmar que está publicado.
+    set({
+      publishStatus: "published",
     });
-    editorDebug("[EditorStore] Sitio publicado oficialmente.");
-  },
+
+    editorDebug(
+      "[EditorStore] Sitio publicado oficialmente."
+    );
+
+    return body.url ?? `/p/${websiteId}`;
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "No se pudo publicar el sitio";
+
+    markError(message);
+
+    editorError(
+      "[EditorStore] Error publicando sitio",
+      error
+    );
+
+    return null;
+  }
+},
 
   updateNodeProps: (id: NodeId, props: NodeProps) => 
     get().execute(`edit-prop:${id}:${Object.keys(props)[0]}`, (draft) => {
@@ -1602,6 +1874,51 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     get().closeAssetPicker();
   },
 
+  updateBrandKit: (patch) => {
+  set((state) => {
+    const currentBrand: BrandKit = {
+      ...DEFAULT_BRAND_KIT,
+      ...(state.tree.brand ?? {}),
+      contact: {
+        ...DEFAULT_BRAND_KIT.contact,
+        ...(state.tree.brand?.contact ?? {}),
+      },
+      social: {
+        ...DEFAULT_BRAND_KIT.social,
+        ...(state.tree.brand?.social ?? {}),
+      },
+    };
+
+    const nextBrand =
+      typeof patch === "function"
+        ? patch(currentBrand)
+        : {
+            ...currentBrand,
+            ...patch,
+            contact: patch.contact
+              ? {
+                  ...currentBrand.contact,
+                  ...patch.contact,
+                }
+              : currentBrand.contact,
+            social: patch.social
+              ? {
+                  ...currentBrand.social,
+                  ...patch.social,
+                }
+              : currentBrand.social,
+          };
+
+    return {
+      tree: {
+        ...state.tree,
+        brand: nextBrand,
+      },
+      saveStatus: "dirty",
+    };
+  });
+},
+
   updateGlobalTheme: (patch) => {
     get().execute("update-theme", (draft) => {
       if (!draft.tree.theme) {
@@ -1636,10 +1953,14 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
       }
       const theme = draft.tree.theme as GlobalTheme;
       if (typeof patch === "function") {
-        patch(theme);
+        const result = patch(theme);
+        if (result) {
+          draft.tree.theme = { ...theme, ...result };
+        }
       } else {
         draft.tree.theme = { ...theme, ...patch };
       }
+      draft.tree.globalTheme = draft.tree.theme;
       draft.rev += 1;
     });
   },

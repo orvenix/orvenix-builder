@@ -12,84 +12,167 @@ export const runtime = "nodejs"
 
 export async function POST(request: Request) {
   let auditId: string | null = null
+
   try {
-    const body = await request.json() as {
+    const body = (await request.json()) as {
       type?: string
       action?: string
       data?: { id?: string | number }
     }
 
     const id = String(body.data?.id ?? "")
-    if (!id) return NextResponse.json({ error: "Sin id" }, { status: 400 })
 
-    const eventType = body.action ?? body.type ?? "unknown"
-    auditId = await recordWebhookEvent({
+    if (!id) {
+      return NextResponse.json(
+        { error: "Sin id" },
+        { status: 400 }
+      )
+    }
+
+    const eventType =
+      body.action ??
+      body.type ??
+      "unknown"
+
+    const webhookRecord = await recordWebhookEvent({
       provider: "mercadopago",
-      eventId: eventType ? `${eventType}:${id}` : id,
+      eventId: `${eventType}:${id}`,
       eventType,
       resourceId: id,
       payload: body,
     })
 
+    if (webhookRecord.duplicate) {
+      return NextResponse.json({
+        received: true,
+        duplicate: true,
+      })
+    }
+
+    auditId = webhookRecord.id
+
     // Suscripciones (preapproval)
-    if (body.type === "subscription_preapproval" || body.action?.startsWith("subscription")) {
+    if (
+      body.type === "subscription_preapproval" ||
+      body.action?.startsWith("subscription")
+    ) {
       await processMercadoPagoSubscription(id)
       await markWebhookEvent(auditId, "processed")
+
       return NextResponse.json({ ok: true })
     }
 
-    // Pagos únicos — detectar si es orden de tienda o compra de sitio/template
-    if (body.type === "payment" || body.action === "payment.created" || body.action === "payment.updated") {
-      const storeResult = await processStoreMercadoPagoPayment(id)
-      if (!storeResult.processed && storeResult.orderId === null) {
-        // Not a store order — try template/site purchase
+    // Pagos únicos: detectar si es orden de tienda
+    // o compra de sitio/template.
+    if (
+      body.type === "payment" ||
+      body.action === "payment.created" ||
+      body.action === "payment.updated"
+    ) {
+      const storeResult =
+        await processStoreMercadoPagoPayment(id)
+
+      if (
+        !storeResult.processed &&
+        storeResult.orderId === null
+      ) {
         await processMercadoPagoPayment(id)
       }
+
       await markWebhookEvent(auditId, "processed")
+
       return NextResponse.json({ ok: true })
     }
 
     await markWebhookEvent(auditId, "skipped")
-    return NextResponse.json({ ok: true, skipped: true })
+
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+    })
   } catch (err) {
     serverError("[webhook:mp] Error", err)
-    await markWebhookEvent(auditId, "failed", err)
-    return NextResponse.json({ ok: true, error: "internal" })
+
+    await markWebhookEvent(
+      auditId,
+      "failed",
+      err
+    )
+
+    return NextResponse.json({
+      ok: true,
+      error: "internal",
+    })
   }
 }
 
-// IPN legacy (GET) — algunos planes de MP lo usan
+// IPN legacy (GET): algunos planes de Mercado Pago lo usan.
 export async function GET(request: Request) {
+  let auditId: string | null = null
+
   const { searchParams } = new URL(request.url)
   const topic = searchParams.get("topic")
   const id = searchParams.get("id")
 
-  if (!id) return NextResponse.json({ ok: true, skipped: true })
+  if (!id) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+    })
+  }
 
-  const auditId = await recordWebhookEvent({
+  const eventType = topic
+    ? `legacy.${topic}`
+    : "legacy.unknown"
+
+  const webhookRecord = await recordWebhookEvent({
     provider: "mercadopago",
-    eventId: topic ? `legacy:${topic}:${id}` : `legacy:${id}`,
-    eventType: topic ? `legacy.${topic}` : "legacy.unknown",
+    eventId: topic
+      ? `legacy:${topic}:${id}`
+      : `legacy:${id}`,
+    eventType,
     resourceId: id,
-    payload: Object.fromEntries(searchParams.entries()),
+    payload: Object.fromEntries(
+      searchParams.entries()
+    ),
   })
+
+  if (webhookRecord.duplicate) {
+    return NextResponse.json({
+      received: true,
+      duplicate: true,
+    })
+  }
+
+  auditId = webhookRecord.id
 
   try {
     if (topic === "subscription_preapproval") {
       await processMercadoPagoSubscription(id)
       await markWebhookEvent(auditId, "processed")
     } else if (topic === "payment") {
-      const storeResult = await processStoreMercadoPagoPayment(id)
-      if (!storeResult.processed && storeResult.orderId === null) {
+      const storeResult =
+        await processStoreMercadoPagoPayment(id)
+
+      if (
+        !storeResult.processed &&
+        storeResult.orderId === null
+      ) {
         await processMercadoPagoPayment(id)
       }
+
       await markWebhookEvent(auditId, "processed")
     } else {
       await markWebhookEvent(auditId, "skipped")
     }
   } catch (err) {
     serverError("[webhook:mp:get] Error", err)
-    await markWebhookEvent(auditId, "failed", err)
+
+    await markWebhookEvent(
+      auditId,
+      "failed",
+      err
+    )
   }
 
   return NextResponse.json({ ok: true })

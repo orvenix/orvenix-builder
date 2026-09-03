@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useEditorStore, GlobalTheme } from "./store/useEditorStore";
+import { useEditorStore, GlobalTheme } from "@/store/useEditorStore";
 import { Palette, Type, ArrowLeft, RotateCcw, MoveHorizontal, Sparkles } from "lucide-react";
 
 export const GlobalStylesPanel = ({ onClose }: { onClose: () => void }) => {

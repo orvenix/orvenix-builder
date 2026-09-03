@@ -2,11 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
-  ArrowUp, Sparkles, RotateCcw, Plus, Wand2, Check, AlertCircle,
-  RefreshCw, Eye, EyeOff, FileStack, Loader2, Upload, SlidersHorizontal, PencilLine, History,
+  ArrowUp, Sparkles, Plus, Wand2, Check, AlertCircle,
+  RefreshCw, Eye, EyeOff, FileStack, Loader2, Upload, SlidersHorizontal, PencilLine, Trash2,
 } from "lucide-react";
 import {
-  generateSectionAI, generateFullPageAI, improveSelectedCopyAI,
+  generateSectionAI,
+  generateFullPageAI,
+  improveSelectedCopyAI,
+  runOrvenixAgentAction,
+  rollbackOrvenixAIChangeAction,
   type BlockContext,
 } from "@/app/actions/ai";
 import { useEditorStore } from "@/store/useEditorStore";
@@ -23,6 +27,18 @@ type AiMsg    = {
   tree?: EditorTree; blockTypes?: string[];
   usedAI: boolean; tone?: "normal" | "success" | "error";
   userPrompt?: string; // the user message that triggered this
+    agentAction?: {
+    request: string;
+    scope: string;
+    requireConfirmation: boolean;
+        expectedTreeHash: string;
+  };
+  undoAction?: {
+    id: string;
+    siteId: string;
+    pageSlug: string;
+    expiresAt?: string;
+  };
   sketchMeta?: {
     fileName: string;
     fidelity: "strict" | "balanced" | "system";
@@ -31,11 +47,18 @@ type AiMsg    = {
 };
 type ChatMsg  = UserMsg | AiMsg;
 
-const SUGGESTIONS = [
+const GENERATION_SUGGESTIONS = [
   "Hero para una landing de SaaS",
   "Sección de precios con 3 planes",
   "Testimonios con social proof",
   "Formulario de contacto profesional",
+];
+
+const AGENT_SUGGESTIONS = [
+  "Crea una sección hero premium para restaurante",
+  "Diseña una sección de precios con 3 paquetes",
+  "Agrega una sección de servicios para clínica",
+  "Haz que el sitio se vea más premium",
 ];
 
 type SketchResponse = {
@@ -62,20 +85,33 @@ export function AiAssistantPanel() {
     {
       id: "welcome",
       role: "ai",
-      text: "Hola, soy **Orvenix AI**. Describe la sección que necesitas y la generaré con los bloques de tu proyecto.",
+      text: "Hola, soy **Orvenix AI**. Dime qué quieres cambiar y lo aplicaré directo cuando sea seguro.",
       usedAI: false,
     },
   ]);
   const [insertedIds, setInsertedIds] = useState<Set<string>>(new Set());
+  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
   const [input, setInput] = useState("");
   const [isHydrated, setIsHydrated] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isGeneratingPage, setIsGeneratingPage] = useState(false);
   const [isSketchPending, setIsSketchPending] = useState(false);
+  const [pendingUndoId, setPendingUndoId] = useState<string | null>(null);
   const [sketchFidelity, setSketchFidelity] = useState<"strict" | "balanced" | "system">("balanced");
   const [designSystem, setDesignSystem] = useState("");
+    const [
+    assistantMode,
+    setAssistantMode,
+  ] = useState<
+    "generate" | "agent"
+  >("agent");
 
   const insertTree = useEditorStore((s) => s.insertTree);
+    const syncTreeFromServer =
+    useEditorStore(
+      (s) =>
+        s.syncTreeFromServer,
+    );
   const updateNodeProps = useEditorStore((s) => s.updateNodeProps);
   const rootId     = useEditorStore((s) => s.tree.rootId);
   const nodes      = useEditorStore((s) => s.tree.nodes);
@@ -89,8 +125,11 @@ export function AiAssistantPanel() {
   const listRef    = useRef<HTMLDivElement>(null);
   const inputRef   = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messageSequenceRef = useRef(0);
-  const nextMessageId = (prefix: "u" | "a") => `${prefix}-${++messageSequenceRef.current}`;
+    const nextMessageId = (
+    prefix:
+      "u" | "a",
+  ) =>
+    `${prefix}-${globalThis.crypto.randomUUID()}`;
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -101,9 +140,45 @@ export function AiAssistantPanel() {
     try {
       const raw = window.localStorage.getItem(`orvenix-ai-chat:${websiteId}`);
       if (raw) {
-        const parsed = JSON.parse(raw) as ChatMsg[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          queueMicrotask(() => setMessages(parsed));
+                const parsed =
+          JSON.parse(
+            raw,
+          ) as ChatMsg[];
+
+        if (
+          Array.isArray(
+            parsed,
+          ) &&
+          parsed.length > 0
+        ) {
+          const seen =
+            new Set<string>();
+
+          const uniqueMessages =
+            parsed.filter(
+              (message) => {
+                if (
+                  seen.has(
+                    message.id,
+                  )
+                ) {
+                  return false;
+                }
+
+                seen.add(
+                  message.id,
+                );
+
+                return true;
+              },
+            );
+
+          queueMicrotask(
+            () =>
+              setMessages(
+                uniqueMessages,
+              ),
+          );
         }
       }
     } catch {
@@ -115,7 +190,7 @@ export function AiAssistantPanel() {
 
   useEffect(() => {
     if (!websiteId || !isHydrated) return;
-    window.localStorage.setItem(`orvenix-ai-chat:${websiteId}`, JSON.stringify(messages.slice(-30)));
+    window.localStorage.setItem(`orvenix-ai-chat:${websiteId}`, JSON.stringify(messages.slice(-10)));
   }, [isHydrated, messages, websiteId]);
 
   const availableBlocks = useMemo<BlockContext[]>(() =>
@@ -131,26 +206,303 @@ export function AiAssistantPanel() {
     return (root?.children ?? []).map((id) => nodes[id]?.type).filter(Boolean) as string[];
   }, [nodes, rootId]);
 
-  const promptHistory = useMemo(() => {
-    const seen = new Set<string>();
-    const values: string[] = [];
 
-    messages.forEach((msg) => {
-      const candidate =
-        msg.role === "user"
-          ? msg.text.replace(/^\[Página completa\]\s*/i, "").trim()
-          : msg.userPrompt?.trim() ?? "";
+  const suggestions =
+    assistantMode === "agent"
+      ? AGENT_SUGGESTIONS
+      : GENERATION_SUGGESTIONS;
 
-      if (!candidate || candidate === "[Sketch-to-Web]" || seen.has(candidate)) return;
-      seen.add(candidate);
-      values.push(candidate);
-    });
+  const sendAgentPrompt = (
+    text: string,
 
-    return values.slice(-8).reverse();
-  }, [messages]);
+    mode:
+      "preview" | "execute" =
+        "preview",
+
+    confirmed =
+      false,
+
+    addUserMessage =
+      true,
+
+    expectedTreeHash?:
+      string,
+  ) => {
+    const normalized =
+      text.trim();
+
+    if (
+      !normalized ||
+      isPending
+    ) {
+      return;
+    }
+
+    if (!websiteId) {
+      setMessages(
+        (prev) => [
+          ...prev,
+          {
+            id:
+              nextMessageId("a"),
+
+            role:
+              "ai",
+
+            text:
+              "Selecciona un sitio antes de usar el agente.",
+
+            usedAI:
+              false,
+
+            tone:
+              "error",
+          },
+        ],
+      );
+
+      return;
+    }
+
+    if (addUserMessage) {
+      const userMsg:
+        UserMsg = {
+          id:
+            nextMessageId("u"),
+
+          role:
+            "user",
+
+          text:
+            normalized,
+        };
+
+      setMessages(
+        (prev) => [
+          ...prev,
+          userMsg,
+        ],
+      );
+
+      setInput("");
+    }
+
+    startTransition(
+      async () => {
+        try {
+          const action =
+            await runOrvenixAgentAction({
+              siteId:
+                websiteId,
+
+              pageSlug:
+                activePageSlug,
+
+              message:
+                normalized,
+
+              mode,
+
+              confirmed,
+
+              expectedTreeHash,
+            });
+
+          if (
+            "message" in action
+          ) {
+            setMessages(
+              (prev) => [
+                ...prev,
+                {
+                  id:
+                    nextMessageId("a"),
+
+                  role:
+                    "ai",
+
+                  text:
+                    action.message,
+
+                  usedAI:
+                    false,
+
+                  tone:
+                    "error",
+                },
+              ],
+            );
+
+            return;
+          }
+
+      const result =
+            action.result;
+
+          if (
+            result.action ===
+              "executed" &&
+            result.scope !==
+              "publish" &&
+            result.plan?.after
+          ) {
+            syncTreeFromServer(
+              result.plan.after,
+            );
+          }
+
+          const canApply =
+            result.action ===
+              "preview" &&
+            result.scope !==
+              "read_only" &&
+            Boolean(
+              action.previewHash,
+            );
+
+          const requiresConfirmation =
+            canApply &&
+            Boolean(
+              result.policy
+                ?.limits
+                .requireConfirmation,
+            );
+
+          if (
+            canApply &&
+            !requiresConfirmation &&
+            mode === "preview"
+          ) {
+            const executed = await runOrvenixAgentAction({
+              siteId: websiteId,
+              pageSlug: activePageSlug,
+              message: normalized,
+              mode: "execute",
+              confirmed: true,
+              expectedTreeHash: action.previewHash,
+            });
+
+            if ("message" in executed) {
+              setMessages((prev) => [...prev, {
+                id: nextMessageId("a"),
+                role: "ai",
+                text: executed.message,
+                usedAI: false,
+                tone: "error",
+              }]);
+              return;
+            }
+
+            if (
+              executed.result.action === "executed" &&
+              executed.result.scope !== "publish" &&
+              executed.result.plan?.after
+            ) {
+              syncTreeFromServer(executed.result.plan.after);
+            }
+
+            setMessages((prev) => [...prev, {
+              id: nextMessageId("a"),
+              role: "ai",
+              text: executed.result.message,
+              usedAI: false,
+              tone: executed.result.action === "executed" ? "success" : "normal",
+              userPrompt: normalized,
+              undoAction: executed.undo,
+            }]);
+
+            return;
+          }
+
+          setMessages(
+            (prev) => [
+              ...prev,
+              {
+                id:
+                  nextMessageId("a"),
+
+                role:
+                  "ai",
+
+                text:
+                  result.message,
+
+                usedAI:
+                  false,
+
+                tone:
+                  result.action ===
+                    "executed"
+                    ? "success"
+                    : result.action ===
+                        "blocked"
+                      ? "error"
+                      : "normal",
+
+                userPrompt:
+                  normalized,
+
+                undoAction:
+                  result.action === "executed"
+                    ? action.undo
+                    : undefined,
+
+                agentAction:
+                  canApply
+                    ? {
+                        request:
+                          normalized,
+
+                        scope:
+                          result.scope,
+
+                        requireConfirmation:
+                          requiresConfirmation,
+
+                        expectedTreeHash:
+                          action.previewHash!,
+                      }
+                    : undefined,
+              },
+            ],
+          );
+        } catch {
+          setMessages(
+            (prev) => [
+              ...prev,
+              {
+                id:
+                  nextMessageId("a"),
+
+                role:
+                  "ai",
+
+                text:
+                  "No pude comunicarme con el agente de Orvenix.",
+
+                usedAI:
+                  false,
+
+                tone:
+                  "error",
+              },
+            ],
+          );
+        }
+      },
+    );
+  };
 
   const sendPrompt = (text: string) => {
     if (!text.trim() || isPending) return;
+
+        if (
+      assistantMode ===
+      "agent"
+    ) {
+      sendAgentPrompt(text);
+      return;
+    }
 
     const userMsg: UserMsg = { id: nextMessageId("u"), role: "user", text: text.trim() };
     setMessages((prev) => [...prev, userMsg]);
@@ -189,12 +541,15 @@ export function AiAssistantPanel() {
         ),
       ];
 
+      insertTree({ tree: result.tree, parentId: rootId });
+      setInsertedIds((prev) => new Set(prev).add(result.tree.rootId));
       setMessages((prev) => [...prev, {
         id: nextMessageId("a"), role: "ai",
-        text: result.message,
+        text: result.message + " Ya la agregué al canvas.",
         tree: result.tree, blockTypes,
         usedAI: result.usedAI,
         userPrompt: text.trim(),
+        tone: "success",
       }]);
     });
   };
@@ -204,6 +559,97 @@ export function AiAssistantPanel() {
   const handleRegenerate = (userPrompt: string) => {
     if (!userPrompt || isPending) return;
     sendPrompt(userPrompt);
+  };
+
+      const handleAgentApply = (
+    messageId: string,
+    request: string,
+    expectedTreeHash: string,
+  ) => {
+    if (isPending) return;
+
+    /*
+     * Retira el botón para impedir
+     * dobles ejecuciones.
+     */
+    setMessages(
+      (prev) =>
+        prev.map(
+          (message) =>
+            message.id ===
+              messageId &&
+            message.role ===
+              "ai"
+              ? {
+                  ...message,
+                  agentAction:
+                    undefined,
+                }
+              : message,
+        ),
+    );
+
+        sendAgentPrompt(
+      request,
+      "execute",
+      true,
+      false,
+      expectedTreeHash,
+    );
+  };
+
+  const handleAgentUndo = async (messageId: string, undoId: string) => {
+    if (pendingUndoId) return;
+
+    setPendingUndoId(undoId);
+
+    try {
+      const result = await rollbackOrvenixAIChangeAction({ undoId });
+
+      if (!result.success) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextMessageId("a"),
+            role: "ai",
+            text: result.message,
+            usedAI: false,
+            tone: "error",
+          },
+        ]);
+        return;
+      }
+
+      syncTreeFromServer(result.tree);
+
+      setMessages((prev) => [
+        ...prev.map((message) =>
+          message.id === messageId && message.role === "ai"
+            ? { ...message, undoAction: undefined }
+            : message,
+        ),
+        {
+          id: nextMessageId("a"),
+          role: "ai",
+          text: result.message,
+          usedAI: false,
+          tone: "success",
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nextMessageId("a"),
+          role: "ai",
+          text: "No pude deshacer el cambio de Orvenix AI.",
+          usedAI: false,
+          tone: "error",
+        },
+      ]);
+    } finally {
+      setPendingUndoId(null);
+    }
   };
 
   const handleEditPrompt = (prompt: string) => {
@@ -255,18 +701,21 @@ export function AiAssistantPanel() {
                   .filter((t) => t !== "section" && t !== "heading" && t !== "text")
               ),
             ];
+            insertTree({ tree: result.tree, parentId: rootId });
+            setInsertedIds((prev) => new Set(prev).add(result.tree.rootId));
             setMessages((prev) => [...prev, {
               id: nextMessageId("a"), role: "ai",
-              text: result.message,
+              text: result.message + " Agregada al canvas.",
               tree: result.tree, blockTypes,
               usedAI: result.usedAI,
               userPrompt: result.title,
+              tone: "success",
             }]);
           }
         }
         setMessages((prev) => [...prev, {
           id: nextMessageId("a"), role: "ai",
-          text: `✦ Página completa generada con ${sections.filter(s => s.result.success).length} secciones. Insértalas una a una.`,
+          text: `Página completa generada con ${sections.filter(s => s.result.success).length} secciones y agregada al canvas.`,
           usedAI: true, tone: "success",
         }]);
       } catch {
@@ -374,10 +823,17 @@ export function AiAssistantPanel() {
         return;
       }
 
+      if (data.preview?.tree) {
+        insertTree({ tree: data.preview.tree, parentId: rootId });
+        setInsertedIds((prev) => new Set(prev).add(data.preview!.tree.rootId));
+      }
+
       setMessages((prev) => [...prev, {
         id: nextMessageId("a"),
         role: "ai",
-        text: data.preview?.message ?? "Preparé una propuesta inicial a partir de tu referencia visual.",
+        text: data.preview?.message
+          ? data.preview.message + " Ya la agregué al canvas."
+          : "Preparé una propuesta inicial a partir de tu referencia visual.",
         tree: data.preview?.tree,
         blockTypes: data.preview?.tree
           ? [...new Set(
@@ -436,11 +892,48 @@ export function AiAssistantPanel() {
         </div>
         <button
           type="button"
-          title="Nueva conversación"
+          title="Limpiar historial"
           onClick={clearChat}
           className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:text-slate-300 hover:bg-white/[0.06] transition-colors"
         >
-          <RotateCcw size={11} />
+          <Trash2 size={11} />
+          <span className="sr-only">Limpiar historial</span>
+        </button>
+      </div>
+
+            <div className="grid grid-cols-2 gap-1 border-b border-white/[0.05] px-3 py-2">
+        <button
+          type="button"
+          onClick={() =>
+            setAssistantMode(
+              "generate",
+            )
+          }
+          className={`rounded-lg px-2 py-1.5 text-[10px] font-semibold transition-colors ${
+            assistantMode ===
+            "generate"
+              ? "bg-cyan-500/15 text-cyan-300"
+              : "bg-white/[0.03] text-slate-500 hover:text-slate-300"
+          }`}
+        >
+          Crear sección
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            setAssistantMode(
+              "agent",
+            )
+          }
+          className={`rounded-lg px-2 py-1.5 text-[10px] font-semibold transition-colors ${
+            assistantMode ===
+            "agent"
+              ? "bg-violet-500/15 text-violet-300"
+              : "bg-white/[0.03] text-slate-500 hover:text-slate-300"
+          }`}
+        >
+          Editar sitio
         </button>
       </div>
 
@@ -453,6 +946,9 @@ export function AiAssistantPanel() {
             onInsert={handleInsert}
             onRegenerate={handleRegenerate}
             onEditPrompt={handleEditPrompt}
+            onAgentApply={handleAgentApply}
+            onAgentUndo={handleAgentUndo}
+            pendingUndoId={pendingUndoId}
             inserted={msg.role === "ai" && !!msg.tree && insertedIds.has(msg.tree.rootId)}
           />
         ))}
@@ -471,7 +967,7 @@ export function AiAssistantPanel() {
       {/* Suggestions */}
       {messages.length === 1 && !isWorking && (
         <div className="px-3 pb-2 flex flex-col gap-1 shrink-0">
-          {SUGGESTIONS.map((s) => (
+          {suggestions.map((s) => (
             <button key={s} type="button"
               onClick={() => { setInput(s); inputRef.current?.focus(); }}
               className="truncate rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-1.5 text-left text-[10px] text-slate-500 transition-colors hover:border-cyan-500/20 hover:bg-cyan-500/5 hover:text-slate-300">
@@ -481,30 +977,19 @@ export function AiAssistantPanel() {
         </div>
       )}
 
-      {promptHistory.length > 0 && (
-        <div className="shrink-0 border-t border-white/[0.05] px-3 py-2">
-          <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
-            <History size={10} className="text-violet-400" />
-            Historial de prompts
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {promptHistory.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => handleEditPrompt(prompt)}
-                title={`Editar prompt: ${prompt}`}
-                className="max-w-full truncate rounded-full border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-[9px] text-slate-400 transition-colors hover:border-violet-400/20 hover:bg-violet-500/8 hover:text-slate-200"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="shrink-0 border-t border-white/[0.05] px-3 py-2">
+        <button
+          type="button"
+          onClick={() => setShowAdvancedTools((value) => !value)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold text-slate-400 transition-colors hover:border-cyan-400/20 hover:bg-cyan-500/8 hover:text-cyan-200"
+        >
+          <SlidersHorizontal size={11} />
+          {showAdvancedTools ? "Ocultar opciones" : "Más opciones"}
+        </button>
+      </div>
 
       {/* Selection actions */}
-      {selectedNode && (
+      {showAdvancedTools && selectedNode && (
         <div className="shrink-0 border-t border-white/[0.05] px-3 py-2">
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="min-w-0">
@@ -534,6 +1019,7 @@ export function AiAssistantPanel() {
 
       {/* Input */}
       <div className="shrink-0 border-t border-white/[0.05] px-3 py-2.5">
+        {showAdvancedTools && (
         <div className="mb-2 rounded-xl border border-white/[0.08] bg-white/[0.02] p-2.5">
           <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold text-slate-400">
             <Upload size={11} className="text-cyan-400" />
@@ -593,6 +1079,7 @@ export function AiAssistantPanel() {
             />
           </div>
         </div>
+        )}
 
         <div className="flex items-end gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 focus-within:border-cyan-500/30 transition-colors">
           <textarea
@@ -607,7 +1094,7 @@ export function AiAssistantPanel() {
           <button type="button" title="Enviar (Enter)" onClick={send}
             disabled={isWorking || input.trim().length < 3}
             className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-sm shadow-cyan-500/25 transition-all hover:from-cyan-400 hover:to-blue-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:shadow-none">
-            <ArrowUp size={12} />
+            {isWorking ? <Loader2 size={12} className="animate-spin" /> : <ArrowUp size={12} />}
           </button>
         </div>
 
@@ -632,12 +1119,26 @@ export function AiAssistantPanel() {
 // ─── ChatBubble ───────────────────────────────────────────────────────────────
 
 function ChatBubble({
-  msg, onInsert, onRegenerate, onEditPrompt, inserted,
+  msg,
+  onInsert,
+  onRegenerate,
+  onEditPrompt,
+  onAgentApply,
+  onAgentUndo,
+  pendingUndoId,
+  inserted,
 }: {
   msg: ChatMsg;
   onInsert: (tree: EditorTree) => void;
   onRegenerate: (prompt: string) => void;
   onEditPrompt: (prompt: string) => void;
+  onAgentApply: (
+    messageId: string,
+    request: string,
+    expectedTreeHash: string,
+  ) => void;
+  onAgentUndo: (messageId: string, undoId: string) => void;
+  pendingUndoId: string | null;
   inserted?: boolean;
 }) {
   const [showPreview, setShowPreview] = useState(false);
@@ -717,6 +1218,47 @@ function ChatBubble({
           )}
         </div>
 
+        {msg.agentAction && (
+          <button
+            type="button"
+            onClick={() =>
+            onAgentApply(
+                msg.id,
+                msg.agentAction!
+                  .request,
+                msg.agentAction!
+                  .expectedTreeHash,
+              )
+            }
+            className="motion-button flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 py-1.5 text-[10px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20 hover:text-emerald-200"
+          >
+            <Check size={11} />
+
+            {msg.agentAction
+              .requireConfirmation
+              ? "Confirmar y aplicar"
+              : "Aplicar cambios"}
+          </button>
+        )}
+
+
+        {msg.role === "ai" && msg.undoAction && (
+          <button
+            type="button"
+            disabled={pendingUndoId === msg.undoAction.id}
+            onClick={() => onAgentUndo(msg.id, msg.undoAction!.id)}
+            className="motion-button flex w-full items-center justify-center gap-1.5 rounded-lg border border-sky-500/20 bg-sky-500/10 py-1.5 text-[10px] font-semibold text-sky-200 transition-colors hover:bg-sky-500/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pendingUndoId === msg.undoAction.id ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <RefreshCw size={11} />
+            )}
+            {pendingUndoId === msg.undoAction.id
+              ? "Deshaciendo..."
+              : "Deshacer cambio de IA"}
+          </button>
+        )}
         {/* Preview toggle */}
         {preview && (
           <button type="button"

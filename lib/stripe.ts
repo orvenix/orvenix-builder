@@ -1,3 +1,4 @@
+import type { EnvironmentVariables } from "@/lib/env-types"
 import { createHmac, timingSafeEqual } from "crypto"
 
 const STRIPE_API_VERSION = "2026-04-22.dahlia"
@@ -46,6 +47,15 @@ export function isStripeConfigured() {
   return Boolean(process.env.STRIPE_SECRET_KEY)
 }
 
+export function getStripeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : ""
+}
+
+export function isStripeModeMismatchError(error: unknown) {
+  const message = getStripeErrorMessage(error).toLowerCase()
+  return message.includes("exists in test mode") || message.includes("live mode key was used")
+}
+
 export function getStripeWebhookSecret() {
   return process.env.STRIPE_WEBHOOK_SECRET ?? ""
 }
@@ -59,12 +69,51 @@ export function getStripeAppUrl() {
   ).replace(/\/$/, "")
 }
 
+export type StripePlanPriceMatch = {
+  planId: string
+  interval: "month" | "year"
+}
+
+export function resolveConfiguredStripePlanFromPrice(
+  priceId: string | null | undefined,
+  env: EnvironmentVariables = process.env
+): StripePlanPriceMatch | null {
+  if (!priceId) return null
+
+  const configuredPrices: Array<[string | undefined, StripePlanPriceMatch]> = [
+    [env.STRIPE_PRICE_STARTER_MONTH, { planId: "starter", interval: "month" }],
+    [env.STRIPE_PRICE_STARTER_YEAR, { planId: "starter", interval: "year" }],
+    [env.STRIPE_PRICE_PRO_MONTH, { planId: "pro", interval: "month" }],
+    [env.STRIPE_PRICE_PRO_YEAR, { planId: "pro", interval: "year" }],
+    [env.STRIPE_PRICE_BUSINESS_MONTH, { planId: "commerce", interval: "month" }],
+    [env.STRIPE_PRICE_BUSINESS_YEAR, { planId: "commerce", interval: "year" }],
+    [env.STRIPE_PRICE_COMMERCE_MONTH, { planId: "commerce", interval: "month" }],
+    [env.STRIPE_PRICE_COMMERCE_YEAR, { planId: "commerce", interval: "year" }],
+  ]
+
+  return configuredPrices.find(([configuredPrice]) => configuredPrice === priceId)?.[1] ?? null
+}
+
 export function getStripePriceId(planId: string, interval: "month" | "year", dbPriceId?: string | null) {
   if (dbPriceId) return dbPriceId
 
   const normalizedPlan = planId.toUpperCase().replace(/[^A-Z0-9]+/g, "_")
   const normalizedInterval = interval.toUpperCase()
-  return process.env[`STRIPE_PRICE_${normalizedPlan}_${normalizedInterval}`] ?? null
+  const direct = process.env[`STRIPE_PRICE_${normalizedPlan}_${normalizedInterval}`]
+  if (direct) return direct
+
+  // Business is still stored as commerce in older billing records and plan seeds.
+  const legacyAliases: Record<string, string[]> = {
+    BUSINESS: ["COMMERCE"],
+    COMMERCE: ["BUSINESS"],
+  }
+
+  for (const alias of legacyAliases[normalizedPlan] ?? []) {
+    const aliased = process.env[`STRIPE_PRICE_${alias}_${normalizedInterval}`]
+    if (aliased) return aliased
+  }
+
+  return null
 }
 
 function getStripeSecretKey() {
@@ -95,6 +144,24 @@ async function stripeRequest<T>(path: string, init: RequestInit = {}): Promise<T
   }
 
   return payload as T
+}
+
+export async function retrieveStripeCustomer(customerId: string) {
+  return stripeRequest<{ id: string; deleted?: boolean }>(
+    `/customers/${encodeURIComponent(customerId)}`
+  )
+}
+
+export async function retrieveStripeSubscription(subscriptionId: string) {
+  return stripeRequest<StripeSubscription>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}?expand[]=items.data.price`
+  )
+}
+
+export async function retrieveStripeCheckoutSession(sessionId: string) {
+  return stripeRequest<StripeCheckoutSession>(
+    `/checkout/sessions/${encodeURIComponent(sessionId)}`
+  )
 }
 
 export async function createStripeCheckoutSession(params: {
@@ -134,13 +201,42 @@ export async function createStripeCheckoutSession(params: {
   return { checkoutUrl: session.url, sessionId: session.id }
 }
 
-export async function cancelStripeSubscription(stripeSubscriptionId: string): Promise<void> {
-  const body = new URLSearchParams({ cancel_at_period_end: "true" })
-  await stripeRequest<StripeSubscription>(`/subscriptions/${stripeSubscriptionId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
+export async function cancelStripeSubscription(
+  stripeSubscriptionId: string
+): Promise<StripeSubscription> {
+  const body = new URLSearchParams({
+    cancel_at_period_end: "true",
   })
+
+  return stripeRequest<StripeSubscription>(
+    `/subscriptions/${encodeURIComponent(stripeSubscriptionId)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    }
+  )
+}
+
+export async function reactivateStripeSubscription(
+  stripeSubscriptionId: string
+): Promise<StripeSubscription> {
+  const body = new URLSearchParams({
+    cancel_at_period_end: "false",
+  })
+
+  return stripeRequest<StripeSubscription>(
+    `/subscriptions/${stripeSubscriptionId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    }
+  )
 }
 
 export async function createStripeBillingPortalSession(params: {
@@ -152,6 +248,10 @@ export async function createStripeBillingPortalSession(params: {
     customer: params.customerId,
     return_url: `${appUrl}${params.returnPath ?? "/dashboard"}`,
   })
+
+  if (process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID) {
+    body.set("configuration", process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID)
+  }
 
   const session = await stripeRequest<{ id: string; url: string }>("/billing_portal/sessions", {
     method: "POST",

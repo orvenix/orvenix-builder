@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState, useTransition } from "react";
-import { useEditorStore } from "./store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import {
   Search, Image as ImageIcon, X, Info,
   AlertCircle, AlertTriangle, CheckCircle2, Zap, ShieldCheck, Wrench,

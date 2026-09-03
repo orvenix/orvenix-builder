@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/editor-prisma"
 import { editorPrisma } from "@/lib/editor-db"
-
+import { canUseEcommerce } from "@/lib/billing/plan-entitlements"
+import { getUserPlanAccess } from "@/lib/plan-guard"
 export type ExperimentStatus = "draft" | "active" | "archived"
 export type ExperimentTargetType = "page" | "funnel"
 export type ExperimentVariant = "A" | "B"
@@ -29,6 +30,17 @@ export interface ExperimentRecord {
   trafficSplit: Record<string, unknown>
   createdAt: Date
   updatedAt: Date
+}
+
+export class ExperimentAccessError extends Error {
+  readonly code = "EXPERIMENTS_NOT_INCLUDED"
+
+  constructor(
+    message = "Los experimentos no están incluidos en el plan del propietario del sitio.",
+  ) {
+    super(message)
+    this.name = "ExperimentAccessError"
+  }
 }
 
 type DynamicExperimentDelegate = {
@@ -131,6 +143,25 @@ export async function createExperiment(siteId: string, input: {
   if (!delegate) {
     throw new Error("EXPERIMENTS_NOT_READY")
   }
+
+  const site = await editorPrisma.editorWebsite.findUnique({
+  where: { id: siteId },
+  select: { userId: true },
+})
+
+if (!site) {
+  throw new Error("SITE_NOT_FOUND")
+}
+
+const access = await getUserPlanAccess(site.userId)
+
+if (
+  !access.isActive ||
+  !access.plan ||
+  !canUseEcommerce(access.plan.id)
+) {
+  throw new ExperimentAccessError()
+}
 
   return delegate.create({
     data: {

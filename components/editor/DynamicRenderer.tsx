@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { getBlockDefinition } from "@/components/editor/blocks/registry";
 import { editorError } from "@/components/editor/logger";
 import { EditableNode } from "./EditableNode";

@@ -7,6 +7,7 @@ import { CtaSection } from '@/components/marketing/sections/CtaSection';
 import { PricingSection, type PricingPlanView } from '@/components/marketing/home/PricingSection';
 import { REAL_TEMPLATES } from '@/lib/realTemplates';
 import { ArrowRight, CreditCard, CheckCircle } from 'lucide-react';
+import { formatUsd, getOfficialPlan, officialPlanComparison2026, officialPlans2026 } from '@/lib/orvenix-official-2026';
 import { editorPrisma } from '@/lib/editor-db';
 import { getAuthSession } from '@/lib/auth-session';
 import { serverWarn } from '@/lib/server-log';
@@ -14,101 +15,67 @@ import { serverWarn } from '@/lib/server-log';
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: 'Planes y Precios — Orvenix SaaS desde $349 MXN/mes',
-  description: 'Planes SaaS Orvenix desde $349 MXN/mes. Panel privado, sitio web, tienda online, citas y más. Sin permanencia forzada. Cancela cuando quieras.',
+  title: 'Precios Orvenix — Activa tu sitio desde 15 USD/mes',
+  description: 'Elige tu plan Orvenix y publica tu sitio con hosting, editor visual, soporte y pagos seguros en minutos.',
   openGraph: {
     url: 'https://orvenix.com.mx/precios/',
-    title: 'Planes y Precios — Orvenix SaaS',
-    description: 'Planes desde $349 MXN/mes. Panel privado, tienda, citas, almacenamiento y más. Sin costos ocultos.',
+    title: 'Precios Orvenix — Activa tu sitio',
+    description: 'Planes claros para publicar, vender y administrar tu sitio con Orvenix.',
     images: ['/img/logo-main.png'],
   },
 };
 
 const guaranteeItems = [
-  { icon: '🔒', title: 'Sin permanencia', desc: 'Cancela cuando quieras, sin penalizaciones. Tu cuenta se mantiene activa hasta el final del periodo pagado.' },
-  { icon: '📦', title: 'Tu data es tuya', desc: 'Exporta todos tus datos — clientes, productos, archivos — en cualquier momento. Sin restricciones ni rehenes.' },
-  { icon: '⚡', title: 'Activación en 24 horas', desc: 'Tu plataforma queda lista en menos de un día hábil. Nuestro equipo la configura con tu marca y datos.' },
+  { icon: '🔒', title: 'Sitio listo para publicar', desc: 'Hosting, SSL, velocidad y soporte incluidos desde el primer dia.' },
+  { icon: '📦', title: 'Control de tu negocio', desc: 'Administra contenido, contactos, ventas e imagenes desde tu panel.' },
+  { icon: '⚡', title: 'Sin complicarte', desc: 'Paga, entra al constructor, edita lo basico y publica cuando estes listo.' },
 ];
 
-const comparisonRows = [
-  { feature: 'Sitio web profesional',          orvenix: '✓',              wix: '✓',               agencia: '✓' },
-  { feature: 'Panel privado para tus clientes', orvenix: '✓ Incluido',     wix: '✗ No existe',     agencia: 'Desarrollo extra' },
-  { feature: 'Almacenamiento en la nube',       orvenix: '✓ 50 GB',        wix: '✗ No incluido',   agencia: '✗ No incluido' },
-  { feature: 'Gestión de proyectos',           orvenix: '✓ Integrado',    wix: '✗ Requiere apps', agencia: 'Costo extra' },
-  { feature: 'Sistema de citas y pagos',        orvenix: '✓ Incluido',     wix: 'Plan premium +$', agencia: 'Desarrollo extra' },
-  { feature: 'Dominio .com.mx incluido',        orvenix: '✓ Plan Pro+',    wix: 'Costo adicional', agencia: 'Costo adicional' },
-  { feature: 'Soporte en español',              orvenix: '✓ WhatsApp',     wix: 'Chat en inglés',  agencia: 'Depende' },
-  { feature: 'Servidores en México',            orvenix: '✓ CDMX y GDL',  wix: '✗ USA / Europa',  agencia: 'Depende' },
-  { feature: 'Actualizaciones de plataforma',   orvenix: '✓ Automáticas',  wix: '✓',               agencia: '✗ Cobro extra' },
-  { feature: 'Costo de setup',                 orvenix: '$0 — Incluido',  wix: '$0',              agencia: '$2,000–$15,000 MXN' },
-  { feature: 'Precio mensual',                 orvenix: 'Desde $349 MXN', wix: '$549+ MXN',       agencia: '$2,000+/mes mantenimiento' },
-];
+const comparisonRows = officialPlanComparison2026.map(([feature, , pro, business, enterprise]) => ({
+  feature,
+  orvenix: pro,
+  wix: business,
+  agencia: enterprise,
+}));
 
 const faqItems = [
-  { question: '¿Puedo cambiar de plan en cualquier momento?', answer: 'Sí. Puedes subir o bajar de plan cuando quieras desde tu panel. El cambio aplica en el siguiente ciclo de facturación. Si subes de plan, el acceso a las nuevas funciones es inmediato.' },
-  { question: '¿Qué pasa si cancelo? ¿Pierdo mis datos?', answer: 'No. Al cancelar tienes 30 días para exportar todos tus datos (clientes, archivos, configuraciones) antes de que la cuenta se cierre. Nunca te dejamos sin acceso de forma inmediata.' },
-  { question: '¿El precio incluye IVA?', answer: 'Los precios publicados son antes de IVA. Al facturar se agrega el 16% correspondiente. Para empresas que requieren factura, la emitimos automáticamente al cierre de cada periodo.' },
-  { question: '¿Cómo funciona el ahorro anual?', answer: 'Al elegir facturación anual pagas el equivalente a 9.6 meses en lugar de 12 — un ahorro del 20%. El cargo se hace una sola vez al inicio del año y no hay renovación automática sorpresa.' },
-  { question: '¿Qué métodos de pago aceptan?', answer: 'Aceptamos tarjeta de crédito o débito (Visa, Mastercard, Amex), transferencia bancaria SPEI y MercadoPago. Para plan Empresa también aceptamos pago por factura con crédito a 30 días.' },
-  { question: '¿Hay costos adicionales por uso?', answer: 'No. El precio del plan cubre todo lo incluido en él. El único costo adicional posible es la comisión de tu pasarela de pagos (Stripe o MercadoPago) sobre las ventas que proceses — esto lo cobran ellos directamente, no nosotros.' },
+  { question: '¿Los precios incluyen IVA?', answer: 'Los precios oficiales se expresan en USD antes de IVA. En Mexico se puede cobrar en MXN usando el tipo de cambio vigente de Banco de Mexico en la fecha de cobro o factura.' },
+  { question: '¿Puedo cancelar mi plan?', answer: 'Si. La cancelacion debe solicitarse desde el panel administrativo al menos 5 dias naturales antes del corte del servicio. El acceso se mantiene hasta el final del periodo pagado.' },
+  { question: '¿Hay reembolsos?', answer: 'Los planes mensuales y add-ons ejecutados no tienen reembolso. En anual, la ventana inicial es de 7 dias naturales posteriores al primer pago, con retencion administrativa del 15%.' },
+  { question: '¿Qué pasa si se atrasa un pago?', answer: 'Hay 3 dias de gracia. Despues puede suspenderse la plataforma y el sitio publico. Tras 30 dias naturales de suspension por falta de pago, los archivos pueden eliminarse del servidor.' },
+  { question: '¿Qué incluye el SLA?', answer: 'Orvenix compromete 99.9% de disponibilidad mensual, soporte por severidad y backups diarios. Starter conserva historial de 7 dias; Pro y Business conservan 30 dias.' },
+  { question: '¿Puedo comprar definitivamente mi sitio?', answer: 'Si. La compra definitiva transfiere derechos patrimoniales sobre el codigo personalizado entregado, mientras Orvenix conserva sus librerias base y componentes propietarios.' },
 ];
 
-const FALLBACK_PRICING_PLANS: PricingPlanView[] = [
-  {
-    id: 'starter',
-    name: 'Basico',
-    priceMonthMxn: 349,
-    priceYearMxn: 3350,
-    maxWebsites: 1,
-    maxVisits: 15000,
-    hasEcommerce: false,
-    hasExport: false,
-    features: [
-      '1 sitio publicado',
-      'Editor visual completo',
-      'SSL y hosting administrado',
-      'Soporte por email y WhatsApp',
-    ],
-    isAvailableMonth: Boolean(process.env.STRIPE_PRICE_STARTER_MONTH),
-    isAvailableYear: Boolean(process.env.STRIPE_PRICE_STARTER_YEAR),
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    priceMonthMxn: 699,
-    priceYearMxn: 6710,
-    maxWebsites: 3,
-    maxVisits: 75000,
-    hasEcommerce: true,
-    hasExport: true,
-    features: [
-      'Hasta 3 sitios',
-      'CMS editable por colecciones',
-      'Tienda online integrada',
-      'Exportacion de codigo',
-    ],
-    isAvailableMonth: Boolean(process.env.STRIPE_PRICE_PRO_MONTH),
-    isAvailableYear: Boolean(process.env.STRIPE_PRICE_PRO_YEAR),
-  },
-  {
-    id: 'commerce',
-    name: 'Empresa',
-    priceMonthMxn: 1399,
-    priceYearMxn: 13430,
-    maxWebsites: 9999,
-    maxVisits: 500000,
-    hasEcommerce: true,
-    hasExport: true,
-    features: [
-      'Sitios ilimitados',
-      'Billing y operaciones avanzadas',
-      'Webhooks y automatizaciones',
-      'Soporte prioritario',
-    ],
-    isAvailableMonth: Boolean(process.env.STRIPE_PRICE_COMMERCE_MONTH),
-    isAvailableYear: Boolean(process.env.STRIPE_PRICE_COMMERCE_YEAR),
-  },
-];
+function toPricingPlanView(plan: (typeof officialPlans2026)[number]): PricingPlanView | null {
+  if (plan.id === 'enterprise') return null;
+  const billingId = 'billingId' in plan ? plan.billingId : plan.id;
+  const monthlyUsd = plan.monthlyUsd ?? 0;
+  const annualUsd = plan.annualUsd ?? 0;
+
+  return {
+    id: billingId,
+    name: plan.name,
+    priceMonthMxn: Math.round(monthlyUsd * 100),
+    priceYearMxn: Math.round(annualUsd * 100),
+    maxWebsites: plan.maxWebsites,
+    maxVisits: plan.maxVisits,
+    hasEcommerce: plan.id !== 'starter',
+    hasExport: plan.id !== 'starter',
+    features: [...plan.features],
+    isAvailableMonth: Boolean(process.env['STRIPE_PRICE_' + plan.stripeEnvAlias + '_MONTH'] || ('legacyStripeEnvAlias' in plan && process.env['STRIPE_PRICE_' + plan.legacyStripeEnvAlias + '_MONTH'])),
+    isAvailableYear: Boolean(process.env['STRIPE_PRICE_' + plan.stripeEnvAlias + '_YEAR'] || ('legacyStripeEnvAlias' in plan && process.env['STRIPE_PRICE_' + plan.legacyStripeEnvAlias + '_YEAR'])),
+    priceMonthLabel: formatUsd(plan.monthlyUsd),
+    priceYearLabel: formatUsd(plan.annualTotalUsd),
+    annualEquivalentLabel: plan.annualUsd ? formatUsd(plan.annualUsd / 12) : undefined,
+    annualSavingLabel: plan.annualUsd ? 'Ahorro anual oficial: ' + formatUsd(plan.monthlyUsd! * 12 - plan.annualUsd) : undefined,
+    taxNote: plan.monthlyTotalUsd ? formatUsd(plan.monthlyTotalUsd) + ' con IVA / mes' : 'Cotizacion segun alcance',
+  };
+}
+
+const FALLBACK_PRICING_PLANS: PricingPlanView[] = officialPlans2026
+  .map(toPricingPlanView)
+  .filter((plan): plan is PricingPlanView => Boolean(plan));
 
 async function getPricingPlans(): Promise<PricingPlanView[]> {
   try {
@@ -117,25 +84,39 @@ async function getPricingPlans(): Promise<PricingPlanView[]> {
       orderBy: { priceMonthMxn: 'asc' },
     });
 
-    return plans.map((plan) => ({
-      id: plan.id,
-      name: plan.name,
-      priceMonthMxn: plan.priceMonthMxn,
-      priceYearMxn: plan.priceYearMxn,
-      maxWebsites: plan.maxWebsites,
-      maxVisits: plan.maxVisits,
-      hasEcommerce: plan.hasEcommerce,
-      hasExport: plan.hasExport,
-      features: Array.isArray(plan.features)
-        ? plan.features.filter((feature): feature is string => typeof feature === 'string')
-        : [],
-      isAvailableMonth: Boolean(
-        plan.stripePriceIdMonth || process.env[`STRIPE_PRICE_${plan.id.toUpperCase()}_MONTH`]
-      ),
-      isAvailableYear: Boolean(
-        plan.stripePriceIdYear || process.env[`STRIPE_PRICE_${plan.id.toUpperCase()}_YEAR`]
-      ),
-    }));
+    if (plans.length === 0) {
+      serverWarn('[precios] No active plans found in DB, rendering fallback pricing plans');
+      return FALLBACK_PRICING_PLANS;
+    }
+
+    return plans.map((plan) => {
+      const official = getOfficialPlan(plan.id);
+      const officialView = official ? toPricingPlanView(official) : null;
+      return {
+        id: plan.id,
+        name: officialView?.name ?? plan.name,
+        priceMonthMxn: plan.priceMonthMxn,
+        priceYearMxn: plan.priceYearMxn,
+        maxWebsites: officialView?.maxWebsites ?? plan.maxWebsites,
+        maxVisits: officialView?.maxVisits ?? plan.maxVisits,
+        hasEcommerce: officialView?.hasEcommerce ?? plan.hasEcommerce,
+        hasExport: officialView?.hasExport ?? plan.hasExport,
+        features: officialView?.features ?? (Array.isArray(plan.features)
+          ? plan.features.filter((feature): feature is string => typeof feature === 'string')
+          : []),
+        isAvailableMonth: Boolean(
+          plan.stripePriceIdMonth || officialView?.isAvailableMonth || process.env[`STRIPE_PRICE_${plan.id.toUpperCase()}_MONTH`]
+        ),
+        isAvailableYear: Boolean(
+          plan.stripePriceIdYear || officialView?.isAvailableYear || process.env[`STRIPE_PRICE_${plan.id.toUpperCase()}_YEAR`]
+        ),
+        priceMonthLabel: officialView?.priceMonthLabel,
+        priceYearLabel: officialView?.priceYearLabel,
+        annualEquivalentLabel: officialView?.annualEquivalentLabel,
+        annualSavingLabel: officialView?.annualSavingLabel,
+        taxNote: officialView?.taxNote,
+      };
+    });
   } catch (error) {
     serverWarn('[precios] Falling back to static pricing plans because DB lookup failed', error);
     return FALLBACK_PRICING_PLANS;
@@ -187,13 +168,25 @@ async function getCurrentPlan(userId?: string | null): Promise<CurrentPlanView> 
   };
 }
 
-export default async function PreciosPage() {
+type PreciosPageProps = {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+function firstSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function PreciosPage({ searchParams }: PreciosPageProps) {
   let session = null;
   try {
     session = await getAuthSession();
   } catch (error) {
     serverWarn('[precios] Auth session unavailable, rendering pricing without current plan context', error);
   }
+  const rawSearchParams = await searchParams;
+  const autoCheckoutPlanId = firstSearchValue(rawSearchParams?.checkout) ?? null;
+  const autoCheckoutInterval = firstSearchValue(rawSearchParams?.interval) === 'year' ? 'year' : 'month';
+
   const [plans, currentPlan] = await Promise.all([
     getPricingPlans(),
     getCurrentPlan(session?.user?.id),
@@ -210,22 +203,21 @@ export default async function PreciosPage() {
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-5">
               <span className="mk-eyebrow-dot" aria-hidden="true" />
-              <span className="text-sm font-medium text-orvenix-secondary">Precios claros y transparentes</span>
+              <span className="text-sm font-medium text-orvenix-secondary">Elige tu plan</span>
             </div>
             <h1 className="mk-hero-title mb-5 text-orvenix-text">
-              Planes simples,<br />sin sorpresas
+              Publica tu sitio con<br />Orvenix
             </h1>
             <p className="text-base leading-relaxed mb-6 text-orvenix-secondary">
-              Paga mensual o anual y ahorra 20%. Sin permanencia forzada, sin costos ocultos.
-              Cancela cuando quieras — tu data siempre es tuya.
+              Escoge el plan que necesitas, paga con Stripe y entra al constructor para editar y publicar sin tocar codigo.
             </p>
             <div className="flex flex-wrap gap-3">
               <span className="mk-urgency-pill">
                 <span className="mk-live-dot" aria-hidden="true" />
-                <strong>18</strong> personas viendo estos planes ahora
+                <strong>30 dias</strong> para probar tu plan
               </span>
               <span className="mk-urgency-pill mk-urgency-pill-red">
-                🔥 Solo <strong>3</strong> cupos para activación inmediata
+                Pago seguro, hosting y soporte incluidos
               </span>
             </div>
           </div>
@@ -239,6 +231,8 @@ export default async function PreciosPage() {
         currentInterval={currentPlan.currentInterval}
         currentStatus={currentPlan.currentStatus}
         currentEndsAt={currentPlan.currentEndsAt}
+        autoCheckoutPlanId={autoCheckoutPlanId}
+        autoCheckoutInterval={autoCheckoutInterval}
       />
 
       {/* Trust items */}
@@ -260,9 +254,9 @@ export default async function PreciosPage() {
       <section className="mk-section bg-orvenix-bg">
         <div className="mk-container">
           <SectionHeader
-            tag="¿Por qué Orvenix?"
-            title="Orvenix vs. las alternativas"
-            description="Una comparación directa para que puedas decidir con información completa."
+            tag="Elige con confianza"
+            title="Qué plan te conviene"
+            description="Starter para empezar, Pro para negocios que quieren crecer y Business para vender con automatizaciones."
             center
           />
           <div className="mt-10 overflow-x-auto">
@@ -270,9 +264,9 @@ export default async function PreciosPage() {
               <thead>
                 <tr>
                   <th scope="col">Característica</th>
-                  <th scope="col" className="highlight">Orvenix Pro</th>
-                  <th scope="col">Wix / Squarespace</th>
-                  <th scope="col">Contratar agencia</th>
+                  <th scope="col" className="highlight">Pro</th>
+                  <th scope="col">Business</th>
+                  <th scope="col">Enterprise</th>
                 </tr>
               </thead>
               <tbody>
@@ -288,7 +282,7 @@ export default async function PreciosPage() {
             </table>
           </div>
           <div className="text-center mt-8">
-            <Link href="#planes" className="mk-btn-primary">Ver planes de Orvenix →</Link>
+            <Link href="#planes" className="mk-btn-primary">Elegir mi plan →</Link>
           </div>
         </div>
       </section>
@@ -319,11 +313,11 @@ export default async function PreciosPage() {
               {
                 icon: "🔄",
                 title: "Plataforma mensual",
-                subtitle: "Desde $349 MXN/mes",
+                subtitle: "Desde 15 USD/mes",
                 badge: "Sin pago inicial",
                 badgeColor: "bg-[rgba(0,131,179,0.10)] text-[color:var(--accent-3)] border-[rgba(0,131,179,0.22)]",
-                desc: "Paga mes a mes y ten acceso completo a la plataforma: panel privado, editor visual, templates, publicación y soporte. Cancela cuando quieras.",
-                pros: ["Sin pago inicial grande", "Actualizaciones automáticas", "Soporte incluido", "Cancela sin penalidad"],
+                desc: "Paga mes a mes y ten acceso a plataforma, editor visual, publicacion, hosting administrado y soporte segun el plan elegido.",
+                pros: ["Sin pago inicial grande", "Actualizaciones automáticas", "Soporte incluido", "Cancela con 5 dias de anticipacion"],
                 cta: "Ver planes →",
                 href: "#planes",
                 primary: false,
@@ -331,11 +325,11 @@ export default async function PreciosPage() {
               {
                 icon: "💎",
                 title: "Compra o renta un sitio",
-                subtitle: "Desde $1,199 MXN/mes",
+                subtitle: "Cotizacion a medida",
                 badge: "Pago único disponible",
                 badgeColor: "bg-[rgba(0,181,246,0.10)] text-[color:var(--accent)] border-[color:var(--glass-border-hover)]",
-                desc: "Elige un template específico por industria, paga una vez (tuyo para siempre) o renta mensualmente a precio fijo. Sin plataforma, solo tu sitio.",
-                pros: ["Precio fijo sin sorpresas", "Compra única = tuyo para siempre", "Templates por industria", "Editable sin código"],
+                desc: "Solicita compra definitiva de tu desarrollo para recibir el codigo personalizado y migrarlo o mantenerlo en infraestructura Orvenix.",
+                pros: ["Precio fijo sin sorpresas", "Cesion patrimonial del codigo personalizado", "Templates por industria", "Editable sin código"],
                 cta: "Ver templates →",
                 href: "/templates",
                 primary: true,
@@ -429,7 +423,7 @@ export default async function PreciosPage() {
       <CtaSection
         title="¿Listo para empezar?"
         description="Activa tu plataforma hoy. Nuestro equipo la deja lista en menos de 24 horas."
-        buttonLabel="Elegir mi plan →"
+        buttonLabel="Elegir plan oficial →"
         buttonHref="/precios#planes"
       />
     </MarketingLayout>

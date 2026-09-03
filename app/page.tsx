@@ -13,7 +13,7 @@ import { SectionHeader } from '@/components/marketing/sections/SectionHeader';
 
 export const metadata: Metadata = {
   title: 'Orvenix — Plataforma SaaS para tu Negocio Digital',
-  description: 'Orvenix — Plataforma SaaS todo-en-uno para negocios digitales. Web profesional + panel privado + gestión de clientes + almacenamiento. Desde $349 MXN/mes.',
+  description: 'Orvenix — Plataforma SaaS todo-en-uno para negocios digitales. Web profesional + panel privado + gestión de clientes + almacenamiento. Desde 15 USD/mes + IVA.',
   manifest: '/manifest.json',
   openGraph: {
     type: 'website',
@@ -26,32 +26,32 @@ export const metadata: Metadata = {
 
 const faqItems = [
   {
-    question: '¿Necesito conocimientos técnicos para usar la plataforma?',
-    answer: 'No. La plataforma está diseñada para que cualquier persona pueda gestionarla sin saber programación. Todo funciona desde un navegador: subir archivos, crear clientes, revisar analíticas. Si tienes dudas, el soporte está incluido en todos los planes.',
+    question: '¿Por donde empiezo si no se que plan elegir?',
+    answer: 'Empieza por el tipo de operacion: presencia inicial, crecimiento comercial o operacion avanzada. Inicio te orienta; en /precios puedes revisar condiciones completas y elegir con calma.',
   },
   {
-    question: '¿Puedo conectar mi propio dominio al panel?',
-    answer: 'Sí. En todos los planes puedes conectar tu dominio propio (ej. panel.tuempresa.com) para que tus clientes accedan con tu marca, no con la nuestra. El proceso toma menos de 15 minutos y te guiamos paso a paso.',
+    question: '¿Puedo editar mi sitio sin programar?',
+    answer: 'Si. El Super Builder permite cambiar textos, imagenes, colores, enlaces y secciones desde una experiencia visual. Tambien puedes partir de templates reales por industria.',
   },
   {
-    question: '¿Cuántos clientes puedo agregar a mi panel?',
-    answer: 'El plan Básico incluye hasta 5 cuentas de clientes. Los planes Pro y Empresa tienen clientes ilimitados. Cada cliente tiene su propio portal privado donde solo ve lo que tú decides compartir con él.',
+    question: '¿Que diferencia hay entre template y lienzo guiado?',
+    answer: 'Un template te da una estructura completa por industria. El lienzo guiado empieza mas libre, con sugerencias de secciones esenciales para construir sin sentir una pantalla vacia.',
   },
   {
-    question: '¿Cómo funciona la facturación?',
-    answer: 'Cobramos de forma recurrente, mensual o anual (con 20% de descuento). Aceptamos tarjetas de crédito/débito, transferencia SPEI y MercadoPago. Puedes cancelar en cualquier momento desde tu panel sin penalizaciones. Los precios son antes de IVA (16%) — la factura se emite automáticamente.',
+    question: '¿Puedo crecer de Starter a Pro o Business?',
+    answer: 'Si. La idea es empezar con el alcance correcto y escalar cuando necesites eCommerce, CRM, IA, mas sitios, funnels, automatizaciones o soporte mas avanzado.',
   },
   {
-    question: '¿Hay garantía de devolución?',
-    answer: 'Sí. Si en los primeros 30 días no estás satisfecho, te devolvemos el 100% de tu pago sin preguntas ni formularios complicados. Solo contáctanos y procesamos el reembolso en 3-5 días hábiles.',
+    question: '¿El constructor funciona en pantallas pequeñas?',
+    answer: 'La plataforma se puede consultar en movil, pero el constructor se aprovecha mejor en desktop o pantallas amplias porque hay canvas, paneles y controles visuales.',
   },
   {
-    question: '¿La plataforma funciona en dispositivos móviles?',
-    answer: 'Completamente. Tanto tu panel de administración como el portal que ven tus clientes están optimizados para móvil, tablet y escritorio. Accede y gestiona desde cualquier dispositivo sin instalar ninguna app.',
+    question: '¿Puedo pedir ayuda para personalizar mi sitio?',
+    answer: 'Si. Puedes usar la plataforma por tu cuenta o contactar al equipo para ajustes, migraciones, integraciones, compra definitiva o un alcance Enterprise.',
   },
   {
-    question: '¿Qué pasa con mis datos si cancelo?',
-    answer: 'Antes de cancelar puedes exportar todos tus archivos y datos en cualquier momento. Guardamos tu información durante 30 días después de la cancelación por si deseas reactivar. Tus datos son tuyos, siempre.',
+    question: '¿Donde veo precios, impuestos y condiciones completas?',
+    answer: 'La informacion comercial detallada esta en /precios: montos oficiales, modalidades, condiciones, soporte, backups y activacion del plan.',
   },
 ];
 

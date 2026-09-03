@@ -1,8 +1,8 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getPublishedSite } from "@/lib/auth";
 import { PublicRenderer } from "@/components/PublicRenderer";
 import { getResolvedSiteRuntimeContext } from "@/lib/builder-core/tree/siteRuntimeContext";
-import { getPublishedSitePublicPath, hasPublishedSiteArtifact } from "@/lib/publishedSiteArtifacts";
+
 import { trackPageView } from "@/lib/analytics";
 import { SiteCopyrightBar, parseSiteOwnership } from "@/components/SiteCopyrightBar";
 import { getFunnel } from "@/lib/commerce/funnels";
@@ -146,10 +146,6 @@ export default async function PublicPage({ params, searchParams }: Props) {
         declineHref: dismissHref,
       })
     }
-  }
-
-  if (await hasPublishedSiteArtifact(id)) {
-    redirect(getPublishedSitePublicPath(id));
   }
 
   let runtimeContext;

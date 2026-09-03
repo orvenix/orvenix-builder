@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DynamicRenderer } from "@/components/editor/DynamicRenderer";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { DEVICE_WIDTHS } from "@/store/useEditorStore";
@@ -11,13 +11,15 @@ import { getFreeInsertProps } from "@/components/editor/freeInsert";
 import { resolveResponsiveProps } from "@/components/editor/responsive";
 import {
   ZoomIn, ZoomOut, Maximize2, Minimize2,
-  LayoutTemplate, Sparkles, MousePointerClick,
   MessageSquarePlus,
 } from "lucide-react";
 import type { EditorTree, NodeId, EditorComment } from "@/types/editor";
 import { generateSectionAI } from "@/app/actions/ai";
 
-const ZOOM_STEPS = [50, 75, 100, 125, 150] as const;
+const ZOOM_STEPS = [25, 33, 50, 75, 100, 125, 150] as const;
+const MIN_CANVAS_ZOOM = ZOOM_STEPS[0];
+const EMPTY_COMMENTS: EditorComment[] = [];
+const EMPTY_CHILDREN: NodeId[] = [];
 
 const DEVICE_CONFIG: Record<string, { label: string; icon: string }> = {
   desktop: { label: "Escritorio",  icon: "🖥" },
@@ -54,9 +56,9 @@ export const Canvas = () => {
   const addComment    = useEditorStore((s) => s.addComment);
   const resolveComment = useEditorStore((s) => s.resolveComment);
   const setLastCanvasPoint = useEditorStore((s) => s.setLastCanvasPoint);
-  const comments      = useEditorStore((s) => s.tree.comments ?? {});
+  const comments      = useEditorStore((s) => s.tree.comments ?? EMPTY_COMMENTS);
   const tree          = useEditorStore((s) => s.tree);
-  const rootChildren  = useEditorStore((s) => s.tree.nodes[s.tree.rootId]?.children ?? []);
+  const rootChildren  = useEditorStore((s) => s.tree.nodes[s.tree.rootId]?.children ?? EMPTY_CHILDREN);
   const clipboardTree = useEditorStore((s) => s.clipboardTree);
   const pasteNodeAt = useEditorStore((s) => s.pasteNodeAt);
   const addNode = useEditorStore((s) => s.addNode);
@@ -87,13 +89,11 @@ export const Canvas = () => {
     const viewport = viewportRef.current;
     const deviceWidth = Number.parseInt(DEVICE_WIDTHS[currentDevice], 10);
     if (!viewport || Number.isNaN(deviceWidth)) { setZoom(100); return; }
-    const available = Math.max(viewport.clientWidth - 48, 240);
-    setZoom(Math.min(100, Math.max(50, Math.floor((available / deviceWidth) * 100))));
+    setZoom(getFitZoom(viewport.clientWidth, deviceWidth));
   }, [currentDevice]);
 
   useEffect(() => { fitToWidth(); }, [fitToWidth]);
   useEffect(() => { setCanvasZoom(zoom); }, [setCanvasZoom, zoom]);
-
   // Listener para Generación de Secciones con IA (Nivel 4)
   useEffect(() => {
     const handleAIGenerate = async (e: AIGenerateEvent) => {
@@ -139,24 +139,20 @@ export const Canvas = () => {
     const ro = new ResizeObserver(() => {
       const deviceWidth = Number.parseInt(DEVICE_WIDTHS[currentDevice], 10);
       if (Number.isNaN(deviceWidth)) return;
-      const available = Math.max(viewport.clientWidth - 48, 240);
-      const maxZoom = Math.min(100, Math.max(50, Math.floor((available / deviceWidth) * 100)));
+      const maxZoom = getFitZoom(viewport.clientWidth, deviceWidth);
       setZoom((z) => Math.min(z, maxZoom));
     });
     ro.observe(viewport);
     return () => ro.disconnect();
   }, [currentDevice]);
 
-  const isEmpty = rootChildren.length === 0;
   const rendererMode = isPreviewMode ? "preview" : "edit";
   const freeCanvasHeight = getFreeCanvasHeight(tree, currentDevice);
   const deviceWidth = DEVICE_WIDTHS[currentDevice];
   const usesStrictViewport = currentDevice !== "desktop";
-  const displayZoom = currentDevice === "desktop" ? 100 : zoom;
+  const displayZoom = zoom;
   const displayScale = displayZoom / 100;
-  const scaledWidth = currentDevice === "desktop"
-    ? "100%"
-    : `calc(${deviceWidth} * ${displayScale})`;
+  const scaledWidth = `calc(${deviceWidth} * ${displayScale})`;
 
   const dc = DEVICE_CONFIG[currentDevice] ?? DEVICE_CONFIG.desktop;
   const marqueeBox = marquee ? getMarqueeBox(marquee) : null;
@@ -304,12 +300,12 @@ export const Canvas = () => {
         className={cn(
           "flex flex-1 items-start justify-center overflow-auto",
           isPreviewMode
-            ? currentDevice === "desktop" ? "p-0" : "bg-[color:var(--bg)] p-6 lg:p-10"
-            : currentDevice === "desktop" ? "p-0" : "p-3 lg:p-5"
+            ? currentDevice === "desktop" ? "p-0" : "bg-[color:var(--bg)] p-4 sm:p-6 lg:p-10"
+            : currentDevice === "desktop" ? "p-3 xl:p-0" : "p-3 lg:p-5"
         )}
         onClick={isPreviewMode ? undefined : () => select(null)}
       >
-        <div className={cn("shrink-0", currentDevice === "desktop" && "w-full")} style={{ width: scaledWidth }}>
+        <div className="shrink-0" style={{ width: scaledWidth }}>
           <div style={{ transform: `scale(${displayScale})`, transformOrigin: "top center", width: deviceWidth }}>
 
             {/* Page shadow frame */}
@@ -408,41 +404,6 @@ export const Canvas = () => {
                     <div className="editor-anim-scale-in rounded-2xl border-2 border-dashed border-indigo-400 bg-indigo-950/90 px-8 py-5 text-center backdrop-blur-sm shadow-xl shadow-indigo-950/50">
                       <div className="text-2xl mb-2">⊕</div>
                       <div className="text-sm font-semibold text-indigo-200">Suelta para agregar bloque</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Empty state */}
-                {isEmpty && !isOver && !isPreviewMode && (
-                  <div className="pointer-events-none absolute inset-0 flex select-none flex-col items-center justify-center gap-5 px-6 py-32">
-                    {/* Animated background circles */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-64 h-64 rounded-full opacity-[0.03]"
-                        style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)", animation: "editor-glow-pulse 3s ease-in-out infinite" }} />
-                    </div>
-
-                    <div className="relative">
-                      <div className="grid h-16 w-16 place-items-center rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white text-slate-300 shadow-sm">
-                        <LayoutTemplate size={26} />
-                      </div>
-                      {/* Floating sparkle */}
-                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-indigo-500/10 border border-indigo-500/20 grid place-items-center"
-                        style={{ animation: "editor-bounce-subtle 2s ease-in-out infinite" }}>
-                        <Sparkles size={10} className="text-indigo-400" />
-                      </div>
-                    </div>
-
-                    <div className="relative text-center max-w-[220px]">
-                      <div className="text-sm font-bold text-slate-500 mb-1">Canvas vacío</div>
-                      <div className="text-xs leading-relaxed text-slate-400">
-                        Arrastra un bloque desde el panel izquierdo o haz clic en uno para comenzar
-                      </div>
-                    </div>
-
-                    {/* Quick action hint */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50">
-                      <MousePointerClick size={11} className="text-slate-400" />
-                      <span className="text-[10px] text-slate-400 font-medium">Clic en cualquier bloque del panel</span>
                     </div>
                   </div>
                 )}
@@ -611,6 +572,12 @@ export const Canvas = () => {
     </main>
   );
 };
+
+function getFitZoom(viewportWidth: number, deviceWidth: number) {
+  const gutter = viewportWidth < 640 ? 24 : 48;
+  const available = Math.max(viewportWidth - gutter, 160);
+  return Math.min(100, Math.max(MIN_CANVAS_ZOOM, Math.floor((available / deviceWidth) * 100)));
+}
 
 function DeviceShell({ type, children }: { type: string; children: React.ReactNode }) {
   if (type === "desktop") return <>{children}</>;

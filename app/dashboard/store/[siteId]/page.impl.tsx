@@ -574,8 +574,11 @@ function getStepPublicPath(
   return `/p/${encodeURIComponent(siteId)}/funnel/${encodeURIComponent(funnelId)}/${encodeURIComponent(step)}?${search.toString()}`
 }
 
-function getEditorPagePath(pageId: string) {
-  return `/editor/${encodeURIComponent(pageId)}`
+function getEditorPagePath(siteId: string, page: SitePageOption) {
+  const sitePath = encodeURIComponent(siteId)
+  return page.slug === "home"
+    ? `/editor/${sitePath}`
+    : `/editor/${sitePath}?page=${encodeURIComponent(page.slug)}`
 }
 
 function getPrimaryFunnelStepPath(siteId: string, funnel: Funnel, availablePages: SitePageOption[]) {
@@ -2999,7 +3002,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                                       <>
                                         <span>{page.name} (/{page.slug})</span>
                                         <Link
-                                          href={getEditorPagePath(page.id)}
+                                          href={getEditorPagePath(siteId, page)}
                                           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
                                         >
                                           Editar pagina <ExternalLink size={10} />
@@ -3778,7 +3781,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                               {experiment.targetType === "page" && page && (
                                 <>
                                   <Link
-                                    href={getEditorPagePath(page.id)}
+                                    href={getEditorPagePath(siteId, page)}
                                     className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
                                   >
                                     Editar pagina <ExternalLink size={10} />
@@ -3823,7 +3826,7 @@ export default function StoreImpl({ siteId, siteName, initialProducts, initialOr
                               {experiment.targetType === "page" && variantBPage && (
                                 <>
                                   <Link
-                                    href={getEditorPagePath(variantBPage.id)}
+                                    href={getEditorPagePath(siteId, variantBPage)}
                                     className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-semibold text-slate-300 transition-colors hover:border-white/[0.14] hover:text-white"
                                   >
                                     Editar pagina B <ExternalLink size={10} />

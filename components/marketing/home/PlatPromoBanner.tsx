@@ -31,8 +31,8 @@ export function PlatPromoBanner() {
           <div className="relative flex flex-col items-center gap-4 shrink-0">
             <div className="text-center">
               <span className="block text-xs text-orvenix-muted mb-1">desde</span>
-              <span className="mk-promo-price">$399</span>
-              <span className="block text-xs text-orvenix-muted mt-1">MXN/mes</span>
+              <span className="mk-promo-price">15 USD</span>
+              <span className="block text-xs text-orvenix-muted mt-1">/mes + IVA</span>
             </div>
             <span className="mk-promo-cta group-hover:scale-105 transition-transform duration-200">
               Ver planes →

@@ -1,4 +1,6 @@
+import type { EnvironmentVariables } from "@/lib/env-types"
 import { getBillingConfigReport } from "./billing-config"
+import { hasConfiguredEnvValue } from "./env-placeholders"
 import { isPlaceholderDatabaseUrl } from "./storage-mode"
 
 export type ProductionReadinessStatus = "ready" | "attention" | "manual"
@@ -17,7 +19,7 @@ export type ProductionReadinessReport = {
 }
 
 function hasValue(value: string | undefined) {
-  return Boolean(value && value.trim() && !value.includes("placeholder"))
+  return hasConfiguredEnvValue(value)
 }
 
 function normalizeOrigin(url: string | undefined) {
@@ -30,7 +32,7 @@ function normalizeOrigin(url: string | undefined) {
   }
 }
 
-function buildPublicUrlCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildPublicUrlCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const authUrl = normalizeOrigin(env.AUTH_URL)
   const nextAuthUrl = normalizeOrigin(env.NEXTAUTH_URL)
   const publicApiUrl = normalizeOrigin(env.NEXT_PUBLIC_API_URL)
@@ -79,7 +81,7 @@ function buildPublicUrlCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
   }
 }
 
-function buildAuthSecretCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildAuthSecretCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const authSecret = env.AUTH_SECRET
   const nextAuthSecret = env.NEXTAUTH_SECRET
   const hasAuthSecret = hasValue(authSecret)
@@ -111,7 +113,7 @@ function buildAuthSecretCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck 
   }
 }
 
-function buildStorageCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildStorageCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const storageMode = env.ORVENIX_STORAGE_MODE?.trim() ?? "file"
   const databaseUrl = env.DATABASE_URL
 
@@ -120,7 +122,7 @@ function buildStorageCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
       key: "storage_mode",
       label: "Persistencia de produccion",
       status: "attention",
-      detail: `ORVENIX_STORAGE_MODE=${storageMode}. En Vercel o produccion serverless conviene usar prisma con una base de datos real.`,
+      detail: `ORVENIX_STORAGE_MODE=${storageMode}. En produccion conviene usar prisma con una base de datos real y persistente.`,
     }
   }
 
@@ -150,7 +152,7 @@ function buildStorageCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
   }
 }
 
-function buildBillingCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildBillingCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const billing = getBillingConfigReport(env)
 
   if (billing.status === "ok") {
@@ -179,7 +181,7 @@ function buildBillingCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
   }
 }
 
-function buildEmailCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
+function buildEmailCheck(env: EnvironmentVariables): ProductionReadinessCheck {
   const hasResendKey = hasValue(env.RESEND_API_KEY)
   const hasResendFrom = hasValue(env.RESEND_FROM)
 
@@ -200,7 +202,7 @@ function buildEmailCheck(env: NodeJS.ProcessEnv): ProductionReadinessCheck {
   }
 }
 
-export function getProductionReadinessReport(env: NodeJS.ProcessEnv = process.env): ProductionReadinessReport {
+export function getProductionReadinessReport(env: EnvironmentVariables = process.env): ProductionReadinessReport {
   const automaticChecks = [
     buildPublicUrlCheck(env),
     buildAuthSecretCheck(env),
@@ -211,7 +213,7 @@ export function getProductionReadinessReport(env: NodeJS.ProcessEnv = process.en
 
   const manualChecks: ProductionReadinessCheck[] = [
     {
-      key: "vercel_env",
+      key: "production_env",
       label: "Variables reales del entorno",
       status: "manual",
       detail: "Confirmar que el servidor o plataforma activa usa valores reales de produccion para auth, DB, billing y email.",

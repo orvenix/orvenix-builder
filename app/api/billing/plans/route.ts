@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { editorPrisma } from "@/lib/editor-db"
+import { getOfficialPlanName } from "@/lib/orvenix-official-2026"
 
 // GET /api/billing/plans — lista pública de planes activos
 export async function GET() {
@@ -7,5 +8,10 @@ export async function GET() {
     where: { isActive: true },
     orderBy: { priceMonthMxn: "asc" },
   })
-  return NextResponse.json({ plans })
+  return NextResponse.json({
+    plans: plans.map((plan) => ({
+      ...plan,
+      name: getOfficialPlanName(plan.id, plan.name),
+    })),
+  })
 }

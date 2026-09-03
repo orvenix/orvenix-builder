@@ -56,9 +56,24 @@ export function Navbar() {
 
   useEffect(() => {
     if (!menuOpen) return;
+
+    const closeFromOutside = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('.nav-links, .nav-toggle')) return;
+
+      setMenuOpen(false);
+    };
+
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+
+    document.addEventListener('pointerdown', closeFromOutside, true);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+
+    return () => {
+      document.removeEventListener('pointerdown', closeFromOutside, true);
+      window.removeEventListener('keydown', onKey);
+    };
   }, [menuOpen]);
 
   /* Cerrar menú al cambiar de ruta */

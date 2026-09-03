@@ -216,6 +216,8 @@ async function resolvePostLoginRedirect() {
   const pendingDesignKey = params.get("pendingDesignKey");
   const callbackUrl = params.get("callbackUrl");
   const returnTo = params.get("returnTo");
+  const plan = params.get("plan");
+  const interval = params.get("interval") === "year" ? "year" : "month";
 
   if (pendingDesignKey) {
     const draft = readPendingDesignDraft(pendingDesignKey);
@@ -243,6 +245,7 @@ async function resolvePostLoginRedirect() {
   }
 
   if (callbackUrl?.startsWith("/")) return callbackUrl;
+  if (plan) return "/precios?checkout=" + encodeURIComponent(plan) + "&interval=" + interval;
   if (returnTo?.startsWith("/") && returnTo !== "/editor/pending") return returnTo;
   return "/dashboard";
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { CheckCheck, ExternalLink, Search, Sparkles, Undo2, X } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { TEMPLATES, TEMPLATE_CATEGORIES } from "@/templates";
 import type { Template } from "@/templates";
 

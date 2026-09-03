@@ -27,7 +27,7 @@ export const pipelineStages: PipelineStage[] = [
   {
     id: "negotiation", label: "Negociación", colorKey: "amber", count: 5, totalValue: "$680K",
     deals: [
-      { name: "Vercel Enterprise",value: "$380K", daysInStage: 31, initials: "VE", colorKey: "slate"  },
+      { name: "NovaCloud Enterprise",value: "$380K", daysInStage: 31, initials: "VE", colorKey: "slate"  },
       { name: "PlanetScale",      value: "$120K", daysInStage: 14, initials: "PS", colorKey: "teal"   },
     ],
   },

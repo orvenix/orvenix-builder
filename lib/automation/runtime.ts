@@ -4,6 +4,8 @@ import { join } from "path"
 import { editorPrisma } from "@/lib/editor-db"
 import type { Prisma } from "@/generated/editor-prisma"
 import { isFileStorageMode } from "@/lib/storage-mode"
+import { canUseAutomations } from "@/lib/billing/plan-entitlements"
+import { getUserPlanAccess } from "@/lib/plan-guard"
 import { sendEmail } from "@/lib/email"
 import {
   getCmsWorkflowPublishedAt,
@@ -32,6 +34,17 @@ export interface AutomationRecord {
   status: string
   createdAt: Date
   updatedAt: Date
+}
+
+export class AutomationAccessError extends Error {
+  readonly code = "AUTOMATIONS_NOT_INCLUDED"
+
+  constructor(
+    message = "Las automatizaciones no están incluidas en el plan del propietario del sitio.",
+  ) {
+    super(message)
+    this.name = "AutomationAccessError"
+  }
 }
 
 type DynamicAutomationDelegate = {
@@ -361,6 +374,25 @@ export async function createAutomation(siteId: string, input: {
   const delegate = getAutomationDelegate()
   if (!delegate) {
     throw new Error("AUTOMATIONS_NOT_READY")
+  }
+
+const site = await editorPrisma.editorWebsite.findUnique({
+    where: { id: siteId },
+    select: { userId: true },
+  })
+
+  if (!site) {
+    throw new Error("SITE_NOT_FOUND")
+  }
+
+  const access = await getUserPlanAccess(site.userId)
+
+  if (
+    !access.isActive ||
+    !access.plan ||
+    !canUseAutomations(access.plan.id)
+  ) {
+    throw new AutomationAccessError()
   }
 
   const actionGraph = normalizeAutomationGraph(input.triggerType, input.actionGraph)

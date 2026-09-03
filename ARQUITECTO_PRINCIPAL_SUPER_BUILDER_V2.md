@@ -73,7 +73,7 @@ Este es el stack canonico de Orvenix hoy. Cualquier documento nuevo debe asumir 
 - Pagos complementarios: MercadoPago para pagos puntuales, tienda y flujos legacy
 - IA: Anthropic y capas auxiliares ya integradas en el producto
 - Editor avanzado: Monaco donde aplique
-- Deploy inicial: servidor propio / Vercel segun entorno
+- Deploy inicial: servidor propio Node segun entorno
 - Render interno: arbol JSON modular resuelto a componentes React
 
 ## Decisiones tecnicas ya asumidas

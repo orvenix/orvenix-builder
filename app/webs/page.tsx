@@ -42,7 +42,7 @@ export default function WebsHub() {
                 Ver catálogo
                 <ArrowRight size={16} />
               </a>
-              <Link href="/constructor" className="webs-secondary-link">
+              <Link href="/constructor?source=blank" className="webs-secondary-link">
                 Crear desde cero
               </Link>
             </div>
@@ -155,11 +155,9 @@ export default function WebsHub() {
                   <div className="webs-actions">
                     <Link
                       href={app.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="webs-demo-action"
                     >
-                      Ver demo
+                      {isEditableTemplate ? "Ver demo" : "Ver página real"}
                       <ArrowRight size={14} />
                     </Link>
                     {isEditableTemplate ? (
@@ -180,7 +178,9 @@ export default function WebsHub() {
                         </Link>
                       </>
                     ) : (
-                      <span className="webs-real-page-note">Página real</span>
+                      <Link href={app.href} className="webs-real-page-note">
+                        Página real
+                      </Link>
                     )}
                   </div>
                 </div>

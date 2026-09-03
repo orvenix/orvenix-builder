@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import type { BlockComponentProps } from "@/types/editor";
 import { resolveRuntimeHref } from "@/lib/builder-core/tree/pageLinks";
 
@@ -17,22 +17,22 @@ export interface CtaButtonProps {
 // Matches the main site's design system (orvenix-tokens.css)
 const VARIANT = {
   primary:
-    "bg-gradient-to-br from-[#00bbff] to-[#0083b3] text-white font-semibold " +
-    "shadow-[0_10px_20px_-10px_rgba(0,131,179,0.5)] " +
-    "hover:shadow-[0_20px_30px_-10px_rgba(0,181,246,0.4)] hover:-translate-y-px transition-all",
+    "bg-gradient-to-br from-[#1BB3FA] via-[#1794CC] to-[#075985] text-white font-black " +
+    "shadow-[0_16px_34px_-16px_rgba(27,179,250,0.68)] " +
+    "hover:shadow-[0_26px_52px_-16px_rgba(23,148,204,0.74)] hover:-translate-y-1 hover:saturate-125 transition-all",
   secondary:
-    "border border-white/[0.12] bg-white/[0.03] text-white font-semibold " +
-    "hover:border-white/25 hover:-translate-y-px transition-all",
+    "border border-[#1BB3FA]/24 bg-white/70 text-[#075985] font-black backdrop-blur " +
+    "hover:border-[#1BB3FA]/50 hover:bg-[#e5f6ff] hover:text-[#062f44] hover:-translate-y-1 transition-all",
   ghost:
-    "text-[#00b5f6] font-semibold hover:text-[#00bbff] transition-colors underline-offset-4 hover:underline",
+    "text-[#1379A8] font-black hover:text-[#1BB3FA] transition-all underline-offset-4 hover:underline hover:-translate-y-0.5",
   danger:
     "bg-red-600 text-white font-semibold hover:bg-red-500 hover:-translate-y-px transition-all",
 } as const;
 
 const SIZE = {
   sm: "px-3 py-1.5 text-xs rounded-lg",
-  md: "px-5 py-2.5 text-sm rounded-xl",
-  lg: "px-6 py-3.5 text-base rounded-xl",
+  md: "px-5 py-2.5 text-sm rounded-full",
+  lg: "px-7 py-4 text-base rounded-full",
 } as const;
 
 export function CtaButton({
@@ -59,8 +59,8 @@ export function CtaButton({
   const buttonShadow = theme?.shadow?.soft ?? "0 12px 32px rgba(15,23,42,0.08)";
   const motionDuration = theme?.motion?.duration ?? "240ms";
   const motionEasing = theme?.motion?.easing ?? "cubic-bezier(0.22, 1, 0.36, 1)";
-  const primaryColor = theme?.colors?.primary ?? "#00b5f6";
-  const secondaryColor = theme?.colors?.secondary ?? "#112540";
+  const primaryColor = theme?.colors?.primary ?? "#1BB3FA";
+  const secondaryColor = theme?.colors?.secondary ?? "#075985";
   const accentColor = theme?.colors?.accent ?? primaryColor;
 
   const themeStyle: React.CSSProperties = {
@@ -121,14 +121,16 @@ export function CtaButton({
         setEditingNode(null);
       }}
       className={`
-        ${isFree ? "flex h-full w-full justify-center" : "inline-flex"}
-        items-center outline-none select-none
+        group ${isFree ? "flex h-full w-full justify-center" : "inline-flex"}
+        orvenix-cta-button orvenix-cta-${variant}
+        items-center outline-none select-none tracking-[0.01em]
         ${SIZE[size]} ${VARIANT[variant]}
-        ${isEditing ? "ring-2 ring-[#00b5f6]/60 ring-offset-2 ring-offset-[#112540] cursor-text select-text" : "cursor-pointer"}
+        ${isEditing ? "ring-2 ring-[#1BB3FA]/75 ring-offset-2 ring-offset-[#075985] cursor-text select-text" : "cursor-pointer"}
       `}
       style={themeStyle}
     >
-      {label}
+      <span className="relative z-10">{label}</span>
+      {variant !== "ghost" ? <span className="relative z-10 transition-transform duration-300 group-hover:translate-x-1">→</span> : null}
     </a>
   );
 }

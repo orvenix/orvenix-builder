@@ -208,11 +208,26 @@ export function CartDrawer({
               <span className="text-sm text-slate-400">Total</span>
               <span className="text-xl font-extrabold text-white">{formatMxn(totalMxn())}</span>
             </div>
-            <button type="button" onClick={handleCheckout} disabled={isCheckingOut}
-              className="w-full h-11 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-              style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}>
-              {isCheckingOut ? "Preparando pago..." : checkoutLabel}
-            </button>
+           <div className="space-y-2">
+  <button
+    type="button"
+    onClick={handleCheckout}
+    disabled={isCheckingOut}
+    className="w-full h-11 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+    style={{
+      background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+    }}
+  >
+    {isCheckingOut
+      ? "Preparando pago..."
+      : `${checkoutLabel} con Mercado Pago`}
+  </button>
+
+  <p className="text-center text-[11px] leading-relaxed text-slate-500">
+    Pago seguro mediante Mercado Pago. Podrás elegir los métodos disponibles
+    antes de completar tu compra.
+  </p>
+</div>
           </div>
         )}
       </aside>

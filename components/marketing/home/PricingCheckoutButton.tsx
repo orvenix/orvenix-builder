@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 interface Props {
   planId: string
@@ -10,13 +10,16 @@ interface Props {
   label: string
   featured?: boolean
   unavailable?: boolean
+  repairActiveSubscription?: boolean
 }
 
-export function PricingCheckoutButton({ planId, interval, label, featured, unavailable }: Props) {
+export function PricingCheckoutButton({ planId, interval, label, featured, unavailable, repairActiveSubscription }: Props) {
+  const searchParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isBillingRepair = repairActiveSubscription || searchParams?.get('billingRepair') === '1'
 
   async function handleClick() {
     setError(null)
@@ -26,9 +29,10 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
       return
     }
 
-    // Si no hay sesión → registrar con el plan preseleccionado
+    // Si no hay sesión → registrar con el plan preseleccionado y volver al checkout
     if (!session) {
-      router.push(`/register?plan=${planId}&interval=${interval}`)
+      const checkoutReturn = "/precios?checkout=" + encodeURIComponent(planId) + "&interval=" + interval + (isBillingRepair ? "&billingRepair=1" : "")
+      router.push(`/register?plan=${encodeURIComponent(planId)}&interval=${interval}&callbackUrl=${encodeURIComponent(checkoutReturn)}`)
       return
     }
 
@@ -37,9 +41,12 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
       const res = await fetch('/api/billing/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, interval }),
+        body: JSON.stringify({ planId, interval, repairActiveSubscription: isBillingRepair }),
       })
-      const data = await res.json() as { initPoint?: string; error?: string; code?: string }
+      const contentType = res.headers.get('content-type') ?? ''
+      const data = contentType.includes('application/json')
+        ? await res.json() as { initPoint?: string; error?: string; code?: string }
+        : { error: 'El servidor no devolvio una respuesta valida de checkout.', code: 'INVALID_CHECKOUT_RESPONSE' }
 
       if (data.initPoint) {
         window.location.href = data.initPoint
@@ -55,7 +62,7 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
         setError(data.error ?? 'Error al iniciar el pago. Intenta de nuevo.')
       }
     } catch {
-      setError('Error de conexión. Intenta de nuevo.')
+      setError('No se pudo conectar con el checkout. Revisa tu conexion e intenta de nuevo.')
     } finally {
       setLoading(false)
     }

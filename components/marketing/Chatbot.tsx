@@ -22,13 +22,14 @@ const MAX_HISTORY = 12;
 const DEFAULT_MESSAGES: ChatMessage[] = [{ role: "assistant", content: getDefaultWelcomeMessage() }];
 
 function getDefaultWelcomeMessage() {
-  return "Hola, soy orvenix. Puedo ayudarte con precios, plataforma, editor visual, plantillas reales, demos por industria y el proceso para lanzar tu sitio.";
+  return "Hola, soy Orvenix AI. Puedo ayudarte con planes oficiales 2026, Super Builder, templates por industria, pagos, soporte y la ruta para lanzar tu sitio.";
 }
 
 const SUGGESTIONS = [
-  "Que incluye la Plataforma Orvenix?",
-  "Cuanto cuesta un sitio?",
-  "Como funciona el editor?",
+  "Que plan me conviene?",
+  "Crea un sitio de restaurante",
+  "Como funciona el Super Builder?",
+  "Que incluye Pro y Business?",
 ];
 
 function loadHistory(): ChatMessage[] {
@@ -80,6 +81,46 @@ function parseSseText(raw: string) {
   });
 
   return output.trim();
+}
+
+
+type CreateSiteResponse = {
+  ok?: boolean;
+  templateName?: string;
+  nextRoute?: string;
+  error?: string;
+  code?: string;
+  loginUrl?: string;
+  upgradeUrl?: string;
+};
+
+function shouldGenerateSite(text: string) {
+  const normalized = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const hasCreateIntent = /(crea|crear|genera|generar|haz|hacer|arma|armar|construye|construir)/.test(normalized);
+  const hasSiteIntent = /(sitio|web|pagina|landing|template|plantilla)/.test(normalized);
+  const hasIndustry = /(restaurante|tienda|ecommerce|clinica|salud|inmobiliaria|gimnasio|fitness|abogado|legal|contador|contabilidad|hotel|barberia|viajes|arquitectura|servicios)/.test(normalized);
+
+  return hasCreateIntent && (hasSiteIntent || hasIndustry);
+}
+
+async function requestTemplateSite(prompt: string): Promise<CreateSiteResponse> {
+  const response = await fetch("/api/chat/create-site", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
+
+  const data = await response.json().catch(() => ({
+    error: "No pude leer la respuesta del generador de sitios.",
+    code: "INVALID_RESPONSE",
+  })) as CreateSiteResponse;
+
+  if (!response.ok) return data;
+  return data;
 }
 
 async function readAssistantResponse(response: Response, onText: (text: string) => void) {
@@ -219,6 +260,41 @@ export function Chatbot() {
     messagesRef.current = nextMessages;
 
     try {
+      if (shouldGenerateSite(text)) {
+        const data = await requestTemplateSite(text);
+
+        if (data.ok && data.nextRoute) {
+          setIsSending(false);
+          await typeAssistantMessage(
+            `Listo. Creé una copia editable basada en ${data.templateName ?? "un template profesional"}. Te llevo al editor para que cambies textos, imágenes, colores y secciones.`
+          );
+          window.setTimeout(() => {
+            window.location.href = data.nextRoute!;
+          }, 650);
+          return;
+        }
+
+        if (data.code === "UNAUTHENTICATED") {
+          setIsSending(false);
+          await typeAssistantMessage(
+            `Para crear el sitio necesito que inicies sesión. Después puedo abrir el editor con una plantilla editable. Entra aquí: ${data.loginUrl ?? "/login"}`
+          );
+          return;
+        }
+
+        if (data.code === "PLAN_LIMIT_REACHED") {
+          setIsSending(false);
+          await typeAssistantMessage(
+            `Tu plan ya llegó al límite de sitios. Puedes subir de plan para generar más sitios desde templates. Revisa: ${data.upgradeUrl ?? "/precios"}`
+          );
+          return;
+        }
+
+        setIsSending(false);
+        await typeAssistantMessage(data.error ?? "No encontré un template claro. Prueba con restaurante, tienda, clínica, inmobiliaria, gimnasio, abogados o contabilidad.");
+        return;
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -393,7 +469,7 @@ export function Chatbot() {
             }}
             rows={2}
             disabled={isBusy}
-            placeholder="Pregunta por precios, plataforma, tiempos..."
+            placeholder="Pregunta por planes, pagos, Builder, templates..."
             className="min-w-0 flex-1 resize-none rounded-xl border border-slate-400/20 bg-slate-900/90 px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-300/50 disabled:opacity-70"
           />
           <button

@@ -84,6 +84,30 @@ export interface SEOMetadata {
   [key: string]: unknown;
 }
 
+export interface BrandKit {
+  businessName: string;
+  tagline?: string;
+  description?: string;
+
+  logoUrl?: string;
+  faviconUrl?: string;
+
+  contact?: {
+    phone?: string;
+    whatsapp?: string;
+    email?: string;
+    address?: string;
+  };
+
+  social?: {
+    facebook?: string;
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    linkedin?: string;
+  };
+}
+
 export interface EditorComment {
   id: string;
   x: number;
@@ -99,6 +123,7 @@ export interface EditorTree {
   nodes: Record<NodeId, EditorNode>;
   theme?: GlobalTheme;
   globalTheme?: GlobalTheme;
+  brand?: BrandKit;
   seo?: SEOMetadata;
   comments?: EditorComment[];
   [key: string]: unknown;

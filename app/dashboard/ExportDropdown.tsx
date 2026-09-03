@@ -36,7 +36,7 @@ export function ExportDropdown({ siteId }: Props) {
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative z-30">
       <button
         type="button"
         title="Exportar código"
@@ -52,7 +52,7 @@ export function ExportDropdown({ siteId }: Props) {
       </button>
 
       {exportError && (
-        <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs text-red-200 shadow-xl shadow-black/20">
+        <div className="absolute right-0 top-11 z-[80] w-64 rounded-xl border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs text-red-200 shadow-xl shadow-black/20">
           {exportError}
         </div>
       )}
@@ -65,7 +65,7 @@ export function ExportDropdown({ siteId }: Props) {
             className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 top-10 z-50 w-52 overflow-hidden rounded-xl border border-white/[0.08] bg-[color:var(--bg-2)]/95 py-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl">
+          <div className="absolute right-0 top-10 z-[80] w-52 overflow-hidden rounded-xl border border-white/[0.08] bg-[color:var(--bg-2)]/95 py-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl">
             <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/[0.05] mb-1">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">Exportar código</span>
               <button type="button" onClick={() => setOpen(false)} className="text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-secondary)]">
@@ -93,7 +93,7 @@ export function ExportDropdown({ siteId }: Props) {
               <FileCode2 size={14} className="shrink-0 mt-0.5 text-[color:var(--accent)]" />
               <div>
                 <p className="text-xs font-semibold text-[color:var(--text)]">Next.js 15</p>
-                <p className="mt-0.5 text-[10px] text-[color:var(--text-secondary)]">App Router + Tailwind. Deploy a Vercel en 1 clic.</p>
+                <p className="mt-0.5 text-[10px] text-[color:var(--text-secondary)]">App Router + Tailwind. Listo para servidor Node.</p>
               </div>
             </button>
 

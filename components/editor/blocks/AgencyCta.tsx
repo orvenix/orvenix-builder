@@ -1,6 +1,6 @@
 import React from 'react';
 import { MessageCircle } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 
 export function AgencyCta({ phoneNumber = "123456789" }) {
   const theme = useEditorStore((s) => s.tree.theme);

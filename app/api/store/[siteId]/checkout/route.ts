@@ -58,7 +58,20 @@ function buildOrderNotes(
 
 export async function POST(request: Request, { params }: Ctx) {
   const { siteId } = await params
-  const parsed = CheckoutSchema.safeParse(await request.json())
+  let body: unknown;
+
+try {
+    body = await request.json();
+} catch {
+    return NextResponse.json(
+        {
+            error: "INVALID_JSON",
+        },
+        { status: 400 }
+    );
+}
+
+const parsed = CheckoutSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "INVALID_CHECKOUT", details: parsed.error.flatten() }, { status: 400 })
   }
@@ -70,12 +83,26 @@ export async function POST(request: Request, { params }: Ctx) {
   if (!site?.userId) return NextResponse.json({ error: "STORE_NOT_FOUND" }, { status: 404 })
 
   const access = await getUserPlanAccess(site.userId)
-  if (!access.plan?.hasEcommerce) {
-    return NextResponse.json(
-      { error: "STORE_DISABLED", message: "Esta tienda no tiene checkout activo." },
-      { status: 403 }
-    )
-  }
+
+if (!access.entitlements) {
+  return NextResponse.json(
+    {
+      error: "STORE_DISABLED",
+      message: "Esta tienda no tiene checkout activo.",
+    },
+    { status: 403 },
+  )
+}
+
+if (access.entitlements.features.ecommerce === "none") {
+  return NextResponse.json(
+    {
+      error: "STORE_DISABLED",
+      message: "Esta tienda no tiene checkout activo.",
+    },
+    { status: 403 },
+  )
+}
 
   const funnelId = parsed.data.funnelId?.trim() || undefined
   const funnelStep = funnelId ? (parsed.data.funnelStep ?? "checkout") : undefined
@@ -136,6 +163,24 @@ export async function POST(request: Request, { params }: Ctx) {
   if (variants.length !== requestedItems.length) {
     return NextResponse.json({ error: "INVALID_ITEMS", message: "Uno o mas productos ya no estan disponibles." }, { status: 400 })
   }
+
+const MAX_CHECKOUT_BODY = 256 * 1024;
+
+const contentLength = Number(
+    request.headers.get("content-length") ?? "0"
+);
+
+if (
+    Number.isFinite(contentLength) &&
+    contentLength > MAX_CHECKOUT_BODY
+) {
+    return NextResponse.json(
+        {
+            error: "REQUEST_TOO_LARGE",
+        },
+        { status: 413 }
+    );
+}
 
   const baseItems = variants.map((variant) => {
     const quantity = requestedByVariant.get(variant.id) ?? 1

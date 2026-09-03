@@ -43,6 +43,7 @@ type PlanRecord = {
 type SubscribeRequestBody = {
   planId?: string
   interval?: string
+  repairActiveSubscription?: boolean
 }
 
 const ACTIVE_STATUSES = new Set(["active", "authorized"])
@@ -141,6 +142,7 @@ export async function buildBillingSubscribeResponse(params: {
     interval: "month" | "year"
     priceId: string
   }) => Promise<{ checkoutUrl: string; sessionId: string }>
+  canReplaceActiveSubscription?: (subscription: SubscriptionRecord) => Promise<boolean>
   upsertSubscription: (params: {
     where: { userId: string }
     update: Record<string, unknown>
@@ -191,13 +193,19 @@ export async function buildBillingSubscribeResponse(params: {
   }
 
   if (existingSubscription && ACTIVE_STATUSES.has(existingSubscription.status)) {
-    return jsonError(
-      existingSubscription.planId === planId
-        ? "Ya tienes este plan activo"
-        : "Ya tienes una suscripción activa. Cámbiala desde el dashboard.",
-      409,
-      "ACTIVE_SUBSCRIPTION_EXISTS"
-    )
+    const canReplaceActive = params.body.repairActiveSubscription === true && params.canReplaceActiveSubscription
+      ? await params.canReplaceActiveSubscription(existingSubscription)
+      : false
+
+    if (!canReplaceActive) {
+      return jsonError(
+        existingSubscription.planId === planId
+          ? "Ya tienes este plan activo"
+          : "Ya tienes una suscripción activa. Cámbiala desde el dashboard.",
+        409,
+        "ACTIVE_SUBSCRIPTION_EXISTS"
+      )
+    }
   }
 
   if (hasScheduledCancellationAccess(existingSubscription)) {
@@ -249,7 +257,10 @@ export async function buildBillingSubscribeResponse(params: {
         planId,
         interval,
         status: "pending",
+        stripeSubscriptionId: null,
+        stripeCustomerId: null,
         mpSubscriptionId: null,
+        canceledAt: null,
       },
       create: {
         userId,
@@ -293,7 +304,12 @@ export async function buildBillingCancelResponse(params: {
   session: SessionLike
   findSubscription: (userId: string) => Promise<SubscriptionRecord | null>
   isStripeConfigured: () => boolean
-  cancelStripeSubscription: (stripeSubscriptionId: string) => Promise<void>
+  cancelStripeSubscription: (
+  stripeSubscriptionId: string
+) => Promise<{
+  cancel_at_period_end?: boolean | null
+  current_period_end?: number | null
+}>
   isMpConfigured: () => boolean
   cancelMpSubscription: (mpSubscriptionId: string) => Promise<void>
   updateSubscription: (params: {
@@ -337,40 +353,63 @@ export async function buildBillingCancelResponse(params: {
     }
   }
 
-  if (subscription.provider === "stripe" && subscription.stripeSubscriptionId) {
-    if (!params.isStripeConfigured()) {
-      return jsonError("Stripe no está configurado para cancelar esta suscripción", 503, "STRIPE_NOT_CONFIGURED")
-    }
+  let cancellationDate =
+  subscription.currentPeriodEnd ?? new Date()
 
-    try {
-      await params.cancelStripeSubscription(subscription.stripeSubscriptionId)
-    } catch {
-      return jsonError(
-        "No pudimos cancelar en Stripe. Intenta de nuevo o contacta soporte.",
-        502,
-        "STRIPE_CANCEL_FAILED"
-      )
-    }
-  } else if (subscription.mpSubscriptionId) {
-    if (!params.isMpConfigured()) {
-      return jsonError("MercadoPago no está configurado para cancelar esta suscripción", 503, "MP_NOT_CONFIGURED")
-    }
-
-    try {
-      await params.cancelMpSubscription(subscription.mpSubscriptionId)
-    } catch {
-      return jsonError(
-        "No pudimos cancelar en MercadoPago. Intenta de nuevo o contacta soporte.",
-        502,
-        "MP_CANCEL_FAILED"
-      )
-    }
+if (subscription.provider === "stripe" && subscription.stripeSubscriptionId) {
+  if (!params.isStripeConfigured()) {
+    return jsonError(
+      "Stripe no está configurado para cancelar esta suscripción",
+      503,
+      "STRIPE_NOT_CONFIGURED"
+    )
   }
 
+  try {
+    const stripeSubscription =
+      await params.cancelStripeSubscription(
+        subscription.stripeSubscriptionId
+      )
+
+    if (stripeSubscription.current_period_end) {
+      cancellationDate = new Date(
+        stripeSubscription.current_period_end * 1000
+      )
+    }
+  } catch {
+    return jsonError(
+      "No pudimos cancelar en Stripe. Intenta de nuevo o contacta soporte.",
+      502,
+      "STRIPE_CANCEL_FAILED"
+    )
+  }
+} else if (subscription.mpSubscriptionId) {
+  if (!params.isMpConfigured()) {
+    return jsonError(
+      "MercadoPago no está configurado para cancelar esta suscripción",
+      503,
+      "MP_NOT_CONFIGURED"
+    )
+  }
+
+  try {
+    await params.cancelMpSubscription(subscription.mpSubscriptionId)
+  } catch {
+    return jsonError(
+      "No pudimos cancelar en MercadoPago. Intenta de nuevo o contacta soporte.",
+      502,
+      "MP_CANCEL_FAILED"
+    )
+  }
+}
+
   const updated = await params.updateSubscription({
-    where: { userId },
-    data: { status: "cancelled", canceledAt: new Date() },
-  })
+  where: { userId },
+  data: {
+    status: "cancelled",
+    canceledAt: cancellationDate,
+  },
+})
 
   return {
     status: 200,

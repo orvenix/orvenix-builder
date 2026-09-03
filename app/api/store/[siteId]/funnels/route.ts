@@ -4,7 +4,12 @@ import { getAuthSession } from "@/lib/auth-session"
 import { canManageSite } from "@/lib/auth"
 import type { UserRole } from "@/lib/auth"
 import { requireEcommercePlan } from "@/lib/plan-guard"
-import { createFunnel, isFunnelsReady, listFunnels } from "@/lib/commerce/funnels"
+import {
+  createFunnel,
+  FunnelAccessError,
+  isFunnelsReady,
+  listFunnels,
+} from "@/lib/commerce/funnels"
 
 const FunnelStepSchema = z.object({
   pageId: z.string().optional().nullable(),
@@ -75,6 +80,25 @@ export async function POST(req: Request, { params }: Ctx) {
   const body = FunnelSchema.safeParse(await req.json())
   if (!body.success) return NextResponse.json({ error: body.error.flatten() }, { status: 400 })
 
+  try {
   const funnel = await createFunnel(siteId, body.data)
-  return NextResponse.json({ funnel }, { status: 201 })
+
+  return NextResponse.json(
+    { funnel },
+    { status: 201 },
+  )
+} catch (error) {
+  if (error instanceof FunnelAccessError) {
+    return NextResponse.json(
+      {
+        error: error.code,
+        message: error.message,
+        upgradeUrl: "/precios?upgrade=funnels",
+      },
+      { status: 403 },
+    )
+  }
+
+  throw error
+}
 }

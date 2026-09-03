@@ -77,7 +77,10 @@ test("buildBillingSubscribeResponse prefers Stripe when configured and a price i
     planId: "pro",
     interval: "year",
     status: "pending",
+    stripeSubscriptionId: null,
+    stripeCustomerId: null,
     mpSubscriptionId: null,
+    canceledAt: null,
   })
 })
 
@@ -206,8 +209,13 @@ test("buildBillingCancelResponse cancels Stripe subscriptions and updates the lo
     }),
     isStripeConfigured: () => true,
     cancelStripeSubscription: async (stripeSubscriptionId) => {
-      cancelledStripeId = stripeSubscriptionId
-    },
+  cancelledStripeId = stripeSubscriptionId
+
+  return {
+    cancel_at_period_end: true,
+    current_period_end: 1_800_000_000,
+  }
+},
     isMpConfigured: () => true,
     cancelMpSubscription: async () => undefined,
     updateSubscription: async ({ data }) => {

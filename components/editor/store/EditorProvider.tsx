@@ -1,13 +1,22 @@
 "use client";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useEditorStore } from "./useEditorStore";
+import { EditorRuntimeBoundary } from "./EditorRuntimeBoundary";
 import { loadSavedTree } from "@/hooks/useAutosave";
 import type { EditorTree } from "@/types/editor";
 import type { SitePageListItem } from "@/lib/builder-core/tree/sitePages";
+import { isArtisanEditableTree } from "@/lib/editorWebs";
+import {
+  ExperienceBoundary,
+  ExperienceProvider,
+} from "@/components/editor/experience"
+import type { BuilderTier, UserRole } from "./useEditorStore"
 
 interface EditorProviderProps {
   children: ReactNode;
   websiteId: string;
+  initialUserRole?: UserRole;
+  initialBuilderTier?: BuilderTier;
   initialTree: EditorTree;
   initialPageSlug?: string;
   initialPageName?: string;
@@ -20,21 +29,88 @@ export function EditorProvider({
   children,
   websiteId,
   initialTree,
+  initialUserRole = "client",
+  initialBuilderTier = "basic",
   initialPageSlug = "home",
   initialPageName = "Inicio",
   availablePages = EMPTY_SITE_PAGES,
 }: EditorProviderProps) {
   const initialize = useEditorStore((s) => s.initialize);
+  const setUserRole = useEditorStore((s) => s.setUserRole);
+  const setBuilderTier = useEditorStore((s) => s.setBuilderTier);
   const isReady = useEditorStore((s) => s.websiteId === websiteId);
+  const [initializationIssue, setInitializationIssue] = useState<string | null>(null);
+  const initializationKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const savedTree = loadSavedTree(websiteId, initialPageSlug);
-    initialize(websiteId, savedTree ?? initialTree, null, {
-      activePageSlug: initialPageSlug,
-      activePageName: initialPageName,
-      availablePages,
-    });
-  }, [availablePages, initialPageName, initialPageSlug, initialTree, initialize, websiteId]);
+  const initializationKey =
+    `${websiteId}:${initialPageSlug}:${initialUserRole}:${initialBuilderTier}`;
+
+  if (initializationKeyRef.current === initializationKey) return;
+
+  initializationKeyRef.current = initializationKey;
+
+  const pageContext = {
+    activePageSlug: initialPageSlug,
+    activePageName: initialPageName,
+    availablePages,
+  };
+
+    let nextInitializationIssue: string | null = null;
+
+    try {
+      setUserRole(initialUserRole);
+      setBuilderTier(initialBuilderTier);
+      const savedTree = loadSavedTree(websiteId, initialPageSlug);
+      const shouldIgnoreStaleDraft =
+        Boolean(savedTree) &&
+        isArtisanEditableTree(initialTree) &&
+        !isArtisanEditableTree(savedTree);
+
+      initialize(
+        websiteId,
+        shouldIgnoreStaleDraft ? initialTree : savedTree ?? initialTree,
+        null,
+        pageContext,
+      );
+    } catch (error) {
+  console.error(
+    "[EditorProvider] Constructor initialization failed",
+    error,
+  );
+
+  try {
+    setUserRole(initialUserRole);
+    setBuilderTier(initialBuilderTier);
+    initialize(websiteId, initialTree, null, pageContext);
+        nextInitializationIssue =
+          error instanceof Error ? error.message : "No se pudo cargar el borrador local";
+      } catch (fallbackError) {
+        console.error("[EditorProvider] Constructor fallback initialization failed", fallbackError);
+        nextInitializationIssue =
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : "No se pudo abrir el constructor";
+      }
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setInitializationIssue(nextInitializationIssue);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+  availablePages,
+  initialBuilderTier,
+  initialPageName,
+  initialPageSlug,
+  initialTree,
+  initialUserRole,
+  initialize,
+  setBuilderTier,
+  setUserRole,
+  websiteId,
+]);
 
   if (!isReady) {
     return (
@@ -77,12 +153,20 @@ export function EditorProvider({
           </div>
           <div className="flex items-center justify-center gap-2 border-t border-white/[0.06] bg-white/[0.025] px-4 py-3 text-xs font-semibold text-slate-400">
             <span className="h-2 w-2 rounded-full bg-indigo-400 editor-status-dot-live" />
-            Abriendo diseño en el editor...
+            {initializationIssue ?? "Abriendo diseño en el editor..."}
           </div>
         </div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  return (
+  <EditorRuntimeBoundary resetKey={websiteId}>
+    <ExperienceProvider>
+      <ExperienceBoundary>
+        {children}
+      </ExperienceBoundary>
+    </ExperienceProvider>
+  </EditorRuntimeBoundary>
+)
 }

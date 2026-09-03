@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 
 export function AgencyHero({ title = "Ecosistemas digitales de alto impacto", subtitle = "Diseñamos y desarrollamos productos digitales que escalan tu autoridad y facturación." }) {
   const theme = useEditorStore((s) => s.tree.theme);

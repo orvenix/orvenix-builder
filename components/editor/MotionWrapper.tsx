@@ -33,6 +33,9 @@ export interface NodeAnimation {
   delay: number;
   easing: MotionEasing;
   hoverEffect: MotionTransition;
+  distance: number;
+  scale: number;
+  blur: number;
 }
 
 export const DEFAULT_NODE_ANIMATION: NodeAnimation = {
@@ -42,6 +45,9 @@ export const DEFAULT_NODE_ANIMATION: NodeAnimation = {
   delay: 0,
   easing: "smooth",
   hoverEffect: "none",
+  distance: 18,
+  scale: 0.96,
+  blur: 5,
 };
 
 export interface MotionProps {
@@ -51,11 +57,15 @@ export interface MotionProps {
   motionDuration?: number;
   motionDelay?: number;
   motionEasing?: MotionEasing;
+  motionDistance?: number;
+  motionScale?: number;
+  motionBlur?: number;
 }
 
 const MOTION_KEYS = new Set([
   "motionAnimation", "motionTrigger",
   "motionTransition", "motionDuration", "motionDelay", "motionEasing",
+  "motionDistance", "motionScale", "motionBlur",
 ]);
 
 export function splitMotionProps<T extends Record<string, unknown>>(props: T) {
@@ -83,6 +93,9 @@ export function MotionWrapper({
   motionDuration = 560,
   motionDelay = 0,
   motionEasing = "smooth",
+  motionDistance = 18,
+  motionScale = 0.96,
+  motionBlur = 5,
 }: MotionProps & { children: ReactNode }) {
   const hasAnimation = motionAnimation !== "none";
   const hasTransition = motionTransition !== "none";
@@ -91,6 +104,9 @@ export function MotionWrapper({
 
   const duration = clampNumber(motionDuration, 120, 2400);
   const delay    = clampNumber(motionDelay, 0, 2000);
+  const distance = clampNumber(motionDistance, 0, 120);
+  const scale    = clampNumber(motionScale, 0.8, 1);
+  const blur     = clampNumber(motionBlur, 0, 16);
   const enterClass = hasAnimation ? `editor-motion-enter-${motionAnimation}` : "";
 
   // Handle non-load triggers
@@ -150,6 +166,9 @@ export function MotionWrapper({
         {
           "--editor-motion-duration": `${duration}ms`,
           "--editor-motion-delay": `${delay}ms`,
+          "--editor-motion-distance": `${distance}px`,
+          "--editor-motion-scale": scale,
+          "--editor-motion-blur": `${blur}px`,
         } as CSSProperties
       }
     >
@@ -166,15 +185,29 @@ function clampNumber(value: unknown, min: number, max: number) {
 
 // ─── CSS export helpers ───────────────────────────────────────────────────────
 
-const KEYFRAME_MAP: Record<MotionAnimation, string> = {
-  none: "",
-  fade: `  from { opacity: 0; }\n  to   { opacity: 1; }`,
-  "fade-up":    `  from { opacity: 0; transform: translateY(18px); filter: blur(5px); }\n  to   { opacity: 1; transform: translateY(0); filter: blur(0); }`,
-  "fade-down":  `  from { opacity: 0; transform: translateY(-18px); filter: blur(5px); }\n  to   { opacity: 1; transform: translateY(0); filter: blur(0); }`,
-  "slide-left": `  from { opacity: 0; transform: translateX(-22px); filter: blur(4px); }\n  to   { opacity: 1; transform: translateX(0); filter: blur(0); }`,
-  "slide-right":`  from { opacity: 0; transform: translateX(22px); filter: blur(4px); }\n  to   { opacity: 1; transform: translateX(0); filter: blur(0); }`,
-  scale:        `  from { opacity: 0; transform: scale(0.96); filter: blur(4px); }\n  to   { opacity: 1; transform: scale(1); filter: blur(0); }`,
-};
+function getKeyframeBlock(anim: Partial<NodeAnimation>) {
+  const type = anim.type ?? "none";
+  const distance = clampNumber(anim.distance ?? DEFAULT_NODE_ANIMATION.distance, 0, 120);
+  const scale = clampNumber(anim.scale ?? DEFAULT_NODE_ANIMATION.scale, 0.8, 1);
+  const blur = clampNumber(anim.blur ?? DEFAULT_NODE_ANIMATION.blur, 0, 16);
+
+  const blurFrom = `filter: blur(${blur}px);`;
+  const clear = "opacity: 1; transform: translate(0, 0) scale(1); filter: blur(0);";
+
+  if (type === "fade") return `  from { opacity: 0; }
+  to   { opacity: 1; }`;
+  if (type === "fade-up") return `  from { opacity: 0; transform: translateY(${distance}px); ${blurFrom} }
+  to   { ${clear} }`;
+  if (type === "fade-down") return `  from { opacity: 0; transform: translateY(-${distance}px); ${blurFrom} }
+  to   { ${clear} }`;
+  if (type === "slide-left") return `  from { opacity: 0; transform: translateX(-${distance}px); ${blurFrom} }
+  to   { ${clear} }`;
+  if (type === "slide-right") return `  from { opacity: 0; transform: translateX(${distance}px); ${blurFrom} }
+  to   { ${clear} }`;
+  if (type === "scale") return `  from { opacity: 0; transform: scale(${scale}); ${blurFrom} }
+  to   { ${clear} }`;
+  return "";
+}
 
 const EASING_MAP: Record<MotionEasing, string> = {
   smooth: "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -190,7 +223,7 @@ export function exportAnimationCss(anim: Partial<NodeAnimation>): string {
   const easing    = EASING_MAP[anim.easing ?? "smooth"];
   const hover     = anim.hoverEffect ?? "none";
 
-  const keyframes = KEYFRAME_MAP[type];
+  const keyframes = getKeyframeBlock(anim);
   const kfBlock   = keyframes ? `@keyframes ${type} {\n${keyframes}\n}\n\n` : "";
   const animDecl  = type !== "none"
     ? `  animation: ${type} ${duration}ms ${easing} ${delay}ms both;\n`

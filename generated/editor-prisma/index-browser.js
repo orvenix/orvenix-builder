@@ -174,7 +174,11 @@ exports.Prisma.SubscriptionScalarFieldEnum = {
   currentPeriodEnd: 'currentPeriodEnd',
   canceledAt: 'canceledAt',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  pendingPlanId: 'pendingPlanId',
+  pendingInterval: 'pendingInterval',
+  pendingStartsAt: 'pendingStartsAt',
+  pendingStripePriceId: 'pendingStripePriceId'
 };
 
 exports.Prisma.WebhookEventScalarFieldEnum = {
@@ -197,6 +201,27 @@ exports.Prisma.EditorWebsiteScalarFieldEnum = {
   tree: 'tree',
   published: 'published',
   userId: 'userId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.SitePageScalarFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  name: 'name',
+  slug: 'slug',
+  tree: 'tree',
+  seo: 'seo',
+  isHome: 'isHome',
+  published: 'published',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.SiteThemeScalarFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  tokens: 'tokens',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -243,6 +268,65 @@ exports.Prisma.OrderScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.FunnelScalarFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  name: 'name',
+  slug: 'slug',
+  status: 'status',
+  settings: 'settings',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.FunnelStepScalarFieldEnum = {
+  id: 'id',
+  funnelId: 'funnelId',
+  pageId: 'pageId',
+  kind: 'kind',
+  position: 'position',
+  settings: 'settings',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ExperimentScalarFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  pageId: 'pageId',
+  funnelId: 'funnelId',
+  name: 'name',
+  status: 'status',
+  targetType: 'targetType',
+  trafficSplit: 'trafficSplit',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AiGenerationJobScalarFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  pageId: 'pageId',
+  type: 'type',
+  input: 'input',
+  output: 'output',
+  status: 'status',
+  error: 'error',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AutomationScalarFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  name: 'name',
+  triggerType: 'triggerType',
+  actionGraph: 'actionGraph',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.CollectionScalarFieldEnum = {
   id: 'id',
   siteId: 'siteId',
@@ -260,6 +344,38 @@ exports.Prisma.RecordScalarFieldEnum = {
   publishedAt: 'publishedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AuditLogScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  level: 'level',
+  module: 'module',
+  action: 'action',
+  userId: 'userId',
+  siteId: 'siteId',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  message: 'message',
+  metadata: 'metadata'
+};
+
+exports.Prisma.SubscriptionHistoryScalarFieldEnum = {
+  id: 'id',
+  subscriptionId: 'subscriptionId',
+  userId: 'userId',
+  oldPlanId: 'oldPlanId',
+  newPlanId: 'newPlanId',
+  oldInterval: 'oldInterval',
+  newInterval: 'newInterval',
+  oldStatus: 'oldStatus',
+  newStatus: 'newStatus',
+  provider: 'provider',
+  reason: 'reason',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -329,7 +445,10 @@ exports.Prisma.SubscriptionOrderByRelevanceFieldEnum = {
   stripeSubscriptionId: 'stripeSubscriptionId',
   stripeCustomerId: 'stripeCustomerId',
   interval: 'interval',
-  status: 'status'
+  status: 'status',
+  pendingPlanId: 'pendingPlanId',
+  pendingInterval: 'pendingInterval',
+  pendingStripePriceId: 'pendingStripePriceId'
 };
 
 exports.Prisma.WebhookEventOrderByRelevanceFieldEnum = {
@@ -347,6 +466,18 @@ exports.Prisma.EditorWebsiteOrderByRelevanceFieldEnum = {
   name: 'name',
   description: 'description',
   userId: 'userId'
+};
+
+exports.Prisma.SitePageOrderByRelevanceFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  name: 'name',
+  slug: 'slug'
+};
+
+exports.Prisma.SiteThemeOrderByRelevanceFieldEnum = {
+  id: 'id',
+  siteId: 'siteId'
 };
 
 exports.Prisma.ProductOrderByRelevanceFieldEnum = {
@@ -377,6 +508,48 @@ exports.Prisma.OrderOrderByRelevanceFieldEnum = {
   notes: 'notes'
 };
 
+exports.Prisma.FunnelOrderByRelevanceFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  name: 'name',
+  slug: 'slug',
+  status: 'status'
+};
+
+exports.Prisma.FunnelStepOrderByRelevanceFieldEnum = {
+  id: 'id',
+  funnelId: 'funnelId',
+  pageId: 'pageId',
+  kind: 'kind'
+};
+
+exports.Prisma.ExperimentOrderByRelevanceFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  pageId: 'pageId',
+  funnelId: 'funnelId',
+  name: 'name',
+  status: 'status',
+  targetType: 'targetType'
+};
+
+exports.Prisma.AiGenerationJobOrderByRelevanceFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  pageId: 'pageId',
+  type: 'type',
+  status: 'status',
+  error: 'error'
+};
+
+exports.Prisma.AutomationOrderByRelevanceFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  name: 'name',
+  triggerType: 'triggerType',
+  status: 'status'
+};
+
 exports.Prisma.CollectionOrderByRelevanceFieldEnum = {
   id: 'id',
   siteId: 'siteId',
@@ -389,6 +562,34 @@ exports.Prisma.RecordOrderByRelevanceFieldEnum = {
   collectionId: 'collectionId'
 };
 
+exports.Prisma.AuditLogOrderByRelevanceFieldEnum = {
+  id: 'id',
+  level: 'level',
+  module: 'module',
+  action: 'action',
+  userId: 'userId',
+  siteId: 'siteId',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  message: 'message'
+};
+
+exports.Prisma.SubscriptionHistoryOrderByRelevanceFieldEnum = {
+  id: 'id',
+  subscriptionId: 'subscriptionId',
+  userId: 'userId',
+  oldPlanId: 'oldPlanId',
+  newPlanId: 'newPlanId',
+  oldInterval: 'oldInterval',
+  newInterval: 'newInterval',
+  oldStatus: 'oldStatus',
+  newStatus: 'newStatus',
+  provider: 'provider',
+  reason: 'reason'
+};
+
 
 exports.Prisma.ModelName = {
   User: 'User',
@@ -397,11 +598,20 @@ exports.Prisma.ModelName = {
   Subscription: 'Subscription',
   WebhookEvent: 'WebhookEvent',
   EditorWebsite: 'EditorWebsite',
+  SitePage: 'SitePage',
+  SiteTheme: 'SiteTheme',
   Product: 'Product',
   ProductVariant: 'ProductVariant',
   Order: 'Order',
+  Funnel: 'Funnel',
+  FunnelStep: 'FunnelStep',
+  Experiment: 'Experiment',
+  AiGenerationJob: 'AiGenerationJob',
+  Automation: 'Automation',
   Collection: 'Collection',
-  Record: 'Record'
+  Record: 'Record',
+  AuditLog: 'AuditLog',
+  SubscriptionHistory: 'SubscriptionHistory'
 };
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 import type { NodeId } from "@/types/editor";
 import { useSortable } from "@dnd-kit/sortable";
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { blockRegistry } from "@/blocks/registry";
 import { getEditorVisualStyle, resolveResponsiveProps } from "@/components/editor/responsive";
+import { useEditorExperience } from "@/components/editor/experience/ExperienceContext";
 
 // Map block category → accent color
 const CATEGORY_COLORS: Record<string, string> = {
@@ -35,6 +36,7 @@ interface EditableNodeProps {
 }
 
 export const EditableNode = ({ id, children }: EditableNodeProps) => {
+  const { isClient, capabilities } = useEditorExperience();
   const selectedId  = useEditorStore((s) => s.selectedId);
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const editingNodeId = useEditorStore((s) => s.editingNodeId);
@@ -70,7 +72,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
     : false;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id, disabled: isEditing || isLocked });
+    useSortable({ id, disabled: isEditing || isLocked || !capabilities.allowStructureEditing });
 
   const isSelected    = selectedId === id || selectedIds.includes(id);
   const isPrimarySelection = selectedId === id;
@@ -106,8 +108,8 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         }
       : {}),
   } satisfies React.CSSProperties;
-  const freeDragProps = isFreePosition && !isEditing && !isLocked ? { ...attributes, ...listeners } : {};
-  const toolbarDragProps = isFreePosition || isLocked ? {} : { ...attributes, ...listeners };
+  const freeDragProps = isFreePosition && capabilities.allowFreePosition && !isEditing && !isLocked ? { ...attributes, ...listeners } : {};
+  const toolbarDragProps = !capabilities.allowStructureEditing || isFreePosition || isLocked ? {} : { ...attributes, ...listeners };
   const dragPreview = isFreePosition && isDragging
     ? {
         x: Math.max(0, Math.round(freeX + (transform?.x ?? 0) / (canvasZoom / 100 || 1))),
@@ -122,8 +124,15 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
       {...freeDragProps}
       onClick={(e) => {
         e.stopPropagation();
-        if (isFreePosition && !isLocked && !(e.shiftKey || e.ctrlKey || e.metaKey)) bringNodeToFront(id);
-        select(id, { additive: e.shiftKey || e.ctrlKey || e.metaKey });
+        if (isFreePosition && capabilities.allowFreePosition && !isLocked && !(e.shiftKey || e.ctrlKey || e.metaKey)) bringNodeToFront(id);
+        if (isClient) {
+          window.dispatchEvent(
+            new CustomEvent("orvenix:client-panel-request", {
+              detail: { panel: "content" },
+            }),
+          );
+        }
+        select(id, { additive: !isClient && (e.shiftKey || e.ctrlKey || e.metaKey) });
       }}
       onDoubleClick={(e) => {
         e.stopPropagation();
@@ -133,14 +142,16 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         e.preventDefault();
         e.stopPropagation();
         select(id);
-        openContextMenu(id, { x: e.clientX, y: e.clientY });
+        if (!isClient) {
+          openContextMenu(id, { x: e.clientX, y: e.clientY });
+        }
       }}
       onMouseEnter={(e) => { e.stopPropagation(); hover(id); }}
       onMouseLeave={() => hover(null)}
       className={cn(
         "outline-none group",
-        "transition-[box-shadow] duration-150",
-        isFreePosition ? (isEditing ? "absolute cursor-text editor-free-node" : isLocked ? "absolute cursor-default editor-free-node" : "absolute cursor-move editor-free-node editor-free-node-draggable") : "relative",
+        "transition-[box-shadow,filter,transform] duration-200",
+        isFreePosition ? (isEditing ? "absolute cursor-text editor-free-node" : isLocked || !capabilities.allowFreePosition ? "absolute cursor-default editor-free-node" : "absolute cursor-move editor-free-node editor-free-node-draggable") : "relative",
         isLocked ? "editor-node-locked" : "",
         isSelected
           ? "ring-2 ring-inset editor-glow-ring"
@@ -191,8 +202,49 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         </>
       )}
 
+      {/* ── Client quick actions ── */}
+      {isClient && isSelected && !isRoot && (
+        <div
+          className="absolute -top-11 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-cyan-300/20 bg-slate-950/90 p-1 text-[10px] font-black text-cyan-100 shadow-2xl shadow-black/35 backdrop-blur-xl editor-anim-fade-down"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="flex h-8 items-center gap-1.5 rounded-full px-3 transition hover:bg-cyan-300/10 hover:text-white"
+            onClick={() => !isLocked && setEditingNode(id)}
+            disabled={isLocked}
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            title="Duplicar bloque"
+            aria-label="Duplicar bloque"
+            className="grid h-8 w-8 place-items-center rounded-full text-cyan-100/75 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            onClick={() => !isLocked && duplicateNode(id)}
+            disabled={isLocked}
+          >
+            <Copy size={13} />
+          </button>
+          <button
+            type="button"
+            title="Eliminar bloque"
+            aria-label="Eliminar bloque"
+            className="grid h-8 w-8 place-items-center rounded-full text-red-200/80 transition hover:bg-red-400/15 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-30"
+            onClick={() => {
+              if (isLocked) return;
+              const confirmed = window.confirm("Eliminar este bloque de la página?");
+              if (confirmed) removeNode(id);
+            }}
+            disabled={isLocked}
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      )}
+
       {/* ── Floating toolbar ── */}
-      {(isSelected || isHovered) && (
+      {!isClient && (isSelected || isHovered) && (
         <div
           className="absolute -top-9 left-0 z-50 flex items-center gap-0 rounded-lg shadow-xl shadow-black/50 editor-anim-fade-down overflow-hidden"
           style={{
@@ -318,7 +370,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
       )}
 
       {/* ── Hover label (type indicator) ── */}
-      {isHovered && !isSelected && (
+      {!isClient && isHovered && !isSelected && (
         <div
           className="pointer-events-none absolute -top-5 left-0 z-40 flex items-center gap-1 px-1.5 py-0.5 rounded-t text-[9px] font-semibold uppercase tracking-wide editor-anim-fade-in"
           style={{ color: accentColor, background: `${accentColor}18`, borderTop: `1px solid ${accentColor}30` }}
@@ -330,7 +382,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
 
       {children}
 
-      {isFreePosition && isSelected && !isEditing && !isLocked && (
+      {capabilities.allowResize && isFreePosition && isSelected && !isEditing && !isLocked && (
         <ResizeHandles
           accentColor={accentColor}
           x={freeX}

@@ -15,6 +15,7 @@ const SAFE_TAGS = new Set([
   "div", "span", "p", "h1", "h2", "h3", "h4", "h5", "h6",
   "section", "article", "header", "footer", "main", "aside",
   "ul", "ol", "li", "blockquote", "code", "pre",
+  "details", "summary",
 ]);
 
 export function GenericWrapper({

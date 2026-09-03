@@ -42,10 +42,27 @@ export async function createSiteAction(formData: FormData) {
   }
 }
 
-export async function deleteSiteAction(id: string) {
+export type DeleteSiteState = {
+  ok?: boolean;
+  error?: string;
+};
+
+export async function deleteSiteAction(
+  id: string,
+  prevState: DeleteSiteState
+): Promise<DeleteSiteState> {
+  void prevState;
   const user = await requireSession();
-  await deleteSiteForRole(id, user.id, user.role);
-  revalidatePath("/dashboard");
+
+  try {
+    await deleteSiteForRole(id, user.id, user.role);
+    revalidatePath("/dashboard");
+    return { ok: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "No se pudo eliminar el sitio.",
+    };
+  }
 }
 
 export type SiteEditRequestState = {

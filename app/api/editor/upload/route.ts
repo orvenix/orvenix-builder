@@ -4,12 +4,14 @@ import { join, extname } from "path"
 import { randomBytes } from "crypto"
 import { getAuthSession } from "@/lib/auth-session"
 import { serverError } from "@/lib/server-log"
+import {
+  ALLOWED_TYPES,
+  MAX_SIZE_BYTES,
+} from "@/lib/upload-policy"
 
 export const runtime = "nodejs"
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads")
-const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml", "image/avif"]
 
 export async function POST(request: Request) {
   // Auth requerida
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
   // Validar tipo
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json({
-      error: `Tipo de archivo no permitido. Usa: JPG, PNG, WebP, GIF o SVG.`,
+      error: `Tipo de archivo no permitido. Usa: JPG, PNG, WebP, GIF o AVIF.`,
     }, { status: 400 })
   }
 

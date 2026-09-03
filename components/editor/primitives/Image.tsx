@@ -3,7 +3,7 @@
 import NextImage from "next/image";
 import { useRef, useState } from "react";
 import { ImagePlus, Loader2 } from "lucide-react";
-import { useEditorStore } from "@/components/editor/store/useEditorStore";
+import { useEditorStore } from "@/store/useEditorStore";
 import type { BlockComponentProps } from "@/types/editor";
 
 export interface ImageProps {

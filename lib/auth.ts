@@ -1,6 +1,11 @@
 import { pbkdf2Sync, randomBytes } from "crypto";
 import { editorPrisma } from "@/lib/editor-db";
-import { getDefaultStarterEditorTree } from "@/lib/editorWebs";
+import { getDefaultStarterEditorTree, isArtisanEditableTree } from "@/lib/editorWebs";
+import { canCreateWebsite } from "@/lib/billing/plan-entitlements"
+import { getUserPlanAccess } from "@/lib/plan-guard"
+import { isAdvancedBuilderPlan } from "@/lib/pro-plan"
+import { seedProfessionalStarterPages } from "@/lib/professional-site-starter"
+import { HOME_PAGE_NAME, HOME_PAGE_SLUG } from "@/lib/builder-core/tree/sitePages"
 import type { Prisma } from "@/generated/editor-prisma";
 import type { EditorTree } from "@/types/editor";
 
@@ -84,17 +89,65 @@ export async function getSitesForRole(userId: string, role: UserRole) {
   return role === "ADMIN" ? getAllSitesForAdmin() : getSitesByUser(userId);
 }
 
-export async function createSite(name: string, description: string, userId: string) {
-  const id = `site_${randomBytes(6).toString("hex")}`;
-  const starterTree = getDefaultStarterEditorTree();
+export class WebsiteLimitReachedError extends Error {
+  readonly code = "WEBSITE_LIMIT_REACHED"
 
-  return editorPrisma.editorWebsite.create({
-    data: { id, name, description, tree: toPrismaJson(starterTree), userId },
-  });
+  constructor(
+    message = "Has alcanzado el límite de sitios incluido en tu plan.",
+  ) {
+    super(message)
+    this.name = "WebsiteLimitReachedError"
+  }
 }
 
-function toPrismaJson(tree: EditorTree): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(tree)) as Prisma.InputJsonValue;
+async function requireCanCreateWebsite(userId: string) {
+  const [access, websitesUsed] = await Promise.all([
+    getUserPlanAccess(userId),
+    editorPrisma.editorWebsite.count({
+      where: { userId },
+    }),
+  ])
+
+  if (
+    !access.isActive ||
+    !access.plan ||
+    !canCreateWebsite(access.plan.id, websitesUsed)
+  ) {
+    throw new WebsiteLimitReachedError()
+  }
+
+  return access
+}
+
+export async function createSite(
+  name: string,
+  description: string,
+  userId: string,
+) {
+  const access = await requireCanCreateWebsite(userId)
+
+  const id = `site_${randomBytes(6).toString("hex")}`
+  const starterTree = getDefaultStarterEditorTree()
+
+  const site = await editorPrisma.editorWebsite.create({
+    data: {
+      id,
+      name,
+      description,
+      tree: toPrismaJson(starterTree),
+      userId,
+    },
+  })
+
+  if (isAdvancedBuilderPlan(access.plan?.id)) {
+    await seedProfessionalStarterPages(site.id, starterTree)
+  }
+
+  return site
+}
+
+function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
 export async function createSiteFromTree({
@@ -102,34 +155,95 @@ export async function createSiteFromTree({
   description,
   userId,
   tree,
+  id,
+  tx,
+  access,
+  createHomePage = false,
+  syncTheme = false,
+  seedProfessionalPages = true,
 }: {
   name: string;
   description: string;
   userId: string;
   tree: EditorTree;
+  id?: string;
+  tx?: Pick<Prisma.TransactionClient, "editorWebsite" | "sitePage" | "siteTheme">;
+  access?: Awaited<ReturnType<typeof requireCanCreateWebsite>>;
+  createHomePage?: boolean;
+  syncTheme?: boolean;
+  seedProfessionalPages?: boolean;
 }) {
-  const id = `site_${randomBytes(6).toString("hex")}`;
 
-  return editorPrisma.editorWebsite.create({
+  const resolvedAccess = access ?? await requireCanCreateWebsite(userId)
+
+  const siteId = id ?? `site_${randomBytes(6).toString("hex")}`;
+  const db = tx ?? editorPrisma
+
+  const site = await db.editorWebsite.create({
     data: {
-      id,
+      id: siteId,
       name,
       description,
       tree: toPrismaJson(tree),
+      published: false,
       userId,
     },
   });
+
+  if (createHomePage) {
+    await db.sitePage.create({
+      data: {
+        siteId: site.id,
+        name: HOME_PAGE_NAME,
+        slug: HOME_PAGE_SLUG,
+        tree: toPrismaJson(tree),
+        isHome: true,
+        published: false,
+      },
+    })
+  }
+
+  const theme = tree.theme ?? tree.globalTheme
+  if (syncTheme && theme) {
+    await db.siteTheme.upsert({
+      where: { siteId: site.id },
+      update: {
+        tokens: toPrismaJson(theme),
+      },
+      create: {
+        siteId: site.id,
+        tokens: toPrismaJson(theme),
+      },
+    })
+  }
+
+  if (!tx && seedProfessionalPages && isAdvancedBuilderPlan(resolvedAccess.plan?.id) && !isArtisanEditableTree(tree)) {
+    await seedProfessionalStarterPages(site.id, tree)
+  }
+
+  return site;
 }
 
 export async function deleteSite(id: string, userId: string) {
-  return editorPrisma.editorWebsite.deleteMany({ where: { id, userId } });
+  const result = await editorPrisma.editorWebsite.deleteMany({ where: { id, userId } });
+
+  if (result.count === 0) {
+    throw new Error("No se encontro el sitio o no pertenece a tu cuenta.");
+  }
+
+  return result;
 }
 
 export async function deleteSiteForRole(id: string, userId: string, role: UserRole) {
-  if (role === "ADMIN") {
-    return editorPrisma.editorWebsite.deleteMany({ where: { id } });
+  const result = role === "ADMIN"
+    ? await editorPrisma.editorWebsite.deleteMany({ where: { id } })
+    : await editorPrisma.editorWebsite.deleteMany({ where: { id, userId } });
+
+  if (result.count === 0) {
+    throw new Error("No se encontro el sitio o no tienes permiso para eliminarlo.");
   }
-  return deleteSite(id, userId);
+
+  return result;
 }
 
 export async function publishSite(id: string, userId: string) {

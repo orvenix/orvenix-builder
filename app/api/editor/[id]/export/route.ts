@@ -34,6 +34,62 @@ type ExportPageEntry = {
   tree: EditorTree
 }
 
+const MAX_EXPORT_PAGES = 100;
+const MAX_EXPORT_ASSETS = 500;
+const MAX_EXPORT_BYTES = 100 * 1024 * 1024;
+
+const SAFE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/i;
+
+function jsonError(
+  error: string,
+  status: number,
+  code: string,
+) {
+  return NextResponse.json(
+    { error, code },
+    {
+      status,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    },
+  );
+}
+
+function assertSafeSlug(slug: string): string {
+  if (slug === HOME_PAGE_SLUG) {
+    return slug;
+  }
+
+  if (
+    !slug ||
+    slug.length > 100 ||
+    !SAFE_SLUG_PATTERN.test(slug)
+  ) {
+    throw new Error("UNSAFE_EXPORT_SLUG");
+  }
+
+  return slug;
+}
+
+function assertSafeZipPath(value: string): string {
+  const normalized = value.replaceAll("\\", "/");
+
+  if (
+    !normalized ||
+    normalized.length > 500 ||
+    normalized.startsWith("/") ||
+    normalized.includes("\0") ||
+    normalized.split("/").some(
+      (segment) => segment === ".." || segment === "." || segment === "",
+    )
+  ) {
+    throw new Error("UNSAFE_ZIP_PATH");
+  }
+
+  return normalized;
+}
+
 /** GET /api/editor/[id]/export?format=static|nextjs */
 export async function GET(req: Request, { params }: Ctx) {
   const session = await getAuthSession()
@@ -42,7 +98,28 @@ export async function GET(req: Request, { params }: Ctx) {
   }
 
   const { id } = await params
-  const page = new URL(req.url).searchParams.get("page") ?? "home"
+  const searchParams = new URL(req.url).searchParams;
+const page = searchParams.get("page") ?? HOME_PAGE_SLUG;
+const requestedFormat = searchParams.get("format") ?? "static";
+
+if (requestedFormat !== "static" && requestedFormat !== "nextjs") {
+  return jsonError(
+    "Formato de exportación no válido",
+    400,
+    "INVALID_EXPORT_FORMAT",
+  );
+}
+
+try {
+  assertSafeSlug(page);
+} catch {
+  return jsonError(
+    "Página no válida",
+    400,
+    "INVALID_PAGE_SLUG",
+  );
+}
+
   const allowed = await canManageSite(id, session.user.id, (session.user.role ?? "CLIENT") as UserRole)
   if (!allowed) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 })
@@ -50,15 +127,13 @@ export async function GET(req: Request, { params }: Ctx) {
 
   try {
     await requireExportPlan(session.user.id)
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error: "PLAN_REQUIRED",
-        message: error instanceof Error ? error.message : "La exportacion requiere un plan Pro o superior.",
-      },
-      { status: 403 }
-    )
-  }
+  } catch {
+  return jsonError(
+    "La exportación requiere un plan Pro o superior",
+    403,
+    "PLAN_REQUIRED",
+  );
+}
 
   const format = new URL(req.url).searchParams.get("format") === "nextjs" ? "nextjs" : "static"
   const exportAllPages = new URL(req.url).searchParams.get("all") !== "false"
@@ -67,6 +142,34 @@ export async function GET(req: Request, { params }: Ctx) {
   if (pages.length === 0) {
     return NextResponse.json({ error: "Sitio no encontrado" }, { status: 404 })
   }
+
+if (pages.length === 0) {
+  return jsonError(
+    "Sitio no encontrado",
+    404,
+    "SITE_NOT_FOUND",
+  );
+}
+
+if (pages.length > MAX_EXPORT_PAGES) {
+  return jsonError(
+    "El sitio contiene demasiadas páginas para exportarlo",
+    413,
+    "EXPORT_PAGE_LIMIT_EXCEEDED",
+  );
+}
+
+try {
+  for (const pageEntry of pages) {
+    assertSafeSlug(pageEntry.slug);
+  }
+} catch {
+  return jsonError(
+    "El sitio contiene una ruta de página no válida",
+    400,
+    "INVALID_PAGE_SLUG",
+  );
+}
 
   // Obtener nombre del sitio
   const { editorPrisma } = await import("@/lib/editor-db")
@@ -81,7 +184,19 @@ export async function GET(req: Request, { params }: Ctx) {
   const { ZipArchive } = await import("archiver") as unknown as { ZipArchive: ZipArchiveCtor }
   const archive = new ZipArchive({ zlib: { level: 6 } })
 
-  archive.on("data", (chunk: Buffer) => chunks.push(chunk))
+  let generatedBytes = 0;
+let exportTooLarge = false;
+
+archive.on("data", (chunk: Buffer) => {
+  generatedBytes += chunk.length;
+
+  if (generatedBytes > MAX_EXPORT_BYTES) {
+    exportTooLarge = true;
+    return;
+  }
+
+  chunks.push(chunk);
+});
 
   const done = new Promise<void>((resolve, reject) => {
     archive.on("end", resolve)
@@ -107,7 +222,9 @@ export async function GET(req: Request, { params }: Ctx) {
       const validationReport = validateHtmlExport(html)
       const outputPath = pageEntry.slug === HOME_PAGE_SLUG ? "index.html" : `${pageEntry.slug}/index.html`
 
-      archive.append(html, { name: outputPath })
+      archive.append(html, {
+  name: assertSafeZipPath(outputPath),
+});
       validationReports.push({
         slug: pageEntry.slug,
         name: pageEntry.name,
@@ -121,10 +238,16 @@ export async function GET(req: Request, { params }: Ctx) {
       }
 
       for (const asset of prepared.assets) {
-        if (!assetsByPath.has(asset.zipPath)) {
-          assetsByPath.set(asset.zipPath, asset.content)
-        }
-      }
+  const safeAssetPath = assertSafeZipPath(asset.zipPath);
+
+  if (!assetsByPath.has(safeAssetPath)) {
+    assetsByPath.set(safeAssetPath, asset.content);
+  }
+
+  if (assetsByPath.size > MAX_EXPORT_ASSETS) {
+    throw new Error("EXPORT_ASSET_LIMIT_EXCEEDED");
+  }
+}
     }
 
     archive.append(rootCss ?? "", { name: "styles.css" })
@@ -167,7 +290,9 @@ export async function GET(req: Request, { params }: Ctx) {
       const validationReport = validateHtmlExport(html)
 
       const pagePath = pageEntry.slug === HOME_PAGE_SLUG ? "app/page.tsx" : `app/${pageEntry.slug}/page.tsx`
-      archive.append(jsxExport.pageTsx, { name: pagePath })
+      archive.append(jsxExport.pageTsx, {
+  name: assertSafeZipPath(pagePath),
+});
       validationReports.push({
         slug: pageEntry.slug,
         name: pageEntry.name,
@@ -183,10 +308,16 @@ export async function GET(req: Request, { params }: Ctx) {
       readme ??= jsxExport.readme
 
       for (const asset of prepared.assets) {
-        if (!assetsByPath.has(asset.zipPath)) {
-          assetsByPath.set(asset.zipPath, asset.content)
-        }
-      }
+  const safeAssetPath = assertSafeZipPath(asset.zipPath);
+
+  if (!assetsByPath.has(safeAssetPath)) {
+    assetsByPath.set(safeAssetPath, asset.content);
+  }
+
+  if (assetsByPath.size > MAX_EXPORT_ASSETS) {
+    throw new Error("EXPORT_ASSET_LIMIT_EXCEEDED");
+  }
+}
     }
 
     archive.append(layoutTsx ?? "",   { name: "app/layout.tsx" })
@@ -196,7 +327,9 @@ export async function GET(req: Request, { params }: Ctx) {
     archive.append(readme ?? "",      { name: "README.md" })
     archive.append(JSON.stringify(validationReports, null, 2), { name: "w3c-validation-report.json" })
     for (const [zipPath, content] of assetsByPath.entries()) {
-      archive.append(content, { name: `public/${zipPath}` })
+      archive.append(content, {
+  name: assertSafeZipPath(`public/${zipPath}`),
+});
     }
     archive.append(
       `/** @type {import('tailwindcss').Config} */\nmodule.exports = { content: ["./app/**/*.{ts,tsx}"], theme: { extend: {} }, plugins: [] }`,
@@ -210,17 +343,26 @@ export async function GET(req: Request, { params }: Ctx) {
 
   archive.finalize()
   await done
+if (exportTooLarge) {
+  return jsonError(
+    "La exportación excede el tamaño permitido",
+    413,
+    "EXPORT_TOO_LARGE",
+  );
+}
 
   const buffer = Buffer.concat(chunks)
   const filename = `${siteName.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${format}.zip`
 
   return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Content-Length": String(buffer.length),
-    },
-  })
+  headers: {
+    "Content-Type": "application/zip",
+    "Content-Disposition": `attachment; filename="${filename}"`,
+    "Content-Length": String(buffer.length),
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff",
+  },
+});
 }
 
 async function resolveExportPages(siteId: string, activePageSlug: string, exportAllPages: boolean): Promise<ExportPageEntry[]> {

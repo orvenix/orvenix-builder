@@ -72,8 +72,21 @@ export default function RegisterPage() {
     }
     await signIn("credentials", { email, password, redirect: false });
 
-    const nextRoute = await claimPendingDesignAfterRegister();
-    router.push(nextRoute);
+    const login = await signIn("credentials", {
+  email,
+  password,
+  redirect: false,
+});
+
+if (!login || login.error) {
+  setLoading(false);
+  setError(login?.error ?? "La cuenta fue creada pero no se pudo iniciar sesión.");
+  return;
+}
+
+const nextRoute = await claimPendingDesignAfterRegister();
+router.replace(nextRoute);
+router.refresh();
   };
 
   return (
@@ -292,9 +305,12 @@ async function claimPendingDesignAfterRegister() {
   const pendingDesignKey = params.get("pendingDesignKey");
   const callbackUrl = params.get("callbackUrl");
   const returnTo = params.get("returnTo");
+  const plan = params.get("plan");
+  const interval = params.get("interval") === "year" ? "year" : "month";
 
   if (!pendingDesignKey) {
     if (callbackUrl?.startsWith("/")) return callbackUrl;
+    if (plan) return "/precios?checkout=" + encodeURIComponent(plan) + "&interval=" + interval;
     return returnTo && returnTo !== "/editor/pending" ? returnTo : "/dashboard";
   }
 

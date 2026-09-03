@@ -28,9 +28,25 @@ interface Props {
 // Props de nodo que tienen sentido bindear (texto, imagen, número, etc.)
 const BINDABLE_PROP_TYPES = new Set(["text", "textarea", "number", "image", "color"]);
 
-// Type guard: descarta GroupDef que no tiene key
-function isBindableField(f: SettingsField): f is Extract<SettingsField, { key: string }> {
-  return "key" in f && BINDABLE_PROP_TYPES.has(f.kind);
+// Campo individual vinculable.
+// Excluye GroupDef y conserva correctamente key + label.
+type BindableSettingsField =
+  SettingsField & {
+    key: string
+    label: string
+  }
+
+function isBindableField(
+  f: SettingsField,
+): f is BindableSettingsField {
+  return (
+    f.kind !== "group" &&
+    "key" in f &&
+    typeof f.key === "string" &&
+    "label" in f &&
+    typeof f.label === "string" &&
+    BINDABLE_PROP_TYPES.has(f.kind)
+  )
 }
 
 export function BindModePanel({ siteId }: Props) {

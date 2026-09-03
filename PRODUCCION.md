@@ -227,24 +227,28 @@ Visita:
 
 ---
 
-## Deploy alternativo — Vercel
+## Deploy en servidor Node
 
-El proyecto incluye `vercel.json` para deploy serverless. En Vercel usa obligatoriamente base de datos externa, no modo archivo.
+El proyecto se opera como una app Next.js en servidor Node. La build productiva usa:
 
-> Recomendacion actual:
-> - `Stripe` = suscripciones nuevas
-> - `MercadoPago` = tienda / pagos únicos
-> - no usar MercadoPago como alta nueva de suscripciones recurrentes
+```bash
+npm run build
+npm run start
+```
 
-### Variables necesarias en Vercel
+Recomendacion actual:
 
-Configura en `Project Settings → Environment Variables`:
+- `Stripe` = suscripciones nuevas
+- `MercadoPago` = tienda / pagos únicos
+- no usar MercadoPago como alta nueva de suscripciones recurrentes
+
+Variables necesarias en el servidor:
 
 | Variable | Valor recomendado |
 |----------|-------------------|
 | `ORVENIX_STORAGE_MODE` | `prisma` |
-| `DATABASE_URL` | MySQL/MariaDB accesible desde Vercel |
-| `NEXTAUTH_URL` | `https://orvenix.com.mx` o dominio Vercel |
+| `DATABASE_URL` | MySQL/MariaDB accesible desde el servidor |
+| `NEXTAUTH_URL` | `https://orvenix.com.mx` o dominio real |
 | `AUTH_URL` | Mismo dominio |
 | `AUTH_SECRET` / `NEXTAUTH_SECRET` | Secret real de 32 bytes |
 | `ORVENIX_ADMIN_EMAILS` | Correos admin separados por coma |
@@ -254,19 +258,12 @@ Configura en `Project Settings → Environment Variables`:
 | `ANTHROPIC_API_KEY` | Opcional, activa IA real |
 | `RESEND_API_KEY` / `RESEND_FROM` | Opcional, emails transaccionales |
 
-El comando de build de Vercel es:
+Nota importante del workspace actual:
 
-```bash
-npm run vercel-build
-```
-
-Ese script ejecuta `prisma generate`, `npm run prisma:deploy-schema` y `next build`.
-
-> Nota importante del workspace actual:
-> - el repo ya incluye una baseline inicial en `prisma/migrations/20260524_000000_baseline`
-> - `npm run prisma:deploy-schema` usa `migrate deploy` cuando detecta migraciones versionadas
-> - si tu base ya existia antes de versionar migraciones, necesitas marcar esa baseline una sola vez con `prisma migrate resolve --applied ...`
-> - la deuda real pendiente ya no es “crear baseline”, sino validar el primer deploy publico y seguir despues con migraciones incrementales normales
+- el repo ya incluye una baseline inicial en `prisma/migrations/20260524_000000_baseline`
+- `npm run prisma:deploy-schema` usa `migrate deploy` cuando detecta migraciones versionadas
+- si tu base ya existia antes de versionar migraciones, necesitas marcar esa baseline una sola vez con `prisma migrate resolve --applied ...`
+- la deuda real pendiente ya no es “crear baseline”, sino validar el primer deploy publico y seguir despues con migraciones incrementales normales
 
 Si tu base productiva ya existe y fue creada antes de versionar migraciones, marca la baseline una sola vez antes del primer `deploy`:
 
@@ -278,7 +275,7 @@ Despues de eso, `npm run prisma:deploy-schema` ya puede continuar normalmente co
 
 ## Checklist rápida de salida pública
 
-1. Configura en Vercel o en tu servidor:
+1. Configura en servidor o en tu servidor:
    - `NEXTAUTH_URL`
    - `AUTH_URL`
    - `NEXT_PUBLIC_API_URL`

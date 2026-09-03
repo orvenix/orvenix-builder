@@ -1,0 +1,282 @@
+{
+  "title": "Base de conocimiento publica de Orvenix AI",
+  "contact": {
+    "email": "contacto@orvenix.com.mx",
+    "whatsapp": "+52 81 2898 5846",
+    "contactPath": "/contacto/",
+    "pricingPath": "/precios/"
+  },
+  "principles": [
+    "Responder siempre en espanol.",
+    "Hablar como asesor comercial y de producto: claro, cercano y consultivo.",
+    "No inventar precios, tiempos, funciones ni condiciones.",
+    "No revelar detalles tecnicos internos, configuracion, proveedores, variables de entorno, base de datos, codigo fuente ni arquitectura interna.",
+    "Si algo requiere confirmacion comercial o tecnica, enviar a /contacto/."
+  ],
+  "positioning": [
+    "Orvenix es una plataforma SaaS para publicar sitios profesionales, administrar contenido y operar presencia digital desde un panel con editor visual.",
+    "El objetivo es que el cliente elija un plan, pague de forma segura, entre al constructor y publique sin tocar codigo.",
+    "Pro es la ruta recomendada para negocios que quieren publicar, vender y crecer sin comparar demasiadas opciones."
+  ],
+  "plans": [
+    {
+      "id": "starter",
+      "name": "Starter",
+      "price": "15 USD/mes + IVA; 150 USD/ano + IVA",
+      "audience": "Para publicar una primera web profesional con hosting, SSL, editor y soporte incluido.",
+      "cta": "/precios?checkout=starter&interval=month",
+      "includes": [
+        "1 sitio institucional",
+        "Hasta 5 paginas o secciones",
+        "Editor visual completo",
+        "SSL y hosting administrado",
+        "Soporte estandar por email"
+      ]
+    },
+    {
+      "id": "pro",
+      "name": "Pro",
+      "price": "39 USD/mes + IVA; 390 USD/ano + IVA",
+      "audience": "La opcion recomendada para vender, usar IA, administrar varios sitios y crecer sin rehacer el sistema.",
+      "cta": "/precios?checkout=pro&interval=month",
+      "includes": [
+        "Hasta 10 sitios",
+        "eCommerce avanzado",
+        "Orvenix AI",
+        "CRM nativo",
+        "Blog y SEO",
+        "Exportacion de codigo",
+        "Soporte prioritario"
+      ]
+    },
+    {
+      "id": "commerce",
+      "name": "Business",
+      "price": "79 USD/mes + IVA; 790 USD/ano + IVA",
+      "audience": "Para operar ventas, funnels, automatizaciones y eCommerce con una base mas robusta.",
+      "cta": "/precios?checkout=commerce&interval=month",
+      "includes": [
+        "Sitios ilimitados o conforme a acuerdo comercial",
+        "Funnels de venta",
+        "Automatizaciones complejas",
+        "eCommerce multi-moneda",
+        "CRM automatizado",
+        "Soporte omnicanal urgente"
+      ]
+    },
+    {
+      "id": "enterprise",
+      "name": "Enterprise",
+      "price": "Cotizacion segun alcance",
+      "audience": "Para organizaciones con arquitectura dedicada, integraciones y SLA premium.",
+      "cta": "/contacto/",
+      "includes": [
+        "Arquitectura dedicada",
+        "IA personalizada",
+        "Integraciones ERP/API",
+        "eCommerce B2B",
+        "Gestor dedicado"
+      ]
+    }
+  ],
+  "builder": [
+    "El Super Builder permite editar visualmente textos, imagenes, colores, enlaces y secciones.",
+    "El usuario puede partir de templates por industria o de un lienzo guiado.",
+    "El constructor se aprovecha mejor en resoluciones grandes; en pantallas pequenas puede mostrarse una experiencia adaptada o advertencia.",
+    "El objetivo del editor es ser simple para usuarios novatos y mas potente para clientes Pro.",
+    "Orvenix AI puede crear una copia editable desde templates por industria cuando el usuario pida crear, generar o armar un sitio web; requiere sesion activa y disponibilidad del plan."
+  ],
+  "templates": [
+    "Tienda online",
+    "Restaurante",
+    "Clinica o salud",
+    "Inmobiliaria",
+    "Gimnasio",
+    "Barberia",
+    "Hotel",
+    "Abogados",
+    "Academia",
+    "Agencia digital",
+    "Transporte",
+    "Contabilidad",
+    "Viajes",
+    "Notaria",
+    "Recursos humanos",
+    "Arquitectura",
+    "Seguros",
+    "Finanzas",
+    "Fotografia",
+    "Servicios locales",
+    "Jugueteria",
+    "Moda",
+    "SaaS o producto digital"
+  ],
+  "conversion": [
+    "Cuando el usuario no sabe que plan elegir, recomendar Pro si quiere vender, crecer o administrar mas de un sitio.",
+    "Recomendar Starter si solo quiere una primera presencia profesional simple.",
+    "Recomendar Business si habla de automatizaciones, funnels, muchas ventas, multiples sitios o eCommerce avanzado.",
+    "Para dudas de alcance, integraciones o compra definitiva, enviar a /contacto/.",
+    "Correo oficial: contacto@orvenix.com.mx.",
+    "Si el usuario pide crear un sitio, sugerir una industria concreta como restaurante, tienda, clinica, inmobiliaria, gimnasio, abogados, contabilidad, hotel, barberia, viajes o arquitectura."
+  ],
+  "pageTypes": [
+    {
+      "name": "Landing page de venta",
+      "useCase": "Ideal para vender un producto, servicio, curso, evento, lanzamiento o campaña puntual.",
+      "recommendedSections": [
+        "Hero con promesa clara",
+        "Problema y solucion",
+        "Beneficios",
+        "Prueba social",
+        "Oferta o planes",
+        "FAQ",
+        "CTA final",
+        "Contacto o WhatsApp"
+      ],
+      "advice": "Debe enfocarse en una sola accion principal: comprar, agendar, cotizar o registrarse."
+    },
+    {
+      "name": "Sitio institucional",
+      "useCase": "Ideal para empresas, profesionistas, despachos y negocios que necesitan presencia formal.",
+      "recommendedSections": [
+        "Inicio",
+        "Nosotros",
+        "Servicios",
+        "Casos o proyectos",
+        "Testimonios",
+        "FAQ",
+        "Contacto"
+      ],
+      "advice": "Debe transmitir confianza, claridad y trayectoria sin saturar al visitante."
+    },
+    {
+      "name": "Ecommerce",
+      "useCase": "Ideal para vender productos fisicos o digitales con catalogo y checkout.",
+      "recommendedSections": [
+        "Hero comercial",
+        "Categorias",
+        "Productos destacados",
+        "Beneficios de compra",
+        "Envios y pagos",
+        "Testimonios",
+        "FAQ",
+        "CTA a tienda"
+      ],
+      "advice": "Debe priorizar fotos claras, precios visibles, filtros, confianza de pago y politicas sencillas."
+    },
+    {
+      "name": "Sitio de servicios profesionales",
+      "useCase": "Ideal para consultores, contadores, abogados, medicos, arquitectos y agencias.",
+      "recommendedSections": [
+        "Especialidad",
+        "Servicios",
+        "Proceso",
+        "Casos",
+        "Credenciales",
+        "Testimonios",
+        "Agenda o contacto"
+      ],
+      "advice": "Debe convertir autoridad en accion: explicar que problema resuelve y cual es el siguiente paso."
+    },
+    {
+      "name": "Portafolio premium",
+      "useCase": "Ideal para creativos, fotografos, arquitectos, disenadores, estudios y marcas visuales.",
+      "recommendedSections": [
+        "Hero visual",
+        "Galeria",
+        "Proyectos destacados",
+        "Proceso creativo",
+        "Servicios",
+        "Reconocimientos",
+        "Contacto"
+      ],
+      "advice": "Debe dejar que el trabajo respire: menos texto, mejores imagenes y llamados a contacto elegantes."
+    },
+    {
+      "name": "Sitio para reservas o citas",
+      "useCase": "Ideal para restaurantes, clinicas, barberias, spas, gimnasios, hoteles y consultorios.",
+      "recommendedSections": [
+        "Hero con disponibilidad",
+        "Servicios o experiencias",
+        "Calendario o CTA de reserva",
+        "Equipo",
+        "Ubicacion",
+        "FAQ",
+        "Contacto rapido"
+      ],
+      "advice": "Debe reducir friccion: horario, ubicacion, telefono, WhatsApp y CTA siempre claros."
+    },
+    {
+      "name": "Blog o medio de contenido",
+      "useCase": "Ideal para SEO, autoridad, educacion de clientes y marketing de contenidos.",
+      "recommendedSections": [
+        "Hero editorial",
+        "Categorias",
+        "Posts destacados",
+        "Newsletter",
+        "Recursos",
+        "Autoridad",
+        "CTA comercial"
+      ],
+      "advice": "Debe combinar lectura agradable con caminos claros hacia contacto, demo o compra."
+    },
+    {
+      "name": "SaaS o producto digital",
+      "useCase": "Ideal para software, plataformas, dashboards, apps, membresias y herramientas online.",
+      "recommendedSections": [
+        "Hero con resultado",
+        "Producto en accion",
+        "Funciones",
+        "Casos de uso",
+        "Precios",
+        "Seguridad",
+        "FAQ",
+        "Demo o registro"
+      ],
+      "advice": "Debe explicar rapido que hace, para quien es, como mejora el trabajo y como empezar."
+    }
+  ],
+  "industryGuides": [
+    "Restaurante: destacar menu, reservas, ambiente, ubicacion, horarios, galeria y CTA a WhatsApp o reservar mesa.",
+    "Clinica o salud: priorizar confianza, especialidades, doctores, cedulas si aplica, citas, ubicacion, seguros o metodos de pago.",
+    "Inmobiliaria: mostrar propiedades destacadas, filtros, zonas, agentes, captacion de leads y botones para agendar visita.",
+    "Gimnasio: mostrar planes, clases, entrenadores, horarios, resultados, comunidad y prueba o inscripcion.",
+    "Abogados: reforzar experiencia, areas de practica, proceso, confidencialidad, casos generales y consulta inicial.",
+    "Contabilidad: explicar servicios fiscales, nomina, declaraciones, paquetes, beneficios de orden y contacto rapido.",
+    "Hotel: destacar habitaciones, experiencias, amenidades, ubicacion, galeria, disponibilidad y reserva directa.",
+    "Barberia o belleza: mostrar servicios, precios, estilos, equipo, horarios, ubicacion y reserva por WhatsApp.",
+    "Arquitectura: dar protagonismo a proyectos, renders/fotos, proceso, materiales, equipo, servicios y formulario de cotizacion.",
+    "Tienda online: enfocar en producto, confianza, envios, pagos, cambios/devoluciones, categorias y ofertas claras.",
+    "Servicios locales: mostrar zona de cobertura, servicios, antes/despues, reseñas, urgencias y boton de llamada o WhatsApp.",
+    "Academia o cursos: explicar resultados, temario, modalidad, profesores, testimonios, precio y registro.",
+    "Agencia digital: demostrar casos, metodologia, paquetes, resultados, equipo y llamada de diagnostico.",
+    "Finanzas o seguros: priorizar confianza, claridad, asesoramiento, comparativas, beneficios y contacto consultivo."
+  ],
+  "sectionPlaybook": [
+    "Hero: debe responder en segundos que ofreces, para quien es, que resultado promete y cual es el CTA principal.",
+    "Beneficios: traducir funciones a resultados concretos para el cliente, evitando listas genericas.",
+    "Servicios: agrupar ofertas por necesidad del cliente, no solo por nombres internos del negocio.",
+    "Prueba social: usar testimonios, logos, metricas, casos, fotos reales o indicadores de confianza.",
+    "Precios: mostrar opciones claras, recomendar una opcion principal y explicar para quien es cada plan.",
+    "FAQ: resolver objeciones antes de que frenen la compra: precio, tiempo, soporte, cambios, pagos y garantia si aplica.",
+    "CTA final: repetir la accion principal con lenguaje directo y bajo riesgo.",
+    "Contacto: incluir formulario simple, WhatsApp, correo, horario, ubicacion y expectativa de respuesta cuando aplique.",
+    "Galeria: usar imagenes que demuestren producto, lugar, resultado o experiencia; evitar imagenes decorativas sin funcion.",
+    "Proceso: explicar pasos de compra, reserva o contratacion para reducir incertidumbre."
+  ],
+  "designGuidance": [
+    "Para sitios premium, sugerir menos ruido visual, mejor jerarquia, espacios generosos, contraste claro y CTAs visibles.",
+    "Evitar que todos los sitios tengan el mismo patron: variar estructura, ritmo, tipo de hero, densidad, galeria, colores y tono segun industria.",
+    "En negocios elegantes, recomendar paletas sobrias con acentos fuertes; en ecommerce, recomendar colores vivos para CTAs y fotos limpias.",
+    "En paginas de venta, priorizar conversion: CTA arriba, prueba social temprana, beneficios concretos y objeciones resueltas.",
+    "En sitios profesionales, priorizar confianza: credenciales, proceso, claridad de servicios y contacto directo.",
+    "En moviles, recomendar botones visibles, textos cortos, secciones escaneables y contacto rapido."
+  ],
+  "botBehavior": [
+    "Cuando el usuario pida una pagina web, preguntar o inferir industria, objetivo principal, publico, estilo visual y CTA.",
+    "Si el usuario esta indeciso, proponer 2 o 3 rutas concretas en vez de una respuesta generica.",
+    "Cuando sugiera una pagina, incluir estructura recomendada, tono visual y CTA principal.",
+    "Si el usuario pide algo premium, recomendar detalles de confianza, animaciones sutiles, microcopy comercial y secciones con prueba social.",
+    "Si el usuario pide generar un sitio, recordar que Orvenix AI puede partir de templates editables por industria cuando hay sesion activa y cupo de plan."
+  ]
+}

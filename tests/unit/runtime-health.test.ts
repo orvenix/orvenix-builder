@@ -1,3 +1,4 @@
+import type { EnvironmentVariables } from "@/lib/env-types"
 import test from "node:test"
 import assert from "node:assert/strict"
 import { buildRuntimeHealth } from "../../lib/runtime-health-core"
@@ -18,7 +19,7 @@ const stripeReadyEnv = {
   STRIPE_PRICE_PRO_YEAR: "price_4",
   STRIPE_PRICE_COMMERCE_MONTH: "price_5",
   STRIPE_PRICE_COMMERCE_YEAR: "price_6",
-} satisfies NodeJS.ProcessEnv
+} satisfies EnvironmentVariables
 
 test("buildRuntimeHealth reports an operational app in healthy file mode", async () => {
   const report = await buildRuntimeHealth({
@@ -46,7 +47,7 @@ test("buildRuntimeHealth degrades billing when MercadoPago is the only ready gat
     AUTH_URL: "https://example.com",
     MP_ACCESS_TOKEN: "APP_USR-real-token-value",
     ORVENIX_STORAGE_MODE: "file",
-  } satisfies NodeJS.ProcessEnv
+  } satisfies EnvironmentVariables
 
   const report = await buildRuntimeHealth({
     env,
@@ -94,7 +95,7 @@ test("buildRuntimeHealth warns when public URLs are misaligned or non-https in p
     AUTH_URL: "https://orvenix.com.mx",
     NEXT_PUBLIC_API_URL: "https://api.orvenix.com.mx",
     ORVENIX_STORAGE_MODE: "file",
-  } satisfies NodeJS.ProcessEnv
+  } satisfies EnvironmentVariables
 
   const report = await buildRuntimeHealth({
     env,

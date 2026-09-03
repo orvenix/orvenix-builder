@@ -21,6 +21,9 @@ const NAV_LINKS = [
   { href: '/proceso',     label: 'Proceso' },
   { href: '/afiliados',   label: 'Afiliados' },
   { href: '/contacto',    label: 'Contacto' },
+  { href: '/legal/dossier-2026', label: 'Dossier 2026' },
+  { href: '/legal/sla', label: 'SLA' },
+  { href: '/legal/contrato', label: 'Contrato' },
   { href: '/legal/privacidad', label: 'Privacidad' },
   { href: '/legal/terminos',   label: 'Términos' },
 ];
@@ -93,7 +96,7 @@ export function Footer() {
               ))}
             </ul>
             <p className="footer-address">
-              <a href="mailto:hola@orvenix.com.mx">hola@orvenix.com.mx</a>
+              <a href="mailto:contacto@orvenix.com.mx">contacto@orvenix.com.mx</a>
               <br />
               Monterrey, México
             </p>

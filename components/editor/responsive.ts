@@ -37,7 +37,7 @@ const RESPONSIVE_KEYS = new Set([
   "styleBackground", "styleOpacity", "stylePadding", "styleRadius",
   "styleBorderWidth", "styleBorderColor", "styleShadow",
   "motionAnimation", "motionTransition", "motionEasing",
-  "motionDuration", "motionDelay",
+  "motionDuration", "motionDelay", "motionDistance", "motionScale", "motionBlur",
 ]);
 
 export function isResponsiveEditorProp(key: string) {

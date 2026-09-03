@@ -9,7 +9,7 @@ const MESSAGES = [
   '5 usuarios nuevos en la Plataforma hoy',
   'Alguien descargó la guía de SaaS rentable',
   'Cliente en Guadalajara lanzó su tienda online',
-  'Plan Empresa activado en Tijuana',
+  'Plan Business activado en Tijuana',
   'Nuevo sitio publicado en menos de 24h',
   'Integración con Stripe completada por un cliente',
   'Equipo de 8 personas accedió al panel hoy',
