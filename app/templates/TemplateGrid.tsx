@@ -4,7 +4,7 @@ import { useState } from "react"
 import type { CSSProperties } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowUpRight, ArrowRight, CreditCard, Edit3, Repeat, CheckCircle } from "lucide-react"
+import { ArrowUpRight, ArrowRight, Edit3, CheckCircle } from "lucide-react"
 import { REAL_TEMPLATES } from "@/lib/realTemplates"
 import { selfEditTemplateAction } from "./actions"
 
@@ -106,25 +106,13 @@ export function TemplateGrid() {
                   ))}
                 </div>
 
-                {/* Precios prominentes */}
-                <div className="mb-5 rounded-xl border border-white/[0.08] bg-white/[0.025] overflow-hidden">
-                  <div className="flex">
-                    <div className="flex-1 px-4 py-3 text-center">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/30 mb-0.5">Compra única</p>
-                      <p className="text-xl font-black text-white">
-                        ${template.purchasePriceMxn.toLocaleString("es-MX")}
-                      </p>
-                      <p className="text-[10px] text-white/25 mt-0.5">tuyo para siempre</p>
-                    </div>
-                    <div className="w-px bg-white/[0.06]" />
-                    <div className="flex-1 px-4 py-3 text-center">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/30 mb-0.5">Renta mensual</p>
-                      <p className="text-xl font-black text-white">
-                        ${template.rentalPriceMxn.toLocaleString("es-MX")}
-                      </p>
-                      <p className="text-[10px] text-white/25 mt-0.5">cancela cuando quieras</p>
-                    </div>
-                  </div>
+                <div className="mb-5 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100/55">
+                    Incluido con tu plan Orvenix
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-white/42">
+                    Usa este diseño como base, personaliza lo esencial y publícalo desde tu suscripción.
+                  </p>
                 </div>
 
                 {/* Acciones */}
@@ -152,21 +140,9 @@ export function TemplateGrid() {
                   <form action={selfEditTemplateAction.bind(null, template.id)} className="flex-1">
                     <button type="submit" className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500">
                       <Edit3 size={12} />
-                      Editar gratis
+                      Usar este diseño
                     </button>
                   </form>
-                  <Link href={`/checkout/start?templateId=${template.id}&intent=buy`} className="flex-1">
-                    <span className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-xs font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-500">
-                      <CreditCard size={12} />
-                      Comprar
-                    </span>
-                  </Link>
-                  <Link href={`/checkout/start?templateId=${template.id}&intent=rent`} className="flex-1">
-                    <span className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-xs font-bold text-cyan-200 transition hover:bg-cyan-400/15">
-                      <Repeat size={12} />
-                      Rentar
-                    </span>
-                  </Link>
                 </div>
               </div>
             </article>

@@ -127,7 +127,16 @@ type Job = {
 }
 
 type Site = { id: string; name: string; description: string; tree: unknown; userId: string; published: boolean }
-type Page = { id: string; siteId: string; name: string; slug: string; tree: unknown; isHome: boolean; published: boolean }
+type Page = {
+  id: string
+  siteId: string
+  name: string
+  slug: string
+  tree: unknown
+  seo?: unknown | null
+  isHome: boolean
+  published: boolean
+}
 type Theme = { siteId: string; tokens: unknown }
 
 function cloneMap<T>(map: Map<string, T>) {
@@ -173,10 +182,35 @@ function createHarness({ planId = "pro", themeFails = false, createFails = false
           pages.set(`${page.siteId}:${page.slug}`, page)
           return page
         },
+        update: async ({
+          where,
+          data,
+        }: {
+          where: { siteId_slug: { siteId: string; slug: string } }
+          data: Partial<Page>
+        }) => {
+          const { siteId, slug } = where.siteId_slug
+          const key = `${siteId}:${slug}`
+          const current = pages.get(key)
+          if (!current) throw new Error(`SitePage no encontrada: ${key}`)
+
+          const updated = {
+            ...current,
+            ...structuredClone(data),
+          }
+
+          pages.set(key, updated)
+          return updated
+        },
         findFirst: async ({ where }: { where: { siteId: string; slug: string; isHome: boolean } }) => {
           const page = pages.get(`${where.siteId}:${where.slug}`)
           return page && page.isHome === where.isHome ? page : null
         },
+        findMany: async ({ where }: { where: { siteId: string } }) =>
+          Array.from(pages.values())
+            .filter((page) => page.siteId === where.siteId)
+            .sort((a, b) => a.slug.localeCompare(b.slug))
+            .map((page) => structuredClone(page)),
       },
       siteTheme: {
         upsert: async ({ where, create, update }: { where: { siteId: string }; create: Theme; update: { tokens: unknown } }) => {
@@ -198,6 +232,17 @@ function createHarness({ planId = "pro", themeFails = false, createFails = false
         deleteMany: async () => ({ count: 0 }),
         create: async ({ data }: { data: Job }) => {
           const job = { ...structuredClone(data), createdAt: new Date(), updatedAt: new Date() }
+          jobs.set(job.id, job)
+          return job
+        },
+        upsert: async ({ where, create, update }: { where: { id: string }; create: Job; update: Partial<Job> }) => {
+          const existing = jobs.get(where.id)
+          if (existing) {
+            const next = { ...existing, ...structuredClone(update), updatedAt: new Date() }
+            jobs.set(where.id, next)
+            return next
+          }
+          const job = { ...structuredClone(create), createdAt: new Date(), updatedAt: new Date() }
           jobs.set(job.id, job)
           return job
         },
@@ -234,6 +279,119 @@ async function installHarness(harness: ReturnType<typeof createHarness>) {
   prisma.$transaction = harness.prisma.$transaction
 }
 
+
+test("reserve crea attempt planning antes del builder sin payload privado", async () => {
+  const harness = createHarness({ planId: "pro" })
+  await installHarness(harness)
+  const service = await import("../../lib/orvenix-ai/site-creation/preview-service")
+
+  const attempt = await service.reserveSiteCreationPreviewAttempt({ userId: "user_1", clientAttemptKey: "client:attempt-1" })
+  const job = harness.jobs.get(attempt.id)
+
+  assert.equal(attempt.status, "planning")
+  assert.equal(job?.status, "planning")
+  assert.equal(job?.type, "ai_site_creation_preview")
+  assert.equal(typeof attempt.reservedSiteId, "string")
+  assert.equal("request" in (job?.input as Record<string, unknown>), false)
+  assert.equal("business" in (job?.input as Record<string, unknown>), false)
+  assert.equal("plan" in (job?.input as Record<string, unknown>), false)
+})
+
+test("reserve same user/key recupera mismo attempt y same reservedSiteId", async () => {
+  const harness = createHarness({ planId: "pro" })
+  await installHarness(harness)
+  const service = await import("../../lib/orvenix-ai/site-creation/preview-service")
+
+  const first = await service.reserveSiteCreationPreviewAttempt({ userId: "user_1", clientAttemptKey: "client:attempt-1" })
+  const second = await service.reserveSiteCreationPreviewAttempt({ userId: "user_1", clientAttemptKey: "client:attempt-1" })
+
+  assert.equal(first.id, second.id)
+  assert.equal(first.reservedSiteId, second.reservedSiteId)
+  assert.equal(harness.jobs.size, 1)
+})
+
+test("reserve scopea clientAttemptKey por usuario y permite regeneracion deliberada", async () => {
+  const harness = createHarness({ planId: "pro" })
+  await installHarness(harness)
+  const service = await import("../../lib/orvenix-ai/site-creation/preview-service")
+
+  const first = await service.reserveSiteCreationPreviewAttempt({ userId: "user_1", clientAttemptKey: "client:attempt-1" })
+  const otherUser = await service.reserveSiteCreationPreviewAttempt({ userId: "user_2", clientAttemptKey: "client:attempt-1" })
+  const deliberate = await service.reserveSiteCreationPreviewAttempt({ userId: "user_1", clientAttemptKey: "client:attempt-2" })
+
+  assert.notEqual(first.id, otherUser.id)
+  assert.notEqual(first.id, deliberate.id)
+  assert.equal(harness.jobs.size, 3)
+})
+
+test("complete planning es idempotente para mismo preview y rechaza conflicto", async () => {
+  const harness = createHarness({ planId: "pro" })
+  await installHarness(harness)
+  const service = await import("../../lib/orvenix-ai/site-creation/preview-service")
+
+  const attempt = await service.reserveSiteCreationPreviewAttempt({ userId: "user_1", clientAttemptKey: "client:attempt-1" })
+  const plan = createPlan(attempt.reservedSiteId)
+  const previewHash = hashEditorTreeForTest(plan.after)
+
+  const first = await service.completeSiteCreationPreviewAttempt({
+    userId: "user_1",
+    previewId: attempt.id,
+    previewHash,
+    request: "Crea un sitio",
+    business: { name: "Demo" },
+    plan,
+  })
+  const second = await service.completeSiteCreationPreviewAttempt({
+    userId: "user_1",
+    previewId: attempt.id,
+    previewHash,
+    request: "Crea un sitio",
+    business: { name: "Demo" },
+    plan,
+  })
+
+  assert.equal(first.id, second.id)
+  assert.equal(harness.jobs.get(attempt.id)?.status, "completed")
+
+  const conflicting = createPlan(attempt.reservedSiteId)
+  conflicting.after.nodes[conflicting.after.rootId].props = { title: "Otro" }
+  await assert.rejects(
+    service.completeSiteCreationPreviewAttempt({
+      userId: "user_1",
+      previewId: attempt.id,
+      previewHash: hashEditorTreeForTest(conflicting.after),
+      request: "Crea otro sitio",
+      business: { name: "Otro" },
+      plan: conflicting,
+    }),
+    /resultado diferente/i,
+  )
+})
+
+test("fail solo cambia planning a failed y no degrada completed", async () => {
+  const harness = createHarness({ planId: "pro" })
+  await installHarness(harness)
+  const service = await import("../../lib/orvenix-ai/site-creation/preview-service")
+
+  const failedAttempt = await service.reserveSiteCreationPreviewAttempt({ userId: "user_1", clientAttemptKey: "client:attempt-1" })
+  assert.equal(await service.failSiteCreationPreviewAttempt({ userId: "user_1", previewId: failedAttempt.id, error: "boom" }), true)
+  assert.equal(harness.jobs.get(failedAttempt.id)?.status, "failed")
+  assert.equal(await service.failSiteCreationPreviewAttempt({ userId: "user_1", previewId: failedAttempt.id, error: "again" }), false)
+
+  const completedAttempt = await service.reserveSiteCreationPreviewAttempt({ userId: "user_1", clientAttemptKey: "client:attempt-2" })
+  const plan = createPlan(completedAttempt.reservedSiteId)
+  await service.completeSiteCreationPreviewAttempt({
+    userId: "user_1",
+    previewId: completedAttempt.id,
+    previewHash: hashEditorTreeForTest(plan.after),
+    request: "Crea un sitio",
+    business: { name: "Demo" },
+    plan,
+  })
+  assert.equal(await service.failSiteCreationPreviewAttempt({ userId: "user_1", previewId: completedAttempt.id, error: "late" }), false)
+  assert.equal(harness.jobs.get(completedAttempt.id)?.status, "completed")
+})
+
 function addPreviewJob(params: {
   jobs: Map<string, Job>
   id: string
@@ -253,6 +411,7 @@ function addPreviewJob(params: {
     type: "ai_site_creation_preview",
     input: {
       userId: params.userId ?? "user_1",
+      clientAttemptKeyHash: "h".repeat(64),
       previewHash: hashEditorTreeForTest(plan.after),
       reservedSiteId,
       request: "Crea un sitio para una clinica dental",
@@ -392,7 +551,8 @@ test("payload demasiado grande se rechaza antes de guardar", async () => {
     service.rememberSiteCreationPreview({ userId: "user_1", previewHash: hash, request: "crear", business: { name: "Demo" }, plan }),
     /demasiado grande/i,
   )
-  assert.equal(harness.jobs.size, 0)
+  assert.equal(harness.jobs.size, 1)
+  assert.equal(Array.from(harness.jobs.values())[0]?.status, "failed")
 })
 
 test("errores Prisma no filtran SQL, arbol ni payload interno", async () => {
@@ -543,6 +703,7 @@ test("preview persistido contiene theme y globalTheme", async () => {
     plan,
   })
 
+  assert.ok("after" in preview.plan)
   assert.ok(preview.plan.after.theme)
   assert.ok(preview.plan.after.globalTheme)
   assert.deepEqual(preview.plan.after.theme, preview.plan.after.globalTheme)
@@ -565,7 +726,8 @@ test("preview nuevo sin theme ni globalTheme no se persiste", async () => {
     /Theme valido/i,
   )
 
-  assert.equal(harness.jobs.size, 0)
+  assert.equal(harness.jobs.size, 1)
+  assert.equal(Array.from(harness.jobs.values())[0]?.status, "failed")
 })
 
 test("verificacion falla y revierte si SiteTheme no existe", async () => {
@@ -587,4 +749,286 @@ test("verificacion falla y revierte si SiteTheme no existe", async () => {
   assert.equal(harness.pages.has("site_no_theme:home"), false)
   assert.equal(harness.themes.has("site_no_theme"), false)
   assert.equal(harness.jobs.get("preview_no_site_theme")?.status, "completed")
+})
+
+test("V2 crea multiples paginas con SEO, theme compartido, hashes e idempotencia", async () => {
+  const harness = createHarness({ planId: "pro" })
+  await installHarness(harness)
+
+  const service = await import("../../lib/orvenix-ai/site-creation/preview-service")
+  const planV2 = await import("../../lib/orvenix-ai/site-creation/plan-v2")
+
+  const homeTree = createTree(["home-root", "hero", "services-home", "cta-home"])
+  const servicesTree = createTree(["services-root", "services-list", "services-cta"])
+  const contactTree = createTree(["contact-root", "contact-form", "contact-info"])
+
+  assert.ok(homeTree.theme)
+
+  const plan = {
+    version: 2 as const,
+    identity: {
+      name: "Clinica Aurora",
+      industry: "salud",
+      location: "Monterrey",
+      description: "Clinica dental profesional",
+    },
+    theme: homeTree.theme,
+    navigation: [
+      {
+        label: "Inicio",
+        slug: "home",
+        href: "page:home",
+      },
+      {
+        label: "Servicios",
+        slug: "servicios",
+        href: "page:servicios",
+      },
+      {
+        label: "Contacto",
+        slug: "contacto",
+        href: "page:contacto",
+      },
+    ],
+    pages: [
+      {
+        slug: "home",
+        name: "Inicio",
+        isHome: true,
+        seo: {
+          title: "Clinica Aurora | Inicio",
+          description: "Atencion dental profesional en Monterrey.",
+        },
+        tree: homeTree,
+        treeHash: planV2.calculateSiteCreationTreeHash(homeTree),
+      },
+      {
+        slug: "servicios",
+        name: "Servicios",
+        isHome: false,
+        seo: {
+          title: "Servicios dentales | Clinica Aurora",
+          description: "Conoce nuestros servicios dentales.",
+        },
+        tree: servicesTree,
+        treeHash: planV2.calculateSiteCreationTreeHash(servicesTree),
+      },
+      {
+        slug: "contacto",
+        name: "Contacto",
+        isHome: false,
+        seo: {
+          title: "Contacto | Clinica Aurora",
+          description: "Agenda una cita con Clinica Aurora.",
+        },
+        tree: contactTree,
+        treeHash: planV2.calculateSiteCreationTreeHash(contactTree),
+      },
+    ],
+    quality: {
+      score: 92,
+      warnings: [],
+      summary: "Plan multipagina listo para revision.",
+    },
+  }
+
+  const validation = planV2.validateSiteCreationPlanV2(
+    plan,
+    planV2.SITE_CREATION_PLAN_V2_DEFAULT_LIMITS,
+  )
+
+  if (validation.ok === false) {
+    assert.fail(validation.errors.join("; "))
+  }
+
+  assert.equal(validation.ok, true)
+
+  const preview = await service.rememberSiteCreationPreview({
+    userId: "user_1",
+    previewHash: validation.planHash,
+    request: "Crea un sitio multipagina para una clinica dental",
+    business: {
+      name: "Clinica Aurora",
+      industry: "salud",
+      location: "Monterrey",
+    },
+    plan: validation.plan,
+  })
+
+  assert.equal(preview.previewHash, validation.planHash)
+  assert.ok("version" in preview.plan)
+  assert.equal(preview.plan.version, 2)
+
+  const first = await service.createDraftSiteFromPersistedPreview({
+    userId: "user_1",
+    previewId: preview.id,
+    expectedPreviewHash: validation.planHash,
+  })
+
+  assert.equal(first.siteId, preview.reservedSiteId)
+  assert.equal(first.nextRoute, `/editor/${preview.reservedSiteId}`)
+  assert.equal(first.verified, true)
+
+  const siteId = preview.reservedSiteId
+
+  assert.equal(harness.websites.get(siteId)?.published, false)
+  assert.equal(harness.themes.has(siteId), true)
+  assert.equal(harness.pages.size, 3)
+
+  const home = harness.pages.get(`${siteId}:home`)
+  const servicesPage = harness.pages.get(`${siteId}:servicios`)
+  const contact = harness.pages.get(`${siteId}:contacto`)
+
+  assert.ok(home)
+  assert.ok(servicesPage)
+  assert.ok(contact)
+
+  assert.equal(home.isHome, true)
+  assert.equal(servicesPage.isHome, false)
+  assert.equal(contact.isHome, false)
+
+  assert.equal(home.published, false)
+  assert.equal(servicesPage.published, false)
+  assert.equal(contact.published, false)
+
+  assert.deepEqual(home.seo, {
+    title: "Clinica Aurora | Inicio",
+    description: "Atencion dental profesional en Monterrey.",
+  })
+  assert.deepEqual(servicesPage.seo, {
+    title: "Servicios dentales | Clinica Aurora",
+    description: "Conoce nuestros servicios dentales.",
+  })
+  assert.deepEqual(contact.seo, {
+    title: "Contacto | Clinica Aurora",
+    description: "Agenda una cita con Clinica Aurora.",
+  })
+
+  assert.equal(
+    planV2.calculateSiteCreationTreeHash(home.tree as EditorTree),
+    validation.plan.pages.find((page) => page.slug === "home")?.treeHash,
+  )
+  assert.equal(
+    planV2.calculateSiteCreationTreeHash(servicesPage.tree as EditorTree),
+    validation.plan.pages.find((page) => page.slug === "servicios")?.treeHash,
+  )
+  assert.equal(
+    planV2.calculateSiteCreationTreeHash(contact.tree as EditorTree),
+    validation.plan.pages.find((page) => page.slug === "contacto")?.treeHash,
+  )
+
+  assert.equal(harness.jobs.get(preview.id)?.status, "consumed")
+
+  const second = await service.createDraftSiteFromPersistedPreview({
+    userId: "user_1",
+    previewId: preview.id,
+    expectedPreviewHash: validation.planHash,
+  })
+
+  assert.deepEqual(second, first)
+  assert.equal(harness.websites.size, 1)
+  assert.equal(harness.pages.size, 3)
+})
+
+test("V2 bloquea todo el execute si una pagina secundaria falla Safety Validator", async () => {
+  const harness = createHarness({ planId: "pro" })
+  await installHarness(harness)
+
+  const service = await import("../../lib/orvenix-ai/site-creation/preview-service")
+  const planV2 = await import("../../lib/orvenix-ai/site-creation/plan-v2")
+
+  const homeTree = createTree(["home-root", "hero", "home-cta"])
+  const unsafeTree = createTree(["services-root", "services-list"])
+
+  const unsafeNode = unsafeTree.nodes["services-list"]
+  assert.ok(unsafeNode)
+
+  unsafeNode.type = "bloque-que-no-existe-en-orvenix"
+
+  assert.ok(homeTree.theme)
+
+  const plan = {
+    version: 2 as const,
+    identity: {
+      name: "Clinica Aurora",
+      industry: "salud",
+      description: "Clinica dental profesional",
+    },
+    theme: homeTree.theme,
+    navigation: [
+      {
+        label: "Inicio",
+        slug: "home",
+        href: "page:home",
+      },
+      {
+        label: "Servicios",
+        slug: "servicios",
+        href: "page:servicios",
+      },
+    ],
+    pages: [
+      {
+        slug: "home",
+        name: "Inicio",
+        isHome: true,
+        seo: {
+          title: "Clinica Aurora",
+          description: "Atencion dental profesional.",
+        },
+        tree: homeTree,
+        treeHash: planV2.calculateSiteCreationTreeHash(homeTree),
+      },
+      {
+        slug: "servicios",
+        name: "Servicios",
+        isHome: false,
+        seo: {
+          title: "Servicios",
+          description: "Servicios dentales.",
+        },
+        tree: unsafeTree,
+        treeHash: planV2.calculateSiteCreationTreeHash(unsafeTree),
+      },
+    ],
+    quality: {
+      score: 80,
+      warnings: [],
+      summary: "Plan para probar Safety Validator.",
+    },
+  }
+
+  const validation = planV2.validateSiteCreationPlanV2(
+    plan,
+    planV2.SITE_CREATION_PLAN_V2_DEFAULT_LIMITS,
+  )
+
+  if (validation.ok === false) {
+    assert.fail(validation.errors.join("; "))
+  }
+
+  const preview = await service.rememberSiteCreationPreview({
+    userId: "user_1",
+    previewHash: validation.planHash,
+    request: "Crea un sitio para Clinica Aurora",
+    business: {
+      name: "Clinica Aurora",
+      industry: "salud",
+    },
+    plan: validation.plan,
+  })
+
+  await assert.rejects(
+    service.createDraftSiteFromPersistedPreview({
+      userId: "user_1",
+      previewId: preview.id,
+      expectedPreviewHash: validation.planHash,
+    }),
+    /Safety Validator rechazo la pagina "servicios"/i,
+  )
+
+  assert.equal(harness.websites.size, 0)
+  assert.equal(harness.pages.size, 0)
+  assert.equal(harness.themes.size, 0)
+  assert.equal(harness.jobs.get(preview.id)?.status, "completed")
 })

@@ -528,7 +528,6 @@ export function validateSiteCreationPlanV2(
     errors.push("El plan excede el limite de bytes permitido.")
   }
 
-  // TODO(site_creation_v2): ejecutar Safety Validator completo antes de permitir Execute V2.
 
   if (errors.length > 0) {
     return { ok: false, errors, warnings }

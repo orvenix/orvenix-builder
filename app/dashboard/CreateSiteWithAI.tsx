@@ -29,6 +29,14 @@ function createServiceField(): ServiceField {
   }
 }
 
+function createClientAttemptKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `client:${crypto.randomUUID()}`
+  }
+
+  return `client:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`
+}
+
 function getPreviewTree(result: OrvenixSiteCreationActionResult): EditorTree | null {
   if (!result.success) return null
   return result.result.plan?.after ?? result.result.tree ?? null
@@ -89,6 +97,8 @@ export function CreateSiteWithAI() {
       }))
       .filter((service) => service.name)
 
+    const clientAttemptKey = createClientAttemptKey()
+
     const message = [
       name ? `Negocio: ${name}.` : null,
       industry ? `Industria: ${industry}.` : null,
@@ -103,6 +113,7 @@ export function CreateSiteWithAI() {
       const result = await runOrvenixSiteCreationAction({
         mode: "preview",
         message,
+        clientAttemptKey,
         business: {
           name,
           industry,

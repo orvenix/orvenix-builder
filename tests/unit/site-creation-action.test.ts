@@ -34,7 +34,7 @@ type PreviewRecord = {
   request: string
   type: string
   status: string
-  plan: { after: EditorTree; snapshot?: unknown }
+  plan: Record<string, unknown>
 }
 
 function stableObject(value: unknown): unknown {
@@ -68,7 +68,15 @@ async function withActionMocks<T>(options: {
   agentResponse?: AgentResponse
   previewForExecute?: Record<string, unknown> | null
   onRunAgent?: (input: Record<string, unknown>) => void
+  onRunMultiPageBuilder?: (input: Record<string, unknown>) => void
+  multiPageBuilderResult?: Record<string, unknown>
   onCreateDraftSite?: () => void
+  createDraftSiteResult?: { siteId: string; nextRoute: string; verified: boolean; rollbackApplied?: boolean }
+  onRecordDesignGeneration?: (input: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>
+  onAcceptDesignGeneration?: (input: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>
+  onGetDesignPatternRanking?: (input: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>
+  onSelectDesignPattern?: (input: Record<string, unknown>) => Record<string, unknown>
+  onCreateDesignPlannerPrior?: (input: Record<string, unknown>) => Record<string, unknown> | null
 }, callback: (action: typeof import("../../app/actions/ai"), previews: PreviewRecord[]) => Promise<T>) {
   const originalLoad = (Module as unknown as { _load: (...args: unknown[]) => unknown })._load
   const previews: PreviewRecord[] = []
@@ -109,14 +117,76 @@ async function withActionMocks<T>(options: {
         },
       }
     }
+    if (request === "@/lib/orvenix-ai/autonomous/site-builder") {
+      return {
+        runAutonomousMultiPageSiteBuilder: async (input: Record<string, unknown>) => {
+          options.onRunMultiPageBuilder?.(input)
+          if (!options.multiPageBuilderResult) {
+            throw new Error("Falta multiPageBuilderResult en el test")
+          }
+          return options.multiPageBuilderResult
+        },
+      }
+    }
+    if (request === "@/lib/orvenix-ai/design-memory") {
+      return {
+        recordDesignGeneration: async (input: Record<string, unknown>) => {
+          if (options.onRecordDesignGeneration) {
+            return options.onRecordDesignGeneration(input)
+          }
+
+          return { ok: true, generationId: "design_generation_1" }
+        },
+        acceptDesignGeneration: async (input: Record<string, unknown>) => {
+          if (options.onAcceptDesignGeneration) {
+            return options.onAcceptDesignGeneration(input)
+          }
+
+          return { ok: true, generationId: "design_generation_1", status: "accepted" }
+        },
+        createDesignPatternSelectionTargetV1: (input: Record<string, unknown>) => ({
+          version: 1,
+          context: input.context,
+          l1Key: { version: 1, context: input.context },
+          l1KeyHash: "1".repeat(64),
+        }),
+        getDesignPatternRankingV1: async (input: Record<string, unknown>) => {
+          if (options.onGetDesignPatternRanking) return options.onGetDesignPatternRanking(input)
+          return { ok: true, rankings: [] }
+        },
+        selectDesignPatternV1: (input: Record<string, unknown>) => {
+          if (options.onSelectDesignPattern) return options.onSelectDesignPattern(input)
+          return { version: 1, decision: "abstain", reasonCode: "insufficient_evidence", reason: [] }
+        },
+        createDesignPlannerPriorV1: (input: Record<string, unknown>) => {
+          if (options.onCreateDesignPlannerPrior) return options.onCreateDesignPlannerPrior(input)
+          return null
+        },
+      }
+    }
     if (request === "@/lib/orvenix-ai/site-creation/preview-store") {
       return {
+        completeSiteCreationPreviewAttempt: async (record: Record<string, unknown>) => {
+          const preview = { ...record, id: String(record.previewId), type: "ai_site_creation_preview", status: "completed" } as PreviewRecord
+          previews.push(preview)
+          return preview
+        },
         createDraftSiteFromPersistedPreview: async () => {
           options.onCreateDraftSite?.()
-          return { siteId: "site_1", nextRoute: "/editor/site_1", verified: true, rollbackApplied: false }
+          return options.createDraftSiteResult ?? { siteId: "site_1", nextRoute: "/editor/site_1", verified: true, rollbackApplied: false }
         },
+        failSiteCreationPreviewAttempt: async () => true,
+        getCompletedSiteCreationPreviewForAttempt: async () => null,
         getSiteCreationPreviewFailureMessage: (error: unknown) => error instanceof Error ? error.message : "No se pudo crear el sitio.",
         getSiteCreationPreviewForExecute: async () => options.previewForExecute ?? null,
+        reserveSiteCreationPreviewAttempt: async ({ clientAttemptKey }: { clientAttemptKey: string }) => ({
+          id: `preview_${clientAttemptKey.replace(/[^a-z0-9]/gi, "_")}`,
+          userId: "user_1",
+          reservedSiteId: "site_reserved_1",
+          clientAttemptKeyHash: "h".repeat(64),
+          createdAt: new Date(0).toISOString(),
+          status: "planning",
+        }),
         rememberSiteCreationPreview: async (record: Omit<PreviewRecord, "id" | "type" | "status">) => {
           const preview = { ...record, id: `preview_${previews.length + 1}`, type: "ai_site_creation_preview", status: "completed" }
           previews.push(preview)
@@ -138,52 +208,217 @@ async function withActionMocks<T>(options: {
   }
 }
 
-test("site_creation action convierte mensaje de formulario sin verbo en solicitud explicita y persiste un preview", async () => {
-  let agentInput: Record<string, unknown> | null = null
-  await withActionMocks({ onRunAgent: (input) => { agentInput = input } }, async (action, previews) => {
-    const result = await action.runOrvenixSiteCreationAction({
-      mode: "preview",
-      message: "Negocio: Clínica Aurora. Industria: salud. Objetivo: conseguir citas.",
-      business: { name: "Clinica Aurora", industry: "salud", objective: "conseguir citas" },
-    })
+test("site_creation action genera V2 multipagina, persiste el plan completo y devuelve home para Preview", async () => {
+  const homeTree = createTree()
+  const servicesTree = createTree()
+  const planHash = "b".repeat(64)
 
-    assert.equal(result.success, true)
-    assert.equal(result.result.scope, "site_creation")
-    assert.equal(result.result.action, "preview")
-    assert.equal(previews.length, 1)
-    assert.equal(previews[0]?.type, "ai_site_creation_preview")
-    assert.equal(previews[0]?.status, "completed")
-    assert.match(String(agentInput?.message), /^Crea un sitio desde cero\. Negocio: Clínica Aurora/)
-    assert.equal(previews[0]?.request, agentInput?.message)
-  })
-})
+  const plan = {
+    version: 2,
+    identity: { name: "Clinica Aurora" },
+    theme: {},
+    navigation: [
+      { label: "Inicio", slug: "home", href: "page:home" },
+      { label: "Servicios", slug: "servicios", href: "page:servicios" },
+    ],
+    pages: [
+      {
+        slug: "home",
+        name: "Inicio",
+        isHome: true,
+        seo: { title: "Clinica Aurora", description: "Atencion profesional" },
+        tree: homeTree,
+        treeHash: "1".repeat(64),
+      },
+      {
+        slug: "servicios",
+        name: "Servicios",
+        isHome: false,
+        seo: { title: "Servicios", description: "Nuestros servicios" },
+        tree: servicesTree,
+        treeHash: "2".repeat(64),
+      },
+    ],
+    quality: { score: 92, warnings: [], summary: "Plan multipagina valido" },
+  }
 
-test("site_creation action falla y no guarda preview si el agente responde otro scope", async () => {
+  let builderInput: Record<string, unknown> | null = null
+  let designMemoryInput: Record<string, unknown> | null = null
+
   await withActionMocks({
-    agentResponse: { ok: true, action: "preview", scope: "section_edit", message: "Otro scope", plan: { after: createTree() }, warnings: [] },
+    onRunMultiPageBuilder: (input) => { builderInput = input },
+    onRecordDesignGeneration: (input) => {
+      designMemoryInput = input
+      return { ok: true, generationId: "design_generation_1" }
+    },
+    multiPageBuilderResult: {
+      ok: true,
+      plan,
+      planHash,
+      byteLength: 1234,
+      pageQuality: [
+        { slug: "home", score: 94 },
+        { slug: "servicios", score: 90 },
+      ],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: {},
+      selectedTemplate: null,
+    },
   }, async (action, previews) => {
     const result = await action.runOrvenixSiteCreationAction({
       mode: "preview",
+      clientAttemptKey: "client:attempt-test",
       message: "Negocio: Clínica Aurora. Industria: salud. Objetivo: conseguir citas.",
+      business: {
+        name: "Clinica Aurora",
+        industry: "salud",
+        objective: "conseguir citas",
+        preferredStyle: "moderno y limpio",
+      },
+    })
+
+    assert.equal(result.success, true)
+    if (!result.success) return
+
+    assert.equal(result.result.scope, "site_creation")
+    assert.equal(result.result.action, "preview")
+    assert.deepEqual(result.result.tree, homeTree)
+    assert.equal(result.result.plan, undefined)
+
+    assert.equal(result.previewHash, planHash)
+    assert.equal(previews.length, 1)
+    assert.equal(previews[0]?.previewHash, planHash)
+    assert.equal(previews[0]?.type, "ai_site_creation_preview")
+    assert.equal(previews[0]?.status, "completed")
+    assert.deepEqual(previews[0]?.plan, plan)
+
+    assert.match(
+      String(builderInput?.request),
+      /^Crea un sitio desde cero\. Negocio: Clínica Aurora/,
+    )
+    assert.equal(builderInput?.preferredStyle, "moderno y limpio")
+    assert.equal(builderInput?.forceFreshComposition, true)
+    assert.equal(builderInput?.minimumQuality, 55)
+    assert.equal(builderInput?.designMemoryPrior, null)
+    assert.equal(designMemoryInput?.userId, "user_1")
+    assert.equal(designMemoryInput?.initialPlanHash, planHash)
+    assert.equal(designMemoryInput?.siteCreationAttemptId, result.previewId)
+    assert.deepEqual(designMemoryInput?.initialPlan, plan)
+    assert.equal(designMemoryInput?.industry, "salud")
+    assert.equal(designMemoryInput?.siteType, undefined)
+    assert.equal(designMemoryInput?.objective, "conseguir citas")
+    assert.equal(designMemoryInput?.requestedStyle, "moderno y limpio")
+  })
+})
+
+test("site_creation action conserva preview valido si Design Memory falla", async () => {
+  const homeTree = createTree()
+  const planHash = "e".repeat(64)
+  const plan = {
+    version: 2,
+    identity: { name: "Clinica Aurora", industry: "salud" },
+    theme: {},
+    navigation: [],
+    pages: [
+      {
+        slug: "home",
+        name: "Inicio",
+        isHome: true,
+        seo: { title: "Clinica Aurora", description: "Inicio" },
+        tree: homeTree,
+        treeHash: "1".repeat(64),
+      },
+    ],
+    quality: { score: 88, warnings: [], summary: "Plan listo" },
+  }
+
+  await withActionMocks({
+    multiPageBuilderResult: {
+      ok: true,
+      plan,
+      planHash,
+      byteLength: 1234,
+      pageQuality: [{ slug: "home", score: 88 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "landing" },
+      selectedTemplate: null,
+    },
+    onRecordDesignGeneration: () => ({ ok: false, error: "fallo simulado" }),
+  }, async (action, previews) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:attempt-test",
+      message: "Negocio: Clínica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud" },
+    })
+
+    assert.equal(result.success, true)
+    if (!result.success) return
+
+    assert.equal(previews.length, 1)
+    assert.equal(result.previewHash, planHash)
+    assert.deepEqual(result.result.tree, homeTree)
+  })
+})
+
+test("site_creation action falla y no guarda preview si el builder multipagina falla", async () => {
+  await withActionMocks({
+    multiPageBuilderResult: {
+      ok: false,
+      plan: { version: 2, pages: [] },
+      planHash: "c".repeat(64),
+      warnings: ["fallo controlado"],
+      trace: [],
+    },
+  }, async (action, previews) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:attempt-test",
+      message: "Negocio: Clínica Aurora.",
     })
 
     assert.equal(result.success, false)
-    assert.match(result.message, /Preview de sitio completo/i)
+    if (result.success) return
+
+    assert.match(result.message, /Preview multipagina valido/i)
     assert.equal(previews.length, 0)
   })
 })
 
-test("site_creation action falla y no guarda preview si el agente no devuelve plan.after", async () => {
+test("site_creation action falla y no guarda preview si V2 no contiene home", async () => {
   await withActionMocks({
-    agentResponse: { ok: true, action: "preview", scope: "site_creation", message: "Sin plan", warnings: [] },
+    multiPageBuilderResult: {
+      ok: true,
+      planHash: "d".repeat(64),
+      plan: {
+        version: 2,
+        pages: [
+          {
+            slug: "servicios",
+            name: "Servicios",
+            isHome: false,
+            tree: createTree(),
+          },
+        ],
+      },
+      warnings: [],
+      trace: [],
+    },
   }, async (action, previews) => {
     const result = await action.runOrvenixSiteCreationAction({
       mode: "preview",
-      message: "Negocio: Clínica Aurora. Industria: salud. Objetivo: conseguir citas.",
+      clientAttemptKey: "client:attempt-test",
+      message: "Negocio: Clínica Aurora.",
     })
 
     assert.equal(result.success, false)
-    assert.match(result.message, /Preview de sitio completo/i)
+    if (result.success) return
+
+    assert.match(result.message, /pagina principal valida/i)
     assert.equal(previews.length, 0)
   })
 })
@@ -224,5 +459,388 @@ test("site_creation execute usa request y plan persistidos", async () => {
     assert.equal(agentInput?.message, persistedRequest)
     assert.equal(agentInput?.siteCreationPlan, persistedPlan)
     assert.deepEqual(agentInput?.business, { name: "Negocio persistido" })
+  })
+})
+
+test("site_creation execute V2 crea desde preview persistido sin volver a runOrvenixAgent", async () => {
+  const persistedPlan = {
+    version: 2,
+    identity: { name: "Clinica Aurora" },
+    theme: {},
+    navigation: [],
+    pages: [
+      {
+        slug: "home",
+        name: "Inicio",
+        isHome: true,
+        seo: { title: "Clinica Aurora", description: "Inicio" },
+        tree: createTree(),
+        treeHash: "1".repeat(64),
+      },
+    ],
+    quality: {
+      score: 90,
+      warnings: [],
+      summary: "Plan V2",
+    },
+  }
+
+  let runAgentCalled = false
+  let createDraftCalled = false
+
+  await withActionMocks({
+    previewForExecute: {
+      status: "completed",
+      reservedSiteId: "reserved_site_v2",
+      request: "Crea un sitio multipagina para Clinica Aurora.",
+      business: { name: "Clinica Aurora" },
+      plan: persistedPlan,
+    },
+    onRunAgent: () => {
+      runAgentCalled = true
+    },
+    onCreateDraftSite: () => {
+      createDraftCalled = true
+    },
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "execute",
+      confirmed: true,
+      previewId: "preview_v2",
+      expectedPreviewHash: "b".repeat(64),
+    })
+
+    assert.equal(result.success, true)
+    assert.equal(runAgentCalled, false)
+    assert.equal(createDraftCalled, true)
+
+    if (!result.success) return
+
+    assert.equal(result.result.scope, "site_creation")
+    assert.equal(result.result.action, "executed")
+    assert.equal(result.result.createdSite?.siteId, "site_1")
+  })
+})
+
+test("site_creation execute V2 acepta Design Memory con request, hash y siteId creado", async () => {
+  const persistedPlan = {
+    version: 2,
+    identity: { name: "Clinica Aurora" },
+    theme: {},
+    navigation: [],
+    pages: [
+      {
+        slug: "home",
+        name: "Inicio",
+        isHome: true,
+        seo: { title: "Clinica Aurora", description: "Inicio" },
+        tree: createTree(),
+        treeHash: "1".repeat(64),
+      },
+    ],
+    quality: { score: 90, warnings: [], summary: "Plan V2" },
+  }
+  const acceptedInputs: Record<string, unknown>[] = []
+
+  await withActionMocks({
+    previewForExecute: {
+      status: "completed",
+      reservedSiteId: "reserved_site_v2",
+      request: "Crea un sitio desde cero. Negocio persistido.",
+      business: { name: "Clinica Aurora" },
+      plan: persistedPlan,
+    },
+    createDraftSiteResult: {
+      siteId: "site_created_v2",
+      nextRoute: "/editor/site_created_v2",
+      verified: true,
+      rollbackApplied: false,
+    },
+    onAcceptDesignGeneration: (input) => {
+      acceptedInputs.push(input)
+      return { ok: true, generationId: "design_generation_1", status: "accepted" }
+    },
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "execute",
+      confirmed: true,
+      previewId: "preview_v2",
+      expectedPreviewHash: "f".repeat(64),
+    })
+
+    assert.equal(result.success, true)
+    if (!result.success) return
+
+    assert.equal(result.siteId, "site_created_v2")
+    assert.equal(result.nextRoute, "/editor/site_created_v2")
+    assert.deepEqual(acceptedInputs, [
+      {
+        userId: "user_1",
+        request: "Crea un sitio desde cero. Negocio persistido.",
+        initialPlanHash: "f".repeat(64),
+        siteId: "site_created_v2",
+      },
+    ])
+  })
+})
+
+test("site_creation execute consumed vuelve a aceptar Design Memory y recupera el mismo sitio sin crear otro", async () => {
+  const persistedPlan = {
+    version: 2,
+    identity: { name: "Clinica Aurora" },
+    theme: {},
+    navigation: [],
+    pages: [
+      {
+        slug: "home",
+        name: "Inicio",
+        isHome: true,
+        seo: { title: "Clinica Aurora", description: "Inicio" },
+        tree: createTree(),
+        treeHash: "1".repeat(64),
+      },
+    ],
+    quality: { score: 90, warnings: [], summary: "Plan V2" },
+  }
+  const acceptedInputs: Record<string, unknown>[] = []
+  let createDraftCalled = false
+
+  await withActionMocks({
+    previewForExecute: {
+      status: "consumed",
+      request: "Crea un sitio desde cero. Negocio persistido.",
+      plan: persistedPlan,
+      output: {
+        siteId: "site_existing",
+        nextRoute: "/editor/site_existing",
+      },
+    },
+    onCreateDraftSite: () => {
+      createDraftCalled = true
+    },
+    onAcceptDesignGeneration: (input) => {
+      acceptedInputs.push(input)
+      return { ok: true, generationId: "design_generation_1", status: "accepted" }
+    },
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "execute",
+      confirmed: true,
+      previewId: "preview_consumed",
+      expectedPreviewHash: "a".repeat(64),
+    })
+
+    assert.equal(result.success, true)
+    if (!result.success) return
+
+    assert.equal(result.siteId, "site_existing")
+    assert.equal(result.nextRoute, "/editor/site_existing")
+    assert.equal(createDraftCalled, false)
+    assert.deepEqual(acceptedInputs, [
+      {
+        userId: "user_1",
+        request: "Crea un sitio desde cero. Negocio persistido.",
+        initialPlanHash: "a".repeat(64),
+        siteId: "site_existing",
+      },
+    ])
+  })
+})
+
+test("site_creation execute V2 sigue exitoso si acceptDesignGeneration falla", async () => {
+  const persistedPlan = {
+    version: 2,
+    identity: { name: "Clinica Aurora" },
+    theme: {},
+    navigation: [],
+    pages: [
+      {
+        slug: "home",
+        name: "Inicio",
+        isHome: true,
+        seo: { title: "Clinica Aurora", description: "Inicio" },
+        tree: createTree(),
+        treeHash: "1".repeat(64),
+      },
+    ],
+    quality: { score: 90, warnings: [], summary: "Plan V2" },
+  }
+
+  await withActionMocks({
+    previewForExecute: {
+      status: "completed",
+      reservedSiteId: "reserved_site_v2",
+      request: "Crea un sitio desde cero. Negocio persistido.",
+      business: { name: "Clinica Aurora" },
+      plan: persistedPlan,
+    },
+    createDraftSiteResult: {
+      siteId: "site_created_v2",
+      nextRoute: "/editor/site_created_v2",
+      verified: true,
+      rollbackApplied: false,
+    },
+    onAcceptDesignGeneration: () => ({ ok: false, error: "fallo simulado" }),
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "execute",
+      confirmed: true,
+      previewId: "preview_v2",
+      expectedPreviewHash: "b".repeat(64),
+    })
+
+    assert.equal(result.success, true)
+    if (!result.success) return
+
+    assert.equal(result.siteId, "site_created_v2")
+    assert.equal(result.nextRoute, "/editor/site_created_v2")
+  })
+})
+
+test("site_creation execute legacy no depende de Design Memory accepted", async () => {
+  const persistedPlan = { after: createTree(), snapshot: { id: "snapshot_persisted", tree: createTree() } }
+  let acceptedCalls = 0
+
+  await withActionMocks({
+    previewForExecute: {
+      status: "completed",
+      reservedSiteId: "reserved_site_legacy",
+      request: "Crea un sitio desde cero. Legacy.",
+      business: { name: "Legacy" },
+      plan: persistedPlan,
+    },
+    agentResponse: {
+      ok: true,
+      action: "executed",
+      scope: "site_creation",
+      message: "Sitio creado",
+      createdSite: { siteId: "reserved_site_legacy", nextRoute: "/editor/reserved_site_legacy", verified: true },
+      warnings: [],
+    } as AgentResponse,
+    onAcceptDesignGeneration: () => {
+      acceptedCalls += 1
+      return { ok: true }
+    },
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "execute",
+      confirmed: true,
+      previewId: "preview_legacy",
+      expectedPreviewHash: "c".repeat(64),
+    })
+
+    assert.equal(result.success, true)
+    assert.equal(acceptedCalls, 0)
+  })
+})
+
+test("site_creation preview continua si Ranking Reader falla", async () => {
+  const planHash = "9".repeat(64)
+  const homeTree = createTree()
+  let builderInput: Record<string, unknown> | null = null
+
+  await withActionMocks({
+    onRunMultiPageBuilder: (input) => { builderInput = input },
+    onGetDesignPatternRanking: () => ({ ok: false, rankings: [], error: "db down" }),
+    multiPageBuilderResult: {
+      ok: true,
+      plan: {
+        version: 2,
+        identity: { name: "Clinica Aurora" },
+        theme: {},
+        navigation: [],
+        pages: [{ slug: "home", name: "Inicio", isHome: true, seo: {}, tree: homeTree, treeHash: "1".repeat(64) }],
+        quality: { score: 90, warnings: [], summary: "Plan" },
+      },
+      planHash,
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 90 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:attempt-test",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud" },
+    })
+
+    assert.equal(result.success, true)
+    assert.equal(builderInput?.designMemoryPrior, null)
+  })
+})
+
+test("site_creation preview pasa prior advisory al builder sin heredar outcome historico", async () => {
+  const planHash = "8".repeat(64)
+  const homeTree = createTree()
+  const prior = {
+    version: 1,
+    source: "design_memory",
+    mode: "advisory",
+    rankingVersion: 1,
+    patternVersion: 1,
+    level: "L2",
+    patternKeyHash: "a".repeat(64),
+    evidence: {
+      rankingScore: 0.82,
+      confidence: "high",
+      qualifiedSampleSize: 30,
+      fallbackUsed: false,
+    },
+    recommendation: {
+      context: { industryBucket: "health", siteType: "health", objectiveBucket: "lead_generation", styleBucket: "professional" },
+      theme: { mode: "dark", accentHue: "purple" },
+    },
+    reason: [],
+  }
+  let builderInput: Record<string, unknown> | null = null
+  let designMemoryInput: Record<string, unknown> | null = null
+
+  await withActionMocks({
+    onRunMultiPageBuilder: (input) => { builderInput = input },
+    onGetDesignPatternRanking: () => ({ ok: true, rankings: [{ marker: "ranking" }] }),
+    onSelectDesignPattern: () => ({ version: 1, decision: "recommend", level: "L2" }),
+    onCreateDesignPlannerPrior: () => prior,
+    onRecordDesignGeneration: (input) => {
+      designMemoryInput = input
+      return { ok: true, generationId: "generation_1" }
+    },
+    multiPageBuilderResult: {
+      ok: true,
+      plan: {
+        version: 2,
+        identity: { name: "Clinica Aurora" },
+        theme: {},
+        navigation: [],
+        pages: [{ slug: "home", name: "Inicio", isHome: true, seo: {}, tree: homeTree, treeHash: "1".repeat(64) }],
+        quality: { score: 90, warnings: [], summary: "Plan" },
+      },
+      planHash,
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 90 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:attempt-test",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud", objective: "conseguir citas" },
+    })
+
+    assert.equal(result.success, true)
+    assert.deepEqual(builderInput?.designMemoryPrior, prior)
+    assert.equal(designMemoryInput?.outcomeScore, undefined)
+    assert.equal(designMemoryInput?.rankingScore, undefined)
+    assert.equal(designMemoryInput?.editDistance, undefined)
+    assert.equal(designMemoryInput?.status, undefined)
   })
 })

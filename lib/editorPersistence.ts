@@ -13,11 +13,39 @@ import {
   saveResolvedPageTree,
   saveResolvedSiteTheme,
 } from "@/lib/builder-core/tree/sitePages";
+import { calculateSiteCreationTreeHash } from "@/lib/orvenix-ai/site-creation/plan-v2";
+import { markDesignGenerationEdited } from "@/lib/orvenix-ai/design-memory";
 import { validateTree } from "@/types/validateTree";
 import type { EditorTree } from "@/types/editor";
 
 function toPrismaJson(tree: EditorTree): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(tree)) as Prisma.InputJsonValue;
+}
+
+function hashPersistedTree(value: unknown) {
+  if (!value) return null;
+
+  try {
+    return calculateSiteCreationTreeHash(validateTree(value));
+  } catch {
+    return null;
+  }
+}
+
+async function getPersistedTreeHash(id: string, pageSlug: string) {
+  const page = await getResolvedSitePage(id, pageSlug);
+  return hashPersistedTree(page?.tree ?? null);
+}
+
+async function markDesignMemoryEditedBestEffort(id: string) {
+  try {
+    await markDesignGenerationEdited({ siteId: id });
+  } catch (error) {
+    console.error(
+      "[Orvenix Design Memory] No se pudo marcar la generacion como editada:",
+      error,
+    );
+  }
 }
 
 export async function getEditorTreeFromDb(id: string, pageSlug = "home"): Promise<EditorTree> {
@@ -55,7 +83,9 @@ export async function saveEditorTreeToDb(
   rawTree: unknown,
   pageSlug = "home"
 ): Promise<EditorTree> {
+  const previousHash = await getPersistedTreeHash(id, pageSlug);
   const tree = validateTree(rawTree);
+  const nextHash = calculateSiteCreationTreeHash(tree);
 
   // Para IDs de demo, usar el label hardcodeado; para user sites usar el nombre existente
   const name = isEditorWebId(id) ? WEB_LABELS[id as EditorWebId] : undefined;
@@ -76,6 +106,10 @@ export async function saveEditorTreeToDb(
   await ensureHomePage(id);
   await saveResolvedPageTree(id, pageSlug, tree);
   await saveResolvedSiteTheme(id, tree.theme ?? tree.globalTheme);
+
+  if (previousHash && previousHash !== nextHash) {
+    await markDesignMemoryEditedBestEffort(id);
+  }
 
   return tree;
 }

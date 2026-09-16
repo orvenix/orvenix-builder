@@ -1,4 +1,6 @@
 import type { EditorTree } from "@/types/editor"
+import type { DesignPlannerPriorV1 } from "@/lib/orvenix-ai/design-memory/planner-prior"
+import type { SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2"
 import type {
   OrvenixSiteArchitecture,
 } from "@/lib/orvenix-ai/architect"
@@ -50,6 +52,8 @@ export interface AutonomousSiteBuilderInput {
   forceFreshComposition?: boolean
 
   minimumQuality?: number
+
+  designMemoryPrior?: DesignPlannerPriorV1 | null
 }
 
 export interface AutonomousSiteBuilderResult {
@@ -62,6 +66,31 @@ export interface AutonomousSiteBuilderResult {
   tree: EditorTree
 
   quality: OrvenixAIQualityReport
+
+  repaired: boolean
+
+  warnings: string[]
+
+  trace: string[]
+}
+
+export interface AutonomousMultiPageSiteBuilderResult {
+  ok: boolean
+
+  architecture: OrvenixSiteArchitecture
+
+  selectedTemplate: null
+
+  plan: SiteCreationPlanV2
+
+  planHash: string
+
+  byteLength: number
+
+  pageQuality: Array<{
+    slug: string
+    score: number
+  }>
 
   repaired: boolean
 

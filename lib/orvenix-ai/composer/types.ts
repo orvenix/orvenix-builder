@@ -15,3 +15,17 @@ export interface ComposedSection {
   nodes: Record<string, ComposedNode>
   purpose: string
 }
+
+export interface SectionCompositionContext {
+  siteType?: string
+  industry?: string
+  objective?: string
+  audience?: string
+  pageName?: string
+  pageSlug?: string
+  pagePurpose?: string
+  preferredStyle?: string
+  sectionIndex?: number
+  totalSections?: number
+  compositionSeed?: string
+}

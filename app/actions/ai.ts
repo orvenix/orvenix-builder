@@ -1,4 +1,4 @@
-'use server';
+"use server";
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { EditorTree } from "@/types/editor";
@@ -6,21 +6,19 @@ import { validateTree } from "@/types/validateTree";
 import { revalidatePath } from "next/cache";
 import { getAuthSession } from "@/lib/auth-session";
 import { requireAIPlan, requireCanCreateWebsite } from "@/lib/plan-guard";
-import { extractFirstJsonObject, normalizeGeneratedTreeCandidate } from "@/lib/ai/generationSchema";
+import {
+  extractFirstJsonObject,
+  normalizeGeneratedTreeCandidate,
+} from "@/lib/ai/generationSchema";
 import { runAIGenerationJob } from "@/lib/ai/jobs";
 import { buildAuditFixPlan } from "@/lib/audit/fixPlan";
 import {
   buildArtisanInspiredFallbackTree,
   buildArtisanSectionReferenceContext,
 } from "@/lib/orvenix-ai/section/artisan-section-references";
-import {
-  buildSiteGenerationGuideContext,
-} from "@/lib/orvenix-ai/guidelines/site-generation-guidelines";
+import { buildSiteGenerationGuideContext } from "@/lib/orvenix-ai/guidelines/site-generation-guidelines";
 
-import {
-  canManageSite,
-  type UserRole,
-} from "@/lib/auth";
+import { canManageSite, type UserRole } from "@/lib/auth";
 
 import {
   hashEditorTree,
@@ -29,20 +27,32 @@ import {
   type OrvenixAgentResponse,
 } from "@/lib/orvenix-ai";
 
-import {
-  createSitePublicationCapability,
-} from "@/lib/site-publication";
+import { createSitePublicationCapability } from "@/lib/site-publication";
+
+import { getEditorTreeFromDb } from "@/lib/editorPersistence";
 
 import {
-  getEditorTreeFromDb,
-} from "@/lib/editorPersistence";
-
-import {
+  completeSiteCreationPreviewAttempt,
   createDraftSiteFromPersistedPreview,
+  failSiteCreationPreviewAttempt,
+  getCompletedSiteCreationPreviewForAttempt,
   getSiteCreationPreviewFailureMessage,
   getSiteCreationPreviewForExecute,
-  rememberSiteCreationPreview,
+  reserveSiteCreationPreviewAttempt,
 } from "@/lib/orvenix-ai/site-creation/preview-store";
+import { hasSiteCreationPlanV2Discriminator } from "@/lib/orvenix-ai/site-creation/plan-v2";
+import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/site-builder";
+import { buildSiteArchitecture } from "@/lib/orvenix-ai/architect";
+import {
+  acceptDesignGeneration,
+  createDesignPatternSelectionTargetV1,
+  createDesignPlannerPriorV1,
+  getDesignPatternRankingV1,
+  recordDesignGeneration,
+  selectDesignPatternV1,
+  type DesignPlannerPriorV1,
+} from "@/lib/orvenix-ai/design-memory";
+import { bucketIndustry, bucketObjective, bucketStyle } from "@/lib/orvenix-ai/design-memory/design-pattern";
 import {
   registerAIUndoForExecutedResult,
   rollbackOrvenixAIChange,
@@ -64,7 +74,12 @@ export interface AIGenerationContext {
   skipJobLogging?: boolean;
 }
 
-type SectionIntent = "hero" | "services" | "pricing" | "contact" | "testimonials";
+type SectionIntent =
+  | "hero"
+  | "services"
+  | "pricing"
+  | "contact"
+  | "testimonials";
 
 type GeneratedSection = {
   success: true;
@@ -111,7 +126,9 @@ async function requireAIActionAccess(): Promise<string | null> {
     await requireAIPlan(session.user.id);
     return null;
   } catch (error) {
-    return error instanceof Error ? error.message : "Actualiza tu plan para acceder a Orvenix AI. Ve a /precios.";
+    return error instanceof Error
+      ? error.message
+      : "Actualiza tu plan para acceder a Orvenix AI. Ve a /precios.";
   }
 }
 
@@ -123,14 +140,37 @@ function detectIntent(prompt: string): SectionIntent {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-  if (/(precio|pricing|plan|planes|paquete|paquetes|mensual|suscripcion|pago|comprar|producto)/.test(text)) return "pricing";
-  if (/(testimonio|testimonial|caso de exito|prueba social|resena|review|opinion|cliente feliz)/.test(text)) return "testimonials";
-  if (/(contact|whatsapp|formulario|agenda|agendar|llamada|demo|ubicacion|telefono|correo)/.test(text)) return "contact";
-  if (/(servicio|servicios|beneficio|feature|caracteristica|solucion|especialidad|areas|categoria)/.test(text)) return "services";
+  if (
+    /(precio|pricing|plan|planes|paquete|paquetes|mensual|suscripcion|pago|comprar|producto)/.test(
+      text,
+    )
+  )
+    return "pricing";
+  if (
+    /(testimonio|testimonial|caso de exito|prueba social|resena|review|opinion|cliente feliz)/.test(
+      text,
+    )
+  )
+    return "testimonials";
+  if (
+    /(contact|whatsapp|formulario|agenda|agendar|llamada|demo|ubicacion|telefono|correo)/.test(
+      text,
+    )
+  )
+    return "contact";
+  if (
+    /(servicio|servicios|beneficio|feature|caracteristica|solucion|especialidad|areas|categoria)/.test(
+      text,
+    )
+  )
+    return "services";
   return "hero";
 }
 
-function pickAvailableType(blocks: BlockContext[], preferredTypes: string[]): string | null {
+function pickAvailableType(
+  blocks: BlockContext[],
+  preferredTypes: string[],
+): string | null {
   const available = new Set(blocks.map((block) => block.type));
   return preferredTypes.find((type) => available.has(type)) ?? null;
 }
@@ -138,20 +178,34 @@ function pickAvailableType(blocks: BlockContext[], preferredTypes: string[]): st
 function buildFewShotExamples(blocks: BlockContext[], prompt: string): string {
   const examples: string[] = [];
   const intent = detectIntent(prompt);
-  const artisanReferenceContext = buildArtisanSectionReferenceContext(prompt, intent);
+  const artisanReferenceContext = buildArtisanSectionReferenceContext(
+    prompt,
+    intent,
+  );
 
   const completeExamples = [
     {
       label: "hero premium para agencia",
-      type: pickAvailableType(blocks, ["agency-hero", "landing-hero", "modular-hero"]),
+      type: pickAvailableType(blocks, [
+        "agency-hero",
+        "landing-hero",
+        "modular-hero",
+      ]),
     },
     {
       label: "servicios o capacidades",
-      type: pickAvailableType(blocks, ["agency-services", "landing-features", "devops-services"]),
+      type: pickAvailableType(blocks, [
+        "agency-services",
+        "landing-features",
+        "devops-services",
+      ]),
     },
     {
       label: "testimonios o prueba social",
-      type: pickAvailableType(blocks, ["agency-testimonials", "landing-testimonials"]),
+      type: pickAvailableType(blocks, [
+        "agency-testimonials",
+        "landing-testimonials",
+      ]),
     },
     {
       label: "pricing o planes",
@@ -167,25 +221,27 @@ function buildFewShotExamples(blocks: BlockContext[], prompt: string): string {
     if (!example.type) return;
     examples.push(
       `EJEMPLO ${index + 1} — "${example.label}"\n` +
-      `{"rootId":"ex${index + 1}","nodes":{"ex${index + 1}":{"id":"ex${index + 1}","type":"${example.type}","props":{},"children":[],"version":1}}}`
+        `{"rootId":"ex${index + 1}","nodes":{"ex${index + 1}":{"id":"ex${index + 1}","type":"${example.type}","props":{},"children":[],"version":1}}}`,
     );
   });
 
   if (intent === "testimonials") {
     examples.push(
       `EJEMPLO ${examples.length + 1} — "testimonios personalizados"\n` +
-      '{"rootId":"custom-testimonials","nodes":{"custom-testimonials":{"id":"custom-testimonials","type":"section","props":{"paddingY":"xl","paddingX":"md","align":"center","background":"#ffffff","maxWidth":"lg"},"children":["custom-badge","custom-title","custom-copy","custom-cta"],"version":1},"custom-badge":{"id":"custom-badge","type":"text","props":{"content":"Clientes satisfechos","size":"sm","align":"center","color":"#64748b"},"children":[],"version":1},"custom-title":{"id":"custom-title","type":"heading","props":{"text":"La confianza tambien se disena","level":2,"size":"4xl","weight":"extrabold","align":"center","color":"#0f172a"},"children":[],"version":1},"custom-copy":{"id":"custom-copy","type":"text","props":{"content":"Resume resultados, credibilidad y la experiencia que respalda tu propuesta de valor.","size":"lg","align":"center","color":"#475569","maxWidth":"md"},"children":[],"version":1},"custom-cta":{"id":"custom-cta","type":"ctaButton","props":{"label":"Solicitar propuesta","href":"#","variant":"primary"},"children":[],"version":1}}}'
+        '{"rootId":"custom-testimonials","nodes":{"custom-testimonials":{"id":"custom-testimonials","type":"section","props":{"paddingY":"xl","paddingX":"md","align":"center","background":"#ffffff","maxWidth":"lg"},"children":["custom-badge","custom-title","custom-copy","custom-cta"],"version":1},"custom-badge":{"id":"custom-badge","type":"text","props":{"content":"Clientes satisfechos","size":"sm","align":"center","color":"#64748b"},"children":[],"version":1},"custom-title":{"id":"custom-title","type":"heading","props":{"text":"La confianza tambien se disena","level":2,"size":"4xl","weight":"extrabold","align":"center","color":"#0f172a"},"children":[],"version":1},"custom-copy":{"id":"custom-copy","type":"text","props":{"content":"Resume resultados, credibilidad y la experiencia que respalda tu propuesta de valor.","size":"lg","align":"center","color":"#475569","maxWidth":"md"},"children":[],"version":1},"custom-cta":{"id":"custom-cta","type":"ctaButton","props":{"label":"Solicitar propuesta","href":"#","variant":"primary"},"children":[],"version":1}}}',
     );
   }
 
   if (!examples.some((example) => example.includes('"type":"section"'))) {
     examples.push(
       `EJEMPLO ${examples.length + 1} — "seccion personalizada"\n` +
-      '{"rootId":"custom-section","nodes":{"custom-section":{"id":"custom-section","type":"section","props":{"paddingY":"xl","paddingX":"md","align":"center","background":"#0f172a","maxWidth":"lg"},"children":["custom-heading","custom-text","custom-cta"],"version":1},"custom-heading":{"id":"custom-heading","type":"heading","props":{"text":"Potencia tu negocio digital","level":2,"size":"5xl","weight":"extrabold","align":"center","color":"#ffffff"},"children":[],"version":1},"custom-text":{"id":"custom-text","type":"text","props":{"content":"Herramientas de diseno profesional para proyectos que quieren verse claros, modernos y confiables.","size":"lg","align":"center","color":"#94a3b8","maxWidth":"md"},"children":[],"version":1},"custom-cta":{"id":"custom-cta","type":"ctaButton","props":{"label":"Empezar ahora","href":"#","variant":"primary"},"children":[],"version":1}}}'
+        '{"rootId":"custom-section","nodes":{"custom-section":{"id":"custom-section","type":"section","props":{"paddingY":"xl","paddingX":"md","align":"center","background":"#0f172a","maxWidth":"lg"},"children":["custom-heading","custom-text","custom-cta"],"version":1},"custom-heading":{"id":"custom-heading","type":"heading","props":{"text":"Potencia tu negocio digital","level":2,"size":"5xl","weight":"extrabold","align":"center","color":"#ffffff"},"children":[],"version":1},"custom-text":{"id":"custom-text","type":"text","props":{"content":"Herramientas de diseno profesional para proyectos que quieren verse claros, modernos y confiables.","size":"lg","align":"center","color":"#94a3b8","maxWidth":"md"},"children":[],"version":1},"custom-cta":{"id":"custom-cta","type":"ctaButton","props":{"label":"Empezar ahora","href":"#","variant":"primary"},"children":[],"version":1}}}',
     );
   }
 
-  return [artisanReferenceContext, examples.join("\n\n")].filter(Boolean).join("\n\n");
+  return [artisanReferenceContext, examples.join("\n\n")]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 // ─── Orvenix AI (Claude) ──────────────────────────────────────────────────────
@@ -197,9 +253,12 @@ function buildBlockList(blocks: BlockContext[]): string {
   }, {});
 
   return Object.entries(byCategory)
-    .map(([cat, items]) =>
-      `[${cat}]\n` +
-      items.map((b) => `  ${b.type} → "${b.label}" — ${b.description}`).join("\n")
+    .map(
+      ([cat, items]) =>
+        `[${cat}]\n` +
+        items
+          .map((b) => `  ${b.type} → "${b.label}" — ${b.description}`)
+          .join("\n"),
     )
     .join("\n\n");
 }
@@ -207,14 +266,15 @@ function buildBlockList(blocks: BlockContext[]): string {
 async function generateWithOrveniXAI(
   prompt: string,
   blocks: BlockContext[],
-  currentBlockTypes: string[]
+  currentBlockTypes: string[],
 ): Promise<EditorTree | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
-  const currentList = currentBlockTypes.length > 0
-    ? currentBlockTypes.map((t, i) => `  ${i + 1}. ${t}`).join("\n")
-    : "  (página vacía)";
+  const currentList =
+    currentBlockTypes.length > 0
+      ? currentBlockTypes.map((t, i) => `  ${i + 1}. ${t}`).join("\n")
+      : "  (página vacía)";
   const allowedTypes = blocks.map((block) => block.type);
   const fewShotExamples = buildFewShotExamples(blocks, prompt);
   const generationGuide = buildSiteGenerationGuideContext({
@@ -265,14 +325,20 @@ Devuelve ahora SOLO el JSON final.`;
       messages: [{ role: "user", content: userMessage }],
     });
 
-    const raw = message.content[0]?.type === "text" ? message.content[0].text.trim() : null;
+    const raw =
+      message.content[0]?.type === "text"
+        ? message.content[0].text.trim()
+        : null;
     if (!raw) return null;
 
     const extractedJson = extractFirstJsonObject(raw);
     if (!extractedJson) return null;
 
     const parsed = JSON.parse(extractedJson) as unknown;
-    const normalizedTree = normalizeGeneratedTreeCandidate(parsed, allowedTypes);
+    const normalizedTree = normalizeGeneratedTreeCandidate(
+      parsed,
+      allowedTypes,
+    );
     if (!normalizedTree) return null;
     return validateTree(normalizedTree);
   } catch {
@@ -286,12 +352,15 @@ export async function generateSectionAI(
   prompt: string,
   blocks: BlockContext[] = [],
   currentBlockTypes: string[] = [],
-  context: AIGenerationContext = {}
+  context: AIGenerationContext = {},
 ): Promise<GeneratedSection | GenerationError> {
   const normalized = prompt.trim().replace(/\s+/g, " ").slice(0, 300);
 
   if (normalized.length < 8) {
-    return { success: false, message: "Escribe un poco más para que Orvenix AI pueda ayudarte." };
+    return {
+      success: false,
+      message: "Escribe un poco más para que Orvenix AI pueda ayudarte.",
+    };
   }
 
   const accessError = await requireAIActionAccess();
@@ -300,13 +369,18 @@ export async function generateSectionAI(
   const execute = async (): Promise<GeneratedSection | GenerationError> => {
     // 1. Intentar con Claude + contexto del proyecto
     if (blocks.length > 0) {
-      const aiTree = await generateWithOrveniXAI(normalized, blocks, currentBlockTypes);
+      const aiTree = await generateWithOrveniXAI(
+        normalized,
+        blocks,
+        currentBlockTypes,
+      );
       if (aiTree) {
         return {
           success: true,
           tree: aiTree,
           title: normalized,
-          message: "✦ Generado por Orvenix AI usando referencias artesanales de Orvenix.",
+          message:
+            "✦ Generado por Orvenix AI usando referencias artesanales de Orvenix.",
           usedAI: true,
         };
       }
@@ -322,27 +396,47 @@ export async function generateSectionAI(
         const msg = await client.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 300,
-          messages: [{
-            role: "user",
-            content: `${buildSiteGenerationGuideContext({ request: normalized, mode: "section" })}
+          messages: [
+            {
+              role: "user",
+              content: `${buildSiteGenerationGuideContext({ request: normalized, mode: "section" })}
 
 Genera copy para una sección web tipo "${intent}" sobre: "${normalized}". Responde SOLO con JSON: {"title":"...","subtitle":"...","cta":"..."}`,
-          }],
+            },
+          ],
         });
-        const text = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : null;
+        const text =
+          msg.content[0]?.type === "text" ? msg.content[0].text.trim() : null;
         if (text) {
           const jsonMatch = text.match(/\{[\s\S]*?\}/);
           if (jsonMatch) {
-            const copy = JSON.parse(jsonMatch[0]) as { title?: string; subtitle?: string; cta?: string };
+            const copy = JSON.parse(jsonMatch[0]) as {
+              title?: string;
+              subtitle?: string;
+              cta?: string;
+            };
             if (copy.title && copy.subtitle && copy.cta) {
-              const tree = buildArtisanInspiredFallbackTree(id, normalized, intent);
+              const tree = buildArtisanInspiredFallbackTree(
+                id,
+                normalized,
+                intent,
+              );
               const headingNode = tree.nodes[`${id}-heading`];
               const textNode = tree.nodes[`${id}-text`];
               const ctaNode = tree.nodes[`${id}-cta`];
-              if (headingNode) headingNode.props = { ...headingNode.props, text: copy.title };
-              if (textNode) textNode.props = { ...textNode.props, content: copy.subtitle };
-              if (ctaNode) ctaNode.props = { ...ctaNode.props, label: copy.cta };
-              return { success: true, tree, title: copy.title, message: "✦ Generado por Orvenix AI.", usedAI: true };
+              if (headingNode)
+                headingNode.props = { ...headingNode.props, text: copy.title };
+              if (textNode)
+                textNode.props = { ...textNode.props, content: copy.subtitle };
+              if (ctaNode)
+                ctaNode.props = { ...ctaNode.props, label: copy.cta };
+              return {
+                success: true,
+                tree,
+                title: copy.title,
+                message: "✦ Generado por Orvenix AI.",
+                usedAI: true,
+              };
             }
           }
         }
@@ -355,7 +449,8 @@ Genera copy para una sección web tipo "${intent}" sobre: "${normalized}". Respo
       success: true,
       tree: buildArtisanInspiredFallbackTree(id, normalized, intent),
       title: normalized,
-      message: "Sección generada con referencias artesanales de Orvenix y lista para insertar.",
+      message:
+        "Sección generada con referencias artesanales de Orvenix y lista para insertar.",
       usedAI: false,
     };
   };
@@ -376,11 +471,14 @@ Genera copy para una sección web tipo "${intent}" sobre: "${normalized}". Respo
         source: context.source ?? "ai_action",
       },
     },
-    execute
+    execute,
   );
 }
 
-function getPrimaryTextProp(type: string, props: Record<string, unknown>): string | null {
+function getPrimaryTextProp(
+  type: string,
+  props: Record<string, unknown>,
+): string | null {
   if (type === "heading" && typeof props.text === "string") return "text";
   if (type === "text" && typeof props.content === "string") return "content";
   if (type === "ctaButton" && typeof props.label === "string") return "label";
@@ -394,7 +492,11 @@ function fallbackCopyEdit(value: string, instruction: string): string {
   const text = value.trim();
   const intent = instruction.toLowerCase();
 
-  if (intent.includes("corto") || intent.includes("resume") || intent.includes("breve")) {
+  if (
+    intent.includes("corto") ||
+    intent.includes("resume") ||
+    intent.includes("breve")
+  ) {
     return text.length > 86 ? `${text.slice(0, 83).trim()}...` : text;
   }
 
@@ -405,7 +507,11 @@ function fallbackCopyEdit(value: string, instruction: string): string {
       .replace(/\bcrecer\b/gi, "escalar con claridad");
   }
 
-  if (intent.includes("vendedor") || intent.includes("conversion") || intent.includes("conversión")) {
+  if (
+    intent.includes("vendedor") ||
+    intent.includes("conversion") ||
+    intent.includes("conversión")
+  ) {
     return `${text.replace(/[.!?]+$/, "")} con resultados medibles desde el primer contacto.`;
   }
 
@@ -434,7 +540,8 @@ export async function improveSelectedCopyAI({
   if (!propKey) {
     return {
       success: false,
-      message: "Selecciona un título, texto o botón para que pueda mejorar el copy.",
+      message:
+        "Selecciona un título, texto o botón para que pueda mejorar el copy.",
     };
   }
 
@@ -471,7 +578,8 @@ Responde exactamente:
           ],
         });
 
-        const text = msg.content[0]?.type === "text" ? msg.content[0].text.trim() : null;
+        const text =
+          msg.content[0]?.type === "text" ? msg.content[0].text.trim() : null;
         const jsonMatch = text?.match(/\{[\s\S]*?\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]) as { value?: unknown };
@@ -513,7 +621,7 @@ Responde exactamente:
         source: context?.source ?? "ai_copy_edit",
       },
     },
-    execute
+    execute,
   );
 }
 
@@ -532,11 +640,16 @@ export interface FullPageSection {
 export async function generateFullPageAI(
   businessDescription: string,
   blocks: BlockContext[] = [],
-  context: AIGenerationContext = {}
+  context: AIGenerationContext = {},
 ): Promise<FullPageSection[]> {
   const accessError = await requireAIActionAccess();
   if (accessError) {
-    return [{ prompt: businessDescription, result: { success: false, message: accessError } }];
+    return [
+      {
+        prompt: businessDescription,
+        result: { success: false, message: accessError },
+      },
+    ];
   }
 
   const execute = async (): Promise<FullPageSection[]> => {
@@ -584,13 +697,13 @@ export async function generateFullPageAI(
         source: context.source ?? "full_page_generation",
       },
     },
-    execute
+    execute,
   );
 }
 
 export async function applyAuditFixesAI(
   tree: EditorTree,
-  context: AIGenerationContext = {}
+  context: AIGenerationContext = {},
 ): Promise<AuditFixResult> {
   const accessError = await requireAIActionAccess();
   if (accessError) return { success: false, message: accessError };
@@ -613,7 +726,8 @@ export async function applyAuditFixesAI(
       if (plan.issueIds.length === 0) {
         return {
           success: true,
-          message: "No encontré correcciones automáticas pendientes en SEO, WCAG o performance.",
+          message:
+            "No encontré correcciones automáticas pendientes en SEO, WCAG o performance.",
           issueIds: [],
           seoPatch: {},
           nodePatches: [],
@@ -627,7 +741,7 @@ export async function applyAuditFixesAI(
         seoPatch: plan.seoPatch,
         nodePatches: plan.nodePatches,
       } satisfies AuditFixResult;
-    }
+    },
   );
 }
 
@@ -647,7 +761,7 @@ export interface OrvenixAgentActionInput {
 }
 
 export type OrvenixAgentActionResult =
-    | {
+  | {
       success: true;
       result: OrvenixAgentResponse;
       previewId?: string;
@@ -671,6 +785,7 @@ export interface OrvenixSiteCreationActionInput {
   confirmed?: boolean;
   previewId?: string;
   expectedPreviewHash?: string;
+  clientAttemptKey?: string;
   business?: {
     name?: string;
     industry?: string;
@@ -703,8 +818,12 @@ function normalizeSiteCreationBusiness(
   const normalizedServices = Array.isArray(input?.services)
     ? input.services
         .map((service) => ({
-          name: String(service?.name ?? "").trim().slice(0, 90),
-          description: String(service?.description ?? "").trim().slice(0, 180),
+          name: String(service?.name ?? "")
+            .trim()
+            .slice(0, 90),
+          description: String(service?.description ?? "")
+            .trim()
+            .slice(0, 180),
         }))
         .filter((service) => service.name)
         .slice(0, 8)
@@ -714,27 +833,109 @@ function normalizeSiteCreationBusiness(
     name: input?.name?.trim().slice(0, 120) || "Sitio creado con Orvenix AI",
     industry: input?.industry?.trim().slice(0, 90) || "negocio profesional",
     location: input?.location?.trim().slice(0, 120),
-    objective: input?.objective?.trim().slice(0, 180) || "Generar prospectos y contactos",
+    objective:
+      input?.objective?.trim().slice(0, 180) ||
+      "Generar prospectos y contactos",
     description: input?.description?.trim().slice(0, 600) || message,
     services: normalizedServices,
   };
+}
+
+async function acceptSiteCreationDesignGeneration(params: {
+  userId: string;
+  request: string;
+  initialPlanHash: string;
+  siteId: string;
+}) {
+  try {
+    await acceptDesignGeneration(params);
+  } catch (error) {
+    console.error(
+      "[Orvenix Design Memory] No se pudo enlazar la generacion aceptada:",
+      error,
+    );
+  }
+}
+
+async function resolveSiteCreationDesignMemoryPrior(params: {
+  request: string;
+  business: ReturnType<typeof normalizeSiteCreationBusiness>;
+  preferredStyle: string;
+  preferredStyleExplicit: boolean;
+}): Promise<DesignPlannerPriorV1 | null> {
+  try {
+    const architecture = buildSiteArchitecture({
+      request: params.request,
+      business: {
+        name: params.business.name,
+        industry: params.business.industry,
+        description: params.business.description,
+        location: params.business.location,
+        objective: params.business.objective,
+      },
+    });
+
+    const target = createDesignPatternSelectionTargetV1({
+      context: {
+        industryBucket: bucketIndustry(params.business.industry),
+        siteType: architecture.siteType || null,
+        objectiveBucket: bucketObjective(params.business.objective),
+        styleBucket: bucketStyle(params.preferredStyle),
+      },
+    });
+
+    const [l1Ranking, l2Ranking] = await Promise.all([
+      getDesignPatternRankingV1({ level: "L1" }),
+      getDesignPatternRankingV1({ level: "L2" }),
+    ]);
+
+    if (!l1Ranking.ok || !l2Ranking.ok) {
+      return null;
+    }
+
+    const selection = selectDesignPatternV1({
+      target,
+      l1Rankings: l1Ranking.rankings,
+      l2Rankings: l2Ranking.rankings,
+      constraints: {
+        preserveStyle: params.preferredStyleExplicit,
+      },
+    });
+
+    return createDesignPlannerPriorV1({ selection });
+  } catch (error) {
+    console.error(
+      "[Orvenix Design Memory] No se pudo resolver prior advisory para Site Creation:",
+      error,
+    );
+    return null;
+  }
 }
 
 export async function runOrvenixSiteCreationAction(
   input: OrvenixSiteCreationActionInput,
 ): Promise<OrvenixSiteCreationActionResult> {
   const mode = input.mode ?? "preview";
-  const message = input.message?.trim().replace(/\s+/g, " ").slice(0, 1000) ?? "";
-  const siteCreationRequest = `Crea un sitio desde cero. ${message}`.trim().slice(0, 1000);
+  const message =
+    input.message?.trim().replace(/\s+/g, " ").slice(0, 1000) ?? "";
+  const siteCreationRequest = `Crea un sitio desde cero. ${message}`
+    .trim()
+    .slice(0, 1000);
 
   if (mode !== "execute" && !message) {
-    return { success: false, message: "Describe el negocio para que Orvenix AI cree el sitio." };
+    return {
+      success: false,
+      message: "Describe el negocio para que Orvenix AI cree el sitio.",
+    };
   }
 
   const session = await getAuthSession();
 
   if (!session?.user?.id) {
-    return { success: false, message: "Inicia sesión para crear sitios con Orvenix AI." };
+    return {
+      success: false,
+      message: "Inicia sesión para crear sitios con Orvenix AI.",
+    };
   }
 
   if (mode !== "execute") {
@@ -744,7 +945,10 @@ export async function runOrvenixSiteCreationAction(
     } catch (error) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Tu plan no permite crear otro sitio con Orvenix AI.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Tu plan no permite crear otro sitio con Orvenix AI.",
       };
     }
   }
@@ -754,14 +958,28 @@ export async function runOrvenixSiteCreationAction(
   try {
     if (mode === "execute") {
       if (!input.confirmed) {
-        return { success: false, message: "Confirma la creación antes de guardar el sitio borrador." };
+        return {
+          success: false,
+          message: "Confirma la creación antes de guardar el sitio borrador.",
+        };
       }
 
       const previewId = input.previewId?.trim();
-      const expectedPreviewHash = input.expectedPreviewHash?.trim().toLowerCase();
+      const expectedPreviewHash = input.expectedPreviewHash
+        ?.trim()
+        .toLowerCase();
 
-      if (!previewId || previewId.length > 80 || !expectedPreviewHash || !/^[a-f0-9]{64}$/.test(expectedPreviewHash)) {
-        return { success: false, message: "La previsualización ya no es válida. Genera un Preview nuevo." };
+      if (
+        !previewId ||
+        previewId.length > 80 ||
+        !expectedPreviewHash ||
+        !/^[a-f0-9]{64}$/.test(expectedPreviewHash)
+      ) {
+        return {
+          success: false,
+          message:
+            "La previsualización ya no es válida. Genera un Preview nuevo.",
+        };
       }
 
       const preview = await getSiteCreationPreviewForExecute({
@@ -771,15 +989,28 @@ export async function runOrvenixSiteCreationAction(
       });
 
       if (!preview) {
-        return { success: false, message: "El Preview expiró o ya fue aplicado. Genera uno nuevo antes de crear el sitio." };
+        return {
+          success: false,
+          message:
+            "El Preview expiró o ya fue aplicado. Genera uno nuevo antes de crear el sitio.",
+        };
       }
 
       if (preview.status === "consumed" && preview.output) {
+        if (hasSiteCreationPlanV2Discriminator(preview.plan)) {
+          await acceptSiteCreationDesignGeneration({
+            userId: session.user.id,
+            request: preview.request,
+            initialPlanHash: expectedPreviewHash,
+            siteId: preview.output.siteId,
+          });
+        }
         const result: OrvenixAgentResponse = {
           ok: true,
           action: "executed",
           scope: "site_creation",
-          message: "Sitio borrador recuperado. Puedes abrirlo en el editor para revisarlo antes de publicar.",
+          message:
+            "Sitio borrador recuperado. Puedes abrirlo en el editor para revisarlo antes de publicar.",
           createdSite: {
             siteId: preview.output.siteId,
             nextRoute: preview.output.nextRoute,
@@ -804,38 +1035,74 @@ export async function runOrvenixSiteCreationAction(
       } catch (error) {
         return {
           success: false,
-          message: error instanceof Error ? error.message : "Actualiza tu plan para acceder a Orvenix AI.",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Actualiza tu plan para acceder a Orvenix AI.",
         };
       }
 
-      const result = await runOrvenixAgent(
-        {
-          siteId: preview.reservedSiteId,
-          message: preview.request,
-          mode: "execute",
-          confirmed: true,
-          business: preview.business,
-          siteCreationPlan: preview.plan,
-        },
-        {
-          createDraftSite: () =>
-            createDraftSiteFromPersistedPreview({
-              userId: session.user.id,
-              previewId,
-              expectedPreviewHash,
-            }),
-        },
-      );
+      let result: OrvenixAgentResponse;
+
+      const isPlanV2Preview = hasSiteCreationPlanV2Discriminator(preview.plan);
+
+      if (isPlanV2Preview) {
+        const createdSite = await createDraftSiteFromPersistedPreview({
+          userId: session.user.id,
+          previewId,
+          expectedPreviewHash,
+        });
+
+        result = {
+          ok: true,
+          action: "executed",
+          scope: "site_creation",
+          message:
+            "Sitio multipagina creado como borrador. Puedes revisarlo en el editor antes de publicar.",
+          createdSite,
+          warnings: [],
+        };
+      } else {
+        result = await runOrvenixAgent(
+          {
+            siteId: preview.reservedSiteId,
+            message: preview.request,
+            mode: "execute",
+            confirmed: true,
+            business: preview.business,
+            siteCreationPlan: preview.plan as never,
+          },
+          {
+            createDraftSite: () =>
+              createDraftSiteFromPersistedPreview({
+                userId: session.user.id,
+                previewId,
+                expectedPreviewHash,
+              }),
+          },
+        );
+      }
 
       if (!result.ok) {
         return {
           success: false,
-          message: result.message || getSiteCreationPreviewFailureMessage(result.warnings[0]),
+          message:
+            result.message ||
+            getSiteCreationPreviewFailureMessage(result.warnings[0]),
         };
       }
 
       if (result.createdSite?.verified) {
         revalidatePath("/dashboard");
+
+        if (isPlanV2Preview) {
+          await acceptSiteCreationDesignGeneration({
+            userId: session.user.id,
+            request: preview.request,
+            initialPlanHash: expectedPreviewHash,
+            siteId: result.createdSite.siteId,
+          });
+        }
       }
 
       return {
@@ -848,42 +1115,158 @@ export async function runOrvenixSiteCreationAction(
       };
     }
 
-    const result = await runOrvenixAgent({
-      siteId: "draft:site-creation:" + session.user.id,
-      message: siteCreationRequest,
-      mode: "preview",
-      business,
-    });
+    const clientAttemptKey = input.clientAttemptKey?.trim();
 
-    if (
-      !result.ok ||
-      result.scope !== "site_creation" ||
-      result.action !== "preview" ||
-      !result.plan?.after
-    ) {
+    if (!clientAttemptKey) {
       return {
         success: false,
-        message: "Orvenix AI no pudo generar un Preview de sitio completo. Intenta de nuevo con una descripcion mas clara.",
+        message: "No se pudo identificar este intento de Preview. Intenta generar de nuevo.",
       };
     }
 
-    const previewHash = hashEditorTree(result.plan.after);
-
-    const preview = await rememberSiteCreationPreview({
+    const attempt = await reserveSiteCreationPreviewAttempt({
       userId: session.user.id,
-      previewHash,
+      clientAttemptKey,
+    });
+
+    if (attempt.status === "failed") {
+      return {
+        success: false,
+        message: "Este intento de Preview fallo. Genera uno nuevo.",
+      };
+    }
+
+    const completedPreview = await getCompletedSiteCreationPreviewForAttempt({
+      userId: session.user.id,
+      previewId: attempt.id,
+    });
+
+    if (completedPreview?.status === "completed" && hasSiteCreationPlanV2Discriminator(completedPreview.plan)) {
+      const homePage = completedPreview.plan.pages.find((page) => page.isHome);
+
+      if (homePage) {
+        return {
+          success: true,
+          result: {
+            ok: true,
+            action: "preview",
+            scope: "site_creation",
+            message: `Preview multipagina listo: ${completedPreview.plan.pages.length} paginas preparadas para crear.`,
+            tree: homePage.tree,
+            warnings: completedPreview.plan.quality.warnings,
+          },
+          previewId: completedPreview.id,
+          previewHash: completedPreview.previewHash,
+        };
+      }
+    }
+
+    if (attempt.status !== "planning") {
+      return {
+        success: false,
+        message: "Este intento de Preview ya no puede regenerarse. Genera uno nuevo.",
+      };
+    }
+
+    const preferredStyleInput = input.business?.preferredStyle?.trim().slice(0, 120);
+    const preferredStyle = preferredStyleInput || "sitio profesional editable";
+    const designMemoryPrior = await resolveSiteCreationDesignMemoryPrior({
       request: siteCreationRequest,
       business,
-      plan: result.plan,
+      preferredStyle,
+      preferredStyleExplicit: Boolean(preferredStyleInput),
     });
+
+    let generated: Awaited<ReturnType<typeof runAutonomousMultiPageSiteBuilder>>;
+
+    try {
+      generated = await runAutonomousMultiPageSiteBuilder({
+        request: siteCreationRequest,
+        business: {
+          name: business.name,
+          industry: business.industry,
+          location: business.location,
+          description: business.description,
+          objective: business.objective,
+          services: business.services,
+        },
+        preferredStyle,
+        designMemoryPrior,
+        forceFreshComposition: true,
+        minimumQuality: 55,
+      });
+    } catch (error) {
+      await failSiteCreationPreviewAttempt({
+        userId: session.user.id,
+        previewId: attempt.id,
+        error,
+      }).catch(() => false);
+      throw error;
+    }
+
+    if (!generated.ok) {
+      await failSiteCreationPreviewAttempt({
+        userId: session.user.id,
+        previewId: attempt.id,
+        error: "SITE_CREATION_BUILDER_FAILED",
+      }).catch(() => false);
+
+      return {
+        success: false,
+        message:
+          "Orvenix AI no pudo generar un Preview multipagina valido. Intenta de nuevo con una descripcion mas clara.",
+      };
+    }
+
+    const homePage = generated.plan.pages.find((page) => page.isHome);
+
+    if (!homePage) {
+      await failSiteCreationPreviewAttempt({
+        userId: session.user.id,
+        previewId: attempt.id,
+        error: "SITE_CREATION_HOME_MISSING",
+      }).catch(() => false);
+
+      return {
+        success: false,
+        message:
+          "Orvenix AI no pudo generar una pagina principal valida para el Preview.",
+      };
+    }
+
+    const preview = await completeSiteCreationPreviewAttempt({
+      userId: session.user.id,
+      previewId: attempt.id,
+      previewHash: generated.planHash,
+      request: siteCreationRequest,
+      business,
+      plan: generated.plan,
+    });
+
+    await recordDesignGeneration({
+      userId: session.user.id,
+      request: siteCreationRequest,
+      industry: business.industry,
+      siteType: generated.architecture.siteType,
+      objective: business.objective,
+      requestedStyle: preferredStyle,
+      initialPlan: generated.plan,
+      initialPlanHash: generated.planHash,
+      siteCreationAttemptId: preview.id,
+    });
+
+    const previewResult: OrvenixAgentResponse = {
+      ok: true,
+      action: "preview",
+      scope: "site_creation",
+      message: `Preview multipagina listo: ${generated.plan.pages.length} paginas preparadas para crear.`,
+      tree: homePage.tree,
+      warnings: generated.warnings,
+    };
 
     return {
       success: true,
-      result: {
-        ...result,
-        plan: preview.plan,
-        snapshot: preview.plan.snapshot,
-      },
+      result: previewResult,
       previewId: preview.id,
       previewHash: preview.previewHash,
     };
@@ -895,61 +1278,42 @@ export async function runOrvenixSiteCreationAction(
   }
 }
 
-
 export async function runOrvenixAgentAction(
   input: OrvenixAgentActionInput,
 ): Promise<OrvenixAgentActionResult> {
-  const siteId =
-    input.siteId?.trim();
+  const siteId = input.siteId?.trim();
 
-  const message =
-    input.message
-      ?.trim()
-      .replace(/\s+/g, " ")
-      .slice(0, 1000);
+  const message = input.message?.trim().replace(/\s+/g, " ").slice(0, 1000);
 
-  const pageSlug =
-    input.pageSlug
-      ?.trim()
-      .slice(0, 120) ||
-    "home";
+  const pageSlug = input.pageSlug?.trim().slice(0, 120) || "home";
 
-  const expectedTreeHash =
-    input.expectedTreeHash
-      ?.trim()
-      .toLowerCase();
+  const expectedTreeHash = input.expectedTreeHash?.trim().toLowerCase();
 
   if (!siteId) {
     return {
       success: false,
-      message:
-        "Selecciona un sitio antes de usar Orvenix AI.",
+      message: "Selecciona un sitio antes de usar Orvenix AI.",
     };
   }
 
   if (!message) {
     return {
       success: false,
-      message:
-        "Escribe una instrucción para Orvenix AI.",
+      message: "Escribe una instrucción para Orvenix AI.",
     };
   }
 
-  const session =
-    await getAuthSession();
+  const session = await getAuthSession();
 
   if (!session?.user?.id) {
     return {
       success: false,
-      message:
-        "Inicia sesión para usar Orvenix AI.",
+      message: "Inicia sesión para usar Orvenix AI.",
     };
   }
 
   try {
-    await requireAIPlan(
-      session.user.id,
-    );
+    await requireAIPlan(session.user.id);
   } catch (error) {
     return {
       success: false,
@@ -960,38 +1324,23 @@ export async function runOrvenixAgentAction(
     };
   }
 
-  const role =
-    (
-      session.user.role ??
-      "CLIENT"
-    ) as UserRole;
+  const role = (session.user.role ?? "CLIENT") as UserRole;
 
-  const allowed =
-    await canManageSite(
-      siteId,
-      session.user.id,
-      role,
-    );
+  const allowed = await canManageSite(siteId, session.user.id, role);
 
   if (!allowed) {
     return {
       success: false,
-      message:
-        "No tienes permiso para modificar este sitio.",
+      message: "No tienes permiso para modificar este sitio.",
     };
   }
 
-   try {
+  try {
     /*
      * Protección contra Preview vencido.
      */
     if (input.mode === "execute") {
-      if (
-        !expectedTreeHash ||
-        !/^[a-f0-9]{64}$/.test(
-          expectedTreeHash,
-        )
-      ) {
+      if (!expectedTreeHash || !/^[a-f0-9]{64}$/.test(expectedTreeHash)) {
         return {
           success: false,
           message:
@@ -999,21 +1348,11 @@ export async function runOrvenixAgentAction(
         };
       }
 
-      const currentTree =
-        await getEditorTreeFromDb(
-          siteId,
-          pageSlug,
-        );
+      const currentTree = await getEditorTreeFromDb(siteId, pageSlug);
 
-      const currentTreeHash =
-        hashEditorTree(
-          currentTree,
-        );
+      const currentTreeHash = hashEditorTree(currentTree);
 
-      if (
-        currentTreeHash !==
-        expectedTreeHash
-      ) {
+      if (currentTreeHash !== expectedTreeHash) {
         return {
           success: false,
           message:
@@ -1022,50 +1361,37 @@ export async function runOrvenixAgentAction(
       }
     }
 
-    const result =
-      await runOrvenixAgent(
-        {
-          siteId,
-          pageSlug,
-          message,
-
-          mode:
-            input.mode,
-
-          targetNodeId:
-            input.targetNodeId
-              ?.trim()
-              .slice(0, 200),
-
-          targetSectionId:
-            input.targetSectionId
-              ?.trim()
-              .slice(0, 200),
-
-          confirmed:
-            input.confirmed ===
-            true,
-        },
-
-        {
-          publishSite:
-            createSitePublicationCapability({
-              userId:
-                session.user.id,
-
-              role,
-            }),
-        },
-      );
-
-    const undoMetadata =
-      await registerAIUndoForExecutedResult({
-        result,
-        userId: session.user.id,
+    const result = await runOrvenixAgent(
+      {
         siteId,
         pageSlug,
-        readCanonicalTree: getEditorTreeFromDb,
-      });
+        message,
+
+        mode: input.mode,
+
+        targetNodeId: input.targetNodeId?.trim().slice(0, 200),
+
+        targetSectionId: input.targetSectionId?.trim().slice(0, 200),
+
+        confirmed: input.confirmed === true,
+      },
+
+      {
+        publishSite: createSitePublicationCapability({
+          userId: session.user.id,
+
+          role,
+        }),
+      },
+    );
+
+    const undoMetadata = await registerAIUndoForExecutedResult({
+      result,
+      userId: session.user.id,
+      siteId,
+      pageSlug,
+      readCanonicalTree: getEditorTreeFromDb,
+    });
 
     const undo = undoMetadata.undo;
     const undoWarning = undoMetadata.undoWarning;
@@ -1077,11 +1403,8 @@ export async function runOrvenixAgentAction(
       undoWarning,
 
       previewHash:
-        result.action === "preview" &&
-        result.plan?.before
-          ? hashEditorTree(
-              result.plan.before,
-            )
+        result.action === "preview" && result.plan?.before
+          ? hashEditorTree(result.plan.before)
           : undefined,
     };
   } catch (error) {

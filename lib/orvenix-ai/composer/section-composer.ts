@@ -2,6 +2,7 @@ import type { SectionRole } from "@/lib/orvenix-ai/architect"
 import type {
   ComposedNode,
   ComposedSection,
+  SectionCompositionContext,
 } from "./types"
 import { createComposedNode } from "./node-factory"
 
@@ -453,20 +454,186 @@ function composeNavigation(): ComposedSection {
   return { role: "navigation", rootId: root, nodes, purpose: "Navegacion principal editable del sitio." }
 }
 
-function composeHero(): ComposedSection {
+function compositionVariant(
+  context: SectionCompositionContext,
+  variants: number,
+): number {
+  const source = [
+    context.siteType,
+    context.industry,
+    context.objective,
+    context.audience,
+    context.pageName,
+    context.pageSlug,
+    context.pagePurpose,
+    context.preferredStyle,
+    context.compositionSeed,
+  ]
+    .filter(Boolean)
+    .join("|")
+
+  let hash = 0
+
+  for (let index = 0; index < source.length; index++) {
+    hash = (hash * 31 + source.charCodeAt(index)) >>> 0
+  }
+
+  return variants > 0 ? hash % variants : 0
+}
+
+function composeHero(
+  context: SectionCompositionContext = {},
+): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  const eyebrow = textNode(nodes, "Etiqueta hero", "Nueva experiencia para clientes exigentes", { size: "sm", color: "#0E5C80" })
-  const title = headingNode(nodes, "Titulo hero", "Un sitio profesional que convierte visitas en clientes", 1, { align: "left" })
-  const copy = textNode(nodes, "Descripcion hero", "Presenta tu oferta con claridad, confianza y una experiencia visual lista para personalizar sin tocar codigo.", { size: "lg" })
-  const primary = add(nodes, createComposedNode({ type: "ctaButton", displayName: "CTA principal", props: { label: "Solicitar informacion", href: "#contacto", variant: "primary", size: "lg" } }))
-  const secondary = add(nodes, createComposedNode({ type: "ctaButton", displayName: "CTA secundario", props: { label: "Ver servicios", href: "#servicios", variant: "secondary", size: "lg" } }))
-  const actions = wrapperNode(nodes, "Acciones hero", "flex flex-col gap-3 sm:flex-row", [primary, secondary])
-  const image = add(nodes, createComposedNode({ type: "image", displayName: "Imagen hero", props: { src: "", alt: "Imagen principal del negocio", objectFit: "cover" } }))
-  const media = wrapperNode(nodes, "Visual hero", "overflow-hidden rounded-[2rem] border border-sky-100 bg-sky-50 p-3 shadow-2xl shadow-sky-900/10", [image])
-  const content = wrapperNode(nodes, "Contenido hero", "flex flex-col justify-center gap-6", [eyebrow, title, copy, actions])
-  const grid = wrapperNode(nodes, "Layout hero", "grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]", [content, media])
-  const root = add(nodes, createComposedNode({ type: "section", displayName: "Hero desde cero", props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: "#f8fbff" }, children: [grid] }))
-  return { role: "hero", rootId: root, nodes, purpose: "Presentar promesa, confianza visual y accion principal." }
+  const variant = compositionVariant(context, 3)
+
+  const centered = variant === 2
+  const mediaFirst = variant === 1
+
+  const eyebrow = textNode(
+    nodes,
+    "Etiqueta hero",
+    "Nueva experiencia para clientes exigentes",
+    {
+      size: "sm",
+      color: "#0E5C80",
+      align: centered ? "center" : "left",
+    },
+  )
+
+  const title = headingNode(
+    nodes,
+    "Titulo hero",
+    "Un sitio profesional que convierte visitas en clientes",
+    1,
+    {
+      align: centered ? "center" : "left",
+    },
+  )
+
+  const copy = textNode(
+    nodes,
+    "Descripcion hero",
+    "Presenta tu oferta con claridad, confianza y una experiencia visual lista para personalizar sin tocar codigo.",
+    {
+      size: "lg",
+      align: centered ? "center" : "left",
+    },
+  )
+
+  const primary = add(
+    nodes,
+    createComposedNode({
+      type: "ctaButton",
+      displayName: "CTA principal",
+      props: {
+        label: "Solicitar informacion",
+        href: "#contacto",
+        variant: "primary",
+        size: "lg",
+      },
+    }),
+  )
+
+  const secondary = add(
+    nodes,
+    createComposedNode({
+      type: "ctaButton",
+      displayName: "CTA secundario",
+      props: {
+        label: "Ver servicios",
+        href: "#servicios",
+        variant: "secondary",
+        size: "lg",
+      },
+    }),
+  )
+
+  const actions = wrapperNode(
+    nodes,
+    "Acciones hero",
+    centered
+      ? "flex flex-col justify-center gap-3 sm:flex-row"
+      : "flex flex-col gap-3 sm:flex-row",
+    [primary, secondary],
+  )
+
+  const image = add(
+    nodes,
+    createComposedNode({
+      type: "image",
+      displayName: "Imagen hero",
+      props: {
+        src: "",
+        alt: "Imagen principal del negocio",
+        objectFit: "cover",
+      },
+    }),
+  )
+
+  const media = wrapperNode(
+    nodes,
+    "Visual hero",
+    variant === 2
+      ? "mx-auto w-full max-w-5xl overflow-hidden rounded-[2.5rem] border border-sky-100 bg-sky-50 p-3 shadow-2xl shadow-sky-900/10"
+      : "overflow-hidden rounded-[2rem] border border-sky-100 bg-sky-50 p-3 shadow-2xl shadow-sky-900/10",
+    [image],
+  )
+
+  const content = wrapperNode(
+    nodes,
+    "Contenido hero",
+    centered
+      ? "mx-auto flex max-w-4xl flex-col items-center justify-center gap-6 text-center"
+      : "flex flex-col justify-center gap-6",
+    [eyebrow, title, copy, actions],
+  )
+
+  let layoutChildren: string[]
+  let layoutClassName: string
+
+  if (variant === 1) {
+    layoutChildren = [media, content]
+    layoutClassName =
+      "grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]"
+  } else if (variant === 2) {
+    layoutChildren = [content, media]
+    layoutClassName = "flex flex-col gap-12"
+  } else {
+    layoutChildren = [content, media]
+    layoutClassName =
+      "grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]"
+  }
+
+  const layout = wrapperNode(
+    nodes,
+    "Layout hero",
+    layoutClassName,
+    layoutChildren,
+  )
+
+  const root = add(
+    nodes,
+    createComposedNode({
+      type: "section",
+      displayName: `Hero autonomo variante ${variant + 1}`,
+      props: {
+        maxWidth: "xl",
+        paddingY: "xl",
+        paddingX: "lg",
+        background: variant === 2 ? "#ffffff" : "#f8fbff",
+      },
+      children: [layout],
+    }),
+  )
+
+  return {
+    role: "hero",
+    rootId: root,
+    nodes,
+    purpose:
+      "Presentar promesa, confianza visual y accion principal.",
+  }
 }
 
 function composeCardGridSection(role: SectionRole, titleText: string, introText: string, items: Array<[string, string]>): ComposedSection {
@@ -526,13 +693,15 @@ function composeContent(): ComposedSection { return composeCardGridSection("cont
 
 export function composeSection(
   role: SectionRole,
+  context: SectionCompositionContext = {},
 ): ComposedSection | null {
+  void context
   switch (role) {
     case "navigation":
       return composeNavigation()
 
     case "hero":
-      return composeHero()
+      return composeHero(context)
 
     case "services":
       return composeServices()
