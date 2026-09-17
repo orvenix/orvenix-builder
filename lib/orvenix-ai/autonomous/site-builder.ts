@@ -458,18 +458,11 @@ function themeMotion(theme: GlobalTheme): NonNullable<GlobalTheme["motion"]> {
   }
 }
 
-function applyDesignMemoryThemePrior(theme: GlobalTheme, input: AutonomousSiteBuilderInput): GlobalTheme {
-  const prior = input.designMemoryPrior
-
-  if (prior?.level !== "L2" || !isPlainRecord(prior.recommendation.theme)) {
-    return theme
-  }
-
-  const recommendation = prior.recommendation.theme
+function applyThemeDirection(theme: GlobalTheme, direction: Record<string, unknown>): GlobalTheme {
   const next = structuredClone(theme)
 
-  if (typeof recommendation.accentHue === "string") {
-    const tokens = MEMORY_HUE_TOKENS[recommendation.accentHue]
+  if (typeof direction.accentHue === "string") {
+    const tokens = MEMORY_HUE_TOKENS[direction.accentHue]
 
     if (tokens) {
       next.colors = {
@@ -481,13 +474,13 @@ function applyDesignMemoryThemePrior(theme: GlobalTheme, input: AutonomousSiteBu
     }
   }
 
-  if (recommendation.mode === "dark") {
+  if (direction.mode === "dark") {
     next.colors = {
       ...themeColors(next),
       background: "#06131f",
       text: "#f8fafc",
     }
-  } else if (recommendation.mode === "light") {
+  } else if (direction.mode === "light") {
     next.colors = {
       ...themeColors(next),
       background: "#ffffff",
@@ -495,37 +488,52 @@ function applyDesignMemoryThemePrior(theme: GlobalTheme, input: AutonomousSiteBu
     }
   }
 
-  if (recommendation.radiusBucket === "sharp") {
+  if (direction.radiusBucket === "sharp") {
     next.radius = { ...(next.radius ?? {}), card: "4px", button: "6px" }
-  } else if (recommendation.radiusBucket === "soft") {
+  } else if (direction.radiusBucket === "soft") {
     next.radius = { ...(next.radius ?? {}), card: "16px", button: "999px" }
-  } else if (recommendation.radiusBucket === "pill") {
+  } else if (direction.radiusBucket === "pill") {
     next.radius = { ...(next.radius ?? {}), card: "24px", button: "999px" }
   }
 
-  if (recommendation.typographyBucket === "serif") {
+  if (direction.typographyBucket === "serif") {
     next.fontHeading = "Playfair Display"
     next.fontBody = next.fontBody || "Inter"
-  } else if (recommendation.typographyBucket === "mono") {
+  } else if (direction.typographyBucket === "mono") {
     next.fontHeading = "JetBrains Mono"
     next.fontBody = "Inter"
-  } else if (recommendation.typographyBucket === "display") {
+  } else if (direction.typographyBucket === "display") {
     next.fontHeading = "Oswald"
     next.fontBody = next.fontBody || "Inter"
-  } else if (recommendation.typographyBucket === "sans") {
+  } else if (direction.typographyBucket === "sans") {
     next.fontHeading = "Inter"
     next.fontBody = "Inter"
   }
 
-  if (recommendation.motionBucket === "none") {
+  if (direction.motionBucket === "none") {
     next.motion = { ...themeMotion(next), duration: "0ms" }
-  } else if (recommendation.motionBucket === "subtle") {
+  } else if (direction.motionBucket === "subtle") {
     next.motion = { ...themeMotion(next), duration: "180ms" }
-  } else if (recommendation.motionBucket === "expressive") {
+  } else if (direction.motionBucket === "expressive") {
     next.motion = { ...themeMotion(next), duration: "320ms" }
   }
 
   return next
+}
+
+function applySiteCreationThemeAdvisories(theme: GlobalTheme, input: AutonomousSiteBuilderInput): GlobalTheme {
+  const prior = input.designMemoryPrior
+
+  if (prior?.level === "L2" && isPlainRecord(prior.recommendation.theme)) {
+    return applyThemeDirection(theme, prior.recommendation.theme)
+  }
+
+  const externalTheme = input.externalThemeAdvisory?.theme
+  if (isPlainRecord(externalTheme)) {
+    return applyThemeDirection(theme, externalTheme)
+  }
+
+  return theme
 }
 
 function businessContextForPage(params: {
@@ -598,7 +606,7 @@ function createMultiPagePlan(params: {
     pageQuality,
     warnings,
   } = params
-  const theme = applyDesignMemoryThemePrior(getStarterTheme(), input)
+  const theme = applySiteCreationThemeAdvisories(getStarterTheme(), input)
 
   return normalizeSiteCreationPlanV2({
     version: 2,
@@ -682,6 +690,12 @@ export async function runAutonomousMultiPageSiteBuilder(
   trace.push(
     `Blueprint multipagina compilado: ${blueprint.pages.length} paginas`,
   )
+
+  if (input.designMemoryPrior?.level === "L2") {
+    trace.push("Theme advisory aplicado desde Design Memory L2")
+  } else if (input.externalThemeAdvisory) {
+    trace.push("Theme advisory aplicado desde Third-Party Assistance")
+  }
 
   const pages = blueprint.pages.map((page) => {
     const pagePlan = architecture.pages.find(

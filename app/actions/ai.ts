@@ -42,17 +42,14 @@ import {
 } from "@/lib/orvenix-ai/site-creation/preview-store";
 import { hasSiteCreationPlanV2Discriminator } from "@/lib/orvenix-ai/site-creation/plan-v2";
 import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/site-builder";
-import { buildSiteArchitecture } from "@/lib/orvenix-ai/architect";
 import {
   acceptDesignGeneration,
-  createDesignPatternSelectionTargetV1,
-  createDesignPlannerPriorV1,
-  getDesignPatternRankingV1,
   recordDesignGeneration,
-  selectDesignPatternV1,
-  type DesignPlannerPriorV1,
 } from "@/lib/orvenix-ai/design-memory";
-import { bucketIndustry, bucketObjective, bucketStyle } from "@/lib/orvenix-ai/design-memory/design-pattern";
+import {
+  resolveSiteCreationDesignMemoryDecisionV1,
+  resolveSiteCreationThemeAssistanceAdvisoryV1,
+} from "@/lib/orvenix-ai/site-creation/assistance";
 import {
   registerAIUndoForExecutedResult,
   rollbackOrvenixAIChange,
@@ -857,61 +854,6 @@ async function acceptSiteCreationDesignGeneration(params: {
   }
 }
 
-async function resolveSiteCreationDesignMemoryPrior(params: {
-  request: string;
-  business: ReturnType<typeof normalizeSiteCreationBusiness>;
-  preferredStyle: string;
-  preferredStyleExplicit: boolean;
-}): Promise<DesignPlannerPriorV1 | null> {
-  try {
-    const architecture = buildSiteArchitecture({
-      request: params.request,
-      business: {
-        name: params.business.name,
-        industry: params.business.industry,
-        description: params.business.description,
-        location: params.business.location,
-        objective: params.business.objective,
-      },
-    });
-
-    const target = createDesignPatternSelectionTargetV1({
-      context: {
-        industryBucket: bucketIndustry(params.business.industry),
-        siteType: architecture.siteType || null,
-        objectiveBucket: bucketObjective(params.business.objective),
-        styleBucket: bucketStyle(params.preferredStyle),
-      },
-    });
-
-    const [l1Ranking, l2Ranking] = await Promise.all([
-      getDesignPatternRankingV1({ level: "L1" }),
-      getDesignPatternRankingV1({ level: "L2" }),
-    ]);
-
-    if (!l1Ranking.ok || !l2Ranking.ok) {
-      return null;
-    }
-
-    const selection = selectDesignPatternV1({
-      target,
-      l1Rankings: l1Ranking.rankings,
-      l2Rankings: l2Ranking.rankings,
-      constraints: {
-        preserveStyle: params.preferredStyleExplicit,
-      },
-    });
-
-    return createDesignPlannerPriorV1({ selection });
-  } catch (error) {
-    console.error(
-      "[Orvenix Design Memory] No se pudo resolver prior advisory para Site Creation:",
-      error,
-    );
-    return null;
-  }
-}
-
 export async function runOrvenixSiteCreationAction(
   input: OrvenixSiteCreationActionInput,
 ): Promise<OrvenixSiteCreationActionResult> {
@@ -1170,12 +1112,22 @@ export async function runOrvenixSiteCreationAction(
 
     const preferredStyleInput = input.business?.preferredStyle?.trim().slice(0, 120);
     const preferredStyle = preferredStyleInput || "sitio profesional editable";
-    const designMemoryPrior = await resolveSiteCreationDesignMemoryPrior({
+    const preferredStyleExplicit = Boolean(preferredStyleInput);
+    const designMemoryDecision = await resolveSiteCreationDesignMemoryDecisionV1({
       request: siteCreationRequest,
       business,
       preferredStyle,
-      preferredStyleExplicit: Boolean(preferredStyleInput),
+      preferredStyleExplicit,
     });
+    const assistanceAdvisory = await resolveSiteCreationThemeAssistanceAdvisoryV1({
+      userId: session.user.id,
+      siteCreationAttemptId: attempt.id,
+      designMemoryDecision,
+      preferredStyleExplicit,
+    });
+    const externalThemeAdvisory = assistanceAdvisory.status === "applied"
+      ? assistanceAdvisory.advisory
+      : null;
 
     let generated: Awaited<ReturnType<typeof runAutonomousMultiPageSiteBuilder>>;
 
@@ -1191,7 +1143,8 @@ export async function runOrvenixSiteCreationAction(
           services: business.services,
         },
         preferredStyle,
-        designMemoryPrior,
+        designMemoryPrior: designMemoryDecision.designMemoryPrior,
+        externalThemeAdvisory,
         forceFreshComposition: true,
         minimumQuality: 55,
       });

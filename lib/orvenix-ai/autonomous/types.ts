@@ -1,6 +1,7 @@
 import type { EditorTree } from "@/types/editor"
 import type { DesignPlannerPriorV1 } from "@/lib/orvenix-ai/design-memory/planner-prior"
 import type { SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2"
+import type { SiteCreationExternalThemeAdvisoryV1 } from "@/lib/orvenix-ai/site-creation/assistance"
 import type {
   OrvenixSiteArchitecture,
 } from "@/lib/orvenix-ai/architect"
@@ -54,6 +55,8 @@ export interface AutonomousSiteBuilderInput {
   minimumQuality?: number
 
   designMemoryPrior?: DesignPlannerPriorV1 | null
+
+  externalThemeAdvisory?: SiteCreationExternalThemeAdvisoryV1 | null
 }
 
 export interface AutonomousSiteBuilderResult {

@@ -70,6 +70,8 @@ async function withActionMocks<T>(options: {
   onRunAgent?: (input: Record<string, unknown>) => void
   onRunMultiPageBuilder?: (input: Record<string, unknown>) => void
   multiPageBuilderResult?: Record<string, unknown>
+  completedPreviewForAttempt?: Record<string, unknown> | null
+  onResolveSiteCreationThemeAssistance?: (input: Record<string, unknown>) => Record<string, unknown> | Promise<Record<string, unknown>>
   onCreateDraftSite?: () => void
   createDraftSiteResult?: { siteId: string; nextRoute: string; verified: boolean; rollbackApplied?: boolean }
   onRecordDesignGeneration?: (input: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>
@@ -115,6 +117,18 @@ async function withActionMocks<T>(options: {
           options.onRunAgent?.(input)
           return options.agentResponse ?? defaultResponse
         },
+      }
+    }
+    if (request === "@/lib/orvenix-ai/site-creation/assistance" && options.onResolveSiteCreationThemeAssistance) {
+      return {
+        resolveSiteCreationDesignMemoryDecisionV1: async () => ({
+          kind: "abstain",
+          designMemoryPrior: null,
+          context: { industryBucket: "health", objectiveBucket: "lead_generation", styleBucket: "professional", siteType: "health" },
+          reasonCode: "insufficient_evidence",
+          reason: [],
+        }),
+        resolveSiteCreationThemeAssistanceAdvisoryV1: async (input: Record<string, unknown>) => options.onResolveSiteCreationThemeAssistance?.(input),
       }
     }
     if (request === "@/lib/orvenix-ai/autonomous/site-builder") {
@@ -176,7 +190,7 @@ async function withActionMocks<T>(options: {
           return options.createDraftSiteResult ?? { siteId: "site_1", nextRoute: "/editor/site_1", verified: true, rollbackApplied: false }
         },
         failSiteCreationPreviewAttempt: async () => true,
-        getCompletedSiteCreationPreviewForAttempt: async () => null,
+        getCompletedSiteCreationPreviewForAttempt: async () => options.completedPreviewForAttempt ?? null,
         getSiteCreationPreviewFailureMessage: (error: unknown) => error instanceof Error ? error.message : "No se pudo crear el sitio.",
         getSiteCreationPreviewForExecute: async () => options.previewForExecute ?? null,
         reserveSiteCreationPreviewAttempt: async ({ clientAttemptKey }: { clientAttemptKey: string }) => ({
@@ -200,7 +214,9 @@ async function withActionMocks<T>(options: {
 
   try {
     const compiledActionPath = path.join(process.cwd(), ".tmp/unit/app/actions/ai.js")
+    const compiledAssistancePath = path.join(process.cwd(), ".tmp/unit/lib/orvenix-ai/site-creation/assistance.js")
     delete require.cache[compiledActionPath]
+    delete require.cache[compiledAssistancePath]
     const action = await import("../../app/actions/ai")
     return await callback(action, previews)
   } finally {
@@ -842,5 +858,122 @@ test("site_creation preview pasa prior advisory al builder sin heredar outcome h
     assert.equal(designMemoryInput?.rankingScore, undefined)
     assert.equal(designMemoryInput?.editDistance, undefined)
     assert.equal(designMemoryInput?.status, undefined)
+  })
+})
+
+test("site_creation preview pasa external theme advisory aplicado al builder", async () => {
+  const homeTree = createTree()
+  const planHash = "7".repeat(64)
+  let builderInput: Record<string, unknown> | null = null
+  let assistanceInput: Record<string, unknown> | null = null
+
+  await withActionMocks({
+    onResolveSiteCreationThemeAssistance: (input) => {
+      assistanceInput = input
+      return {
+        ok: true,
+        status: "applied",
+        assistanceId: "da_" + "1".repeat(64),
+        request: {},
+        assistance: { ok: true, status: "applied" },
+        advisory: {
+          version: 1,
+          source: "third_party_assistance",
+          assistanceId: "da_" + "1".repeat(64),
+          providerKey: "deterministic_provider",
+          modelKey: "deterministic_model",
+          theme: { accentHue: "cyan", radiusBucket: "pill", motionBucket: "subtle" },
+        },
+      }
+    },
+    onRunMultiPageBuilder: (input) => { builderInput = input },
+    multiPageBuilderResult: {
+      ok: true,
+      plan: {
+        version: 2,
+        identity: { name: "Clinica Aurora" },
+        theme: {},
+        navigation: [],
+        pages: [{ slug: "home", name: "Inicio", isHome: true, seo: {}, tree: homeTree, treeHash: "1".repeat(64) }],
+        quality: { score: 90, warnings: [], summary: "Plan" },
+      },
+      planHash,
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 90 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:attempt-assisted",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud", objective: "conseguir citas" },
+    })
+
+    assert.equal(result.success, true)
+    assert.equal(assistanceInput?.siteCreationAttemptId, result.success ? result.previewId : undefined)
+    assert.equal((builderInput?.externalThemeAdvisory as Record<string, unknown> | undefined)?.source, "third_party_assistance")
+    assert.equal((builderInput?.externalThemeAdvisory as Record<string, unknown> | undefined)?.providerKey, "deterministic_provider")
+    assert.equal(builderInput?.designMemoryPrior, null)
+  })
+})
+
+test("site_creation preview Retry B recupera preview completed sin assistance ni builder", async () => {
+  const homeTree = createTree()
+  let builderCalls = 0
+  let assistanceCalls = 0
+  const completedPlan = {
+    version: 2,
+    identity: { name: "Clinica Aurora" },
+    theme: {},
+    navigation: [],
+    pages: [{ slug: "home", name: "Inicio", isHome: true, seo: {}, tree: homeTree, treeHash: "1".repeat(64) }],
+    quality: { score: 91, warnings: [], summary: "Plan completed" },
+  }
+
+  await withActionMocks({
+    completedPreviewForAttempt: {
+      id: "preview_client_attempt_completed",
+      status: "completed",
+      previewHash: "6".repeat(64),
+      plan: completedPlan,
+    },
+    onResolveSiteCreationThemeAssistance: () => {
+      assistanceCalls += 1
+      return { ok: true, status: "skipped", reason: "disabled" }
+    },
+    onRunMultiPageBuilder: () => { builderCalls += 1 },
+    multiPageBuilderResult: {
+      ok: true,
+      plan: completedPlan,
+      planHash: "6".repeat(64),
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 91 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:attempt-completed",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora" },
+    })
+
+    assert.equal(result.success, true)
+    if (!result.success) return
+
+    assert.equal(result.previewId, "preview_client_attempt_completed")
+    assert.equal(result.previewHash, "6".repeat(64))
+    assert.deepEqual(result.result.tree, homeTree)
+    assert.equal(assistanceCalls, 0)
+    assert.equal(builderCalls, 0)
   })
 })
