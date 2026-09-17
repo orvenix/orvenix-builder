@@ -250,7 +250,7 @@ async function withActionMocks<T>(options: {
   }
 }
 
-test("site_creation action genera V2 multipagina, persiste el plan completo y devuelve home para Preview", async () => {
+test("site_creation action genera V2 multipagina, persiste el plan completo y devuelve previewPages seguro", async () => {
   const homeTree = createTree()
   const servicesTree = createTree()
   const planHash = "b".repeat(64)
@@ -328,6 +328,18 @@ test("site_creation action genera V2 multipagina, persiste el plan completo y de
     assert.equal(result.result.action, "preview")
     assert.deepEqual(result.result.tree, homeTree)
     assert.equal(result.result.plan, undefined)
+    assert.deepEqual(result.previewPages?.map((page) => page.slug), ["home", "servicios"])
+    assert.deepEqual(result.previewPages?.map((page) => page.title), ["Inicio", "Servicios"])
+    assert.deepEqual(result.previewPages?.map((page) => page.isHome), [true, false])
+    assert.deepEqual(result.previewPages?.[0]?.tree, homeTree)
+    assert.deepEqual(result.previewPages?.[1]?.tree, servicesTree)
+    assert.equal(result.qualityGate?.decision, "pass")
+    assert.equal(result.qualityGate?.score, 100)
+    assert.deepEqual(result.qualityGate?.reasonCodes, [])
+    assert.equal(JSON.stringify(result).includes("providerKey"), false)
+    assert.equal(JSON.stringify(result).includes("modelKey"), false)
+    assert.equal(JSON.stringify(result).includes("Design Memory"), false)
+    assert.equal(JSON.stringify(result).includes("assistance"), false)
 
     assert.equal(result.previewHash, planHash)
     assert.equal(previews.length, 1)
@@ -1076,6 +1088,9 @@ test("site_creation Quality Gate PASS completa preview despues del builder y ant
     assert.deepEqual(previews[0]?.plan, plan)
     assert.equal(JSON.stringify(previews[0]?.plan).includes("quality_gate"), false)
     assert.ok(result.success && result.result.warnings.some((warning) => warning.startsWith("quality_gate:pass:")))
+    assert.equal(result.success && result.qualityGate?.decision, "pass")
+    assert.equal(result.success && result.qualityGate?.score, 95)
+    assert.deepEqual(result.success && result.qualityGate?.reasonCodes, ["pass_info"])
   })
 })
 
@@ -1115,6 +1130,9 @@ test("site_creation Quality Gate REVIEW completa preview y no dispara segunda ge
     assert.equal(gateCalls, 1)
     assert.equal(previews.length, 1)
     assert.ok(result.success && result.result.warnings.includes("quality_gate_reason:duplicate_placeholder_content"))
+    assert.equal(result.success && result.qualityGate?.decision, "review")
+    assert.equal(result.success && result.qualityGate?.score, 40)
+    assert.deepEqual(result.success && result.qualityGate?.reasonCodes, ["duplicate_placeholder_content"])
     assert.equal(JSON.stringify(previews[0]?.plan).includes("quality_gate"), false)
   })
 })
@@ -1233,6 +1251,8 @@ test("site_creation Retry B y execute no vuelven a ejecutar Quality Gate", async
       business: { name: "Clinica Aurora" },
     })
     assert.equal(retry.success, true)
+    assert.deepEqual(retry.success && retry.previewPages?.map((page) => page.slug), ["home"])
+    assert.deepEqual(retry.success && retry.result.tree, homeTree)
 
     const execute = await action.runOrvenixSiteCreationAction({
       mode: "execute",
@@ -1241,6 +1261,7 @@ test("site_creation Retry B y execute no vuelven a ejecutar Quality Gate", async
       expectedPreviewHash: "d".repeat(64),
     })
     assert.equal(execute.success, true)
+    assert.equal(execute.success && execute.previewPages, undefined)
     assert.equal(builderCalls, 0)
     assert.equal(gateCalls, 0)
     assert.equal(createDraftCalls, 1)

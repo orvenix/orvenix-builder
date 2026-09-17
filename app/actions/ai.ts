@@ -40,7 +40,7 @@ import {
   getSiteCreationPreviewForExecute,
   reserveSiteCreationPreviewAttempt,
 } from "@/lib/orvenix-ai/site-creation/preview-store";
-import { hasSiteCreationPlanV2Discriminator } from "@/lib/orvenix-ai/site-creation/plan-v2";
+import { hasSiteCreationPlanV2Discriminator, type SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2";
 import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/site-builder";
 import { assessSiteGenerationQualityV1 } from "@/lib/orvenix-ai/evaluation";
 import {
@@ -795,12 +795,27 @@ export interface OrvenixSiteCreationActionInput {
   };
 }
 
+export type SiteCreationPreviewPageV1 = {
+  slug: string;
+  title: string;
+  isHome: boolean;
+  tree: EditorTree;
+};
+
+export type SiteCreationQualityGatePreviewV1 = {
+  decision: "pass" | "review";
+  score: number;
+  reasonCodes: string[];
+};
+
 export type OrvenixSiteCreationActionResult =
   | {
       success: true;
       result: OrvenixAgentResponse;
       previewId?: string;
       previewHash?: string;
+      previewPages?: SiteCreationPreviewPageV1[];
+      qualityGate?: SiteCreationQualityGatePreviewV1;
       nextRoute?: string;
       siteId?: string;
     }
@@ -836,6 +851,35 @@ function normalizeSiteCreationBusiness(
       "Generar prospectos y contactos",
     description: input?.description?.trim().slice(0, 600) || message,
     services: normalizedServices,
+  };
+}
+
+function buildSiteCreationPreviewPages(plan: SiteCreationPlanV2): SiteCreationPreviewPageV1[] {
+  return plan.pages.map((page) => ({
+    slug: page.slug,
+    title: page.name || page.seo.title || page.slug,
+    isHome: page.isHome,
+    tree: page.tree,
+  }));
+}
+
+function buildQualityGatePreview(params: {
+  decision: string;
+  score: number;
+  reasons: Array<{ code?: unknown }>;
+}): SiteCreationQualityGatePreviewV1 | undefined {
+  if (params.decision !== "pass" && params.decision !== "review") {
+    return undefined;
+  }
+
+  return {
+    decision: params.decision,
+    score: params.score,
+    reasonCodes: params.reasons
+      .map((reason) => typeof reason.code === "string" ? reason.code : null)
+      .filter((code): code is string => Boolean(code))
+      .filter((code, index, codes) => codes.indexOf(code) === index)
+      .slice(0, 8),
   };
 }
 
@@ -1100,6 +1144,7 @@ export async function runOrvenixSiteCreationAction(
           },
           previewId: completedPreview.id,
           previewHash: completedPreview.previewHash,
+          previewPages: buildSiteCreationPreviewPages(completedPreview.plan),
         };
       }
     }
@@ -1213,6 +1258,8 @@ export async function runOrvenixSiteCreationAction(
       };
     }
 
+    const qualityGatePreview = buildQualityGatePreview(qualityGate);
+
     const qualityGateWarnings = [
       `quality_gate:${qualityGate.decision}:${qualityGate.decisionCode}:score:${Math.round(qualityGate.score)}`,
       ...qualityGate.reasons
@@ -1270,6 +1317,8 @@ export async function runOrvenixSiteCreationAction(
       result: previewResult,
       previewId: preview.id,
       previewHash: preview.previewHash,
+      previewPages: buildSiteCreationPreviewPages(generated.plan),
+      qualityGate: qualityGatePreview,
     };
   } catch (error) {
     return {
