@@ -42,6 +42,7 @@ import {
 } from "@/lib/orvenix-ai/site-creation/preview-store";
 import { hasSiteCreationPlanV2Discriminator } from "@/lib/orvenix-ai/site-creation/plan-v2";
 import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/site-builder";
+import { assessSiteGenerationQualityV1 } from "@/lib/orvenix-ai/evaluation";
 import {
   acceptDesignGeneration,
   recordDesignGeneration,
@@ -1187,6 +1188,53 @@ export async function runOrvenixSiteCreationAction(
       };
     }
 
+    let qualityGate: ReturnType<typeof assessSiteGenerationQualityV1>;
+
+    try {
+      qualityGate = assessSiteGenerationQualityV1(generated.plan, {
+        context: {
+          objective: business.objective,
+          siteType: generated.architecture.siteType,
+        },
+      });
+    } catch {
+      await failSiteCreationPreviewAttempt({
+        userId: session.user.id,
+        previewId: attempt.id,
+        error: "SITE_CREATION_QUALITY_GATE_FAILED",
+      }).catch(() => false);
+
+      console.error("[site_creation] Quality Gate fallo antes de persistir Preview");
+
+      return {
+        success: false,
+        message:
+          "Orvenix AI no pudo validar la calidad del sitio generado. Intenta generar un nuevo Preview.",
+      };
+    }
+
+    const qualityGateWarnings = [
+      `quality_gate:${qualityGate.decision}:${qualityGate.decisionCode}:score:${Math.round(qualityGate.score)}`,
+      ...qualityGate.reasons
+        .map((reason) => `quality_gate_reason:${reason.code}`)
+        .filter((value, index, values) => values.indexOf(value) === index)
+        .slice(0, 8),
+    ];
+
+    if (qualityGate.decision === "reject") {
+      await failSiteCreationPreviewAttempt({
+        userId: session.user.id,
+        previewId: attempt.id,
+        error: qualityGate.decisionCode,
+      }).catch(() => false);
+
+      return {
+        success: false,
+        message:
+          "Orvenix AI no pudo crear un Preview seguro con esa solicitud. Ajusta la descripción e intenta de nuevo.",
+      };
+    }
+
     const preview = await completeSiteCreationPreviewAttempt({
       userId: session.user.id,
       previewId: attempt.id,
@@ -1214,7 +1262,7 @@ export async function runOrvenixSiteCreationAction(
       scope: "site_creation",
       message: `Preview multipagina listo: ${generated.plan.pages.length} paginas preparadas para crear.`,
       tree: homePage.tree,
-      warnings: generated.warnings,
+      warnings: [...generated.warnings, ...qualityGateWarnings],
     };
 
     return {

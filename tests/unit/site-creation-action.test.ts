@@ -79,6 +79,9 @@ async function withActionMocks<T>(options: {
   onGetDesignPatternRanking?: (input: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>
   onSelectDesignPattern?: (input: Record<string, unknown>) => Record<string, unknown>
   onCreateDesignPlannerPrior?: (input: Record<string, unknown>) => Record<string, unknown> | null
+  onAssessSiteGenerationQuality?: (plan: unknown, options: Record<string, unknown>) => Record<string, unknown>
+  onFailSiteCreationPreviewAttempt?: (input: Record<string, unknown>) => void
+  onCompleteSiteCreationPreviewAttempt?: (input: Record<string, unknown>) => void
 }, callback: (action: typeof import("../../app/actions/ai"), previews: PreviewRecord[]) => Promise<T>) {
   const originalLoad = (Module as unknown as { _load: (...args: unknown[]) => unknown })._load
   const previews: PreviewRecord[] = []
@@ -131,6 +134,23 @@ async function withActionMocks<T>(options: {
         resolveSiteCreationThemeAssistanceAdvisoryV1: async (input: Record<string, unknown>) => options.onResolveSiteCreationThemeAssistance?.(input),
       }
     }
+    if (request === "@/lib/orvenix-ai/evaluation") {
+      return {
+        assessSiteGenerationQualityV1: (plan: unknown, gateOptions: Record<string, unknown>) => {
+          if (options.onAssessSiteGenerationQuality) return options.onAssessSiteGenerationQuality(plan, gateOptions)
+          return {
+            version: 1,
+            decision: "pass",
+            decisionCode: "gate_pass_threshold_met",
+            hardFailure: false,
+            score: 100,
+            thresholds: { passScore: 80 },
+            reasons: [],
+            evaluation: { score: 100, findings: [], hardFailures: [] },
+          }
+        },
+      }
+    }
     if (request === "@/lib/orvenix-ai/autonomous/site-builder") {
       return {
         runAutonomousMultiPageSiteBuilder: async (input: Record<string, unknown>) => {
@@ -181,6 +201,7 @@ async function withActionMocks<T>(options: {
     if (request === "@/lib/orvenix-ai/site-creation/preview-store") {
       return {
         completeSiteCreationPreviewAttempt: async (record: Record<string, unknown>) => {
+          options.onCompleteSiteCreationPreviewAttempt?.(record)
           const preview = { ...record, id: String(record.previewId), type: "ai_site_creation_preview", status: "completed" } as PreviewRecord
           previews.push(preview)
           return preview
@@ -189,7 +210,10 @@ async function withActionMocks<T>(options: {
           options.onCreateDraftSite?.()
           return options.createDraftSiteResult ?? { siteId: "site_1", nextRoute: "/editor/site_1", verified: true, rollbackApplied: false }
         },
-        failSiteCreationPreviewAttempt: async () => true,
+        failSiteCreationPreviewAttempt: async (input: Record<string, unknown>) => {
+          options.onFailSiteCreationPreviewAttempt?.(input)
+          return true
+        },
         getCompletedSiteCreationPreviewForAttempt: async () => options.completedPreviewForAttempt ?? null,
         getSiteCreationPreviewFailureMessage: (error: unknown) => error instanceof Error ? error.message : "No se pudo crear el sitio.",
         getSiteCreationPreviewForExecute: async () => options.previewForExecute ?? null,
@@ -215,8 +239,10 @@ async function withActionMocks<T>(options: {
   try {
     const compiledActionPath = path.join(process.cwd(), ".tmp/unit/app/actions/ai.js")
     const compiledAssistancePath = path.join(process.cwd(), ".tmp/unit/lib/orvenix-ai/site-creation/assistance.js")
+    const compiledEvaluationPath = path.join(process.cwd(), ".tmp/unit/lib/orvenix-ai/evaluation/index.js")
     delete require.cache[compiledActionPath]
     delete require.cache[compiledAssistancePath]
+    delete require.cache[compiledEvaluationPath]
     const action = await import("../../app/actions/ai")
     return await callback(action, previews)
   } finally {
@@ -975,5 +1001,282 @@ test("site_creation preview Retry B recupera preview completed sin assistance ni
     assert.deepEqual(result.result.tree, homeTree)
     assert.equal(assistanceCalls, 0)
     assert.equal(builderCalls, 0)
+  })
+})
+
+function createQualityGatePlan(homeTree = createTree()) {
+  return {
+    version: 2,
+    identity: { name: "Clinica Aurora" },
+    theme: {},
+    navigation: [{ label: "Inicio", slug: "home", href: "page:home" }],
+    pages: [{ slug: "home", name: "Inicio", isHome: true, seo: {}, tree: homeTree, treeHash: "1".repeat(64) }],
+    quality: { score: 90, warnings: [], summary: "Plan" },
+  }
+}
+
+function qualityGate(decision: "pass" | "review" | "reject", params: { score?: number; hardFailure?: boolean; reasonCode?: string } = {}) {
+  const score = params.score ?? (decision === "pass" ? 95 : decision === "review" ? 62 : 10)
+  const hardFailure = params.hardFailure ?? decision === "reject"
+  const decisionCode = decision === "pass"
+    ? "gate_pass_threshold_met"
+    : decision === "review"
+      ? "gate_review_below_threshold"
+      : "gate_reject_hard_failure"
+
+  return {
+    version: 1,
+    decision,
+    decisionCode,
+    hardFailure,
+    score,
+    thresholds: { passScore: 80 },
+    reasons: params.reasonCode
+      ? [{ code: params.reasonCode, category: hardFailure ? "structuralSafety" : "objectiveQuality", severity: hardFailure ? "error" : "warning", dimension: "structure" }]
+      : [],
+    evaluation: { score, findings: [], hardFailures: hardFailure ? [params.reasonCode ?? "hard_failure"] : [] },
+  }
+}
+
+test("site_creation Quality Gate PASS completa preview despues del builder y antes de persistir", async () => {
+  const plan = createQualityGatePlan()
+  const events: string[] = []
+
+  await withActionMocks({
+    onRunMultiPageBuilder: () => { events.push("builder") },
+    onAssessSiteGenerationQuality: (inputPlan) => {
+      events.push("quality_gate")
+      assert.deepEqual(inputPlan, plan)
+      return qualityGate("pass", { reasonCode: "pass_info" })
+    },
+    onCompleteSiteCreationPreviewAttempt: () => { events.push("complete") },
+    multiPageBuilderResult: {
+      ok: true,
+      plan,
+      planHash: "8".repeat(64),
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 90 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action, previews) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:quality-pass",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud", objective: "conseguir citas" },
+    })
+
+    assert.equal(result.success, true)
+    assert.deepEqual(events, ["builder", "quality_gate", "complete"])
+    assert.equal(previews.length, 1)
+    assert.deepEqual(previews[0]?.plan, plan)
+    assert.equal(JSON.stringify(previews[0]?.plan).includes("quality_gate"), false)
+    assert.ok(result.success && result.result.warnings.some((warning) => warning.startsWith("quality_gate:pass:")))
+  })
+})
+
+test("site_creation Quality Gate REVIEW completa preview y no dispara segunda generacion", async () => {
+  const plan = createQualityGatePlan()
+  let builderCalls = 0
+  let gateCalls = 0
+
+  await withActionMocks({
+    onRunMultiPageBuilder: () => { builderCalls += 1 },
+    onAssessSiteGenerationQuality: () => {
+      gateCalls += 1
+      return qualityGate("review", { score: 40, reasonCode: "duplicate_placeholder_content" })
+    },
+    multiPageBuilderResult: {
+      ok: true,
+      plan,
+      planHash: "9".repeat(64),
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 40 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action, previews) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:quality-review",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud", objective: "conseguir citas" },
+    })
+
+    assert.equal(result.success, true)
+    assert.equal(builderCalls, 1)
+    assert.equal(gateCalls, 1)
+    assert.equal(previews.length, 1)
+    assert.ok(result.success && result.result.warnings.includes("quality_gate_reason:duplicate_placeholder_content"))
+    assert.equal(JSON.stringify(previews[0]?.plan).includes("quality_gate"), false)
+  })
+})
+
+test("site_creation Quality Gate REJECT no persiste preview completed y marca attempt failed", async () => {
+  const plan = createQualityGatePlan()
+  const failures: Record<string, unknown>[] = []
+
+  await withActionMocks({
+    onAssessSiteGenerationQuality: () => qualityGate("reject", { hardFailure: true, reasonCode: "structure_plan_invalid" }),
+    onFailSiteCreationPreviewAttempt: (input) => { failures.push(input) },
+    multiPageBuilderResult: {
+      ok: true,
+      plan,
+      planHash: "a".repeat(64),
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 10 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action, previews) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:quality-reject",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud", objective: "conseguir citas" },
+    })
+
+    assert.equal(result.success, false)
+    assert.equal(previews.length, 0)
+    assert.equal(failures.length, 1)
+    assert.equal(failures[0]?.error, "gate_reject_hard_failure")
+    assert.equal(String(result.message).includes("structure_plan_invalid"), false)
+  })
+})
+
+test("site_creation Quality Gate score bajo sin hard failure es REVIEW, no REJECT", async () => {
+  const plan = createQualityGatePlan()
+
+  await withActionMocks({
+    onAssessSiteGenerationQuality: () => qualityGate("review", { score: 1, hardFailure: false, reasonCode: "low_conversion_readiness" }),
+    multiPageBuilderResult: {
+      ok: true,
+      plan,
+      planHash: "c".repeat(64),
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 1 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action, previews) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:quality-low-score",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud", objective: "conseguir citas" },
+    })
+
+    assert.equal(result.success, true)
+    assert.equal(previews.length, 1)
+  })
+})
+
+test("site_creation Retry B y execute no vuelven a ejecutar Quality Gate", async () => {
+  const homeTree = createTree()
+  const completedPlan = createQualityGatePlan(homeTree)
+  let gateCalls = 0
+  let builderCalls = 0
+  let createDraftCalls = 0
+
+  await withActionMocks({
+    completedPreviewForAttempt: {
+      id: "preview_completed_quality",
+      status: "completed",
+      previewHash: "d".repeat(64),
+      plan: completedPlan,
+    },
+    previewForExecute: {
+      id: "preview_completed_quality",
+      status: "completed",
+      previewHash: "d".repeat(64),
+      plan: completedPlan,
+      reservedSiteId: "site_reserved_1",
+      request: "Crea un sitio desde cero. Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora" },
+    },
+    onRunMultiPageBuilder: () => { builderCalls += 1 },
+    onAssessSiteGenerationQuality: () => {
+      gateCalls += 1
+      return qualityGate("pass")
+    },
+    onCreateDraftSite: () => { createDraftCalls += 1 },
+    multiPageBuilderResult: {
+      ok: true,
+      plan: completedPlan,
+      planHash: "d".repeat(64),
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 90 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action) => {
+    const retry = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:quality-completed",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora" },
+    })
+    assert.equal(retry.success, true)
+
+    const execute = await action.runOrvenixSiteCreationAction({
+      mode: "execute",
+      confirmed: true,
+      previewId: "preview_completed_quality",
+      expectedPreviewHash: "d".repeat(64),
+    })
+    assert.equal(execute.success, true)
+    assert.equal(builderCalls, 0)
+    assert.equal(gateCalls, 0)
+    assert.equal(createDraftCalls, 1)
+  })
+})
+
+test("site_creation fallo tecnico del Quality Gate falla cerrado sin persistir preview", async () => {
+  const plan = createQualityGatePlan()
+  const failures: Record<string, unknown>[] = []
+
+  await withActionMocks({
+    onAssessSiteGenerationQuality: () => { throw new Error("gate down with private details") },
+    onFailSiteCreationPreviewAttempt: (input) => { failures.push(input) },
+    multiPageBuilderResult: {
+      ok: true,
+      plan,
+      planHash: "e".repeat(64),
+      byteLength: 100,
+      pageQuality: [{ slug: "home", score: 90 }],
+      warnings: [],
+      trace: [],
+      repaired: false,
+      architecture: { siteType: "health" },
+      selectedTemplate: null,
+    },
+  }, async (action, previews) => {
+    const result = await action.runOrvenixSiteCreationAction({
+      mode: "preview",
+      clientAttemptKey: "client:quality-throw",
+      message: "Negocio: Clinica Aurora.",
+      business: { name: "Clinica Aurora", industry: "salud", objective: "conseguir citas" },
+    })
+
+    assert.equal(result.success, false)
+    assert.equal(previews.length, 0)
+    assert.equal(failures[0]?.error, "SITE_CREATION_QUALITY_GATE_FAILED")
+    assert.equal(String(result.message).includes("private details"), false)
   })
 })
