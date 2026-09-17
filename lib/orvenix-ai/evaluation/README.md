@@ -96,6 +96,38 @@ lifecycle/orchestrator/provider or the autonomous builder — it works from a
 `SiteCreationPlanV2` value alone and functions whether or not those
 modules exist.
 
+## Quality Gate V1
+
+`assessSiteGenerationQualityV1(plan, options)` (`quality-gate.ts`) wraps
+`evaluateSiteCreationPlanV2` with an explicit `pass | review | reject`
+decision. It is a thin, pure layer: it calls the evaluator once, never
+regenerates or mutates the plan, never calls a provider, never writes to
+the DB, and is not wired into `app/actions/ai.ts` or the preview service —
+that integration is future work.
+
+Decision rules (deterministic, same plan/context/limits/thresholds always
+produce the same decision):
+
+- **reject** — `evaluation.hardFailures.length > 0` (invalid Plan V2, or a
+  hard structural-safety failure such as an empty home page). Never
+  triggered by score alone.
+- **review** — structurally valid, no hard failure, but
+  `evaluation.score < thresholds.passScore`. Objective-quality findings
+  (errors/warnings that are not hard failures) live here, not in reject.
+- **pass** — structurally valid, no hard failure, score meets
+  `thresholds.passScore` (defaults to `EVALUATION_PASS_THRESHOLD`, 60).
+
+Each result carries `reasons`: the evaluation's findings, each tagged with
+a `category` — `structuralSafety` (drives reject), `objectiveQuality`
+(drives review vs pass), or `informational` (never affects the decision) —
+so callers can distinguish "unsafe to accept" from "quality is low" from
+"just FYI" without re-deriving it from finding codes.
+
+`summarizeSiteGenerationQualityGateResults` (`quality-gate-summary.ts`)
+aggregates a batch of gate results (e.g. the existing evaluation corpus)
+into `{ total, passCount, reviewCount, rejectCount, averageScore }`, with
+no persistence.
+
 ## Known V1 limitations (by design, not oversight)
 
 - `conversionReadiness` only understands two objective buckets today
