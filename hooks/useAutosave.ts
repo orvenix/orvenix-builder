@@ -29,6 +29,7 @@ export function useAutosave() {
   const markSaved = useEditorStore((s) => s.markSaved);
   const markSaving = useEditorStore((s) => s.markSaving);
   const markError = useEditorStore((s) => s.markError);
+  const saveToServer = useEditorStore((s) => s.saveToServer);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRevRef = useRef(0);
 
@@ -56,20 +57,13 @@ export function useAutosave() {
             return;
           }
 
-          const response = await fetch(`/api/editor/${websiteId}?page=${encodeURIComponent(activePageSlug)}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tree }),
-          });
-
-          if (!response.ok) {
-            const payload = (await response.json()) as { error?: string };
-            throw new Error(payload.error ?? "No se pudo guardar");
+          const saveResult = await saveToServer();
+          if (!saveResult.success) {
+            throw new Error(saveResult.error ?? "No se pudo guardar");
           }
 
-          localStorage.setItem(getStorageKey(websiteId), JSON.stringify(tree));
-          lastSavedRevRef.current = rev;
-          markSaved(rev);
+          localStorage.setItem(getStorageKeyForPage(websiteId, activePageSlug), JSON.stringify(tree));
+          lastSavedRevRef.current = useEditorStore.getState().lastSavedRev;
         } catch (error) {
           try {
             localStorage.setItem(getStorageKeyForPage(websiteId, activePageSlug), JSON.stringify(tree));
@@ -87,7 +81,7 @@ export function useAutosave() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [activePageSlug, markError, markSaved, markSaving, rev, tree, websiteId]);
+  }, [activePageSlug, markError, markSaved, markSaving, rev, saveToServer, tree, websiteId]);
 
   useEffect(() => {
     if (!websiteId) return;

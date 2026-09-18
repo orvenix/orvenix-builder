@@ -1,21 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Eye, Settings2 } from "lucide-react";
 import { useEditorStore } from "@/store/useEditorStore";
 import { SaveStatus } from "./SaveStatus";
 import { PublishButton } from "./PublishButton";
 import { PreviewModeButton } from "./PreviewModeButton";
+import { buildEditorPageUrl } from "@/components/editor/pageNavigation";
 
 export function EditorOpsBar() {
   const websiteId = useEditorStore((s) => s.websiteId);
   const activePageSlug = useEditorStore((s) => s.activePageSlug);
   const availablePages = useEditorStore((s) => s.availablePages);
+  const flushPendingSave = useEditorStore((s) => s.flushPendingSave);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isCreatingPage, setIsCreatingPage] = useState(false);
+  const [isNavigatingPage, setIsNavigatingPage] = useState(false);
+  const navigationInFlightRef = useRef(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const canManagePages = Boolean(websiteId && !websiteId.startsWith("draft:"));
   const pageOptions =
@@ -34,15 +38,26 @@ export function EditorOpsBar() {
         ];
   const currentPage = pageOptions.find((page) => page.slug === activePageSlug) ?? pageOptions[0] ?? null;
 
-  const navigateToPage = (slug: string) => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    if (slug === "home") {
-      params.delete("page");
-    } else {
-      params.set("page", slug);
+  const navigateToPage = async (slug: string) => {
+    if (slug === activePageSlug || navigationInFlightRef.current) return;
+
+    navigationInFlightRef.current = true;
+    setIsNavigatingPage(true);
+    setPageError(null);
+
+    try {
+      const saveResult = await flushPendingSave();
+      if (!saveResult.success) {
+        setPageError(saveResult.error ?? "No se pudieron guardar los cambios antes de cambiar de página.");
+        return;
+      }
+
+      const targetUrl = buildEditorPageUrl(pathname, searchParams?.toString() ?? "", slug);
+      if (targetUrl) router.push(targetUrl);
+    } finally {
+      navigationInFlightRef.current = false;
+      setIsNavigatingPage(false);
     }
-    const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
   };
 
   const handleCreatePage = async () => {
@@ -65,7 +80,7 @@ export function EditorOpsBar() {
         throw new Error(payload.error ?? "No se pudo crear la página.");
       }
 
-      navigateToPage(payload.page.slug);
+      await navigateToPage(payload.page.slug);
       router.refresh();
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "No se pudo crear la página.");
@@ -97,7 +112,7 @@ export function EditorOpsBar() {
         throw new Error(payload.error ?? "No se pudo actualizar la página.");
       }
 
-      navigateToPage(payload.page.slug);
+      await navigateToPage(payload.page.slug);
       router.refresh();
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "No se pudo actualizar la página.");
@@ -114,7 +129,8 @@ export function EditorOpsBar() {
         </span>
         <select
           value={activePageSlug}
-          onChange={(event) => navigateToPage(event.target.value)}
+          onChange={(event) => void navigateToPage(event.target.value)}
+          disabled={isNavigatingPage}
           className="max-w-[150px] rounded-md border border-white/[0.08] bg-[color:var(--bg-2)] px-2 py-1 text-[11px] font-medium text-[color:var(--text-secondary)] outline-none sm:max-w-[190px]"
         >
           {pageOptions.map((page) => (

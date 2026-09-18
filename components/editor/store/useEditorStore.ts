@@ -249,6 +249,7 @@ export interface EditorState {
   redo: () => void;
   saveToLocalStorage: () => void;
   saveToServer: () => Promise<{ success: boolean; error?: string }>;
+  flushPendingSave: () => Promise<{ success: boolean; error?: string }>;
   loadFromLocalStorage: () => void;
   markSaving: () => void;
   markSaved: (revSaved: number) => void;
@@ -464,6 +465,8 @@ const DEFAULT_BRAND_KIT: BrandKit = {
   },
 };
 
+let saveInFlight: Promise<{ success: boolean; error?: string }> | null = null;
+
 export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, get) => ({
   websiteId: null,
   activePageSlug: "home",
@@ -649,26 +652,84 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   },
 
   saveToServer: async () => {
-    const { tree, websiteId, activePageSlug, markSaving, markSaved, markError } = get();
-    if (!websiteId || websiteId.startsWith("draft:")) return { success: false, error: "ID de borrador no válido para el servidor" };
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const inFlight = saveInFlight;
+      if (inFlight) {
+        const inFlightResult = await inFlight;
+        if (!inFlightResult.success) return inFlightResult;
+        continue;
+      }
 
-    markSaving();
-    try {
-      const response = await fetch(`/api/editor/${websiteId}?page=${encodeURIComponent(activePageSlug)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tree }),
-      });
+      const { tree, websiteId, activePageSlug, rev, markSaving, markSaved, markError } = get();
+      if (!websiteId || websiteId.startsWith("draft:")) return { success: false, error: "ID de borrador no válido para el servidor" };
+      if (rev === get().lastSavedRev) return { success: true };
 
-      if (!response.ok) throw new Error("Fallo al guardar en DB");
-      
-      markSaved(get().rev);
-      return { success: true };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error desconocido";
-      markError(msg);
-      return { success: false, error: msg };
+      const saveSnapshot = {
+        tree: structuredClone(tree),
+        websiteId,
+        pageSlug: activePageSlug,
+        rev,
+      };
+
+      markSaving();
+
+      const runSave = (async () => {
+        try {
+          const response = await fetch(`/api/editor/${saveSnapshot.websiteId}?page=${encodeURIComponent(saveSnapshot.pageSlug)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tree: saveSnapshot.tree }),
+          });
+
+          if (!response.ok) throw new Error("Fallo al guardar en DB");
+
+          const current = get();
+          if (current.websiteId === saveSnapshot.websiteId && current.activePageSlug === saveSnapshot.pageSlug) {
+            markSaved(saveSnapshot.rev);
+          }
+
+          return { success: true };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Error desconocido";
+          const current = get();
+          if (current.websiteId === saveSnapshot.websiteId && current.activePageSlug === saveSnapshot.pageSlug) {
+            markError(msg);
+          }
+          return { success: false, error: msg };
+        }
+      })();
+
+      saveInFlight = runSave;
+
+      try {
+        const result = await runSave;
+        if (saveInFlight === runSave) {
+          saveInFlight = null;
+        }
+        if (!result.success) return result;
+
+        const latest = get();
+        if (latest.rev === latest.lastSavedRev) return result;
+      } finally {
+        if (saveInFlight === runSave) {
+          saveInFlight = null;
+        }
+      }
     }
+
+    return { success: false, error: "No se pudieron guardar todos los cambios pendientes." };
+  },
+
+  flushPendingSave: async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const current = get();
+      if (current.rev === current.lastSavedRev) return { success: true };
+
+      const result = await get().saveToServer();
+      if (!result.success) return result;
+    }
+
+    return { success: false, error: "No se pudieron guardar todos los cambios pendientes." };
   },
 
   loadFromLocalStorage: () => {
@@ -1681,10 +1742,13 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   },
 
   markSaving: () => set({ saveStatus: "saving", lastError: null }),
-  markSaved: (revSaved: number) => set((s: EditorState) => ({
-    lastSavedRev: revSaved,
-    saveStatus: s.rev > revSaved ? "dirty" : "saved",
-  })),
+  markSaved: (revSaved: number) => set((s: EditorState) => {
+    const lastSavedRev = Math.max(s.lastSavedRev, revSaved);
+    return {
+      lastSavedRev,
+      saveStatus: s.rev > lastSavedRev ? "dirty" : "saved",
+    };
+  }),
   markError: (message: string) => set({ saveStatus: "error", lastError: message }),
   
   duplicateNode: (id: NodeId) => {
