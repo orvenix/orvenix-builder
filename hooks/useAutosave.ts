@@ -20,6 +20,10 @@ function isDraftWebsiteId(websiteId: string) {
   return websiteId.startsWith("draft:");
 }
 
+function getAutosaveScopeKey(websiteId: string, pageSlug: string) {
+  return `${websiteId}:${pageSlug}`;
+}
+
 export function useAutosave() {
   const tree = useEditorStore((s) => s.tree);
   const websiteId = useEditorStore((s) => s.websiteId);
@@ -32,13 +36,28 @@ export function useAutosave() {
   const saveToServer = useEditorStore((s) => s.saveToServer);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRevRef = useRef(0);
+  const autosaveScopeRef = useRef<string | null>(null);
 
   useEffect(() => {
     lastSavedRevRef.current = lastSavedRev;
   }, [lastSavedRev]);
 
   useEffect(() => {
-    if (!websiteId) return;
+    if (!websiteId) {
+      autosaveScopeRef.current = null;
+      lastSavedRevRef.current = lastSavedRev;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+      return;
+    }
+
+    const autosaveScope = getAutosaveScopeKey(websiteId, activePageSlug);
+    if (autosaveScopeRef.current !== autosaveScope) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+      autosaveScopeRef.current = autosaveScope;
+      lastSavedRevRef.current = lastSavedRev;
+    }
 
     // No guardar si no hubo cambios reales
     if (rev === lastSavedRevRef.current) return;
@@ -47,13 +66,31 @@ export function useAutosave() {
 
     markSaving();
 
+    const scheduledScope = autosaveScope;
+
     timerRef.current = setTimeout(() => {
       void (async () => {
         try {
+          const currentBeforeSave = useEditorStore.getState();
+          if (
+            !currentBeforeSave.websiteId ||
+            getAutosaveScopeKey(currentBeforeSave.websiteId, currentBeforeSave.activePageSlug) !== scheduledScope
+          ) {
+            return;
+          }
+
+          if (currentBeforeSave.rev === currentBeforeSave.lastSavedRev) {
+            lastSavedRevRef.current = currentBeforeSave.lastSavedRev;
+            return;
+          }
+
           if (isDraftWebsiteId(websiteId)) {
-            localStorage.setItem(getStorageKeyForPage(websiteId, activePageSlug), JSON.stringify(tree));
-            lastSavedRevRef.current = rev;
-            markSaved(rev);
+            localStorage.setItem(
+              getStorageKeyForPage(currentBeforeSave.websiteId, currentBeforeSave.activePageSlug),
+              JSON.stringify(currentBeforeSave.tree),
+            );
+            lastSavedRevRef.current = currentBeforeSave.rev;
+            markSaved(currentBeforeSave.rev);
             return;
           }
 
@@ -62,11 +99,29 @@ export function useAutosave() {
             throw new Error(saveResult.error ?? "No se pudo guardar");
           }
 
-          localStorage.setItem(getStorageKeyForPage(websiteId, activePageSlug), JSON.stringify(tree));
-          lastSavedRevRef.current = useEditorStore.getState().lastSavedRev;
+          const currentAfterSave = useEditorStore.getState();
+          if (
+            currentAfterSave.websiteId &&
+            getAutosaveScopeKey(currentAfterSave.websiteId, currentAfterSave.activePageSlug) === scheduledScope
+          ) {
+            localStorage.setItem(
+              getStorageKeyForPage(currentAfterSave.websiteId, currentAfterSave.activePageSlug),
+              JSON.stringify(currentAfterSave.tree),
+            );
+            lastSavedRevRef.current = currentAfterSave.lastSavedRev;
+          }
         } catch (error) {
           try {
-            localStorage.setItem(getStorageKeyForPage(websiteId, activePageSlug), JSON.stringify(tree));
+            const currentAfterError = useEditorStore.getState();
+            if (
+              currentAfterError.websiteId &&
+              getAutosaveScopeKey(currentAfterError.websiteId, currentAfterError.activePageSlug) === scheduledScope
+            ) {
+              localStorage.setItem(
+                getStorageKeyForPage(currentAfterError.websiteId, currentAfterError.activePageSlug),
+                JSON.stringify(currentAfterError.tree),
+              );
+            }
           } catch {
             // Ignorar backup local fallido
           }
@@ -81,7 +136,7 @@ export function useAutosave() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [activePageSlug, markError, markSaved, markSaving, rev, saveToServer, tree, websiteId]);
+  }, [activePageSlug, lastSavedRev, markError, markSaved, markSaving, rev, saveToServer, websiteId]);
 
   useEffect(() => {
     if (!websiteId) return;
@@ -96,7 +151,7 @@ export function useAutosave() {
     };
 
     const handleBeforeUnload = () => {
-      if (rev === lastSavedRevRef.current) return;
+      if (rev === lastSavedRev) return;
       if (timerRef.current) clearTimeout(timerRef.current);
       flushLocalBackup();
     };
@@ -108,7 +163,7 @@ export function useAutosave() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("pagehide", handleBeforeUnload);
     };
-  }, [activePageSlug, rev, tree, websiteId]);
+  }, [activePageSlug, lastSavedRev, rev, tree, websiteId]);
 }
 
 export function loadSavedTree(websiteId: string, pageSlug = "home"): EditorTree | null {

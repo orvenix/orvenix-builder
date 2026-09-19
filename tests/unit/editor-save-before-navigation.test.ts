@@ -208,6 +208,33 @@ test("useAutosave conserva debounce y delega en saveToServer sin PUT independien
   assert.doesNotMatch(source, /method:\s*["']PUT["']/)
 })
 
+
+
+test("useAutosave scopea timers por website y pagina", () => {
+  const source = readFileSync(path.join(process.cwd(), "hooks/useAutosave.ts"), "utf8")
+
+  assert.match(source, /getAutosaveScopeKey\(websiteId, activePageSlug\)/)
+  assert.match(source, /autosaveScopeRef\.current !== autosaveScope/)
+  assert.match(source, /const scheduledScope = autosaveScope/)
+  assert.match(source, /getAutosaveScopeKey\(currentBeforeSave\.websiteId, currentBeforeSave\.activePageSlug\) !== scheduledScope/)
+  assert.match(source, /currentBeforeSave\.rev === currentBeforeSave\.lastSavedRev/)
+})
+
+test("backup local de Home no hidrata Servicios", async () => {
+  installLocalStorage()
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {} })
+  const { loadSavedTree } = await import("../../hooks/useAutosave")
+
+  localStorage.setItem("orvenix_editor_tree:v2:site_1:home", JSON.stringify(tree("home-local")))
+
+  assert.equal(loadSavedTree("site_1", "servicios"), null)
+
+  localStorage.setItem("orvenix_editor_tree:v2:site_1:servicios", JSON.stringify(tree("servicios-local")))
+
+  assert.deepEqual(loadSavedTree("site_1", "home"), tree("home-local"))
+  assert.deepEqual(loadSavedTree("site_1", "servicios"), tree("servicios-local"))
+})
+
 test("navegacion protegida espera flush, bloquea fallo y aplica first navigation wins", () => {
   const files = [
     "components/editor/toolbar/EditorOpsBar.tsx",

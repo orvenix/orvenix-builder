@@ -47,15 +47,20 @@ async function withPersistenceMocks<T>(options: {
   initialTree?: EditorTree | null
   markThrows?: boolean
 }, callback: (persistence: typeof import("../../lib/editorPersistence"), state: {
-  persistedTree: EditorTree | null
+  legacyTree: EditorTree | null
+  pageTrees: Map<string, EditorTree>
   markCalls: Array<{ siteId: string }>
   upsertCalls: number
+  updateCalls: number
 }) => Promise<T>) {
   const originalLoad = (Module as unknown as { _load: (...args: unknown[]) => unknown })._load
+  const initialTree = options.initialTree ? structuredClone(options.initialTree) : null
   const state = {
-    persistedTree: options.initialTree ? structuredClone(options.initialTree) : null,
+    legacyTree: initialTree ? structuredClone(initialTree) : null,
+    pageTrees: new Map<string, EditorTree>(initialTree ? [["home", structuredClone(initialTree)]] : []),
     markCalls: [] as Array<{ siteId: string }>,
     upsertCalls: 0,
+    updateCalls: 0,
   }
 
   ;(Module as unknown as { _load: (...args: unknown[]) => unknown })._load = function mockedLoad(request: unknown, parent: unknown, isMain: unknown) {
@@ -63,25 +68,49 @@ async function withPersistenceMocks<T>(options: {
       return {
         editorPrisma: {
           editorWebsite: {
-            findUnique: async () => ({ id: "site_1", tree: state.persistedTree ?? tree("legacy") }),
-            upsert: async () => {
+            findUnique: async () => state.legacyTree ? { id: "site_1", tree: state.legacyTree } : null,
+            upsert: async (args: { create: { tree: EditorTree }, update: { tree: EditorTree } }) => {
               state.upsertCalls += 1
+              state.legacyTree = structuredClone(state.legacyTree ? args.update.tree : args.create.tree)
               return { id: "site_1" }
             },
-            create: async () => ({ id: "site_1" }),
+            update: async () => {
+              state.updateCalls += 1
+              return { id: "site_1" }
+            },
+            create: async (args: { data: { tree: EditorTree } }) => {
+              state.legacyTree = structuredClone(args.data.tree)
+              return { id: "site_1" }
+            },
           },
         },
       }
     }
     if (request === "@/lib/builder-core/tree/sitePages") {
       return {
-        ensureHomePage: async () => ({ id: "page_1" }),
-        getResolvedSitePage: async () => state.persistedTree
-          ? { id: "page_1", siteId: "site_1", name: "Inicio", slug: "home", tree: state.persistedTree, isHome: true, published: false, source: "site-page" }
-          : null,
+        HOME_PAGE_SLUG: "home",
+        ensureHomePage: async () => {
+          const homeTree = state.pageTrees.get("home") ?? state.legacyTree ?? tree("legacy")
+          state.pageTrees.set("home", structuredClone(homeTree))
+          return { id: "page_home", siteId: "site_1", name: "Inicio", slug: "home", tree: homeTree, isHome: true, published: false, source: "site-page" }
+        },
+        getResolvedSitePage: async (_siteId: string, slug = "home") => {
+          const pageTree = state.pageTrees.get(slug)
+          if (!pageTree) return null
+          return {
+            id: `page_${slug}`,
+            siteId: "site_1",
+            name: slug === "home" ? "Inicio" : "Servicios",
+            slug,
+            tree: pageTree,
+            isHome: slug === "home",
+            published: false,
+            source: "site-page",
+          }
+        },
         getResolvedSiteTheme: async () => ({ siteId: "site_1", tokens: {}, source: "runtime-defaults" }),
-        saveResolvedPageTree: async (_siteId: string, _slug: string, nextTree: EditorTree) => {
-          state.persistedTree = structuredClone(nextTree)
+        saveResolvedPageTree: async (_siteId: string, slug: string, nextTree: EditorTree) => {
+          state.pageTrees.set(slug, structuredClone(nextTree))
         },
         saveResolvedSiteTheme: async () => undefined,
       }
@@ -121,7 +150,7 @@ test("saveEditorTreeToDb marca Design Memory edited cuando el arbol cambia realm
     const saved = await saveEditorTreeToDb("site_1", tree("despues"), "home")
 
     assert.deepEqual(saved, tree("despues"))
-    assert.deepEqual(state.persistedTree, tree("despues"))
+    assert.deepEqual(state.pageTrees.get("home"), tree("despues"))
     assert.equal(state.upsertCalls, 1)
     assert.deepEqual(state.markCalls, [{ siteId: "site_1" }])
   })
@@ -142,7 +171,7 @@ test("saveEditorTreeToDb conserva el guardado aunque Design Memory falle", async
     const saved = await saveEditorTreeToDb("site_1", tree("despues"), "home")
 
     assert.deepEqual(saved, tree("despues"))
-    assert.deepEqual(state.persistedTree, tree("despues"))
+    assert.deepEqual(state.pageTrees.get("home"), tree("despues"))
     assert.deepEqual(state.markCalls, [{ siteId: "site_1" }])
   })
 })
@@ -152,7 +181,33 @@ test("saveEditorTreeToDb no marca edited durante creacion inicial sin arbol prev
     const saved = await saveEditorTreeToDb("site_1", tree("inicial"), "home")
 
     assert.deepEqual(saved, tree("inicial"))
-    assert.deepEqual(state.persistedTree, tree("inicial"))
+    assert.deepEqual(state.pageTrees.get("home"), tree("inicial"))
     assert.deepEqual(state.markCalls, [])
+  })
+})
+
+test("saveEditorTreeToDb preserva EditorWebsite.tree cuando guarda una pagina secundaria", async () => {
+  await withPersistenceMocks({ initialTree: tree("home-original") }, async ({ saveEditorTreeToDb }, state) => {
+    state.pageTrees.set("servicios", tree("servicios-original"))
+
+    const saved = await saveEditorTreeToDb("site_1", tree("servicios-editado"), "servicios")
+
+    assert.deepEqual(saved, tree("servicios-editado"))
+    assert.deepEqual(state.pageTrees.get("servicios"), tree("servicios-editado"))
+    assert.deepEqual(state.legacyTree, tree("home-original"))
+    assert.equal(state.upsertCalls, 0)
+    assert.deepEqual(state.markCalls, [{ siteId: "site_1" }])
+  })
+})
+
+test("saveEditorTreeToDb mantiene EditorWebsite.tree sincronizado al guardar home", async () => {
+  await withPersistenceMocks({ initialTree: tree("home-original") }, async ({ saveEditorTreeToDb }, state) => {
+    const saved = await saveEditorTreeToDb("site_1", tree("home-editado"), "home")
+
+    assert.deepEqual(saved, tree("home-editado"))
+    assert.deepEqual(state.pageTrees.get("home"), tree("home-editado"))
+    assert.deepEqual(state.legacyTree, tree("home-editado"))
+    assert.equal(state.upsertCalls, 1)
+    assert.deepEqual(state.markCalls, [{ siteId: "site_1" }])
   })
 })

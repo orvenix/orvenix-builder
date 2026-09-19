@@ -7,6 +7,7 @@ import {
   type EditorWebId,
 } from "@/lib/editorWebs";
 import {
+  HOME_PAGE_SLUG,
   ensureHomePage,
   getResolvedSitePage,
   getResolvedSiteTheme,
@@ -89,19 +90,31 @@ export async function saveEditorTreeToDb(
 
   // Para IDs de demo, usar el label hardcodeado; para user sites usar el nombre existente
   const name = isEditorWebId(id) ? WEB_LABELS[id as EditorWebId] : undefined;
-
-  await editorPrisma.editorWebsite.upsert({
+  const requestedHomePage = pageSlug === HOME_PAGE_SLUG;
+  const existingSite = await editorPrisma.editorWebsite.findUnique({
     where: { id },
-    update: {
-      ...(name ? { name } : {}),
-      tree: toPrismaJson(tree),
-    },
-    create: {
-      id,
-      name: name ?? id,
-      tree: toPrismaJson(tree),
-    },
+    select: { id: true },
   });
+
+  if (!existingSite || requestedHomePage) {
+    await editorPrisma.editorWebsite.upsert({
+      where: { id },
+      update: {
+        ...(name ? { name } : {}),
+        tree: toPrismaJson(tree),
+      },
+      create: {
+        id,
+        name: name ?? id,
+        tree: toPrismaJson(tree),
+      },
+    });
+  } else if (name) {
+    await editorPrisma.editorWebsite.update({
+      where: { id },
+      data: { name },
+    });
+  }
 
   await ensureHomePage(id);
   await saveResolvedPageTree(id, pageSlug, tree);
