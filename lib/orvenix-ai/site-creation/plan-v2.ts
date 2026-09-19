@@ -602,9 +602,15 @@ export function normalizeSiteCreationPlanV2(plan: SiteCreationPlanV2): SiteCreat
     version: SITE_CREATION_PLAN_V2_VERSION,
     identity: {
       name: normalizeRequiredText(plan.identity.name, 120),
-      industry: normalizeOptionalText(plan.identity.industry, 90),
-      location: normalizeOptionalText(plan.identity.location, 120),
-      description: normalizeOptionalText(plan.identity.description, 600),
+      ...(typeof normalizeOptionalText(plan.identity.industry, 90) !== "undefined"
+        ? { industry: normalizeOptionalText(plan.identity.industry, 90) }
+        : {}),
+      ...(typeof normalizeOptionalText(plan.identity.location, 120) !== "undefined"
+        ? { location: normalizeOptionalText(plan.identity.location, 120) }
+        : {}),
+      ...(typeof normalizeOptionalText(plan.identity.description, 600) !== "undefined"
+        ? { description: normalizeOptionalText(plan.identity.description, 600) }
+        : {}),
     },
     theme,
     navigation,
@@ -626,7 +632,7 @@ export function normalizeSiteCreationPlanV2(plan: SiteCreationPlanV2): SiteCreat
 
   const result = validateSiteCreationPlanV2(normalized, SITE_CREATION_PLAN_V2_DEFAULT_LIMITS)
   if ("errors" in result) {
-    throw new Error(`SiteCreationPlanV2 invalido: `)
+    throw new Error(`SiteCreationPlanV2 invalido: ${result.errors.join(" ")}`)
   }
 
   return result.plan

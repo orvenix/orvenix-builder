@@ -612,9 +612,9 @@ function createMultiPagePlan(params: {
     version: 2,
     identity: {
       name: input.business.name?.trim() || "Sitio Orvenix",
-      industry: input.business.industry,
-      location: input.business.location,
-      description: input.business.description || input.request,
+      ...(typeof input.business.industry !== "undefined" ? { industry: input.business.industry } : {}),
+      ...(typeof input.business.location !== "undefined" ? { location: input.business.location } : {}),
+      ...(typeof input.business.description !== "undefined" || input.request ? { description: input.business.description || input.request } : {}),
     },
     theme,
     navigation: pages.map((page) => ({

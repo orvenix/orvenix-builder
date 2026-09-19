@@ -73,6 +73,60 @@ test("runAutonomousMultiPageSiteBuilder genera un plan V2 multipagina valido en 
   assert.ok(result.trace.some((entry) => entry.includes("multipagina")))
 })
 
+function hasUndefinedValue(value: unknown): boolean {
+  if (typeof value === "undefined") return true
+  if (!value || typeof value !== "object") return false
+
+  if (Array.isArray(value)) return value.some(hasUndefinedValue)
+
+  return Object.values(value as Record<string, unknown>).some(hasUndefinedValue)
+}
+
+test("runAutonomousMultiPageSiteBuilder omite location undefined en Plan V2", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const { validateSiteCreationPlanV2 } = await import("../../lib/orvenix-ai/site-creation/plan-v2")
+
+  const result = await runAutonomousMultiPageSiteBuilder({
+    request: "Crea un sitio web profesional para una clínica dental en Monterrey llamada Clínica Dental Monterrey. Ofrecemos odontología general, limpieza dental y valoración dental. El objetivo principal es conseguir citas.",
+    forceFreshComposition: true,
+    business: {
+      name: "Clínica Dental Monterrey",
+      industry: "clínica dental",
+      description: "Clínica dental en Monterrey con odontología general, limpieza dental y valoración dental.",
+      objective: "Conseguir citas",
+      services: [
+        { name: "Odontología general" },
+        { name: "Limpieza dental" },
+        { name: "Valoración dental" },
+      ],
+    },
+    preferredStyle: "Premium claro, moderno y confiable",
+    designMemoryPrior: null,
+    externalThemeAdvisory: null,
+    minimumQuality: 55,
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(Object.prototype.hasOwnProperty.call(result.plan.identity, "location"), false)
+  assert.equal(hasUndefinedValue(result.plan), false)
+
+  const validation = validateSiteCreationPlanV2(result.plan, {
+    maxPages: result.plan.pages.length,
+    maxBytes: result.byteLength,
+  })
+
+  assert.equal(validation.ok, true, "errors" in validation ? validation.errors.join("\n") : "")
+  assert.equal(result.plan.pages.filter((page) => page.isHome).length, 1)
+  assert.equal(new Set(result.plan.pages.map((page) => page.slug)).size, result.plan.pages.length)
+
+  const pageSlugs = new Set(result.plan.pages.map((page) => page.slug))
+  assert.deepEqual(
+    result.plan.navigation.map((item) => item.slug),
+    result.plan.pages.map((page) => page.slug),
+  )
+  assert.equal(result.plan.navigation.every((item) => pageSlugs.has(item.slug)), true)
+})
+
 test("runAutonomousSiteBuilder conserva su contrato observable de home unica", async () => {
   const { runAutonomousSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
 

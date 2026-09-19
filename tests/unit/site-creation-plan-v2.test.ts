@@ -350,6 +350,24 @@ test("normalizacion server-side recalcula treeHash en una funcion separada", () 
   expectValid(normalized)
 })
 
+test("normalizacion fallida conserva el detalle de validacion", () => {
+  const candidate = clonePlan()
+  candidate.pages[1]!.name = ""
+  candidate.pages[1]!.seo.title = ""
+
+  assert.throws(
+    () => normalizeSiteCreationPlanV2(candidate),
+    (error: unknown) => {
+      assert.ok(error instanceof Error)
+      assert.notEqual(error.message, "SiteCreationPlanV2 invalido:")
+      assert.match(error.message, /^SiteCreationPlanV2 invalido: .+/)
+      assert.match(error.message, /Pagina 2: nombre requerido/)
+      assert.match(error.message, /Pagina 2: SEO requiere titulo y descripcion/)
+      return true
+    },
+  )
+})
+
 test("rechaza Theme inconsistente", () => {
   const candidate = clonePlan()
   candidate.pages[0]!.tree.globalTheme = theme({ fontBody: "Roboto" })
