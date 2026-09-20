@@ -19,6 +19,46 @@ const originalResolveFilename = (Module as unknown as { _resolveFilename: (...ar
 
   return originalResolveFilename.call(this, request, parent, isMain, options)
 }
+type GeneratedPlanPage = {
+  slug: string
+  tree: {
+    rootId: string
+    nodes: Record<string, { id: string; type: string; props?: Record<string, unknown>; children?: string[] }>
+  }
+}
+
+function walkNodeIds(page: GeneratedPlanPage) {
+  const ids: string[] = []
+  const seen = new Set<string>()
+
+  function visit(id: string) {
+    if (!id || seen.has(id)) return
+    seen.add(id)
+    ids.push(id)
+    const node = page.tree.nodes[id]
+    for (const childId of node?.children ?? []) visit(childId)
+  }
+
+  visit(page.tree.rootId)
+  return ids
+}
+
+function duplicateIdsBetween(a: GeneratedPlanPage, b: GeneratedPlanPage) {
+  const aIds = new Set(walkNodeIds(a))
+  return walkNodeIds(b).filter((id) => aIds.has(id))
+}
+
+function firstHeadingText(page: GeneratedPlanPage) {
+  const ids = walkNodeIds(page)
+  for (const id of ids) {
+    const node = page.tree.nodes[id]
+    if (node?.type !== "heading") continue
+    const text = node.props?.text
+    if (typeof text === "string" && text.trim()) return text.trim()
+  }
+  return ""
+}
+
 
 test("runAutonomousMultiPageSiteBuilder genera un plan V2 multipagina valido en memoria", async () => {
   const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
@@ -72,6 +112,81 @@ test("runAutonomousMultiPageSiteBuilder genera un plan V2 multipagina valido en 
   assert.equal(result.pageQuality.length, result.plan.pages.length)
   assert.ok(result.trace.some((entry) => entry.includes("multipagina")))
 })
+
+test("runAutonomousMultiPageSiteBuilder genera heroes page-aware e IDs unicos entre paginas", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+
+  const result = await runAutonomousMultiPageSiteBuilder({
+    request: "Crea un sitio web profesional para una clínica dental en Monterrey llamada Clínica Dental Monterrey. Ofrecemos odontología general, limpieza dental y valoración dental. El objetivo principal es conseguir citas.",
+    forceFreshComposition: true,
+    business: {
+      name: "Clínica Dental Monterrey",
+      industry: "clínica dental",
+      description: "Clínica dental en Monterrey con odontología general, limpieza dental y valoración dental.",
+      objective: "Conseguir citas",
+      services: [
+        { name: "Odontología general" },
+        { name: "Limpieza dental" },
+        { name: "Valoración dental" },
+      ],
+    },
+  })
+
+  const home = result.plan.pages.find((page) => page.slug === "home")
+  const servicios = result.plan.pages.find((page) => page.slug === "servicios")
+  const contacto = result.plan.pages.find((page) => page.slug === "contacto")
+
+  assert.ok(home)
+  assert.ok(servicios)
+  assert.ok(contacto)
+  assert.ok(home.tree.rootId)
+  assert.ok(servicios.tree.rootId)
+  assert.ok(contacto.tree.rootId)
+  assert.notEqual(home.tree.rootId, servicios.tree.rootId)
+  assert.notEqual(home.tree.rootId, contacto.tree.rootId)
+  assert.notEqual(servicios.tree.rootId, contacto.tree.rootId)
+
+  assert.deepEqual(duplicateIdsBetween(home, servicios), [])
+  assert.deepEqual(duplicateIdsBetween(home, contacto), [])
+  assert.deepEqual(duplicateIdsBetween(servicios, contacto), [])
+
+  const homeHero = firstHeadingText(home)
+  const servicesHero = firstHeadingText(servicios)
+  const contactFirstHeading = firstHeadingText(contacto)
+
+  assert.notEqual(homeHero, servicesHero)
+  assert.match(servicesHero.toLowerCase(), /servicios|tratamientos/)
+  assert.notEqual(contactFirstHeading, homeHero)
+  assert.notEqual(contactFirstHeading, servicesHero)
+})
+
+test("runAutonomousMultiPageSiteBuilder diferencia Home y Servicios por contexto en negocio generico", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+
+  const result = await runAutonomousMultiPageSiteBuilder({
+    request: "Crea un sitio profesional para un estudio de arquitectura con servicios de diseño y remodelación.",
+    forceFreshComposition: true,
+    business: {
+      name: "Estudio Norte",
+      industry: "arquitectura",
+      description: "Estudio de arquitectura para diseño residencial, remodelación y dirección de obra.",
+      objective: "Conseguir consultas",
+      services: [
+        { name: "Diseño residencial" },
+        { name: "Remodelación" },
+      ],
+    },
+  })
+
+  const home = result.plan.pages.find((page) => page.slug === "home")
+  const servicios = result.plan.pages.find((page) => page.slug === "servicios")
+
+  assert.ok(home)
+  assert.ok(servicios)
+  assert.notEqual(firstHeadingText(home), firstHeadingText(servicios))
+  assert.match(firstHeadingText(servicios).toLowerCase(), /servicios/)
+})
+
 
 function hasUndefinedValue(value: unknown): boolean {
   if (typeof value === "undefined") return true

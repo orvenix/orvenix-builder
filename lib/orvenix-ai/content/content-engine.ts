@@ -9,17 +9,12 @@ function businessName(context: BusinessContentContext) {
   return context.name?.trim() || "Tu negocio"
 }
 
-function locationText(context: BusinessContentContext) {
-  return context.location?.trim()
-    ? ` en ${context.location.trim()}`
-    : ""
-}
 
 function industryText(context: BusinessContentContext) {
   return context.industry?.trim() || "servicios profesionales"
 }
 
-function heroCopy(context: BusinessContentContext) {
+export function getPageAwareHeroCopy(context: BusinessContentContext) {
   const language = getBusinessLanguage(context)
   const name = businessName(context)
   const location = context.location?.trim()
@@ -134,7 +129,7 @@ function adaptHero(
   props: NodeProps,
   context: BusinessContentContext,
 ): ContentAdaptation {
-  const copy = heroCopy(context)
+  const copy = getPageAwareHeroCopy(context)
 
   return {
     props: {
@@ -215,7 +210,7 @@ function adaptCTA(
   props: NodeProps,
   context: BusinessContentContext,
 ): ContentAdaptation {
-  const copy = heroCopy(context)
+  const copy = getPageAwareHeroCopy(context)
 
   return {
     props: {

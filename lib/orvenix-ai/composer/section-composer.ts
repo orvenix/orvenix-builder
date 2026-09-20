@@ -5,6 +5,7 @@ import type {
   SectionCompositionContext,
 } from "./types"
 import { createComposedNode } from "./node-factory"
+import { getPageAwareHeroCopy } from "@/lib/orvenix-ai/content/content-engine"
 
 function add(
   nodes: Record<string, ComposedNode>,
@@ -486,14 +487,22 @@ function composeHero(
 ): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const variant = compositionVariant(context, 3)
+  const heroCopy = getPageAwareHeroCopy({
+    industry: context.industry,
+    objective: context.objective,
+    audience: context.audience,
+    page: {
+      name: context.pageName,
+      slug: context.pageSlug,
+      purpose: context.pagePurpose,
+    },
+  })
 
   const centered = variant === 2
-  const mediaFirst = variant === 1
-
   const eyebrow = textNode(
     nodes,
     "Etiqueta hero",
-    "Nueva experiencia para clientes exigentes",
+    heroCopy.eyebrow,
     {
       size: "sm",
       color: "#0E5C80",
@@ -504,7 +513,7 @@ function composeHero(
   const title = headingNode(
     nodes,
     "Titulo hero",
-    "Un sitio profesional que convierte visitas en clientes",
+    heroCopy.title,
     1,
     {
       align: centered ? "center" : "left",
@@ -514,7 +523,7 @@ function composeHero(
   const copy = textNode(
     nodes,
     "Descripcion hero",
-    "Presenta tu oferta con claridad, confianza y una experiencia visual lista para personalizar sin tocar codigo.",
+    heroCopy.description,
     {
       size: "lg",
       align: centered ? "center" : "left",

@@ -8,6 +8,9 @@ import type {
 import {
   composeSection,
 } from "@/lib/orvenix-ai/composer"
+import type {
+  SectionCompositionContext,
+} from "@/lib/orvenix-ai/composer"
 
 import {
   getBlockCapability,
@@ -133,10 +136,11 @@ function createBlockSection(
   section: OrvenixSiteSectionPlan,
   nodes: Record<string, EditorNode>,
   options: CompileBlueprintOptions = {},
+  context: SectionCompositionContext = {},
 ): string | null {
   if (options.preferPrimitiveComposition) {
     const composed = copyComposedSection(
-      composeSection(section.role),
+      composeSection(section.role, context),
       nodes,
     )
 
@@ -149,7 +153,7 @@ function createBlockSection(
    */
   if (!section.blockType) {
     return copyComposedSection(
-      composeSection(section.role),
+      composeSection(section.role, context),
       nodes,
     )
   }
@@ -168,6 +172,7 @@ function createBlockSection(
 
 function compilePage(
   page: OrvenixSitePagePlan,
+  architecture: OrvenixSiteArchitecture,
   options: CompileBlueprintOptions = {},
 ): CompiledPageBlueprint {
   const nodes: Record<string, EditorNode> = {}
@@ -185,12 +190,24 @@ function compilePage(
   nodes[root.id] = root
 
   const children: string[] = []
+  const totalSections = page.sections.length
 
-  for (const section of page.sections) {
+  for (const [sectionIndex, section] of page.sections.entries()) {
     const childId = createBlockSection(
       section,
       nodes,
       options,
+      {
+        siteType: architecture.siteType,
+        industry: architecture.industry,
+        objective: architecture.objective,
+        pageName: page.name,
+        pageSlug: page.slug,
+        pagePurpose: page.purpose,
+        sectionIndex,
+        totalSections,
+        compositionSeed: `${architecture.siteType}:${page.slug}:${section.role}:${sectionIndex}`,
+      },
     )
 
     if (!childId) continue
@@ -225,7 +242,7 @@ export function compileSiteBlueprint(
   const warnings: string[] = []
 
   const pages = architecture.pages.map((page) =>
-    compilePage(page, options),
+    compilePage(page, architecture, options),
   )
 
   for (const page of pages) {
