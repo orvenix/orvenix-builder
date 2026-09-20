@@ -4,6 +4,7 @@ import {
   getEditorTreeFromDb,
   saveEditorTreeToDb,
 } from "@/lib/editorPersistence";
+import { getResolvedSitePage } from "@/lib/builder-core/tree/sitePages";
 import { canManageSite, type UserRole } from "@/lib/auth";
 import { isEditorWebId } from "@/lib/editorWebs";
 import { serverDebug, serverError } from "@/lib/server-log";
@@ -199,11 +200,13 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const savedTree = await saveEditorTreeToDb(id, tree, page);
+    const savedPage = await getResolvedSitePage(id, page);
 
     return NextResponse.json(
       {
         ok: true,
         tree: savedTree,
+        serverVersion: savedPage?.updatedAt?.toISOString() ?? null,
       },
       {
         headers: {

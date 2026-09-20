@@ -43,13 +43,34 @@ function installLocalStorage() {
       clear: () => { store.clear() },
     },
   })
+  return store
 }
 
-function jsonResponse(ok = true) {
+function jsonResponse(ok = true, payload: Record<string, unknown> = {}) {
   return {
     ok,
-    json: async () => ok ? ({}) : ({ error: "No se pudo guardar." }),
+    json: async () => ok ? payload : ({ error: "No se pudo guardar." }),
   } as Response
+}
+
+function recoveryEnvelope(params: {
+  websiteId: string
+  pageSlug: string
+  baseServerVersion: string | null
+  currentTree: EditorTree
+}) {
+  return JSON.stringify({
+    version: 3,
+    websiteId: params.websiteId,
+    pageSlug: params.pageSlug,
+    tree: params.currentTree,
+    savedAt: 123456,
+    baseServerVersion: params.baseServerVersion,
+  })
+}
+
+function recoveryKey(websiteId: string, pageSlug: string) {
+  return `orvenix_editor_tree:v3:${websiteId}:${pageSlug}`
 }
 
 async function waitFor(predicate: () => boolean) {
@@ -99,6 +120,21 @@ test("flushPendingSave sin dirty no dispara save", async () => {
 
   assert.equal(result.success, true)
   assert.equal(calls.length, 0)
+})
+
+test("saveToServer reconcilia serverVersion post-save", async () => {
+  const { useEditorStore } = await loadStore()
+  globalThis.fetch = async () => jsonResponse(true, { serverVersion: "server-v2" })
+
+  useEditorStore.getState().initialize("site_1", tree("saved"), null, { activePageSlug: "home", activePageName: "Inicio", serverVersion: "server-v1" })
+  markDirty(useEditorStore, { currentTree: tree("changed"), rev: 1 })
+
+  const result = await useEditorStore.getState().saveToServer()
+
+  assert.equal(result.success, true)
+  assert.equal(result.serverVersion, "server-v2")
+  assert.equal(useEditorStore.getState().serverVersion, "server-v2")
+  assert.equal(useEditorStore.getState().lastSavedRev, 1)
 })
 
 test("flushPendingSave guarda dirty antes de navegar y usa snapshot rev/pageSlug exactos", async () => {
@@ -220,19 +256,142 @@ test("useAutosave scopea timers por website y pagina", () => {
   assert.match(source, /currentBeforeSave\.rev === currentBeforeSave\.lastSavedRev/)
 })
 
+test("legacy local draft sin version metadata no reemplaza server tree", async () => {
+  installLocalStorage()
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {} })
+  const { inspectSavedTreeRecovery, loadSavedTree } = await import("../../hooks/useAutosave")
+
+  localStorage.setItem("orvenix_editor_tree:v2:site_1:home", JSON.stringify(tree("legacy-local")))
+
+  assert.equal(loadSavedTree("site_1", "home", "server-v1"), null)
+  assert.deepEqual(inspectSavedTreeRecovery("site_1", "home", "server-v1"), { status: "legacy", tree: null })
+})
+
+test("local draft de otro website u otra page no se recupera", async () => {
+  installLocalStorage()
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {} })
+  const { inspectSavedTreeRecovery, loadSavedTree } = await import("../../hooks/useAutosave")
+
+  localStorage.setItem(recoveryKey("site_1", "home"), recoveryEnvelope({
+    websiteId: "site_2",
+    pageSlug: "home",
+    baseServerVersion: "server-v1",
+    currentTree: tree("wrong-site"),
+  }))
+  assert.equal(loadSavedTree("site_1", "home", "server-v1"), null)
+  assert.equal(inspectSavedTreeRecovery("site_1", "home", "server-v1").status, "stale")
+
+  localStorage.setItem(recoveryKey("site_1", "servicios"), recoveryEnvelope({
+    websiteId: "site_1",
+    pageSlug: "home",
+    baseServerVersion: "server-v1",
+    currentTree: tree("wrong-page"),
+  }))
+  assert.equal(loadSavedTree("site_1", "servicios", "server-v1"), null)
+  assert.equal(inspectSavedTreeRecovery("site_1", "servicios", "server-v1").status, "stale")
+})
+
+test("same page stale draft no reemplaza server tree y compatible recovery conserva cambio", async () => {
+  installLocalStorage()
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {} })
+  const { inspectSavedTreeRecovery, loadSavedTree } = await import("../../hooks/useAutosave")
+
+  localStorage.setItem(recoveryKey("site_1", "home"), recoveryEnvelope({
+    websiteId: "site_1",
+    pageSlug: "home",
+    baseServerVersion: "server-v1",
+    currentTree: tree("local-change"),
+  }))
+
+  assert.equal(loadSavedTree("site_1", "home", "server-v2"), null)
+  assert.equal(inspectSavedTreeRecovery("site_1", "home", "server-v2").status, "stale")
+
+  assert.deepEqual(loadSavedTree("site_1", "home", "server-v1"), tree("local-change"))
+  const recovered = inspectSavedTreeRecovery("site_1", "home", "server-v1")
+  assert.equal(recovered.status, "recovered")
+  if (recovered.status === "recovered") {
+    assert.equal(recovered.baseServerVersion, "server-v1")
+    assert.deepEqual(recovered.tree, tree("local-change"))
+  }
+})
+
+test("stale draft ignored inicializa limpio y no produce PUT", async () => {
+  const { useEditorStore } = await loadStore()
+  const calls: FetchCall[] = []
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), tree: JSON.parse(String(init?.body)).tree })
+    return jsonResponse(true, { serverVersion: "server-v2" })
+  }
+
+  useEditorStore.getState().initialize("site_1", tree("server-v2"), null, { activePageSlug: "home", activePageName: "Inicio", serverVersion: "server-v2" })
+
+  assert.equal(useEditorStore.getState().rev, 0)
+  assert.equal(useEditorStore.getState().lastSavedRev, 0)
+  assert.equal(useEditorStore.getState().saveStatus, "idle")
+  const result = await useEditorStore.getState().flushPendingSave()
+  assert.equal(result.success, true)
+  assert.equal(calls.length, 0)
+})
+
+test("valid same-page recovery inicializa dirty y permite autosave normal", async () => {
+  const { useEditorStore } = await loadStore()
+  const calls: FetchCall[] = []
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), tree: JSON.parse(String(init?.body)).tree })
+    return jsonResponse(true, { serverVersion: "server-v2" })
+  }
+
+  useEditorStore.getState().initialize("site_1", tree("local-change"), null, {
+    activePageSlug: "home",
+    activePageName: "Inicio",
+    serverVersion: "server-v1",
+    recoveredFromLocal: true,
+  })
+
+  assert.equal(useEditorStore.getState().rev, 1)
+  assert.equal(useEditorStore.getState().lastSavedRev, 0)
+  assert.equal(useEditorStore.getState().saveStatus, "dirty")
+
+  const result = await useEditorStore.getState().flushPendingSave()
+  assert.equal(result.success, true)
+  assert.equal(calls.length, 1)
+  assert.deepEqual(calls[0]!.tree, tree("local-change"))
+  assert.equal(useEditorStore.getState().serverVersion, "server-v2")
+})
+
 test("backup local de Home no hidrata Servicios", async () => {
   installLocalStorage()
   Object.defineProperty(globalThis, "window", { configurable: true, value: {} })
   const { loadSavedTree } = await import("../../hooks/useAutosave")
 
-  localStorage.setItem("orvenix_editor_tree:v2:site_1:home", JSON.stringify(tree("home-local")))
+  localStorage.setItem(recoveryKey("site_1", "home"), recoveryEnvelope({
+    websiteId: "site_1",
+    pageSlug: "home",
+    baseServerVersion: "server-v1",
+    currentTree: tree("home-local"),
+  }))
 
-  assert.equal(loadSavedTree("site_1", "servicios"), null)
+  assert.equal(loadSavedTree("site_1", "servicios", "server-v1"), null)
 
-  localStorage.setItem("orvenix_editor_tree:v2:site_1:servicios", JSON.stringify(tree("servicios-local")))
+  localStorage.setItem(recoveryKey("site_1", "servicios"), recoveryEnvelope({
+    websiteId: "site_1",
+    pageSlug: "servicios",
+    baseServerVersion: "server-v1",
+    currentTree: tree("servicios-local"),
+  }))
 
-  assert.deepEqual(loadSavedTree("site_1", "home"), tree("home-local"))
-  assert.deepEqual(loadSavedTree("site_1", "servicios"), tree("servicios-local"))
+  assert.deepEqual(loadSavedTree("site_1", "home", "server-v1"), tree("home-local"))
+  assert.deepEqual(loadSavedTree("site_1", "servicios", "server-v1"), tree("servicios-local"))
+})
+
+test("autosave tiene un solo owner estructural y no vive dentro de shells intercambiables", () => {
+  const experienceShell = readFileSync(path.join(process.cwd(), "components/editor/experience/EditorExperienceShell.tsx"), "utf8")
+  const clientShell = readFileSync(path.join(process.cwd(), "components/editor/client-shell/ClientShell.tsx"), "utf8")
+  const editorShell = readFileSync(path.join(process.cwd(), "components/editor/shell/EditorShell.tsx"), "utf8")
+
+  assert.match(experienceShell, /useAutosave()/)
+  assert.doesNotMatch(clientShell, /useAutosave()/)
+  assert.doesNotMatch(editorShell, /useAutosave()/)
 })
 
 test("navegacion protegida espera flush, bloquea fallo y aplica first navigation wins", () => {

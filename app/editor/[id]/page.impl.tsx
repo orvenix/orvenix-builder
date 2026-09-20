@@ -70,6 +70,7 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
   }
   const activePageName = resolvedPage?.name ?? "Inicio";
   const activePageSlug = resolvedPage?.slug ?? "home";
+  const initialServerVersion = resolvedPage?.updatedAt?.toISOString() ?? null;
 
   return (
     <EditorProvider
@@ -79,6 +80,7 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
   initialBuilderTier={shouldEnsureProfessionalPages ? "pro" : "basic"}
   initialPageSlug={activePageSlug}
   initialPageName={activePageName}
+  initialServerVersion={initialServerVersion}
   availablePages={availablePages}
 >
       <div className="ov-shell editor-shell-page relative flex h-screen flex-col overflow-hidden text-white">

@@ -44,6 +44,7 @@ type DynamicSitePageRecord = {
   seo?: unknown;
   isHome: boolean;
   published: boolean;
+  updatedAt: Date;
 };
 
 type DynamicSiteThemeRecord = {
@@ -111,6 +112,7 @@ export interface SitePageListItem {
 export interface ResolvedSitePage extends SitePageListItem {
   tree: unknown;
   seo?: unknown;
+  updatedAt?: Date;
 }
 
 export interface ResolvedSiteTheme {
@@ -273,6 +275,7 @@ export async function getResolvedSitePage(
         seo: true,
         isHome: true,
         published: true,
+        updatedAt: true,
       },
     });
 
@@ -286,6 +289,7 @@ export async function getResolvedSitePage(
         seo: page.seo,
         isHome: page.isHome,
         published: page.published,
+        updatedAt: page.updatedAt,
         source: "site-page",
       };
     }
@@ -297,7 +301,7 @@ export async function getResolvedSitePage(
 
   const legacySite = await editorPrisma.editorWebsite.findUnique({
     where: { id: siteId },
-    select: { id: true, tree: true, published: true },
+    select: { id: true, tree: true, published: true, updatedAt: true },
   });
 
   if (!legacySite) {
@@ -312,6 +316,7 @@ export async function getResolvedSitePage(
     tree: legacySite.tree,
     isHome: true,
     published: legacySite.published,
+    updatedAt: legacySite.updatedAt,
     source: "legacy-site-tree",
   };
 }
@@ -356,6 +361,7 @@ export async function ensureHomePage(siteId: string): Promise<ResolvedSitePage |
     seo: created.seo,
     isHome: created.isHome,
     published: created.published,
+    updatedAt: created.updatedAt,
     source: "site-page",
   };
 }

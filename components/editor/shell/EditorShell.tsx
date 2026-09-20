@@ -18,7 +18,6 @@ import { Canvas } from "@/components/editor/Canvas";
 import { SettingsPanel } from "@/components/editor/inspector/SettingsPanel";
 import { TemplatesPanel } from "@/components/editor/sidebar/TemplatesPanel";
 import { LayersPanel } from "@/components/editor/sidebar/LayersPanel";
-import { useAutosave } from "@/hooks/useAutosave";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { FloatingSaveIndicator } from "@/components/editor/toolbar/FloatingSaveIndicator";
 import { EditorContextMenu } from "@/components/editor/toolbar/EditorContextMenu";
@@ -42,7 +41,6 @@ const TABS: {
 ];
 
 export function EditorShell() {
-  useAutosave();
   useKeyboardShortcuts();
 
   const rootChildCount = useEditorStore((s) => s.tree.nodes[s.tree.rootId]?.children?.length ?? 0);

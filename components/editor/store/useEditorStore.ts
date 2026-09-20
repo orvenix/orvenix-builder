@@ -142,6 +142,7 @@ export interface EditorState {
   publishStatus: PublishStatus;
   rev: number;
   lastSavedRev: number;
+  serverVersion: string | null;
   lastError: string | null;
 
   // Historial
@@ -154,7 +155,7 @@ export interface EditorState {
     id: string,
     tree: EditorTree,
     purchaseType?: PurchaseType,
-    pageContext?: { activePageSlug?: string; activePageName?: string; availablePages?: SitePageListItem[] }
+    pageContext?: { activePageSlug?: string; activePageName?: string; availablePages?: SitePageListItem[]; serverVersion?: string | null; recoveredFromLocal?: boolean }
   ) => void;
   setWebsiteId: (id: string) => void;
     syncTreeFromServer:
@@ -248,8 +249,8 @@ export interface EditorState {
   undo: () => void;
   redo: () => void;
   saveToLocalStorage: () => void;
-  saveToServer: () => Promise<{ success: boolean; error?: string }>;
-  flushPendingSave: () => Promise<{ success: boolean; error?: string }>;
+  saveToServer: () => Promise<{ success: boolean; error?: string; serverVersion?: string | null }>;
+  flushPendingSave: () => Promise<{ success: boolean; error?: string; serverVersion?: string | null }>;
   loadFromLocalStorage: () => void;
   markSaving: () => void;
   markSaved: (revSaved: number) => void;
@@ -465,7 +466,7 @@ const DEFAULT_BRAND_KIT: BrandKit = {
   },
 };
 
-let saveInFlight: Promise<{ success: boolean; error?: string }> | null = null;
+let saveInFlight: Promise<{ success: boolean; error?: string; serverVersion?: string | null }> | null = null;
 
 export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, get) => ({
   websiteId: null,
@@ -500,6 +501,7 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
   publishStatus: "idle",
   rev: 0,
   lastSavedRev: 0,
+  serverVersion: null,
   lastError: null,
   undoStack: [],
   redoStack: [],
@@ -509,7 +511,7 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     id: string,
     tree: EditorTree,
     purchaseType: PurchaseType = null,
-    pageContext?: { activePageSlug?: string; activePageName?: string; availablePages?: SitePageListItem[] }
+    pageContext?: { activePageSlug?: string; activePageName?: string; availablePages?: SitePageListItem[]; serverVersion?: string | null; recoveredFromLocal?: boolean }
   ) => {
     let safeTree: EditorTree;
     try {
@@ -517,6 +519,9 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     } catch {
       safeTree = tree;
     }
+    const recoveredFromLocal = pageContext?.recoveredFromLocal === true;
+    const initialRev = recoveredFromLocal ? 1 : 0;
+
     set({
       websiteId: id,
       activePageSlug: pageContext?.activePageSlug ?? "home",
@@ -533,10 +538,11 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
       smartGuides: [],
       contextMenu: { isOpen: false, nodeId: null, x: 0, y: 0 },
       assetLibrary: loadAssetLibrary(id),
-      rev: 0,
+      rev: initialRev,
       lastSavedRev: 0,
+      serverVersion: pageContext?.serverVersion ?? null,
       lastError: null,
-      saveStatus: "idle",
+      saveStatus: recoveredFromLocal ? "dirty" : "idle",
       publishStatus: "idle",
       undoStack: [],
       redoStack: [],
@@ -683,12 +689,21 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
 
           if (!response.ok) throw new Error("Fallo al guardar en DB");
 
+          const payload: unknown = await response.json().catch(() => null);
+          const serverVersion =
+            typeof payload === "object" &&
+            payload !== null &&
+            typeof (payload as { serverVersion?: unknown }).serverVersion === "string"
+              ? (payload as { serverVersion: string }).serverVersion
+              : null;
+
           const current = get();
           if (current.websiteId === saveSnapshot.websiteId && current.activePageSlug === saveSnapshot.pageSlug) {
+            if (serverVersion) set({ serverVersion });
             markSaved(saveSnapshot.rev);
           }
 
-          return { success: true };
+          return { success: true, serverVersion };
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Error desconocido";
           const current = get();

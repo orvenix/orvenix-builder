@@ -6,10 +6,12 @@ import {
 } from "@/components/editor/client-shell"
 import { EditorShell } from "@/components/editor/shell/EditorShell"
 import { StudioTopBar } from "@/components/editor/studio"
+import { useAutosave } from "@/hooks/useAutosave"
 
 import { useEditorExperience } from "./ExperienceContext"
 
 export function EditorExperienceShell() {
+  useAutosave()
   const { isClient } = useEditorExperience()
 
   if (isClient) {

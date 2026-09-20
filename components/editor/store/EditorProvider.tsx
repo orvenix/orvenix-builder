@@ -2,7 +2,7 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useEditorStore } from "./useEditorStore";
 import { EditorRuntimeBoundary } from "./EditorRuntimeBoundary";
-import { loadSavedTree } from "@/hooks/useAutosave";
+import { inspectSavedTreeRecovery } from "@/hooks/useAutosave";
 import type { EditorTree } from "@/types/editor";
 import type { SitePageListItem } from "@/lib/builder-core/tree/sitePages";
 import { isArtisanEditableTree } from "@/lib/editorWebs";
@@ -20,6 +20,7 @@ interface EditorProviderProps {
   initialTree: EditorTree;
   initialPageSlug?: string;
   initialPageName?: string;
+  initialServerVersion?: string | null;
   availablePages?: SitePageListItem[];
 }
 
@@ -33,6 +34,7 @@ export function EditorProvider({
   initialBuilderTier = "basic",
   initialPageSlug = "home",
   initialPageName = "Inicio",
+  initialServerVersion = null,
   availablePages = EMPTY_SITE_PAGES,
 }: EditorProviderProps) {
   const initialize = useEditorStore((s) => s.initialize);
@@ -61,17 +63,27 @@ export function EditorProvider({
     try {
       setUserRole(initialUserRole);
       setBuilderTier(initialBuilderTier);
-      const savedTree = loadSavedTree(websiteId, initialPageSlug);
+      const recovery = inspectSavedTreeRecovery(
+        websiteId,
+        initialPageSlug,
+        initialServerVersion,
+      );
+      const recoveredTree = recovery.status === "recovered" ? recovery.tree : null;
       const shouldIgnoreStaleDraft =
-        Boolean(savedTree) &&
+        Boolean(recoveredTree) &&
         isArtisanEditableTree(initialTree) &&
-        !isArtisanEditableTree(savedTree);
+        !isArtisanEditableTree(recoveredTree);
+      const shouldRecoverLocal = Boolean(recoveredTree) && !shouldIgnoreStaleDraft;
 
       initialize(
         websiteId,
-        shouldIgnoreStaleDraft ? initialTree : savedTree ?? initialTree,
+        shouldRecoverLocal ? recoveredTree! : initialTree,
         null,
-        pageContext,
+        {
+          ...pageContext,
+          serverVersion: initialServerVersion,
+          recoveredFromLocal: shouldRecoverLocal,
+        },
       );
     } catch (error) {
   console.error(
@@ -82,7 +94,10 @@ export function EditorProvider({
   try {
     setUserRole(initialUserRole);
     setBuilderTier(initialBuilderTier);
-    initialize(websiteId, initialTree, null, pageContext);
+    initialize(websiteId, initialTree, null, {
+      ...pageContext,
+      serverVersion: initialServerVersion,
+    });
         nextInitializationIssue =
           error instanceof Error ? error.message : "No se pudo cargar el borrador local";
       } catch (fallbackError) {
@@ -104,6 +119,7 @@ export function EditorProvider({
   initialBuilderTier,
   initialPageName,
   initialPageSlug,
+  initialServerVersion,
   initialTree,
   initialUserRole,
   initialize,
