@@ -209,6 +209,7 @@ function compilePage(
         pageName: page.name,
         pageSlug: page.slug,
         pagePurpose: page.purpose,
+        archetype: page.archetype,
         sectionIndex,
         totalSections,
         compositionSeed: `${architecture.siteType}:${page.slug}:${section.role}:${sectionIndex}`,

@@ -14,42 +14,71 @@ function industryText(context: BusinessContentContext) {
   return context.industry?.trim() || "servicios profesionales"
 }
 
+function catalogPageHeroCopy(
+  language: ReturnType<typeof getBusinessLanguage>,
+) {
+  return {
+    eyebrow: "Servicios",
+    title:
+      `Conoce nuestros ${language.servicePlural}`,
+    description:
+      `Encuentra información clara sobre las opciones disponibles y elige la que mejor se adapte a lo que necesitas.`,
+    primaryCtaLabel: language.primaryAction,
+    secondaryCtaLabel: "Volver al inicio",
+  }
+}
+
+function conversionPageHeroCopy(
+  name: string,
+  locationPhrase: string,
+  language: ReturnType<typeof getBusinessLanguage>,
+) {
+  return {
+    eyebrow: "Contacto",
+    title:
+      "Estamos aquí para ayudarte a dar el siguiente paso",
+    description:
+      `Comunícate con ${name}${locationPhrase} para resolver dudas, solicitar información o comenzar.`,
+    primaryCtaLabel: language.primaryAction,
+    secondaryCtaLabel: "Ver servicios",
+  }
+}
+
 export function getPageAwareHeroCopy(context: BusinessContentContext) {
   const language = getBusinessLanguage(context)
   const name = businessName(context)
   const location = context.location?.trim()
-  const slug = context.page?.slug ?? "home"
+  const archetype = context.page?.archetype
 
   const locationPhrase =
     location ? ` en ${location}` : ""
 
   /*
-   * PAGE: SERVICIOS
+   * PAGE ARCHETYPE (authoritative). The active multipage composer always
+   * sets this, and it always wins over slug-based inference below.
    */
-  if (slug === "servicios") {
-    return {
-      eyebrow: "Servicios",
-      title:
-        `Conoce nuestros ${language.servicePlural}`,
-      description:
-        `Encuentra información clara sobre las opciones disponibles y elige la que mejor se adapte a lo que necesitas.`,
-      primaryCtaLabel: language.primaryAction,
-      secondaryCtaLabel: "Volver al inicio",
-    }
+  if (archetype === "catalog") {
+    return catalogPageHeroCopy(language)
   }
 
-  /*
-   * PAGE: CONTACTO
-   */
-  if (slug === "contacto") {
-    return {
-      eyebrow: "Contacto",
-      title:
-        "Estamos aquí para ayudarte a dar el siguiente paso",
-      description:
-        `Comunícate con ${name}${locationPhrase} para resolver dudas, solicitar información o comenzar.`,
-      primaryCtaLabel: language.primaryAction,
-      secondaryCtaLabel: "Ver servicios",
+  if (archetype === "conversion") {
+    return conversionPageHeroCopy(name, locationPhrase, language)
+  }
+
+  if (!archetype) {
+    /*
+     * LEGACY FALLBACK — backward compatibility only, for callers that
+     * predate PageArchetype (eg. the artisan-template adaptation path).
+     * The multipage composer never hits this branch.
+     */
+    const slug = context.page?.slug ?? "home"
+
+    if (slug === "servicios") {
+      return catalogPageHeroCopy(language)
+    }
+
+    if (slug === "contacto") {
+      return conversionPageHeroCopy(name, locationPhrase, language)
     }
   }
 
@@ -210,21 +239,30 @@ function adaptCTA(
   props: NodeProps,
   context: BusinessContentContext,
 ): ContentAdaptation {
-  const copy = getPageAwareHeroCopy(context)
+  /*
+   * Ownership: the composer already decided label/href for this button
+   * (page-aware CTA, hero actions, etc). Content adaptation must not
+   * clobber that decision with a generic guess — it only fills a real
+   * gap (href left as the "#" placeholder, eg. composeContact's button)
+   * or adds something it uniquely has: a real configured WhatsApp number.
+   */
+  const isUndecidedHref = props.href === "#" || !props.href
+  const hasRealWhatsapp = typeof context.whatsapp === "string" && context.whatsapp.trim().length > 0
+
+  const href = hasRealWhatsapp
+    ? `https://wa.me/${context.whatsapp}`
+    : isUndecidedHref
+      ? "#contacto"
+      : props.href
 
   return {
     props: {
       ...props,
-      label: copy.primaryCtaLabel,
-      text: copy.primaryCtaLabel,
-      href:
-        context.whatsapp
-          ? `https://wa.me/${context.whatsapp}`
-          : "#contacto",
+      href,
     },
-    notes: [
-      "CTA adaptado al objetivo principal.",
-    ],
+    notes: hasRealWhatsapp
+      ? ["CTA enlazado a WhatsApp real del negocio."]
+      : ["CTA conservado tal como lo definio el composer."],
   }
 }
 

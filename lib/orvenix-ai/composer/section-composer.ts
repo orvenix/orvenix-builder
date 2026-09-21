@@ -15,8 +15,38 @@ function add(
   return node.tempId
 }
 
-function composeFAQ(): ComposedSection {
+function faqCopy(archetype: SectionCompositionContext["archetype"]) {
+  if (archetype === "overview") {
+    return {
+      title: "Antes de que preguntes",
+      intro:
+        "Estas son las dudas que más nos comparten antes de dar el siguiente paso. Conoce el detalle completo en la página de servicios.",
+      count: 2,
+    }
+  }
+
+  if (archetype === "catalog") {
+    return {
+      title: "Preguntas frecuentes sobre nuestros servicios",
+      intro:
+        "Resolvemos las dudas más comunes sobre cada servicio antes de que tengas que preguntar.",
+      count: 4,
+    }
+  }
+
+  return {
+    title: "Preguntas frecuentes",
+    intro:
+      "Resuelve aquí las dudas más comunes antes de que el cliente tenga que preguntar.",
+    count: 4,
+  }
+}
+
+function composeFAQ(
+  context: SectionCompositionContext = {},
+): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
+  const copy = faqCopy(context.archetype)
 
   const heading = add(
     nodes,
@@ -24,7 +54,7 @@ function composeFAQ(): ComposedSection {
       type: "heading",
       displayName: "Título FAQ",
       props: {
-        text: "Preguntas frecuentes",
+        text: copy.title,
         level: 2,
         size: "3xl",
         align: "center",
@@ -38,8 +68,7 @@ function composeFAQ(): ComposedSection {
       type: "text",
       displayName: "Introducción FAQ",
       props: {
-        content:
-          "Resuelve aquí las dudas más comunes antes de que el cliente tenga que preguntar.",
+        content: copy.intro,
         align: "center",
       },
     }),
@@ -47,7 +76,7 @@ function composeFAQ(): ComposedSection {
 
   const items: string[] = []
 
-  for (let index = 1; index <= 4; index++) {
+  for (let index = 1; index <= copy.count; index++) {
     const question = add(
       nodes,
       createComposedNode({
@@ -498,6 +527,7 @@ function compositionVariant(
     context.pageName,
     context.pageSlug,
     context.pagePurpose,
+    context.archetype,
     context.preferredStyle,
     context.compositionSeed,
   ]
@@ -526,6 +556,7 @@ function composeHero(
       name: context.pageName,
       slug: context.pageSlug,
       purpose: context.pagePurpose,
+      archetype: context.archetype,
     },
   })
 
@@ -676,25 +707,135 @@ function composeHero(
   }
 }
 
-function composeCardGridSection(role: SectionRole, titleText: string, introText: string, items: Array<[string, string]>): ComposedSection {
+type CardGridCopy = {
+  titleText: string
+  introText: string
+  items: Array<[string, string]>
+}
+
+/**
+ * Archetype-specific copy for card-grid roles shared between an overview
+ * page and a catalog page (eg. Home vs Servicios). Only overview/catalog
+ * are keyed here: conversion pages rarely carry these roles, and when
+ * they do the neutral legacy copy below is a fine default.
+ */
+const CARD_GRID_ARCHETYPE_COPY: Partial<Record<SectionRole, Record<"overview" | "catalog", CardGridCopy>>> = {
+  services: {
+    overview: {
+      titleText: "Lo que hacemos por ti",
+      introText: "Un vistazo rapido a como podemos ayudarte. Conoce el detalle completo en la pagina de servicios.",
+      items: [["Atencion personalizada", "Resolvemos lo que necesitas con un proceso claro y directo."], ["Resultados medibles", "Nos enfocamos en el resultado que buscas, no solo en la tarea."]],
+    },
+    catalog: {
+      titleText: "Nuestro catalogo de servicios",
+      introText: "Explora cada servicio a detalle y encuentra el que mejor resuelve lo que buscas.",
+      items: [["Diagnostico inicial", "Entendemos tu situacion antes de proponer cualquier solucion."], ["Plan a la medida", "Disenamos un plan especifico para tu caso, no una plantilla generica."], ["Seguimiento cercano", "Acompanamos cada etapa para asegurar el resultado esperado."], ["Entrega y cierre", "Cerramos el proceso con claridad sobre lo logrado y los siguientes pasos."]],
+    },
+  },
+  features: {
+    overview: {
+      titleText: "Por que elegirnos",
+      introText: "Las razones principales por las que los clientes se quedan con nosotros.",
+      items: [["Mas confianza", "Presenta pruebas, garantias o detalles que reduzcan dudas."], ["Menos friccion", "Haz facil pedir informacion, reservar, comprar o cotizar."]],
+    },
+    catalog: {
+      titleText: "Beneficios de cada opcion",
+      introText: "Compara a detalle lo que obtienes en cada alternativa antes de decidir.",
+      items: [["Ventajas claras", "Cada opcion tiene beneficios especificos que puedes comparar antes de elegir."], ["Menos dudas", "Encuentra el detalle que necesitas para decidir con confianza."], ["Experiencia cuidada", "Cada punto de contacto esta pensado para que el proceso se sienta profesional."]],
+    },
+  },
+  process: {
+    overview: {
+      titleText: "Como te ayudamos",
+      introText: "Un resumen rapido del camino que recorres con nosotros.",
+      items: [["1. Cuentanos tu objetivo", "Recibe la informacion clave sin formularios largos."], ["2. Activamos el siguiente paso", "Cierra con una accion concreta y facil de completar."]],
+    },
+    catalog: {
+      titleText: "Nuestro proceso paso a paso",
+      introText: "Asi es como avanzamos juntos desde el primer contacto hasta el resultado final.",
+      items: [["1. Compartes el contexto", "Nos cuentas que necesitas sin formularios largos ni pasos innecesarios."], ["2. Analizamos las opciones", "Revisamos las alternativas disponibles y te mostramos la ruta mas clara."], ["3. Avanzamos juntos", "Confirmamos los detalles y damos el siguiente paso de forma concreta."]],
+    },
+  },
+  products: {
+    overview: {
+      titleText: "Lo mas destacado",
+      introText: "Una muestra rapida de lo que puedes encontrar en el catalogo completo.",
+      items: [["Producto estrella", "Describe el beneficio principal, precio o diferencial."], ["Opcion recomendada", "Resalta el producto ideal para la mayoria de clientes."]],
+    },
+    catalog: {
+      titleText: "Explora el catalogo completo",
+      introText: "Compara opciones y elige la que mejor se adapta a lo que buscas.",
+      items: [["Variedad disponible", "Compara varias opciones antes de decidir cual se adapta mejor a lo que buscas."], ["Detalle por opcion", "Cada producto incluye la informacion que necesitas para comparar con confianza."], ["Listo para elegir", "Encuentra la combinacion de caracteristicas y valor que mejor te convenga."]],
+    },
+  },
+  pricing: {
+    overview: {
+      titleText: "Opciones para todos los presupuestos",
+      introText: "Un vistazo rapido a los planes disponibles.",
+      items: [["Inicial", "Para comenzar con lo esencial y validar interes."], ["Premium", "Para clientes que quieren una experiencia mas completa."]],
+    },
+    catalog: {
+      titleText: "Elige la opcion ideal",
+      introText: "Presenta precios, paquetes u ofertas sin confundir al comprador.",
+      items: [["Basico", "Cubre lo esencial para comenzar sin complicaciones."], ["Estandar", "El equilibrio entre alcance, soporte y valor que buscan la mayoria de clientes."], ["Avanzado", "Para quienes buscan la experiencia mas completa disponible."]],
+    },
+  },
+  content: {
+    overview: {
+      titleText: "Lo esencial de un vistazo",
+      introText: "Los puntos clave que todo visitante deberia conocer primero.",
+      items: [["Detalle importante", "Explica aqui un punto clave que ayude a decidir."], ["Siguiente paso", "Guia al visitante hacia la accion mas importante."]],
+    },
+    catalog: {
+      titleText: "Contenido a detalle",
+      introText: "Toda la informacion relevante organizada para que puedas revisarla con calma.",
+      items: [["Contexto completo", "Cada aspecto relevante queda explicado antes de que tengas que preguntar."], ["Puntos clave", "Cada seccion resalta lo que realmente importa antes de decidir."], ["Proximo paso", "Una guia clara de que hacer despues de revisar el contenido."]],
+    },
+  },
+}
+
+function cardGridCopy(role: SectionRole, archetype: SectionCompositionContext["archetype"], legacy: CardGridCopy): CardGridCopy {
+  if (archetype === "overview" || archetype === "catalog") {
+    return CARD_GRID_ARCHETYPE_COPY[role]?.[archetype] ?? legacy
+  }
+
+  return legacy
+}
+
+function composeCardGridSection(
+  role: SectionRole,
+  titleText: string,
+  introText: string,
+  items: Array<[string, string]>,
+  context: SectionCompositionContext = {},
+): ComposedSection {
+  const copy = cardGridCopy(role, context.archetype, { titleText, introText, items })
   const nodes: Record<string, ComposedNode> = {}
-  const heading = headingNode(nodes, "Titulo " + role, titleText, 2, { align: "center" })
-  const intro = textNode(nodes, "Intro " + role, introText, { align: "center", size: "lg" })
-  const cards = items.map(([title, body]) => {
+  const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center" })
+  const intro = textNode(nodes, "Intro " + role, copy.introText, { align: "center", size: "lg" })
+  const cards = copy.items.map(([title, body]) => {
     const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
     const cardText = textNode(nodes, title + " texto", body)
     return wrapperNode(nodes, title, "rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-900/10", [cardTitle, cardText], "article")
   })
-  const grid = wrapperNode(nodes, "Grid " + role, "grid gap-5 md:grid-cols-3", cards)
-  const root = add(nodes, createComposedNode({ type: "section", displayName: titleText, props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: "#ffffff" }, children: [heading, intro, grid] }))
-  return { role, rootId: root, nodes, purpose: introText }
+  /*
+   * "services" is the flagship role shared between overview and catalog
+   * pages: give catalog a visibly different grid (fewer, wider columns)
+   * instead of layering layout variance onto every role.
+   */
+  const gridClassName = role === "services" && context.archetype === "catalog"
+    ? "grid gap-6 md:grid-cols-2"
+    : "grid gap-5 md:grid-cols-3"
+  const grid = wrapperNode(nodes, "Grid " + role, gridClassName, cards)
+  const root = add(nodes, createComposedNode({ type: "section", displayName: copy.titleText, props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: "#ffffff" }, children: [heading, intro, grid] }))
+  return { role, rootId: root, nodes, purpose: copy.introText }
 }
 
-function composeServices(): ComposedSection { return composeCardGridSection("services", "Servicios pensados para vender mejor", "Organiza tu oferta para que el visitante entienda rapido que haces y por que debe contactarte.", [["Servicio principal", "Explica el resultado mas valioso que obtiene tu cliente."], ["Acompanamiento experto", "Muestra como guias al cliente antes, durante y despues del servicio."], ["Entrega clara", "Convierte tu proceso en una razon para confiar y avanzar."]]) }
-function composeFeatures(): ComposedSection { return composeCardGridSection("features", "Beneficios que se entienden al instante", "Transforma caracteristicas en razones claras para elegir tu negocio.", [["Mas confianza", "Presenta pruebas, garantias o detalles que reduzcan dudas."], ["Menos friccion", "Haz facil pedir informacion, reservar, comprar o cotizar."], ["Mejor experiencia", "Cuida cada punto de contacto para que el sitio se sienta profesional."]]) }
-function composeProcess(): ComposedSection { return composeCardGridSection("process", "Un proceso simple para empezar", "Ayuda al cliente a saber que pasara despues de dar clic.", [["1. Cuentanos tu objetivo", "Recibe la informacion clave sin formularios largos."], ["2. Revisamos la mejor ruta", "Muestra una propuesta clara y adaptada al caso."], ["3. Activamos el siguiente paso", "Cierra con una accion concreta y facil de completar."]]) }
-function composeProducts(): ComposedSection { return composeCardGridSection("products", "Productos destacados", "Muestra opciones faciles de comparar y listas para llevar al usuario a comprar.", [["Producto estrella", "Describe el beneficio principal, precio o diferencial."], ["Opcion recomendada", "Resalta el producto ideal para la mayoria de clientes."], ["Paquete premium", "Presenta la alternativa con mayor valor percibido."]]) }
-function composePricing(): ComposedSection { return composeCardGridSection("pricing", "Elige la opcion ideal", "Presenta precios, paquetes u ofertas sin confundir al comprador.", [["Inicial", "Para comenzar con lo esencial y validar interes."], ["Recomendado", "La opcion con mejor balance entre alcance, soporte y crecimiento."], ["Premium", "Para clientes que quieren una experiencia mas completa."]]) }
+function composeServices(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("services", "Servicios pensados para vender mejor", "Organiza tu oferta para que el visitante entienda rapido que haces y por que debe contactarte.", [["Servicio principal", "Explica el resultado mas valioso que obtiene tu cliente."], ["Acompanamiento experto", "Muestra como guias al cliente antes, durante y despues del servicio."], ["Entrega clara", "Convierte tu proceso en una razon para confiar y avanzar."]], context) }
+function composeFeatures(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("features", "Beneficios que se entienden al instante", "Transforma caracteristicas en razones claras para elegir tu negocio.", [["Mas confianza", "Presenta pruebas, garantias o detalles que reduzcan dudas."], ["Menos friccion", "Haz facil pedir informacion, reservar, comprar o cotizar."], ["Mejor experiencia", "Cuida cada punto de contacto para que el sitio se sienta profesional."]], context) }
+function composeProcess(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("process", "Un proceso simple para empezar", "Ayuda al cliente a saber que pasara despues de dar clic.", [["1. Cuentanos tu objetivo", "Recibe la informacion clave sin formularios largos."], ["2. Revisamos la mejor ruta", "Muestra una propuesta clara y adaptada al caso."], ["3. Activamos el siguiente paso", "Cierra con una accion concreta y facil de completar."]], context) }
+function composeProducts(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("products", "Productos destacados", "Muestra opciones faciles de comparar y listas para llevar al usuario a comprar.", [["Producto estrella", "Describe el beneficio principal, precio o diferencial."], ["Opcion recomendada", "Resalta el producto ideal para la mayoria de clientes."], ["Paquete premium", "Presenta la alternativa con mayor valor percibido."]], context) }
+function composePricing(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("pricing", "Elige la opcion ideal", "Presenta precios, paquetes u ofertas sin confundir al comprador.", [["Inicial", "Para comenzar con lo esencial y validar interes."], ["Recomendado", "La opcion con mejor balance entre alcance, soporte y crecimiento."], ["Premium", "Para clientes que quieren una experiencia mas completa."]], context) }
 
 function composeContact(): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
@@ -708,12 +849,42 @@ function composeContact(): ComposedSection {
   return { role: "contact", rootId: root, nodes, purpose: "Facilitar contacto y siguiente paso." }
 }
 
-function composeCTA(): ComposedSection {
+function ctaCopy(archetype: SectionCompositionContext["archetype"]) {
+  if (archetype === "overview") {
+    return {
+      title: "Descubre todo lo que podemos hacer por ti",
+      body: "Conoce el detalle completo de nuestros servicios y encuentra la opcion ideal.",
+      label: "Ver servicios",
+      href: "#servicios",
+    }
+  }
+
+  if (archetype === "catalog") {
+    return {
+      title: "¿Listo para dar el siguiente paso?",
+      body: "Agenda una valoracion y resolvemos juntos cual es la mejor opcion para ti.",
+      label: "Agendar ahora",
+      href: "#contacto",
+    }
+  }
+
+  return {
+    title: "Convierte esta visita en una oportunidad real",
+    body: "Cierra con una accion clara, directa y facil de tomar.",
+    label: "Comenzar ahora",
+    href: "#contacto",
+  }
+}
+
+function composeCTA(
+  context: SectionCompositionContext = {},
+): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  const heading = headingNode(nodes, "Titulo CTA", "Convierte esta visita en una oportunidad real", 2, { align: "center", color: "#ffffff" })
-  const copy = textNode(nodes, "Texto CTA", "Cierra con una accion clara, directa y facil de tomar.", { align: "center", color: "#dbeafe", size: "lg" })
-  const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "CTA final", props: { label: "Comenzar ahora", href: "#contacto", variant: "primary", size: "lg" } }))
-  const stack = wrapperNode(nodes, "Contenido CTA", "mx-auto flex max-w-3xl flex-col items-center gap-6 text-center", [heading, copy, cta])
+  const copy = ctaCopy(context.archetype)
+  const heading = headingNode(nodes, "Titulo CTA", copy.title, 2, { align: "center", color: "#ffffff" })
+  const body = textNode(nodes, "Texto CTA", copy.body, { align: "center", color: "#dbeafe", size: "lg" })
+  const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "CTA final", props: { label: copy.label, href: copy.href, variant: "primary", size: "lg" } }))
+  const stack = wrapperNode(nodes, "Contenido CTA", "mx-auto flex max-w-3xl flex-col items-center gap-6 text-center", [heading, body, cta])
   const root = add(nodes, createComposedNode({ type: "section", displayName: "CTA final", props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background: "#0A3E57" }, children: [stack] }))
   return { role: "cta", rootId: root, nodes, purpose: "Cerrar con llamada a la accion." }
 }
@@ -729,13 +900,12 @@ function composeFooter(): ComposedSection {
   return { role: "footer", rootId: root, nodes, purpose: "Cerrar navegacion, marca y datos basicos." }
 }
 
-function composeContent(): ComposedSection { return composeCardGridSection("content", "Contenido principal", "Agrega informacion importante del negocio con una estructura clara y editable.", [["Detalle importante", "Explica aqui un punto clave que ayude a decidir."], ["Diferencial", "Cuenta que hace especial esta oferta frente a otras opciones."], ["Siguiente paso", "Guia al visitante hacia la accion mas importante."]]) }
+function composeContent(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("content", "Contenido principal", "Agrega informacion importante del negocio con una estructura clara y editable.", [["Detalle importante", "Explica aqui un punto clave que ayude a decidir."], ["Diferencial", "Cuenta que hace especial esta oferta frente a otras opciones."], ["Siguiente paso", "Guia al visitante hacia la accion mas importante."]], context) }
 
 export function composeSection(
   role: SectionRole,
   context: SectionCompositionContext = {},
 ): ComposedSection | null {
-  void context
   switch (role) {
     case "navigation":
       return composeNavigation(context)
@@ -744,34 +914,34 @@ export function composeSection(
       return composeHero(context)
 
     case "services":
-      return composeServices()
+      return composeServices(context)
 
     case "features":
-      return composeFeatures()
+      return composeFeatures(context)
 
     case "products":
-      return composeProducts()
+      return composeProducts(context)
 
     case "pricing":
-      return composePricing()
+      return composePricing(context)
 
     case "process":
-      return composeProcess()
+      return composeProcess(context)
 
     case "contact":
       return composeContact()
 
     case "cta":
-      return composeCTA()
+      return composeCTA(context)
 
     case "footer":
       return composeFooter()
 
     case "content":
-      return composeContent()
+      return composeContent(context)
 
     case "faq":
-      return composeFAQ()
+      return composeFAQ(context)
 
     case "gallery":
       return composeGallery()

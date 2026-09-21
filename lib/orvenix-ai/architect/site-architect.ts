@@ -3,6 +3,7 @@ import {
   selectBlocksForRoles,
   type SectionRole,
 } from "./block-selector"
+import type { PageArchetype } from "./page-archetype"
 
 export interface OrvenixSiteSectionPlan {
   role: SectionRole
@@ -14,6 +15,7 @@ export interface OrvenixSitePagePlan {
   name: string
   slug: string
   purpose: string
+  archetype: PageArchetype
   sections: OrvenixSiteSectionPlan[]
 }
 
@@ -102,6 +104,7 @@ function makePage(
   name: string,
   slug: string,
   purpose: string,
+  archetype: PageArchetype,
   roles: SectionRole[],
 ): OrvenixSitePagePlan {
   const selected = selectBlocksForRoles(
@@ -116,6 +119,7 @@ function makePage(
     name,
     slug,
     purpose,
+    archetype,
     sections: roles.map((role) => {
       const match = selected.find(
         (item) => item.role === role,
@@ -145,6 +149,7 @@ export function buildSiteArchitecture(
           "Inicio",
           "home",
           "Presentar la clínica y conseguir citas.",
+          "overview",
           [
             "navigation",
             "hero",
@@ -162,6 +167,7 @@ export function buildSiteArchitecture(
           "Servicios",
           "servicios",
           "Explicar tratamientos y servicios.",
+          "catalog",
           [
             "navigation",
             "hero",
@@ -175,6 +181,7 @@ export function buildSiteArchitecture(
           "Contacto",
           "contacto",
           "Facilitar una cita.",
+          "conversion",
           [
             "navigation",
             "contact",
@@ -195,6 +202,7 @@ export function buildSiteArchitecture(
           "Inicio",
           "home",
           "Presentar el restaurante.",
+          "overview",
           [
             "navigation",
             "hero",
@@ -211,6 +219,7 @@ export function buildSiteArchitecture(
           "Menú",
           "menu",
           "Presentar alimentos y bebidas.",
+          "catalog",
           [
             "navigation",
             "hero",
@@ -224,6 +233,7 @@ export function buildSiteArchitecture(
           "Contacto",
           "contacto",
           "Mostrar ubicación y reservaciones.",
+          "conversion",
           [
             "navigation",
             "contact",
@@ -244,6 +254,7 @@ export function buildSiteArchitecture(
           "Inicio",
           "home",
           "Presentar posicionamiento y servicios.",
+          "overview",
           [
             "navigation",
             "hero",
@@ -260,6 +271,7 @@ export function buildSiteArchitecture(
           "Servicios",
           "servicios",
           "Explicar capacidades.",
+          "catalog",
           [
             "navigation",
             "hero",
@@ -274,6 +286,7 @@ export function buildSiteArchitecture(
           "Contacto",
           "contacto",
           "Generar oportunidades.",
+          "conversion",
           [
             "navigation",
             "contact",
@@ -294,6 +307,7 @@ export function buildSiteArchitecture(
           "Inicio",
           "home",
           "Presentar la marca y llevar al catálogo.",
+          "overview",
           [
             "navigation",
             "hero",
@@ -309,6 +323,7 @@ export function buildSiteArchitecture(
           "Productos",
           "productos",
           "Presentar el catálogo.",
+          "catalog",
           [
             "navigation",
             "products",
@@ -329,6 +344,7 @@ export function buildSiteArchitecture(
         "Inicio",
         "home",
         "Presentar el negocio.",
+        "overview",
         [
           "navigation",
           "hero",
@@ -346,6 +362,7 @@ export function buildSiteArchitecture(
         "Servicios",
         "servicios",
         "Explicar la oferta.",
+        "catalog",
         [
           "navigation",
           "hero",
@@ -360,6 +377,7 @@ export function buildSiteArchitecture(
         "Contacto",
         "contacto",
         "Facilitar el contacto.",
+        "conversion",
         [
           "navigation",
           "contact",

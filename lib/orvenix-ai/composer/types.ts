@@ -1,5 +1,5 @@
 import type { NodeProps } from "@/types/editor"
-import type { SectionRole } from "@/lib/orvenix-ai/architect"
+import type { PageArchetype, SectionRole } from "@/lib/orvenix-ai/architect"
 
 export interface ComposedNode {
   tempId: string
@@ -29,6 +29,7 @@ export interface SectionCompositionContext {
   pageName?: string
   pageSlug?: string
   pagePurpose?: string
+  archetype?: PageArchetype
   preferredStyle?: string
   sectionIndex?: number
   totalSections?: number
