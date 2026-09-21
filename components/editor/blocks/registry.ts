@@ -6,6 +6,7 @@ import { Text } from "@/components/editor/primitives/Text";
 import { CtaButton } from "@/components/editor/primitives/CtaButton";
 import { SiteNav } from "@/components/editor/primitives/SiteNav";
 import { Image } from "@/components/editor/primitives/Image";
+import { Icon } from "@/components/editor/primitives/Icon";
 import { GenericWrapper } from "@/components/editor/primitives/GenericWrapper";
 import { StatsBar } from "./StatsBar";
 import { ProductGrid } from "./ProductGrid";
@@ -511,6 +512,38 @@ const imageSettings: SettingsField[] = [
   },
 ];
 
+const iconSettings: SettingsField[] = [
+  {
+    kind: "group",
+    label: "Icono",
+    fields: [
+      {
+        kind: "select",
+        key: "name",
+        label: "Icono",
+        options: [
+          { value: "sparkles", label: "Destacado" },
+          { value: "shield-check", label: "Confianza" },
+          { value: "workflow", label: "Proceso" },
+          { value: "message-circle", label: "Comunicación" },
+          { value: "check-circle", label: "Verificado" },
+          { value: "star", label: "Calidad" },
+          { value: "zap", label: "Rapidez" },
+          { value: "list-checks", label: "Pasos" },
+        ],
+      },
+      {
+        kind: "number",
+        key: "size",
+        label: "Tamaño",
+        min: 12,
+        max: 48,
+        step: 2,
+      },
+    ],
+  },
+];
+
 const enterpriseCopySettings: SettingsField[] = [
   {
     kind: "group",
@@ -622,6 +655,18 @@ export const blockRegistry: Record<string, EditorBlockDefinition> = {
     icon: "Image",
     description: "Imagen o foto",
     settings: imageSettings,
+  },
+  icon: {
+    type: "icon",
+    label: "Ícono",
+    component: Icon as unknown as ComponentType<unknown>,
+    defaults: Icon.defaults,
+    acceptsChildren: false,
+    version: 1,
+    category: "content",
+    icon: "Sparkles",
+    description: "Ícono decorativo de un conjunto seguro predefinido",
+    settings: iconSettings,
   },
   genericWrapper: {
     type: "genericWrapper",

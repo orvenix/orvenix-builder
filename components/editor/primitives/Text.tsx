@@ -3,6 +3,7 @@
 import { useRef, useEffect } from "react";
 import { useEditorStore } from "@/store/useEditorStore";
 import type { BlockComponentProps } from "@/types/editor";
+import { resolveFontCssValue } from "@/components/editor/theme/font-registry";
 
 export interface TextProps {
   content?: string;
@@ -93,7 +94,7 @@ export function Text({
       className={`outline-none ${SIZE[size]} ${ALIGN[align]} ${MAX_WIDTH[maxWidth]} ${isSelected ? "cursor-text" : ""} ${isEditing ? "rounded-sm ring-2 ring-fuchsia-400/60 ring-offset-2 ring-offset-white" : ""}`}
       style={{
         color: color ?? theme?.colors?.text,
-        fontFamily: theme?.fontBody,
+        fontFamily: resolveFontCssValue(theme?.fontBody),
         transitionDuration: theme?.motion?.duration,
         transitionTimingFunction: theme?.motion?.easing,
       }}

@@ -25,6 +25,11 @@ import {
 } from "@/lib/orvenix-ai/quality"
 
 import {
+  getDeterministicVisualDirection,
+  hasSafeContrast,
+} from "@/lib/orvenix-ai/theme/visual-direction"
+
+import {
   buildSiteGenerationGuideContext,
   ORVENIX_SITE_CREATION_CHECKLIST,
   ORVENIX_SITE_GENERATION_GUIDE_VERSION,
@@ -521,19 +526,41 @@ function applyThemeDirection(theme: GlobalTheme, direction: Record<string, unkno
   return next
 }
 
-function applySiteCreationThemeAdvisories(theme: GlobalTheme, input: AutonomousSiteBuilderInput): GlobalTheme {
+/**
+ * V2-1: applies the deterministic, industry-keyed visual direction as the
+ * new baseline (previously every business silently got the bare starter
+ * theme here). A basic contrast check guards the result -- if the
+ * selected accent color would fail a minimum contrast ratio against the
+ * (unchanged) background, we fall back to the safe "business" default
+ * direction instead of shipping an unreadable combination.
+ */
+function applyDeterministicVisualDirection(theme: GlobalTheme, siteType: string): GlobalTheme {
+  const direction = getDeterministicVisualDirection(siteType)
+  const next = applyThemeDirection(theme, direction)
+
+  const { primary, background } = themeColors(next)
+  if (!hasSafeContrast(primary, background)) {
+    return applyThemeDirection(theme, getDeterministicVisualDirection(undefined))
+  }
+
+  return next
+}
+
+function applySiteCreationThemeAdvisories(theme: GlobalTheme, input: AutonomousSiteBuilderInput, siteType: string): GlobalTheme {
+  const baseline = applyDeterministicVisualDirection(theme, siteType)
+
   const prior = input.designMemoryPrior
 
   if (prior?.level === "L2" && isPlainRecord(prior.recommendation.theme)) {
-    return applyThemeDirection(theme, prior.recommendation.theme)
+    return applyThemeDirection(baseline, prior.recommendation.theme)
   }
 
   const externalTheme = input.externalThemeAdvisory?.theme
   if (isPlainRecord(externalTheme)) {
-    return applyThemeDirection(theme, externalTheme)
+    return applyThemeDirection(baseline, externalTheme)
   }
 
-  return theme
+  return baseline
 }
 
 function businessContextForPage(params: {
@@ -596,17 +623,19 @@ function averageScore(scores: number[]) {
 
 function createMultiPagePlan(params: {
   input: AutonomousSiteBuilderInput
+  siteType: string
   pages: Array<{ name: string; slug: string; tree: EditorTree }>
   pageQuality: Array<{ slug: string; score: number }>
   warnings: string[]
 }): SiteCreationPlanV2 {
   const {
     input,
+    siteType,
     pages,
     pageQuality,
     warnings,
   } = params
-  const theme = applySiteCreationThemeAdvisories(getStarterTheme(), input)
+  const theme = applySiteCreationThemeAdvisories(getStarterTheme(), input, siteType)
 
   return normalizeSiteCreationPlanV2({
     version: 2,
@@ -735,6 +764,7 @@ export async function runAutonomousMultiPageSiteBuilder(
 
   const plan = createMultiPagePlan({
     input,
+    siteType: architecture.siteType,
     pages,
     pageQuality,
     warnings,

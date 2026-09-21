@@ -5,6 +5,7 @@ import { DevtoolsErrorSilencer } from "@/components/DevtoolsErrorSilencer";
 import { ChatbotMount } from "@/components/marketing/ChatbotMount";
 import { ThemeModeSync } from "@/components/theme/ThemeMode";
 import { RefCapture } from "@/components/marketing/RefCapture";
+import { FONT_VARIABLE_CLASSES } from "@/components/editor/theme/font-catalog";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
+      <body className={`min-h-full flex flex-col ${FONT_VARIABLE_CLASSES}`}>
         <DevtoolsErrorSilencer />
         <ThemeModeSync />
         <Suspense><RefCapture /></Suspense>

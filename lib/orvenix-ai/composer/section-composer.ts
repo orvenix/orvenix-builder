@@ -265,7 +265,10 @@ function composeTrust(): ComposedSection {
     ["Comunicación directa", "Muestra los canales reales de contacto y seguimiento."],
   ]
 
-  for (const [title, text] of items) {
+  items.forEach(([title, text], index) => {
+    const iconName = cardIconName("trust", index)
+    const icon = iconName ? iconNode(nodes, `${title} ícono`, iconName) : null
+
     const cardTitle = add(
       nodes,
       createComposedNode({
@@ -301,11 +304,11 @@ function composeTrust(): ComposedSection {
             className:
               "rounded-2xl border border-slate-200 bg-white p-6",
           },
-          children: [cardTitle, cardText],
+          children: icon ? [icon, cardTitle, cardText] : [cardTitle, cardText],
         }),
       ),
     )
-  }
+  })
 
   const grid = add(
     nodes,
@@ -472,6 +475,35 @@ function headingNode(nodes: Record<string, ComposedNode>, displayName: string, v
 
 function wrapperNode(nodes: Record<string, ComposedNode>, displayName: string, className: string, children: string[], tag = "div") {
   return add(nodes, createComposedNode({ type: "genericWrapper", displayName, props: { tag, className }, children }))
+}
+
+/**
+ * V2-1: deterministic per-role icon sequences for generated-content
+ * iconography. Values are names from the fixed, statically-imported
+ * ICON_ALLOWLIST in components/editor/primitives/Icon.tsx -- this list
+ * must stay in sync with that allowlist (an unrecognized name renders
+ * nothing, it never executes arbitrary code, but it would silently show
+ * no icon). Deliberately positional-by-index, not title-keyword-matched:
+ * card titles for "services" can be real, business-supplied names (eg.
+ * "Fisioterapia deportiva"), so a title-keyword dictionary would only
+ * ever work for the generic fallback copy, not real business content.
+ * Positional selection works identically for both.
+ */
+const CARD_ICON_SEQUENCE_BY_ROLE: Partial<Record<SectionRole, string[]>> = {
+  trust: ["shield-check", "workflow", "message-circle"],
+  services: ["sparkles", "check-circle", "star", "zap"],
+  features: ["shield-check", "zap", "star"],
+  process: ["list-checks", "workflow", "check-circle"],
+}
+
+function cardIconName(role: SectionRole, index: number): string | undefined {
+  const sequence = CARD_ICON_SEQUENCE_BY_ROLE[role]
+  if (!sequence || sequence.length === 0) return undefined
+  return sequence[index % sequence.length]
+}
+
+function iconNode(nodes: Record<string, ComposedNode>, displayName: string, name: string) {
+  return add(nodes, createComposedNode({ type: "icon", displayName, props: { name, size: 24 } }))
 }
 
 function composeNavigation(
@@ -857,10 +889,13 @@ function composeCardGridSection(
   const nodes: Record<string, ComposedNode> = {}
   const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center" })
   const intro = textNode(nodes, "Intro " + role, copy.introText, { align: "center", size: "lg" })
-  const cards = finalItems.map(([title, body]) => {
+  const cards = finalItems.map(([title, body], index) => {
+    const iconName = cardIconName(role, index)
+    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
     const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
     const cardText = textNode(nodes, title + " texto", body)
-    return wrapperNode(nodes, title, "rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-900/10", [cardTitle, cardText], "article")
+    const children = icon ? [icon, cardTitle, cardText] : [cardTitle, cardText]
+    return wrapperNode(nodes, title, "rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-900/10", children, "article")
   })
   /*
    * "services" is the flagship role shared between overview and catalog

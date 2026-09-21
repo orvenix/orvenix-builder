@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 
 import { useEditorStore } from "@/store/useEditorStore"
 import type { BlockComponentProps } from "@/types/editor"
+import { resolveFontCssValue } from "@/components/editor/theme/font-registry"
 
 export interface HeadingProps {
   text?: string
@@ -150,7 +151,7 @@ export function Heading({
       ].join(" ")}
       style={{
         color: color ?? theme?.colors?.primary,
-        fontFamily: theme?.fontHeading,
+        fontFamily: resolveFontCssValue(theme?.fontHeading),
         transitionDuration: theme?.motion?.duration,
         transitionTimingFunction: theme?.motion?.easing,
       }}
