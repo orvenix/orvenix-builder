@@ -201,6 +201,11 @@ function compilePage(
         siteType: architecture.siteType,
         industry: architecture.industry,
         objective: architecture.objective,
+        sitePages: architecture.pages.map((pagePlan) => ({
+          name: pagePlan.name,
+          slug: pagePlan.slug,
+          isHome: pagePlan.slug === "home",
+        })),
         pageName: page.name,
         pageSlug: page.slug,
         pagePurpose: page.purpose,

@@ -3,7 +3,7 @@
 import { useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEditorStore } from "@/store/useEditorStore";
-import { resolveRuntimeHref } from "@/lib/builder-core/tree/pageLinks";
+import { resolveRuntimeHref, resolveSiteNavItemTarget } from "@/lib/builder-core/tree/pageLinks";
 import { buildEditorPageUrl } from "@/components/editor/pageNavigation";
 import { resolveSiteNavPages } from "@/lib/builder-core/tree/siteNavigation";
 import type { BlockComponentProps } from "@/types/editor";
@@ -242,18 +242,14 @@ export function SiteNav({
       >
         {navPages.map((page) => {
           const label = labelMap.get(page.slug.toLowerCase()) || page.name;
-          const runtimeHref = page.href || resolveRuntimeHref(websiteId, `page:${page.slug}`, hrefMode);
+          const target = resolveSiteNavItemTarget(page, websiteId, hrefMode);
           const editorHref = (() => {
-            if (usesInlinePages) return page.href || runtimeHref;
-            if (!isEditorCanvas || !pathname) return runtimeHref;
-            const params = new URLSearchParams(searchParams?.toString() ?? "");
-            if (page.slug === "home") params.delete("page");
-            else params.set("page", page.slug);
-            const query = params.toString();
-            return query ? `${pathname}?${query}` : pathname;
+            if (!target.isPageLink) return target.runtimeHref;
+            if (!isEditorCanvas || !pathname) return target.runtimeHref;
+            return buildEditorPageHref(pathname, searchParams, target.targetSlug ?? page.slug);
           })();
-          const href = isEditorCanvas ? editorHref : runtimeHref;
-          const isActive = !usesInlinePages && page.slug === currentPageSlug;
+          const href = isEditorCanvas ? editorHref : target.runtimeHref;
+          const isActive = target.isPageLink && (target.targetSlug ?? page.slug) === currentPageSlug;
           const variantClasses = VARIANT_CLASS[surface][variant];
           const linkStyle: React.CSSProperties = {
             color: isActive ? "#ffffff" : surface === "dark" ? "rgba(247, 252, 255, 0.92)" : "#075985",
@@ -272,11 +268,11 @@ export function SiteNav({
               <a
                 href={href}
                 aria-current={isActive ? "page" : undefined}
-                onClick={usesInlinePages ? (event) => {
+                onClick={!target.isPageLink ? (event) => {
                   if (isEditorCanvas && scrollToInlineTarget(href)) event.preventDefault();
                 } : isEditorCanvas ? (event) => {
                   event.preventDefault();
-                  void navigateInsideEditor(page.slug);
+                  void navigateInsideEditor(target.targetSlug ?? page.slug);
                 } : undefined}
                 className={`${variantClasses.base} ${isActive ? variantClasses.active : ""}`}
                 style={linkStyle}

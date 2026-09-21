@@ -188,6 +188,158 @@ test("runAutonomousMultiPageSiteBuilder diferencia Home y Servicios por contexto
 })
 
 
+function findSiteNavNode(page: GeneratedPlanPage) {
+  const ids = walkNodeIds(page)
+  for (const id of ids) {
+    const node = page.tree.nodes[id]
+    if (node?.type === "siteNav") return node
+  }
+  return null
+}
+
+type NavPageEntry = { slug: string; href: string; label?: string; name?: string; isHome?: boolean }
+
+test("SiteNav generado deriva exactamente las paginas del Plan V2 real (home/servicios/contacto) sin productos/precios", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+
+  const result = await runAutonomousMultiPageSiteBuilder({
+    request: "Crea un sitio profesional para una clinica dental en Monterrey",
+    forceFreshComposition: true,
+    business: {
+      name: "Clinica Aurora",
+      industry: "salud dental",
+      location: "Monterrey",
+      description: "Atencion dental preventiva y estetica para familias.",
+      objective: "Conseguir citas por WhatsApp",
+      services: [
+        { name: "Limpieza dental", description: "Prevencion y salud bucal." },
+        { name: "Diseno de sonrisa", description: "Tratamientos esteticos." },
+      ],
+    },
+  })
+
+  assert.deepEqual(result.plan.pages.map((page) => page.slug), ["home", "servicios", "contacto"])
+
+  const expectedTargets = result.plan.pages.map((page) => ({ slug: page.slug, href: `page:${page.slug}` }))
+
+  for (const page of result.plan.pages) {
+    const navNode = findSiteNavNode(page)
+    assert.ok(navNode, `la pagina "${page.slug}" no genero un nodo siteNav`)
+
+    const navPages = navNode!.props?.pages as NavPageEntry[] | undefined
+    assert.ok(Array.isArray(navPages), `la pagina "${page.slug}" no genero props.pages en su siteNav`)
+
+    assert.deepEqual(
+      navPages!.map((entry) => ({ slug: entry.slug, href: entry.href })),
+      expectedTargets,
+      `la navegacion de "${page.slug}" no coincide con las paginas reales del Plan V2`,
+    )
+
+    for (const entry of navPages!) {
+      assert.equal(entry.href, `page:${entry.slug}`)
+    }
+
+    assert.equal(navPages!.some((entry) => entry.slug === "productos"), false)
+    assert.equal(navPages!.some((entry) => entry.slug === "precios"), false)
+    assert.equal(navPages!.find((entry) => entry.slug === "home")?.isHome, true)
+  }
+})
+
+test("composeSection('navigation') deriva paginas arbitrarias de sitePages sin hardcode de nombres (home/nosotros/equipo/blog)", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("navigation", {
+    sitePages: [
+      { name: "Inicio", slug: "home", isHome: true },
+      { name: "Nosotros", slug: "nosotros" },
+      { name: "Equipo", slug: "equipo" },
+      { name: "Blog", slug: "blog" },
+    ],
+  })
+
+  assert.ok(section)
+  const navNode = section!.nodes[section!.rootId]
+  const navPages = navNode.props?.pages as NavPageEntry[] | undefined
+  assert.ok(Array.isArray(navPages))
+
+  assert.deepEqual(
+    navPages!.map((entry) => entry.slug),
+    ["home", "nosotros", "equipo", "blog"],
+  )
+  assert.deepEqual(
+    navPages!.map((entry) => entry.href),
+    ["page:home", "page:nosotros", "page:equipo", "page:blog"],
+  )
+  assert.equal(navPages!.some((entry) => entry.slug === "servicios"), false)
+  assert.equal(navPages!.some((entry) => entry.slug === "contacto"), false)
+})
+
+test("composeSection('navigation') sin sitePages conserva el comportamiento legacy existente", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const withEmptyContext = composeSection("navigation", {})
+  const withoutContext = composeSection("navigation")
+
+  for (const section of [withEmptyContext, withoutContext]) {
+    assert.ok(section)
+    const navNode = section!.nodes[section!.rootId]
+    assert.equal("pages" in (navNode.props ?? {}), false)
+    assert.equal(
+      navNode.props?.labelOverrides,
+      "home=Inicio\nservicios=Servicios\nproductos=Productos\nprecios=Precios\ncontacto=Contacto",
+    )
+    assert.equal(navNode.props?.showCta, true)
+    assert.equal(navNode.props?.ctaHref, "#contacto")
+    assert.equal(navNode.props?.ctaLabel, "Contactar")
+  }
+})
+
+test("composeSection('navigation') mantiene el CTA como concepto separado del menu principal derivado de sitePages", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("navigation", {
+    sitePages: [
+      { name: "Inicio", slug: "home", isHome: true },
+      { name: "Servicios", slug: "servicios" },
+      { name: "Contacto", slug: "contacto" },
+    ],
+  })
+
+  assert.ok(section)
+  const navNode = section!.nodes[section!.rootId]
+
+  assert.equal(navNode.props?.showCta, true)
+  assert.equal(navNode.props?.ctaHref, "#contacto")
+  assert.equal(navNode.props?.ctaLabel, "Contactar")
+
+  const navPages = navNode.props?.pages as NavPageEntry[] | undefined
+  assert.equal(navPages!.some((entry) => entry.slug === "contacto"), true)
+})
+
+test("resolveSiteNavItemTarget resuelve el contrato canonico page:<slug> para navegacion multipagina", async () => {
+  const { resolveSiteNavItemTarget } = await import("../../lib/builder-core/tree/pageLinks")
+
+  const servicios = resolveSiteNavItemTarget({ slug: "servicios", href: "page:servicios" }, "site-1", "published")
+  assert.equal(servicios.isPageLink, true)
+  assert.equal(servicios.targetSlug, "servicios")
+  assert.equal(servicios.runtimeHref, "/p/site-1/servicios")
+
+  const storeResolvedPage = resolveSiteNavItemTarget({ slug: "servicios" }, "site-1", "published")
+  assert.deepEqual(storeResolvedPage, servicios)
+
+  const home = resolveSiteNavItemTarget({ slug: "home", href: "page:home" }, "site-1", "published")
+  assert.equal(home.isPageLink, true)
+  assert.equal(home.runtimeHref, "/p/site-1")
+
+  const previewServicios = resolveSiteNavItemTarget({ slug: "servicios", href: "page:servicios" }, "site-1", "preview")
+  assert.equal(previewServicios.runtimeHref, "/preview/site-1?page=servicios")
+
+  const anchor = resolveSiteNavItemTarget({ slug: "link-1", href: "#contacto-form" }, "site-1", "published")
+  assert.equal(anchor.isPageLink, false)
+  assert.equal(anchor.targetSlug, null)
+  assert.equal(anchor.runtimeHref, "#contacto-form")
+})
+
 function hasUndefinedValue(value: unknown): boolean {
   if (typeof value === "undefined") return true
   if (!value || typeof value !== "object") return false

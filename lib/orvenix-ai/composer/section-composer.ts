@@ -445,12 +445,43 @@ function wrapperNode(nodes: Record<string, ComposedNode>, displayName: string, c
   return add(nodes, createComposedNode({ type: "genericWrapper", displayName, props: { tag, className }, children }))
 }
 
-function composeNavigation(): ComposedSection {
+function composeNavigation(
+  context: SectionCompositionContext = {},
+): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
+  const pages = (context.sitePages ?? [])
+    .map((page, index) => {
+      const slug = page.slug.trim().toLowerCase()
+      const label = page.name.trim() || slug
+
+      return {
+        label,
+        name: label,
+        slug,
+        href: `page:${slug}`,
+        isHome: page.isHome === true || (index === 0 && slug === "home"),
+      }
+    })
+    .filter((page) => page.slug)
+
   const root = add(nodes, createComposedNode({
     type: "siteNav",
     displayName: "Menu principal",
-    props: { title: "Nombre del negocio", subtitle: "Sitio profesional", labelOverrides: "home=Inicio\nservicios=Servicios\nproductos=Productos\nprecios=Precios\ncontacto=Contacto", showHome: true, showCta: true, ctaLabel: "Contactar", ctaHref: "#contacto", layout: "row", justify: "center", variant: "minimal" },
+    props: {
+      title: "Nombre del negocio",
+      subtitle: "Sitio profesional",
+      labelOverrides: pages.length
+        ? pages.map((page) => `${page.slug}=${page.label}`).join("\n")
+        : "home=Inicio\nservicios=Servicios\nproductos=Productos\nprecios=Precios\ncontacto=Contacto",
+      ...(pages.length ? { pages } : {}),
+      showHome: true,
+      showCta: true,
+      ctaLabel: "Contactar",
+      ctaHref: "#contacto",
+      layout: "row",
+      justify: "center",
+      variant: "minimal",
+    },
   }))
   return { role: "navigation", rootId: root, nodes, purpose: "Navegacion principal editable del sitio." }
 }
@@ -707,7 +738,7 @@ export function composeSection(
   void context
   switch (role) {
     case "navigation":
-      return composeNavigation()
+      return composeNavigation(context)
 
     case "hero":
       return composeHero(context)
