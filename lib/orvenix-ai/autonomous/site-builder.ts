@@ -25,7 +25,8 @@ import {
 } from "@/lib/orvenix-ai/quality"
 
 import {
-  getDeterministicVisualDirection,
+  getVisualDirectionForFamily,
+  inferVisualFamily,
   hasSafeContrast,
 } from "@/lib/orvenix-ai/theme/visual-direction"
 
@@ -527,27 +528,45 @@ function applyThemeDirection(theme: GlobalTheme, direction: Record<string, unkno
 }
 
 /**
- * V2-1: applies the deterministic, industry-keyed visual direction as the
+ * V2-1.1: resolves the VisualFamily from already-normalized business
+ * facts (industry/description/services/preferredStyle) -- NOT from
+ * siteType, which stays a purely architectural concept. siteType is only
+ * consulted inside inferVisualFamily as a last-resort fallback hint when
+ * no business-facts keyword matched.
+ */
+function resolveVisualFamily(input: AutonomousSiteBuilderInput, siteType: string) {
+  return inferVisualFamily({
+    industry: input.business.industry,
+    description: input.business.description,
+    services: input.business.services,
+    preferredStyle: input.preferredStyle,
+    siteTypeHint: siteType,
+  })
+}
+
+/**
+ * V2-1: applies the deterministic, visual-family-keyed direction as the
  * new baseline (previously every business silently got the bare starter
  * theme here). A basic contrast check guards the result -- if the
  * selected accent color would fail a minimum contrast ratio against the
- * (unchanged) background, we fall back to the safe "business" default
+ * (unchanged) background, we fall back to the safe "professional" default
  * direction instead of shipping an unreadable combination.
  */
-function applyDeterministicVisualDirection(theme: GlobalTheme, siteType: string): GlobalTheme {
-  const direction = getDeterministicVisualDirection(siteType)
+function applyDeterministicVisualDirection(theme: GlobalTheme, input: AutonomousSiteBuilderInput, siteType: string): GlobalTheme {
+  const family = resolveVisualFamily(input, siteType)
+  const direction = getVisualDirectionForFamily(family)
   const next = applyThemeDirection(theme, direction)
 
   const { primary, background } = themeColors(next)
   if (!hasSafeContrast(primary, background)) {
-    return applyThemeDirection(theme, getDeterministicVisualDirection(undefined))
+    return applyThemeDirection(theme, getVisualDirectionForFamily("professional"))
   }
 
   return next
 }
 
 function applySiteCreationThemeAdvisories(theme: GlobalTheme, input: AutonomousSiteBuilderInput, siteType: string): GlobalTheme {
-  const baseline = applyDeterministicVisualDirection(theme, siteType)
+  const baseline = applyDeterministicVisualDirection(theme, input, siteType)
 
   const prior = input.designMemoryPrior
 

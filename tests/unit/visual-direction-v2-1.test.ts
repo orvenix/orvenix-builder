@@ -124,12 +124,12 @@ test("G) Design Memory L2 sigue teniendo precedencia sobre la direccion determin
   assert.equal(result.plan.theme.colors?.primary, "#db2777")
 })
 
-test("H) guardia de contraste: getDeterministicVisualDirection + hasSafeContrast existen y validan combinaciones reales", async () => {
-  const { getDeterministicVisualDirection, hasSafeContrast, contrastRatio } = await import("../../lib/orvenix-ai/theme/visual-direction")
+test("H) guardia de contraste: getVisualDirectionForFamily + hasSafeContrast existen y validan combinaciones reales", async () => {
+  const { getVisualDirectionForFamily, hasSafeContrast, contrastRatio } = await import("../../lib/orvenix-ai/theme/visual-direction")
 
-  for (const siteType of ["health", "restaurant", "agency", "ecommerce", "business", undefined]) {
-    const direction = getDeterministicVisualDirection(siteType)
-    assert.ok(direction, `siteType '${siteType}' debe producir una direccion`)
+  for (const family of ["health", "hospitality", "creative", "commerce", "professional", undefined] as const) {
+    const direction = getVisualDirectionForFamily(family)
+    assert.ok(direction, `family '${family}' debe producir una direccion`)
   }
 
   assert.equal(hasSafeContrast("#000000", "#ffffff"), true)
