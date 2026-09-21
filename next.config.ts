@@ -29,8 +29,13 @@ const nextConfig: NextConfig = {
     // External image optimization is brittle in restricted/self-hosted environments.
     // Serving remote assets directly avoids runtime 500s on marketing pages.
     unoptimized: true,
+    // Note: unoptimized:true above already bypasses this allowlist check
+    // entirely (it only applies when Next's image optimizer runs). Kept
+    // for documentation/future-compatibility if unoptimized is ever
+    // reverted, not because it enforces anything today.
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "images.pexels.com" },
     ],
   },
 

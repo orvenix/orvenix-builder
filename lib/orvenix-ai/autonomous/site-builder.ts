@@ -31,6 +31,14 @@ import {
 } from "@/lib/orvenix-ai/theme/visual-direction"
 
 import {
+  resolveTreeImageAssets,
+} from "@/lib/orvenix-ai/assets/resolve-tree-assets"
+
+import {
+  createPexelsProvider,
+} from "@/lib/orvenix-ai/assets/pexels-provider"
+
+import {
   buildSiteGenerationGuideContext,
   ORVENIX_SITE_CREATION_CHECKLIST,
   ORVENIX_SITE_GENERATION_GUIDE_VERSION,
@@ -746,7 +754,7 @@ export async function runAutonomousMultiPageSiteBuilder(
     trace.push("Theme advisory aplicado desde Third-Party Assistance")
   }
 
-  const pages = blueprint.pages.map((page) => {
+  const rawPages = blueprint.pages.map((page) => {
     const pagePlan = architecture.pages.find(
       (item) => item.slug === page.slug,
     )
@@ -764,6 +772,31 @@ export async function runAutonomousMultiPageSiteBuilder(
       slug: page.slug,
       tree: omitUndefinedValues(tree) as EditorTree,
     }
+  })
+
+  /*
+   * V2-2: best-effort stock-photo resolution for hero/gallery image
+   * placeholders. Runs once, here, BEFORE the Preview plan is built
+   * below -- so the resolved src/alt/provenance is what gets persisted
+   * and is exactly what Confirm later reuses (no re-query at Confirm
+   * time). Asset failure of any kind (no key, timeout, quota, outage)
+   * silently preserves today's existing src:"" placeholder behavior;
+   * it can never fail site generation.
+   */
+  const assetVisualFamily = inferVisualFamily({
+    industry: input.business.industry,
+    description: input.business.description,
+    services: input.business.services,
+    preferredStyle: input.preferredStyle,
+    siteTypeHint: architecture.siteType,
+  })
+
+  const pages = await resolveTreeImageAssets(rawPages, {
+    provider: createPexelsProvider(),
+    visualFamily: assetVisualFamily,
+    industry: input.business.industry,
+    services: input.business.services,
+    businessName: input.business.name,
   })
 
   const pageQuality = pages.map((page) => {
