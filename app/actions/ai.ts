@@ -41,6 +41,7 @@ import {
   reserveSiteCreationPreviewAttempt,
 } from "@/lib/orvenix-ai/site-creation/preview-store";
 import { hasSiteCreationPlanV2Discriminator, type SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2";
+import { normalizeSiteCreationBusiness } from "@/lib/orvenix-ai/site-creation/business-normalization";
 import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/site-builder";
 import { assessSiteGenerationQualityV1 } from "@/lib/orvenix-ai/evaluation";
 import {
@@ -823,36 +824,6 @@ export type OrvenixSiteCreationActionResult =
       success: false;
       message: string;
     };
-
-function normalizeSiteCreationBusiness(
-  input: OrvenixSiteCreationActionInput["business"] | undefined,
-  message: string,
-) {
-  const normalizedServices = Array.isArray(input?.services)
-    ? input.services
-        .map((service) => ({
-          name: String(service?.name ?? "")
-            .trim()
-            .slice(0, 90),
-          description: String(service?.description ?? "")
-            .trim()
-            .slice(0, 180),
-        }))
-        .filter((service) => service.name)
-        .slice(0, 8)
-    : undefined;
-
-  return {
-    name: input?.name?.trim().slice(0, 120) || "Sitio creado con Orvenix AI",
-    industry: input?.industry?.trim().slice(0, 90) || "negocio profesional",
-    location: input?.location?.trim().slice(0, 120),
-    objective:
-      input?.objective?.trim().slice(0, 180) ||
-      "Generar prospectos y contactos",
-    description: input?.description?.trim().slice(0, 600) || message,
-    services: normalizedServices,
-  };
-}
 
 function buildSiteCreationPreviewPages(plan: SiteCreationPlanV2): SiteCreationPreviewPageV1[] {
   return plan.pages.map((page) => ({
