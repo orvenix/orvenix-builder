@@ -549,6 +549,7 @@ function composeHero(
   const nodes: Record<string, ComposedNode> = {}
   const variant = compositionVariant(context, 3)
   const heroCopy = getPageAwareHeroCopy({
+    name: context.businessName,
     industry: context.industry,
     objective: context.objective,
     audience: context.audience,

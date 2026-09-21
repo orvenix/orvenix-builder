@@ -16,9 +16,10 @@ function industryText(context: BusinessContentContext) {
 
 function catalogPageHeroCopy(
   language: ReturnType<typeof getBusinessLanguage>,
+  name?: string,
 ) {
   return {
-    eyebrow: "Servicios",
+    eyebrow: name?.trim() || "Servicios",
     title:
       `Conoce nuestros ${language.servicePlural}`,
     description:
@@ -58,7 +59,7 @@ export function getPageAwareHeroCopy(context: BusinessContentContext) {
    * sets this, and it always wins over slug-based inference below.
    */
   if (archetype === "catalog") {
-    return catalogPageHeroCopy(language)
+    return catalogPageHeroCopy(language, context.name)
   }
 
   if (archetype === "conversion") {
@@ -74,7 +75,7 @@ export function getPageAwareHeroCopy(context: BusinessContentContext) {
     const slug = context.page?.slug ?? "home"
 
     if (slug === "servicios") {
-      return catalogPageHeroCopy(language)
+      return catalogPageHeroCopy(language, context.name)
     }
 
     if (slug === "contacto") {

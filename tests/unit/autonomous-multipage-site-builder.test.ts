@@ -1200,3 +1200,167 @@ test("Legacy: runAutonomousMultiPageSiteBuilder sin business.services/business.n
     assert.equal(brandText, "Nombre del negocio")
   }
 })
+
+// ---------------------------------------------------------------------------
+// J9-I1a: business identity in the page-aware Hero (Home H1, Servicios
+// eyebrow). Location/objective are explicitly out of scope for this block.
+// ---------------------------------------------------------------------------
+
+/**
+ * The Hero H1 is the only "heading" node at level 1 anywhere in a composed
+ * page -- every other heading (section titles, card titles) uses level 2/3.
+ */
+function heroH1Text(page: GeneratedPlanPage): string | undefined {
+  for (const node of Object.values(page.tree.nodes) as CompiledNode[]) {
+    if (node.type === "heading" && node.props?.level === 1) {
+      return typeof node.props?.text === "string" ? node.props.text : undefined
+    }
+  }
+  return undefined
+}
+
+/**
+ * The Hero eyebrow is the only "text" node styled with composeHero's
+ * eyebrow color (#0E5C80) anywhere in a composed page.
+ */
+function heroEyebrowText(page: GeneratedPlanPage): string | undefined {
+  for (const node of Object.values(page.tree.nodes) as CompiledNode[]) {
+    if (node.type === "text" && node.props?.color === "#0E5C80") {
+      return typeof node.props?.content === "string" ? node.props.content : undefined
+    }
+  }
+  return undefined
+}
+
+const HERO_BUSINESS_NAME = "Centro de Fisioterapia Monterrey"
+
+test("J9-I1a A) composeSection('hero'), overview: el H1 contiene el businessName real", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("hero", {
+    archetype: "overview",
+    industry: "fisioterapia",
+    businessName: HERO_BUSINESS_NAME,
+  })!
+
+  const h1 = Object.values(section.nodes).find((node) => node.type === "heading" && node.props?.level === 1)
+  assert.ok(h1, "no se encontro el H1 del hero")
+  assert.equal(h1!.props?.text, `${HERO_BUSINESS_NAME}: una forma más clara de presentar lo que haces`)
+  assert.equal(String(h1!.props?.text).includes("Tu negocio"), false)
+})
+
+test("J9-I1a B) composeSection('hero'), overview: sin businessName conserva el fallback 'Tu negocio'", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("hero", { archetype: "overview", industry: "fisioterapia" })!
+  const h1 = Object.values(section.nodes).find((node) => node.type === "heading" && node.props?.level === 1)
+  assert.equal(h1!.props?.text, "Tu negocio: una forma más clara de presentar lo que haces")
+})
+
+test("J9-I1a C) composeSection('hero'), catalog: el eyebrow contiene el businessName real, no el H1", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("hero", {
+    archetype: "catalog",
+    industry: "fisioterapia",
+    businessName: HERO_BUSINESS_NAME,
+  })!
+
+  const eyebrow = Object.values(section.nodes).find((node) => node.type === "text" && node.props?.color === "#0E5C80")
+  const h1 = Object.values(section.nodes).find((node) => node.type === "heading" && node.props?.level === 1)
+
+  assert.equal(eyebrow?.props?.content, HERO_BUSINESS_NAME)
+  assert.equal(h1?.props?.text, "Conoce nuestros servicios")
+})
+
+test("J9-I1a D) composeSection('hero'), catalog: sin businessName el eyebrow conserva 'Servicios'", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("hero", { archetype: "catalog", industry: "fisioterapia" })!
+  const eyebrow = Object.values(section.nodes).find((node) => node.type === "text" && node.props?.color === "#0E5C80")
+  assert.equal(eyebrow?.props?.content, "Servicios")
+})
+
+test("J9-I1a E) Home y Servicios: el hero visible no se vuelve identico al personalizar", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const home = composeSection("hero", { archetype: "overview", industry: "fisioterapia", businessName: HERO_BUSINESS_NAME })!
+  const servicios = composeSection("hero", { archetype: "catalog", industry: "fisioterapia", businessName: HERO_BUSINESS_NAME })!
+
+  const homeH1 = Object.values(home.nodes).find((node) => node.type === "heading" && node.props?.level === 1)?.props?.text
+  const serviciosH1 = Object.values(servicios.nodes).find((node) => node.type === "heading" && node.props?.level === 1)?.props?.text
+  const homeEyebrow = Object.values(home.nodes).find((node) => node.type === "text" && node.props?.color === "#0E5C80")?.props?.content
+  const serviciosEyebrow = Object.values(servicios.nodes).find((node) => node.type === "text" && node.props?.color === "#0E5C80")?.props?.content
+
+  assert.notEqual(homeH1, serviciosH1, "el H1 de Home y Servicios no debe coincidir")
+  // Home lleva la identidad en el H1; Servicios la lleva en el eyebrow -- por
+  // diseno ambos mencionan el nombre del negocio, pero en campos distintos.
+  assert.equal(String(homeH1).includes(HERO_BUSINESS_NAME), true)
+  assert.equal(serviciosEyebrow, HERO_BUSINESS_NAME)
+  assert.notEqual(homeEyebrow, serviciosEyebrow, "el eyebrow de Home y Servicios no debe coincidir")
+})
+
+test("J9-I1a F) Pipeline completo: el H1 de Home y el eyebrow de Servicios sobreviven a applyBusinessContent", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+
+  const result = await runAutonomousMultiPageSiteBuilder({
+    request:
+      "Crea un sitio web profesional para Centro de Fisioterapia Monterrey. Ofrecemos fisioterapia deportiva, rehabilitacion fisica y terapia manual en Monterrey. El objetivo principal es conseguir citas de valoracion.",
+    forceFreshComposition: true,
+    business: {
+      name: HERO_BUSINESS_NAME,
+      industry: "fisioterapia",
+      location: "Monterrey",
+      description: "Ofrecemos fisioterapia deportiva, rehabilitacion fisica y terapia manual en Monterrey.",
+      objective: "Conseguir citas de valoracion",
+    },
+  })
+
+  assert.equal(result.ok, true)
+  const home = result.plan.pages.find((page) => page.slug === "home")!
+  const servicios = result.plan.pages.find((page) => page.slug === "servicios")!
+  const contacto = result.plan.pages.find((page) => page.slug === "contacto")!
+
+  assert.equal(heroH1Text(home), `${HERO_BUSINESS_NAME}: una forma más clara de presentar lo que haces`)
+  assert.equal(heroEyebrowText(servicios), HERO_BUSINESS_NAME)
+  assert.equal(heroH1Text(servicios), "Conoce nuestros servicios")
+
+  // G) Regresion CTA: hero (hardcoded, sin cambios) + CTA de seccion (J9-E1.1).
+  // "Solicitar informacion" es unico al CTA primario del hero en todo el
+  // arbol, asi que su wrapper padre ("Acciones hero") identifica sin
+  // ambiguedad los 2 CTA del hero (a diferencia de "Ver servicios", que
+  // tambien aparece como CTA de la seccion 'cta' en overview).
+  const homeNodes = home.tree.nodes as Record<string, CompiledNode>
+  const heroActionsWrapper = Object.values(homeNodes).find((node) =>
+    (node.children ?? []).some((id) => homeNodes[id]?.props?.label === "Solicitar informacion"),
+  )
+  const homeHeroCtas = (heroActionsWrapper?.children ?? [])
+    .map((id) => homeNodes[id])
+    .filter((node) => node?.type === "ctaButton")
+  assert.equal(homeHeroCtas.length, 2, "el hero de Home debe conservar exactamente sus 2 CTA hardcoded")
+  assert.ok(homeHeroCtas.some((cta) => cta.props?.label === "Solicitar informacion" && cta.props?.href === "#contacto"))
+  assert.ok(homeHeroCtas.some((cta) => cta.props?.label === "Ver servicios" && cta.props?.href === "#servicios"))
+
+  const homeSectionCta = findSiblingNodeByHeadingText(home, "Descubre todo lo que podemos hacer por ti", "ctaButton")
+  const serviciosSectionCta = findSiblingNodeByHeadingText(servicios, "¿Listo para dar el siguiente paso?", "ctaButton")
+  assert.equal(homeSectionCta?.props?.label, "Ver servicios")
+  assert.equal(homeSectionCta?.props?.href, "#servicios")
+  assert.equal(serviciosSectionCta?.props?.label, "Agendar ahora")
+  assert.equal(serviciosSectionCta?.props?.href, "#contacto")
+
+  // H) Contacto sigue sin rol 'hero'.
+  const contactoArchitecturePage = result.architecture.pages.find((page) => page.slug === "contacto")!
+  assert.equal(contactoArchitecturePage.sections.some((section) => section.role === "hero"), false)
+  assert.equal(heroH1Text(contacto), undefined)
+})
+
+test("J9-I1a I) Determinismo: la misma entrada produce exactamente el mismo Hero visible", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const context = { archetype: "overview" as const, industry: "fisioterapia", businessName: HERO_BUSINESS_NAME }
+  const first = composeSection("hero", context)!
+  const second = composeSection("hero", context)!
+
+  const h1 = (section: typeof first) => Object.values(section.nodes).find((node) => node.type === "heading" && node.props?.level === 1)?.props?.text
+  assert.equal(h1(first), h1(second))
+})
