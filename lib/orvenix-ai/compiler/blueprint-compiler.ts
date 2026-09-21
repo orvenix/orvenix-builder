@@ -203,6 +203,8 @@ function compilePage(
         objective: architecture.objective,
         businessName: architecture.businessName,
         services: architecture.services,
+        location: architecture.location,
+        businessObjective: architecture.businessObjective,
         sitePages: architecture.pages.map((pagePlan) => ({
           name: pagePlan.name,
           slug: pagePlan.slug,

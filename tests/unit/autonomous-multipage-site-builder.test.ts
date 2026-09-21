@@ -1348,10 +1348,11 @@ test("J9-I1a F) Pipeline completo: el H1 de Home y el eyebrow de Servicios sobre
   assert.equal(serviciosSectionCta?.props?.label, "Agendar ahora")
   assert.equal(serviciosSectionCta?.props?.href, "#contacto")
 
-  // H) Contacto sigue sin rol 'hero'.
+  // H) Contacto sigue sin rol 'hero' -- su H1 (agregado en J9-J) proviene
+  // del propio rol 'contact', no de una seccion 'hero' nueva en la receta.
   const contactoArchitecturePage = result.architecture.pages.find((page) => page.slug === "contacto")!
   assert.equal(contactoArchitecturePage.sections.some((section) => section.role === "hero"), false)
-  assert.equal(heroH1Text(contacto), undefined)
+  assert.equal(heroH1Text(contacto), "Estamos aquí para ayudarte a dar el siguiente paso")
 })
 
 test("J9-I1a I) Determinismo: la misma entrada produce exactamente el mismo Hero visible", async () => {
@@ -1363,4 +1364,287 @@ test("J9-I1a I) Determinismo: la misma entrada produce exactamente el mismo Hero
 
   const h1 = (section: typeof first) => Object.values(section.nodes).find((node) => node.type === "heading" && node.props?.level === 1)?.props?.text
   assert.equal(h1(first), h1(second))
+})
+
+// ---------------------------------------------------------------------------
+// J9-J: final v1 visible personalization -- location (with a duplication
+// guard against businessName already containing it), the real business
+// objective (conservatively, only in Contacto's conversion copy), and a
+// structural fix for Contacto (real H1 + a second CTA) so the existing
+// Quality Gate passes because the page is actually correct, not because
+// the gate was special-cased.
+// ---------------------------------------------------------------------------
+
+const FISIO_BUSINESS = {
+  name: "Centro de Fisioterapia Monterrey",
+  industry: "fisioterapia",
+  location: "Monterrey",
+  description: "Ofrecemos fisioterapia deportiva, rehabilitacion fisica y terapia manual en Monterrey.",
+  objective: "Conseguir citas de valoracion",
+  services: [
+    { name: "Fisioterapia deportiva" },
+    { name: "Rehabilitacion fisica" },
+    { name: "Terapia manual" },
+  ],
+}
+
+// Deliberately a different industry, and -- crucially -- businessName does
+// NOT already contain location, so the duplication guard should NOT
+// suppress the location phrase here (contrast fixture for the guard).
+const STUDIO_BUSINESS = {
+  name: "Estudio Norte",
+  industry: "diseño grafico",
+  location: "Guadalajara",
+  description: "Disenamos logotipos, identidad visual y sitios web para pequenas empresas.",
+  objective: "Conseguir nuevos clientes",
+  services: [
+    { name: "Logotipos" },
+    { name: "Identidad visual" },
+    { name: "Sitios web" },
+  ],
+}
+
+function allVisibleTexts(page: GeneratedPlanPage): string[] {
+  const nodes = page.tree.nodes as Record<string, CompiledNode>
+  return Object.values(nodes)
+    .filter((node) => node.type === "heading" || node.type === "text")
+    .map((node) => (typeof node.props?.text === "string" ? node.props.text : node.props?.content))
+    .filter((value): value is string => typeof value === "string")
+}
+
+test("J9-J A) Negocio de referencia: 'Monterrey' es visible (via el nombre del negocio) en Home/Servicios/Contacto", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+
+  for (const slug of ["home", "servicios", "contacto"]) {
+    const page = result.plan.pages.find((p) => p.slug === slug)!
+    const hasMonterrey = allVisibleTexts(page).some((text) => text.includes("Monterrey"))
+    assert.ok(hasMonterrey, `"${slug}" no muestra "Monterrey" en ningun texto/heading visible`)
+  }
+})
+
+test("J9-J B) Guardia de duplicacion: businessName ya contiene la ubicacion -> ningun texto dice 'Monterrey en Monterrey'", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+
+  for (const page of result.plan.pages) {
+    for (const text of allVisibleTexts(page)) {
+      assert.equal(/monterrey\s+en\s+monterrey/i.test(text), false, `texto con duplicacion de ubicacion en "${page.slug}": "${text}"`)
+    }
+  }
+})
+
+test("J9-J B.1) Sin superposicion nombre/ubicacion: la ubicacion SI aparece explicitamente (prueba que la guardia no suprime de mas)", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: STUDIO_BUSINESS })
+
+  const home = result.plan.pages.find((p) => p.slug === "home")!
+  const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+
+  assert.ok(allVisibleTexts(home).some((text) => text.includes("en Guadalajara")), "Home no muestra la frase de ubicacion cuando no hay riesgo de duplicacion")
+  assert.ok(allVisibleTexts(contacto).some((text) => text.includes("en Guadalajara")), "Contacto no muestra la frase de ubicacion cuando no hay riesgo de duplicacion")
+})
+
+test("J9-J C) Sin ubicacion: se conserva el fallback generico exacto, sin 'en undefined' ni 'en ' colgante", async () => {
+  const { getPageAwareHeroCopy } = await import("../../lib/orvenix-ai/content/content-engine")
+
+  const overview = getPageAwareHeroCopy({ industry: "fisioterapia", page: { archetype: "overview" } })
+  assert.equal(overview.description, "Conoce nuestros servicios y encuentra una solución pensada para tus necesidades.")
+
+  const conversion = getPageAwareHeroCopy({ name: "Centro de Fisioterapia Monterrey", page: { archetype: "conversion" } })
+  assert.equal(conversion.description, "Comunícate con Centro de Fisioterapia Monterrey para resolver dudas, solicitar información o comenzar.")
+  assert.equal(conversion.description.includes("undefined"), false)
+  assert.equal(/\sen\s*$/.test(conversion.description.replace(/\.$/, "")), false)
+})
+
+test("J9-J D) El objective real llega a OrvenixSiteArchitecture.businessObjective, separado del objective interno hardcoded", async () => {
+  const { buildSiteArchitecture } = await import("../../lib/orvenix-ai/architect")
+
+  const architecture = buildSiteArchitecture({
+    request: "Crea un sitio para una clinica dental",
+    business: { industry: "salud", objective: "Conseguir citas de valoracion" },
+  })
+
+  assert.equal(architecture.businessObjective, "Conseguir citas de valoracion")
+  // El objective interno (usado para page.purpose / trace) sigue siendo el
+  // hardcoded por siteType, sin tocar -- no fue "arreglado" reescribiendolo.
+  assert.equal(architecture.objective, "Conseguir citas y generar confianza")
+})
+
+test("J9-J E) El objective real afecta la copy de conversion de Contacto de forma conservadora (insercion literal, sin taxonomia)", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+  const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+
+  const description = allVisibleTexts(contacto).find((text) => text.startsWith("Comunícate con"))
+  assert.equal(description, "Comunícate con Centro de Fisioterapia Monterrey para conseguir citas de valoracion.")
+})
+
+test("J9-J F) Sin objective suministrado: Contacto conserva la copy de conversion generica (fallback)", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({
+    request: "req",
+    forceFreshComposition: true,
+    business: { name: "Taller Rio", industry: "carpinteria" },
+  })
+  const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+  const description = allVisibleTexts(contacto).find((text) => text.startsWith("Comunícate con"))
+  assert.equal(description, "Comunícate con Taller Rio para resolver dudas, solicitar información o comenzar.")
+})
+
+test("J9-J G) Home y Servicios siguen siendo purpose-distinct tras los cambios de J9-J", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+  const home = result.plan.pages.find((p) => p.slug === "home")!
+  const servicios = result.plan.pages.find((p) => p.slug === "servicios")!
+
+  assert.equal(heroH1Text(home), "Centro de Fisioterapia Monterrey: una forma más clara de presentar lo que haces")
+  assert.equal(heroEyebrowText(servicios), "Centro de Fisioterapia Monterrey")
+  assert.equal(heroH1Text(servicios), "Conoce nuestros servicios")
+  assert.notEqual(heroH1Text(home), heroH1Text(servicios))
+})
+
+test("J9-J H) Contacto tiene exactamente un H1 significativo", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+  const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+  const nodes = contacto.tree.nodes as Record<string, CompiledNode>
+  const h1Count = Object.values(nodes).filter((n) => n.type === "heading" && n.props?.level === 1).length
+  assert.equal(h1Count, 1)
+  assert.equal(heroH1Text(contacto), "Estamos aquí para ayudarte a dar el siguiente paso")
+})
+
+test("J9-J I) Contacto tiene un camino de conversion accionable (>= 2 CTA, hrefs validos)", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+  const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+  const nodes = contacto.tree.nodes as Record<string, CompiledNode>
+  const ctas = Object.values(nodes).filter((n) => n.type === "ctaButton")
+  assert.ok(ctas.length >= 2, `Contacto debe tener al menos 2 CTA, tiene ${ctas.length}`)
+  for (const cta of ctas) {
+    assert.ok(typeof cta.props?.href === "string" && (cta.props.href as string).length > 0, "cada CTA debe tener un href valido")
+  }
+})
+
+test("J9-J J) Contacto sigue siendo estructuralmente mas corto que Home y Servicios", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+  const home = result.plan.pages.find((p) => p.slug === "home")!
+  const servicios = result.plan.pages.find((p) => p.slug === "servicios")!
+  const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+
+  const count = (page: GeneratedPlanPage) => Object.keys(page.tree.nodes).length
+  assert.ok(count(contacto) < count(servicios), "Contacto debe seguir siendo mas corto que Servicios")
+  assert.ok(count(contacto) < count(home), "Contacto debe seguir siendo mas corto que Home")
+})
+
+test("J9-J K) Quality Gate: la advertencia de H1 faltante y de pocos CTA desaparecen para Contacto porque la estructura es correcta (no se toco el Quality Gate)", async () => {
+  const { evaluateTreeQuality } = await import("../../lib/orvenix-ai/quality")
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+  const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+
+  const quality = evaluateTreeQuality(contacto.tree)
+  assert.equal(quality.problems.includes("El sitio no tiene un H1 principal."), false)
+  assert.equal(quality.problems.includes("Hay pocas llamadas a la acción."), false)
+})
+
+test("J9-J L) No se fabrican datos de negocio: telefono/correo siguen siendo el placeholder original, sin testimonios/estadisticas inventadas", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const result = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+  const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+  const home = result.plan.pages.find((p) => p.slug === "home")!
+
+  const contactoTexts = allVisibleTexts(contacto)
+  assert.ok(contactoTexts.includes("WhatsApp: +52 000 000 0000"), "el placeholder de WhatsApp no debe cambiar")
+  assert.ok(contactoTexts.includes("Correo: contacto@tumarca.com"), "el placeholder de correo no debe cambiar")
+
+  const homeTexts = allVisibleTexts(home)
+  assert.ok(homeTexts.includes("Testimonio pendiente de contenido real."), "los testimonios siguen siendo el placeholder no-fabricado")
+  assert.equal(homeTexts.some((text) => /\d{1,3}%|clientes satisfechos|premiad[oa]|certificad[oa]/i.test(text)), false, "no debe aparecer ninguna estadistica/certificacion inventada")
+})
+
+test("J9-J M) Pipeline completo desde la frontera freeform real (normalizeSiteCreationBusiness) hasta los arboles finales, para DOS industrias distintas", async () => {
+  const { normalizeSiteCreationBusiness } = await import("../../lib/orvenix-ai/site-creation/business-normalization")
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+
+  const fixtures = [
+    {
+      request:
+        "Crea un sitio web profesional para Centro de Fisioterapia Monterrey. Ofrecemos fisioterapia deportiva, rehabilitacion fisica y terapia manual en Monterrey. El objetivo principal es conseguir citas de valoracion.",
+      form: {
+        name: "Centro de Fisioterapia Monterrey",
+        industry: "fisioterapia",
+        location: "Monterrey",
+        objective: "Conseguir citas de valoracion",
+      },
+      expectServices: ["fisioterapia deportiva", "rehabilitacion fisica", "terapia manual"],
+      expectLocationVisible: false, // location is inside businessName -- guard applies
+    },
+    {
+      request: "Somos Estudio Norte en Guadalajara. Disenamos logotipos, identidad visual y sitios web para pequenas empresas.",
+      form: {
+        name: "Estudio Norte",
+        industry: "diseño grafico",
+        location: "Guadalajara",
+        objective: "Conseguir nuevos clientes",
+      },
+      expectServices: ["logotipos", "identidad visual", "sitios web"],
+      expectLocationVisible: true,
+    },
+  ]
+
+  for (const fixture of fixtures) {
+    const business = normalizeSiteCreationBusiness(
+      { ...fixture.form, description: fixture.request },
+      fixture.request,
+    )
+    assert.deepEqual(business.services?.map((s) => s.name), fixture.expectServices, `servicios inferidos incorrectos para "${fixture.form.name}"`)
+
+    const result = await runAutonomousMultiPageSiteBuilder({
+      request: fixture.request,
+      forceFreshComposition: true,
+      business: {
+        name: business.name,
+        industry: business.industry,
+        location: business.location,
+        description: business.description,
+        objective: business.objective,
+        services: business.services,
+      },
+    })
+
+    assert.equal(result.ok, true)
+    const servicios = result.plan.pages.find((p) => p.slug === "servicios")!
+    const serviciosTitles = allVisibleTexts(servicios)
+    for (const serviceName of fixture.expectServices) {
+      assert.ok(serviciosTitles.includes(serviceName), `Servicios no muestra "${serviceName}" para "${fixture.form.name}"`)
+    }
+
+    const contacto = result.plan.pages.find((p) => p.slug === "contacto")!
+    assert.equal(heroH1Text(contacto), "Estamos aquí para ayudarte a dar el siguiente paso")
+    const quality = (await import("../../lib/orvenix-ai/quality")).evaluateTreeQuality(contacto.tree)
+    assert.equal(quality.problems.length, 0, `Contacto de "${fixture.form.name}" no debe tener problems de Quality Gate: ${quality.problems.join("; ")}`)
+
+    if (fixture.expectLocationVisible) {
+      assert.ok(allVisibleTexts(contacto).some((t) => t.includes(`en ${fixture.form.location}`)), `Contacto de "${fixture.form.name}" deberia mostrar la ubicacion explicitamente`)
+    }
+  }
+})
+
+test("J9-J N) Determinismo: la misma entrada produce exactamente la misma copy de ubicacion/objective/Contacto en corridas repetidas", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+  const first = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+  const second = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIO_BUSINESS })
+
+  const contactoFirst = first.plan.pages.find((p) => p.slug === "contacto")!
+  const contactoSecond = second.plan.pages.find((p) => p.slug === "contacto")!
+  // Sorted comparison: object-key enumeration order is an implementation
+  // detail, not a contract: what must be deterministic is the SET of
+  // visible copy, not the raw iteration order of Object.values(nodes).
+  assert.deepEqual([...allVisibleTexts(contactoFirst)].sort(), [...allVisibleTexts(contactoSecond)].sort())
+
+  const homeFirst = first.plan.pages.find((p) => p.slug === "home")!
+  const homeSecond = second.plan.pages.find((p) => p.slug === "home")!
+  assert.equal(heroH1Text(homeFirst), heroH1Text(homeSecond))
 })

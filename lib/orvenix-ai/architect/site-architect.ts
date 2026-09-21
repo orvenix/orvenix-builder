@@ -26,6 +26,16 @@ export interface OrvenixSiteArchitecture {
   pages: OrvenixSitePagePlan[]
   businessName?: string
   services?: Array<{ name: string; description?: string }>
+  location?: string
+  /**
+   * The real, caller-supplied business objective (eg. "Conseguir citas de
+   * valoración"), kept separate from `objective` above -- which is an
+   * internal, siteType-driven page-intent string used for page.purpose /
+   * trace text and must not change. Composition-time copy generation
+   * should prefer this field when it wants the business's actual stated
+   * intent.
+   */
+  businessObjective?: string
 }
 
 function normalize(value?: string) {
@@ -148,6 +158,8 @@ export function buildSiteArchitecture(
       objective: "Conseguir citas y generar confianza",
       businessName: context.business?.name,
       services: context.business?.services,
+      location: context.business?.location,
+      businessObjective: context.business?.objective,
       pages: [
         makePage(siteType,
           "Inicio",
@@ -203,6 +215,8 @@ export function buildSiteArchitecture(
       objective: "Conseguir reservaciones y visitas",
       businessName: context.business?.name,
       services: context.business?.services,
+      location: context.business?.location,
+      businessObjective: context.business?.objective,
       pages: [
         makePage(siteType,
           "Inicio",
@@ -257,6 +271,8 @@ export function buildSiteArchitecture(
       objective: "Conseguir prospectos",
       businessName: context.business?.name,
       services: context.business?.services,
+      location: context.business?.location,
+      businessObjective: context.business?.objective,
       pages: [
         makePage(siteType,
           "Inicio",
@@ -312,6 +328,8 @@ export function buildSiteArchitecture(
       objective: "Vender productos",
       businessName: context.business?.name,
       services: context.business?.services,
+      location: context.business?.location,
+      businessObjective: context.business?.objective,
       pages: [
         makePage(siteType,
           "Inicio",
@@ -351,6 +369,8 @@ export function buildSiteArchitecture(
     objective: "Presentar el negocio y generar contactos",
     businessName: context.business?.name,
     services: context.business?.services,
+    location: context.business?.location,
+    businessObjective: context.business?.objective,
     pages: [
       makePage(siteType,
         "Inicio",

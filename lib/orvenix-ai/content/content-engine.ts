@@ -14,6 +14,30 @@ function industryText(context: BusinessContentContext) {
   return context.industry?.trim() || "servicios profesionales"
 }
 
+function stripDiacritics(value: string): string {
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "")
+}
+
+/**
+ * Builds " en {location}" the way callers below already expect, EXCEPT it
+ * deterministically suppresses itself when `location` is already present
+ * inside `name` (case/diacritic-insensitive) -- eg. businessName "Centro de
+ * Fisioterapia Monterrey" + location "Monterrey" must not become "...
+ * Monterrey en Monterrey". This one guard protects every branch that
+ * concatenates name + locationPhrase.
+ */
+function buildLocationPhrase(name: string, location?: string): string {
+  const trimmedLocation = location?.trim()
+  if (!trimmedLocation) return ""
+
+  const normalizedName = stripDiacritics(name).toLowerCase()
+  const normalizedLocation = stripDiacritics(trimmedLocation).toLowerCase()
+
+  if (normalizedName.includes(normalizedLocation)) return ""
+
+  return ` en ${trimmedLocation}`
+}
+
 function catalogPageHeroCopy(
   language: ReturnType<typeof getBusinessLanguage>,
   name?: string,
@@ -33,13 +57,17 @@ function conversionPageHeroCopy(
   name: string,
   locationPhrase: string,
   language: ReturnType<typeof getBusinessLanguage>,
+  objective?: string,
 ) {
+  const trimmedObjective = objective?.trim()
+
   return {
     eyebrow: "Contacto",
     title:
       "Estamos aquí para ayudarte a dar el siguiente paso",
-    description:
-      `Comunícate con ${name}${locationPhrase} para resolver dudas, solicitar información o comenzar.`,
+    description: trimmedObjective
+      ? `Comunícate con ${name}${locationPhrase} para ${trimmedObjective.toLowerCase()}.`
+      : `Comunícate con ${name}${locationPhrase} para resolver dudas, solicitar información o comenzar.`,
     primaryCtaLabel: language.primaryAction,
     secondaryCtaLabel: "Ver servicios",
   }
@@ -51,8 +79,7 @@ export function getPageAwareHeroCopy(context: BusinessContentContext) {
   const location = context.location?.trim()
   const archetype = context.page?.archetype
 
-  const locationPhrase =
-    location ? ` en ${location}` : ""
+  const locationPhrase = buildLocationPhrase(name, location)
 
   /*
    * PAGE ARCHETYPE (authoritative). The active multipage composer always
@@ -63,7 +90,7 @@ export function getPageAwareHeroCopy(context: BusinessContentContext) {
   }
 
   if (archetype === "conversion") {
-    return conversionPageHeroCopy(name, locationPhrase, language)
+    return conversionPageHeroCopy(name, locationPhrase, language, context.objective)
   }
 
   if (!archetype) {
@@ -79,7 +106,7 @@ export function getPageAwareHeroCopy(context: BusinessContentContext) {
     }
 
     if (slug === "contacto") {
-      return conversionPageHeroCopy(name, locationPhrase, language)
+      return conversionPageHeroCopy(name, locationPhrase, language, context.objective)
     }
   }
 
@@ -149,7 +176,7 @@ export function getPageAwareHeroCopy(context: BusinessContentContext) {
       `${name}: una forma más clara de presentar lo que haces`,
     description:
       context.description?.trim() ||
-      `Conoce nuestros ${language.servicePlural} y encuentra una solución pensada para tus necesidades.`,
+      `Conoce nuestros ${language.servicePlural}${locationPhrase} y encuentra una solución pensada para tus necesidades.`,
     primaryCtaLabel: language.primaryAction,
     secondaryCtaLabel: language.secondaryAction,
   }

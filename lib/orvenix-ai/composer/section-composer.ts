@@ -551,7 +551,8 @@ function composeHero(
   const heroCopy = getPageAwareHeroCopy({
     name: context.businessName,
     industry: context.industry,
-    objective: context.objective,
+    objective: context.businessObjective,
+    location: context.location,
     audience: context.audience,
     page: {
       name: context.pageName,
@@ -880,14 +881,61 @@ function composeProcess(context: SectionCompositionContext = {}): ComposedSectio
 function composeProducts(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("products", "Productos destacados", "Muestra opciones faciles de comparar y listas para llevar al usuario a comprar.", [["Producto estrella", "Describe el beneficio principal, precio o diferencial."], ["Opcion recomendada", "Resalta el producto ideal para la mayoria de clientes."], ["Paquete premium", "Presenta la alternativa con mayor valor percibido."]], context) }
 function composePricing(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("pricing", "Elige la opcion ideal", "Presenta precios, paquetes u ofertas sin confundir al comprador.", [["Inicial", "Para comenzar con lo esencial y validar interes."], ["Recomendado", "La opcion con mejor balance entre alcance, soporte y crecimiento."], ["Premium", "Para clientes que quieren una experiencia mas completa."]], context) }
 
-function composeContact(): ComposedSection {
+/**
+ * The "contact" role is used two ways: as Contacto's ONLY content section
+ * (archetype="conversion" -- that page has no separate "hero" role in any
+ * architecture recipe, so this IS its purpose-bearing header), and as a
+ * supplementary mid-page block on Home (which already has its own hero
+ * H1). Only the former should gain a real H1 / conversion copy / second
+ * CTA -- giving both would produce two H1s and an unreviewed extra CTA on
+ * Home. The conversion-only branch deliberately reuses
+ * getPageAwareHeroCopy's existing conversion-archetype copy (already
+ * location+objective aware) instead of composeHero's full 2-column
+ * structure, keeping Contacto materially shorter than Home/Servicios.
+ */
+function composeContact(
+  context: SectionCompositionContext = {},
+): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  const heading = headingNode(nodes, "Titulo contacto", "Hablemos de tu proyecto", 2, { align: "left" })
-  const copy = textNode(nodes, "Texto contacto", "Deja claro el siguiente paso y facilita que el visitante te escriba, agende o solicite una cotizacion.", { size: "lg" })
+  const isConversionPage = context.archetype === "conversion"
+
+  let titleText = "Hablemos de tu proyecto"
+  let descriptionText =
+    "Deja claro el siguiente paso y facilita que el visitante te escriba, agende o solicite una cotizacion."
+
+  if (isConversionPage) {
+    const heroCopy = getPageAwareHeroCopy({
+      name: context.businessName,
+      location: context.location,
+      objective: context.businessObjective,
+      page: {
+        name: context.pageName,
+        slug: context.pageSlug ?? "contacto",
+        purpose: context.pagePurpose,
+        archetype: "conversion",
+      },
+    })
+    titleText = heroCopy.title
+    descriptionText = heroCopy.description
+  }
+
+  const heading = headingNode(nodes, "Titulo contacto", titleText, isConversionPage ? 1 : 2, { align: "left" })
+  const copy = textNode(nodes, "Texto contacto", descriptionText, { size: "lg" })
   const phone = textNode(nodes, "Telefono", "WhatsApp: +52 000 000 0000")
   const email = textNode(nodes, "Correo", "Correo: contacto@tumarca.com")
-  const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto", props: { label: "Enviar mensaje", href: "#", variant: "primary", size: "lg" } }))
-  const card = wrapperNode(nodes, "Tarjeta contacto", "rounded-[1.75rem] border border-sky-100 bg-white p-8 shadow-xl shadow-sky-900/10", [heading, copy, phone, email, cta], "article")
+  const primaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto", props: { label: "Enviar mensaje", href: "#", variant: "primary", size: "lg" } }))
+
+  const contentChildren = [heading, copy, phone, email]
+
+  if (isConversionPage) {
+    const secondaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto secundario", props: { label: "Ver servicios", href: "#servicios", variant: "secondary", size: "lg" } }))
+    const actions = wrapperNode(nodes, "Acciones contacto", "flex flex-col gap-3 sm:flex-row", [primaryCta, secondaryCta])
+    contentChildren.push(actions)
+  } else {
+    contentChildren.push(primaryCta)
+  }
+
+  const card = wrapperNode(nodes, "Tarjeta contacto", "rounded-[1.75rem] border border-sky-100 bg-white p-8 shadow-xl shadow-sky-900/10", contentChildren, "article")
   const root = add(nodes, createComposedNode({ type: "section", displayName: "Contacto", props: { maxWidth: "lg", paddingY: "xl", paddingX: "lg", background: "#eef8ff" }, children: [card] }))
   return { role: "contact", rootId: root, nodes, purpose: "Facilitar contacto y siguiente paso." }
 }
@@ -991,7 +1039,7 @@ export function composeSection(
       return composeProcess(context)
 
     case "contact":
-      return composeContact()
+      return composeContact(context)
 
     case "cta":
       return composeCTA(context)
