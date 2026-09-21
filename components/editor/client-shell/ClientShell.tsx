@@ -5,12 +5,10 @@ import { ClientPageRenderer } from "@/components/editor/client-app"
 import { MediaCenter } from "@/components/editor/MediaCenter"
 import { ClientWorkspaceSidebar } from "@/components/editor/experience"
 import { FloatingSaveIndicator } from "@/components/editor/toolbar/FloatingSaveIndicator"
-import { useAutosave } from "@/hooks/useAutosave"
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts"
 import { useEditorStore } from "@/store/useEditorStore"
 
 export function ClientShell() {
-  useAutosave()
   useKeyboardShortcuts()
 
   const isPreviewMode = useEditorStore(

@@ -15,102 +15,112 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
 
 /**
  * Model User
- * 
+ *
  */
 export type User = $Result.DefaultSelection<Prisma.$UserPayload>
 /**
  * Model Contact
- * 
+ *
  */
 export type Contact = $Result.DefaultSelection<Prisma.$ContactPayload>
 /**
  * Model Plan
- * 
+ *
  */
 export type Plan = $Result.DefaultSelection<Prisma.$PlanPayload>
 /**
  * Model Subscription
- * 
+ *
  */
 export type Subscription = $Result.DefaultSelection<Prisma.$SubscriptionPayload>
 /**
  * Model WebhookEvent
- * 
+ *
  */
 export type WebhookEvent = $Result.DefaultSelection<Prisma.$WebhookEventPayload>
 /**
  * Model EditorWebsite
- * 
+ *
  */
 export type EditorWebsite = $Result.DefaultSelection<Prisma.$EditorWebsitePayload>
 /**
  * Model SitePage
- * 
+ *
  */
 export type SitePage = $Result.DefaultSelection<Prisma.$SitePagePayload>
 /**
  * Model SiteTheme
- * 
+ *
  */
 export type SiteTheme = $Result.DefaultSelection<Prisma.$SiteThemePayload>
 /**
  * Model Product
- * 
+ *
  */
 export type Product = $Result.DefaultSelection<Prisma.$ProductPayload>
 /**
  * Model ProductVariant
- * 
+ *
  */
 export type ProductVariant = $Result.DefaultSelection<Prisma.$ProductVariantPayload>
 /**
  * Model Order
- * 
+ *
  */
 export type Order = $Result.DefaultSelection<Prisma.$OrderPayload>
 /**
  * Model Funnel
- * 
+ *
  */
 export type Funnel = $Result.DefaultSelection<Prisma.$FunnelPayload>
 /**
  * Model FunnelStep
- * 
+ *
  */
 export type FunnelStep = $Result.DefaultSelection<Prisma.$FunnelStepPayload>
 /**
  * Model Experiment
- * 
+ *
  */
 export type Experiment = $Result.DefaultSelection<Prisma.$ExperimentPayload>
 /**
+ * Model DesignGeneration
+ *
+ */
+export type DesignGeneration = $Result.DefaultSelection<Prisma.$DesignGenerationPayload>
+/**
+ * Model DesignAssistance
+ *
+ */
+export type DesignAssistance = $Result.DefaultSelection<Prisma.$DesignAssistancePayload>
+/**
  * Model AiGenerationJob
- * 
+ *
  */
 export type AiGenerationJob = $Result.DefaultSelection<Prisma.$AiGenerationJobPayload>
 /**
  * Model Automation
- * 
+ *
  */
 export type Automation = $Result.DefaultSelection<Prisma.$AutomationPayload>
 /**
  * Model Collection
- * 
+ *
  */
 export type Collection = $Result.DefaultSelection<Prisma.$CollectionPayload>
 /**
  * Model Record
- * 
+ *
  */
 export type Record = $Result.DefaultSelection<Prisma.$RecordPayload>
 /**
  * Model AuditLog
- * 
+ *
  */
 export type AuditLog = $Result.DefaultSelection<Prisma.$AuditLogPayload>
 /**
  * Model SubscriptionHistory
- * 
+ *
  */
 export type SubscriptionHistory = $Result.DefaultSelection<Prisma.$SubscriptionHistoryPayload>
 
@@ -224,7 +234,7 @@ export class PrismaClient<
    *   prisma.user.create({ data: { name: 'Alice' } }),
    * ])
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/orm/prisma-client/queries/transactions).
    */
   $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { maxWait?: number, timeout?: number, isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
@@ -374,6 +384,26 @@ export class PrismaClient<
     * ```
     */
   get experiment(): Prisma.ExperimentDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.designGeneration`: Exposes CRUD operations for the **DesignGeneration** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DesignGenerations
+    * const designGenerations = await prisma.designGeneration.findMany()
+    * ```
+    */
+  get designGeneration(): Prisma.DesignGenerationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.designAssistance`: Exposes CRUD operations for the **DesignAssistance** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DesignAssistances
+    * const designAssistances = await prisma.designAssistance.findMany()
+    * ```
+    */
+  get designAssistance(): Prisma.DesignAssistanceDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.aiGenerationJob`: Exposes CRUD operations for the **AiGenerationJob** model.
@@ -882,6 +912,8 @@ export namespace Prisma {
     Funnel: 'Funnel',
     FunnelStep: 'FunnelStep',
     Experiment: 'Experiment',
+    DesignGeneration: 'DesignGeneration',
+    DesignAssistance: 'DesignAssistance',
     AiGenerationJob: 'AiGenerationJob',
     Automation: 'Automation',
     Collection: 'Collection',
@@ -903,7 +935,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "contact" | "plan" | "subscription" | "webhookEvent" | "editorWebsite" | "sitePage" | "siteTheme" | "product" | "productVariant" | "order" | "funnel" | "funnelStep" | "experiment" | "aiGenerationJob" | "automation" | "collection" | "record" | "auditLog" | "subscriptionHistory"
+      modelProps: "user" | "contact" | "plan" | "subscription" | "webhookEvent" | "editorWebsite" | "sitePage" | "siteTheme" | "product" | "productVariant" | "order" | "funnel" | "funnelStep" | "experiment" | "designGeneration" | "designAssistance" | "aiGenerationJob" | "automation" | "collection" | "record" | "auditLog" | "subscriptionHistory"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1831,6 +1863,138 @@ export namespace Prisma {
           }
         }
       }
+      DesignGeneration: {
+        payload: Prisma.$DesignGenerationPayload<ExtArgs>
+        fields: Prisma.DesignGenerationFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DesignGenerationFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DesignGenerationFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload>
+          }
+          findFirst: {
+            args: Prisma.DesignGenerationFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DesignGenerationFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload>
+          }
+          findMany: {
+            args: Prisma.DesignGenerationFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload>[]
+          }
+          create: {
+            args: Prisma.DesignGenerationCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload>
+          }
+          createMany: {
+            args: Prisma.DesignGenerationCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.DesignGenerationDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload>
+          }
+          update: {
+            args: Prisma.DesignGenerationUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload>
+          }
+          deleteMany: {
+            args: Prisma.DesignGenerationDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DesignGenerationUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.DesignGenerationUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignGenerationPayload>
+          }
+          aggregate: {
+            args: Prisma.DesignGenerationAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDesignGeneration>
+          }
+          groupBy: {
+            args: Prisma.DesignGenerationGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DesignGenerationGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DesignGenerationCountArgs<ExtArgs>
+            result: $Utils.Optional<DesignGenerationCountAggregateOutputType> | number
+          }
+        }
+      }
+      DesignAssistance: {
+        payload: Prisma.$DesignAssistancePayload<ExtArgs>
+        fields: Prisma.DesignAssistanceFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DesignAssistanceFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DesignAssistanceFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload>
+          }
+          findFirst: {
+            args: Prisma.DesignAssistanceFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DesignAssistanceFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload>
+          }
+          findMany: {
+            args: Prisma.DesignAssistanceFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload>[]
+          }
+          create: {
+            args: Prisma.DesignAssistanceCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload>
+          }
+          createMany: {
+            args: Prisma.DesignAssistanceCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.DesignAssistanceDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload>
+          }
+          update: {
+            args: Prisma.DesignAssistanceUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload>
+          }
+          deleteMany: {
+            args: Prisma.DesignAssistanceDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DesignAssistanceUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.DesignAssistanceUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DesignAssistancePayload>
+          }
+          aggregate: {
+            args: Prisma.DesignAssistanceAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDesignAssistance>
+          }
+          groupBy: {
+            args: Prisma.DesignAssistanceGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DesignAssistanceGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DesignAssistanceCountArgs<ExtArgs>
+            result: $Utils.Optional<DesignAssistanceCountAggregateOutputType> | number
+          }
+        }
+      }
       AiGenerationJob: {
         payload: Prisma.$AiGenerationJobPayload<ExtArgs>
         fields: Prisma.AiGenerationJobFieldRefs
@@ -2264,7 +2428,7 @@ export namespace Prisma {
      * ```
      * // Shorthand for `emit: 'stdout'`
      * log: ['query', 'info', 'warn', 'error']
-     * 
+     *
      * // Emit as events only
      * log: [
      *   { emit: 'event', level: 'query' },
@@ -2272,14 +2436,14 @@ export namespace Prisma {
      *   { emit: 'event', level: 'warn' }
      *   { emit: 'event', level: 'error' }
      * ]
-     * 
+     *
      * / Emit as events and log to stdout
      * og: [
      *  { emit: 'stdout', level: 'query' },
      *  { emit: 'stdout', level: 'info' },
      *  { emit: 'stdout', level: 'warn' }
      *  { emit: 'stdout', level: 'error' }
-     * 
+     *
      * ```
      * Read more in our [docs](https://pris.ly/d/logging).
      */
@@ -2304,7 +2468,7 @@ export namespace Prisma {
     accelerateUrl?: string
     /**
      * Global configuration for omitting model fields by default.
-     * 
+     *
      * @example
      * ```
      * const prisma = new PrismaClient({
@@ -2320,7 +2484,7 @@ export namespace Prisma {
     /**
      * SQL commenter plugins that add metadata to SQL queries as comments.
      * Comments follow the sqlcommenter format: https://google.github.io/sqlcommenter/
-     * 
+     *
      * @example
      * ```
      * const prisma = new PrismaClient({
@@ -2349,6 +2513,8 @@ export namespace Prisma {
     funnel?: FunnelOmit
     funnelStep?: FunnelStepOmit
     experiment?: ExperimentOmit
+    designGeneration?: DesignGenerationOmit
+    designAssistance?: DesignAssistanceOmit
     aiGenerationJob?: AiGenerationJobOmit
     automation?: AutomationOmit
     collection?: CollectionOmit
@@ -2436,11 +2602,13 @@ export namespace Prisma {
 
   export type UserCountOutputType = {
     sites: number
+    designGenerations: number
     subscriptionHistory: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     sites?: boolean | UserCountOutputTypeCountSitesArgs
+    designGenerations?: boolean | UserCountOutputTypeCountDesignGenerationsArgs
     subscriptionHistory?: boolean | UserCountOutputTypeCountSubscriptionHistoryArgs
   }
 
@@ -2460,6 +2628,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountSitesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: EditorWebsiteWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountDesignGenerationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DesignGenerationWhereInput
   }
 
   /**
@@ -2544,6 +2719,7 @@ export namespace Prisma {
     funnels: number
     experiments: number
     aiGenerationJobs: number
+    designGenerations: number
     automations: number
   }
 
@@ -2555,6 +2731,7 @@ export namespace Prisma {
     funnels?: boolean | EditorWebsiteCountOutputTypeCountFunnelsArgs
     experiments?: boolean | EditorWebsiteCountOutputTypeCountExperimentsArgs
     aiGenerationJobs?: boolean | EditorWebsiteCountOutputTypeCountAiGenerationJobsArgs
+    designGenerations?: boolean | EditorWebsiteCountOutputTypeCountDesignGenerationsArgs
     automations?: boolean | EditorWebsiteCountOutputTypeCountAutomationsArgs
   }
 
@@ -2616,6 +2793,13 @@ export namespace Prisma {
    */
   export type EditorWebsiteCountOutputTypeCountAiGenerationJobsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: AiGenerationJobWhereInput
+  }
+
+  /**
+   * EditorWebsiteCountOutputType without action
+   */
+  export type EditorWebsiteCountOutputTypeCountDesignGenerationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DesignGenerationWhereInput
   }
 
   /**
@@ -2685,6 +2869,68 @@ export namespace Prisma {
    */
   export type FunnelCountOutputTypeCountStepsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: FunnelStepWhereInput
+  }
+
+
+  /**
+   * Count Type DesignGenerationCountOutputType
+   */
+
+  export type DesignGenerationCountOutputType = {
+    activeForSites: number
+  }
+
+  export type DesignGenerationCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    activeForSites?: boolean | DesignGenerationCountOutputTypeCountActiveForSitesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * DesignGenerationCountOutputType without action
+   */
+  export type DesignGenerationCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGenerationCountOutputType
+     */
+    select?: DesignGenerationCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * DesignGenerationCountOutputType without action
+   */
+  export type DesignGenerationCountOutputTypeCountActiveForSitesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: EditorWebsiteWhereInput
+  }
+
+
+  /**
+   * Count Type AiGenerationJobCountOutputType
+   */
+
+  export type AiGenerationJobCountOutputType = {
+    designAssistances: number
+  }
+
+  export type AiGenerationJobCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    designAssistances?: boolean | AiGenerationJobCountOutputTypeCountDesignAssistancesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * AiGenerationJobCountOutputType without action
+   */
+  export type AiGenerationJobCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiGenerationJobCountOutputType
+     */
+    select?: AiGenerationJobCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * AiGenerationJobCountOutputType without action
+   */
+  export type AiGenerationJobCountOutputTypeCountDesignAssistancesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DesignAssistanceWhereInput
   }
 
 
@@ -2803,43 +3049,43 @@ export namespace Prisma {
     where?: UserWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Users to fetch.
      */
     orderBy?: UserOrderByWithRelationInput | UserOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: UserWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Users from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Users.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Users
     **/
     _count?: true | UserCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: UserMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: UserMaxAggregateInputType
@@ -2904,6 +3150,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     sites?: boolean | User$sitesArgs<ExtArgs>
+    designGenerations?: boolean | User$designGenerationsArgs<ExtArgs>
     subscription?: boolean | User$subscriptionArgs<ExtArgs>
     subscriptionHistory?: boolean | User$subscriptionHistoryArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -2924,6 +3171,7 @@ export namespace Prisma {
   export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "name" | "password" | "role" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     sites?: boolean | User$sitesArgs<ExtArgs>
+    designGenerations?: boolean | User$designGenerationsArgs<ExtArgs>
     subscription?: boolean | User$subscriptionArgs<ExtArgs>
     subscriptionHistory?: boolean | User$subscriptionHistoryArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -2933,6 +3181,7 @@ export namespace Prisma {
     name: "User"
     objects: {
       sites: Prisma.$EditorWebsitePayload<ExtArgs>[]
+      designGenerations: Prisma.$DesignGenerationPayload<ExtArgs>[]
       subscription: Prisma.$SubscriptionPayload<ExtArgs> | null
       subscriptionHistory: Prisma.$SubscriptionHistoryPayload<ExtArgs>[]
     }
@@ -3023,13 +3272,13 @@ export namespace Prisma {
      * @example
      * // Get all Users
      * const users = await prisma.user.findMany()
-     * 
+     *
      * // Get first 10 Users
      * const users = await prisma.user.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const userWithIdOnly = await prisma.user.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends UserFindManyArgs>(args?: SelectSubset<T, UserFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -3043,7 +3292,7 @@ export namespace Prisma {
      *     // ... data to create a User
      *   }
      * })
-     * 
+     *
      */
     create<T extends UserCreateArgs>(args: SelectSubset<T, UserCreateArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -3057,7 +3306,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends UserCreateManyArgs>(args?: SelectSubset<T, UserCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3071,7 +3320,7 @@ export namespace Prisma {
      *     // ... filter to delete one User
      *   }
      * })
-     * 
+     *
      */
     delete<T extends UserDeleteArgs>(args: SelectSubset<T, UserDeleteArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -3088,7 +3337,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends UserUpdateArgs>(args: SelectSubset<T, UserUpdateArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -3102,7 +3351,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends UserDeleteManyArgs>(args?: SelectSubset<T, UserDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3121,7 +3370,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends UserUpdateManyArgs>(args: SelectSubset<T, UserUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3210,7 +3459,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends UserGroupByArgs,
@@ -3285,6 +3534,7 @@ export namespace Prisma {
   export interface Prisma__UserClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     sites<T extends User$sitesArgs<ExtArgs> = {}>(args?: Subset<T, User$sitesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$EditorWebsitePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    designGenerations<T extends User$designGenerationsArgs<ExtArgs> = {}>(args?: Subset<T, User$designGenerationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     subscription<T extends User$subscriptionArgs<ExtArgs> = {}>(args?: Subset<T, User$subscriptionArgs<ExtArgs>>): Prisma__SubscriptionClient<$Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     subscriptionHistory<T extends User$subscriptionHistoryArgs<ExtArgs> = {}>(args?: Subset<T, User$subscriptionHistoryArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SubscriptionHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
@@ -3324,7 +3574,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -3393,31 +3643,31 @@ export namespace Prisma {
     where?: UserWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Users to fetch.
      */
     orderBy?: UserOrderByWithRelationInput | UserOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Users.
      */
     cursor?: UserWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Users from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Users.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Users.
      */
     distinct?: UserScalarFieldEnum | UserScalarFieldEnum[]
@@ -3445,31 +3695,31 @@ export namespace Prisma {
     where?: UserWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Users to fetch.
      */
     orderBy?: UserOrderByWithRelationInput | UserOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Users.
      */
     cursor?: UserWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Users from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Users.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Users.
      */
     distinct?: UserScalarFieldEnum | UserScalarFieldEnum[]
@@ -3497,31 +3747,31 @@ export namespace Prisma {
     where?: UserWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Users to fetch.
      */
     orderBy?: UserOrderByWithRelationInput | UserOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Users.
      */
     cursor?: UserWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Users from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Users.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Users.
      */
     distinct?: UserScalarFieldEnum | UserScalarFieldEnum[]
@@ -3692,6 +3942,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: EditorWebsiteScalarFieldEnum | EditorWebsiteScalarFieldEnum[]
+  }
+
+  /**
+   * User.designGenerations
+   */
+  export type User$designGenerationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    where?: DesignGenerationWhereInput
+    orderBy?: DesignGenerationOrderByWithRelationInput | DesignGenerationOrderByWithRelationInput[]
+    cursor?: DesignGenerationWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DesignGenerationScalarFieldEnum | DesignGenerationScalarFieldEnum[]
   }
 
   /**
@@ -3866,55 +4140,55 @@ export namespace Prisma {
     where?: ContactWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Contacts to fetch.
      */
     orderBy?: ContactOrderByWithRelationInput | ContactOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: ContactWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Contacts from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Contacts.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Contacts
     **/
     _count?: true | ContactCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: ContactAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: ContactSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: ContactMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: ContactMaxAggregateInputType
@@ -4096,13 +4370,13 @@ export namespace Prisma {
      * @example
      * // Get all Contacts
      * const contacts = await prisma.contact.findMany()
-     * 
+     *
      * // Get first 10 Contacts
      * const contacts = await prisma.contact.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const contactWithIdOnly = await prisma.contact.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends ContactFindManyArgs>(args?: SelectSubset<T, ContactFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ContactPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -4116,7 +4390,7 @@ export namespace Prisma {
      *     // ... data to create a Contact
      *   }
      * })
-     * 
+     *
      */
     create<T extends ContactCreateArgs>(args: SelectSubset<T, ContactCreateArgs<ExtArgs>>): Prisma__ContactClient<$Result.GetResult<Prisma.$ContactPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -4130,7 +4404,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends ContactCreateManyArgs>(args?: SelectSubset<T, ContactCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4144,7 +4418,7 @@ export namespace Prisma {
      *     // ... filter to delete one Contact
      *   }
      * })
-     * 
+     *
      */
     delete<T extends ContactDeleteArgs>(args: SelectSubset<T, ContactDeleteArgs<ExtArgs>>): Prisma__ContactClient<$Result.GetResult<Prisma.$ContactPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -4161,7 +4435,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends ContactUpdateArgs>(args: SelectSubset<T, ContactUpdateArgs<ExtArgs>>): Prisma__ContactClient<$Result.GetResult<Prisma.$ContactPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -4175,7 +4449,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends ContactDeleteManyArgs>(args?: SelectSubset<T, ContactDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4194,7 +4468,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends ContactUpdateManyArgs>(args: SelectSubset<T, ContactUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4283,7 +4557,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends ContactGroupByArgs,
@@ -4396,7 +4670,7 @@ export namespace Prisma {
     readonly archivo: FieldRef<"Contact", 'String'>
     readonly createdAt: FieldRef<"Contact", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -4453,31 +4727,31 @@ export namespace Prisma {
     where?: ContactWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Contacts to fetch.
      */
     orderBy?: ContactOrderByWithRelationInput | ContactOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Contacts.
      */
     cursor?: ContactWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Contacts from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Contacts.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Contacts.
      */
     distinct?: ContactScalarFieldEnum | ContactScalarFieldEnum[]
@@ -4501,31 +4775,31 @@ export namespace Prisma {
     where?: ContactWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Contacts to fetch.
      */
     orderBy?: ContactOrderByWithRelationInput | ContactOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Contacts.
      */
     cursor?: ContactWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Contacts from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Contacts.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Contacts.
      */
     distinct?: ContactScalarFieldEnum | ContactScalarFieldEnum[]
@@ -4549,31 +4823,31 @@ export namespace Prisma {
     where?: ContactWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Contacts to fetch.
      */
     orderBy?: ContactOrderByWithRelationInput | ContactOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Contacts.
      */
     cursor?: ContactWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Contacts from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Contacts.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Contacts.
      */
     distinct?: ContactScalarFieldEnum | ContactScalarFieldEnum[]
@@ -4875,55 +5149,55 @@ export namespace Prisma {
     where?: PlanWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Plans to fetch.
      */
     orderBy?: PlanOrderByWithRelationInput | PlanOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: PlanWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Plans from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Plans.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Plans
     **/
     _count?: true | PlanCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: PlanAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: PlanSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: PlanMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: PlanMaxAggregateInputType
@@ -5137,13 +5411,13 @@ export namespace Prisma {
      * @example
      * // Get all Plans
      * const plans = await prisma.plan.findMany()
-     * 
+     *
      * // Get first 10 Plans
      * const plans = await prisma.plan.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const planWithIdOnly = await prisma.plan.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends PlanFindManyArgs>(args?: SelectSubset<T, PlanFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -5157,7 +5431,7 @@ export namespace Prisma {
      *     // ... data to create a Plan
      *   }
      * })
-     * 
+     *
      */
     create<T extends PlanCreateArgs>(args: SelectSubset<T, PlanCreateArgs<ExtArgs>>): Prisma__PlanClient<$Result.GetResult<Prisma.$PlanPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -5171,7 +5445,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends PlanCreateManyArgs>(args?: SelectSubset<T, PlanCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -5185,7 +5459,7 @@ export namespace Prisma {
      *     // ... filter to delete one Plan
      *   }
      * })
-     * 
+     *
      */
     delete<T extends PlanDeleteArgs>(args: SelectSubset<T, PlanDeleteArgs<ExtArgs>>): Prisma__PlanClient<$Result.GetResult<Prisma.$PlanPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -5202,7 +5476,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends PlanUpdateArgs>(args: SelectSubset<T, PlanUpdateArgs<ExtArgs>>): Prisma__PlanClient<$Result.GetResult<Prisma.$PlanPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -5216,7 +5490,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends PlanDeleteManyArgs>(args?: SelectSubset<T, PlanDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -5235,7 +5509,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends PlanUpdateManyArgs>(args: SelectSubset<T, PlanUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -5324,7 +5598,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends PlanGroupByArgs,
@@ -5444,7 +5718,7 @@ export namespace Prisma {
     readonly features: FieldRef<"Plan", 'Json'>
     readonly isActive: FieldRef<"Plan", 'Boolean'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -5513,31 +5787,31 @@ export namespace Prisma {
     where?: PlanWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Plans to fetch.
      */
     orderBy?: PlanOrderByWithRelationInput | PlanOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Plans.
      */
     cursor?: PlanWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Plans from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Plans.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Plans.
      */
     distinct?: PlanScalarFieldEnum | PlanScalarFieldEnum[]
@@ -5565,31 +5839,31 @@ export namespace Prisma {
     where?: PlanWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Plans to fetch.
      */
     orderBy?: PlanOrderByWithRelationInput | PlanOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Plans.
      */
     cursor?: PlanWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Plans from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Plans.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Plans.
      */
     distinct?: PlanScalarFieldEnum | PlanScalarFieldEnum[]
@@ -5617,31 +5891,31 @@ export namespace Prisma {
     where?: PlanWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Plans to fetch.
      */
     orderBy?: PlanOrderByWithRelationInput | PlanOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Plans.
      */
     cursor?: PlanWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Plans from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Plans.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Plans.
      */
     distinct?: PlanScalarFieldEnum | PlanScalarFieldEnum[]
@@ -5979,43 +6253,43 @@ export namespace Prisma {
     where?: SubscriptionWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Subscriptions to fetch.
      */
     orderBy?: SubscriptionOrderByWithRelationInput | SubscriptionOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: SubscriptionWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Subscriptions from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Subscriptions.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Subscriptions
     **/
     _count?: true | SubscriptionCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: SubscriptionMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: SubscriptionMaxAggregateInputType
@@ -6243,13 +6517,13 @@ export namespace Prisma {
      * @example
      * // Get all Subscriptions
      * const subscriptions = await prisma.subscription.findMany()
-     * 
+     *
      * // Get first 10 Subscriptions
      * const subscriptions = await prisma.subscription.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const subscriptionWithIdOnly = await prisma.subscription.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends SubscriptionFindManyArgs>(args?: SelectSubset<T, SubscriptionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -6263,7 +6537,7 @@ export namespace Prisma {
      *     // ... data to create a Subscription
      *   }
      * })
-     * 
+     *
      */
     create<T extends SubscriptionCreateArgs>(args: SelectSubset<T, SubscriptionCreateArgs<ExtArgs>>): Prisma__SubscriptionClient<$Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -6277,7 +6551,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends SubscriptionCreateManyArgs>(args?: SelectSubset<T, SubscriptionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -6291,7 +6565,7 @@ export namespace Prisma {
      *     // ... filter to delete one Subscription
      *   }
      * })
-     * 
+     *
      */
     delete<T extends SubscriptionDeleteArgs>(args: SelectSubset<T, SubscriptionDeleteArgs<ExtArgs>>): Prisma__SubscriptionClient<$Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -6308,7 +6582,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends SubscriptionUpdateArgs>(args: SelectSubset<T, SubscriptionUpdateArgs<ExtArgs>>): Prisma__SubscriptionClient<$Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -6322,7 +6596,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends SubscriptionDeleteManyArgs>(args?: SelectSubset<T, SubscriptionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -6341,7 +6615,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends SubscriptionUpdateManyArgs>(args: SelectSubset<T, SubscriptionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -6430,7 +6704,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends SubscriptionGroupByArgs,
@@ -6555,7 +6829,7 @@ export namespace Prisma {
     readonly pendingStartsAt: FieldRef<"Subscription", 'DateTime'>
     readonly pendingStripePriceId: FieldRef<"Subscription", 'String'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -6624,31 +6898,31 @@ export namespace Prisma {
     where?: SubscriptionWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Subscriptions to fetch.
      */
     orderBy?: SubscriptionOrderByWithRelationInput | SubscriptionOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Subscriptions.
      */
     cursor?: SubscriptionWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Subscriptions from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Subscriptions.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Subscriptions.
      */
     distinct?: SubscriptionScalarFieldEnum | SubscriptionScalarFieldEnum[]
@@ -6676,31 +6950,31 @@ export namespace Prisma {
     where?: SubscriptionWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Subscriptions to fetch.
      */
     orderBy?: SubscriptionOrderByWithRelationInput | SubscriptionOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Subscriptions.
      */
     cursor?: SubscriptionWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Subscriptions from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Subscriptions.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Subscriptions.
      */
     distinct?: SubscriptionScalarFieldEnum | SubscriptionScalarFieldEnum[]
@@ -6728,31 +7002,31 @@ export namespace Prisma {
     where?: SubscriptionWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Subscriptions to fetch.
      */
     orderBy?: SubscriptionOrderByWithRelationInput | SubscriptionOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Subscriptions.
      */
     cursor?: SubscriptionWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Subscriptions from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Subscriptions.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Subscriptions.
      */
     distinct?: SubscriptionScalarFieldEnum | SubscriptionScalarFieldEnum[]
@@ -7038,43 +7312,43 @@ export namespace Prisma {
     where?: WebhookEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of WebhookEvents to fetch.
      */
     orderBy?: WebhookEventOrderByWithRelationInput | WebhookEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: WebhookEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` WebhookEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` WebhookEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned WebhookEvents
     **/
     _count?: true | WebhookEventCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: WebhookEventMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: WebhookEventMaxAggregateInputType
@@ -7256,13 +7530,13 @@ export namespace Prisma {
      * @example
      * // Get all WebhookEvents
      * const webhookEvents = await prisma.webhookEvent.findMany()
-     * 
+     *
      * // Get first 10 WebhookEvents
      * const webhookEvents = await prisma.webhookEvent.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const webhookEventWithIdOnly = await prisma.webhookEvent.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends WebhookEventFindManyArgs>(args?: SelectSubset<T, WebhookEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WebhookEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -7276,7 +7550,7 @@ export namespace Prisma {
      *     // ... data to create a WebhookEvent
      *   }
      * })
-     * 
+     *
      */
     create<T extends WebhookEventCreateArgs>(args: SelectSubset<T, WebhookEventCreateArgs<ExtArgs>>): Prisma__WebhookEventClient<$Result.GetResult<Prisma.$WebhookEventPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -7290,7 +7564,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends WebhookEventCreateManyArgs>(args?: SelectSubset<T, WebhookEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -7304,7 +7578,7 @@ export namespace Prisma {
      *     // ... filter to delete one WebhookEvent
      *   }
      * })
-     * 
+     *
      */
     delete<T extends WebhookEventDeleteArgs>(args: SelectSubset<T, WebhookEventDeleteArgs<ExtArgs>>): Prisma__WebhookEventClient<$Result.GetResult<Prisma.$WebhookEventPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -7321,7 +7595,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends WebhookEventUpdateArgs>(args: SelectSubset<T, WebhookEventUpdateArgs<ExtArgs>>): Prisma__WebhookEventClient<$Result.GetResult<Prisma.$WebhookEventPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -7335,7 +7609,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends WebhookEventDeleteManyArgs>(args?: SelectSubset<T, WebhookEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -7354,7 +7628,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends WebhookEventUpdateManyArgs>(args: SelectSubset<T, WebhookEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -7443,7 +7717,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends WebhookEventGroupByArgs,
@@ -7557,7 +7831,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"WebhookEvent", 'DateTime'>
     readonly processedAt: FieldRef<"WebhookEvent", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -7614,31 +7888,31 @@ export namespace Prisma {
     where?: WebhookEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of WebhookEvents to fetch.
      */
     orderBy?: WebhookEventOrderByWithRelationInput | WebhookEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for WebhookEvents.
      */
     cursor?: WebhookEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` WebhookEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` WebhookEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of WebhookEvents.
      */
     distinct?: WebhookEventScalarFieldEnum | WebhookEventScalarFieldEnum[]
@@ -7662,31 +7936,31 @@ export namespace Prisma {
     where?: WebhookEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of WebhookEvents to fetch.
      */
     orderBy?: WebhookEventOrderByWithRelationInput | WebhookEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for WebhookEvents.
      */
     cursor?: WebhookEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` WebhookEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` WebhookEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of WebhookEvents.
      */
     distinct?: WebhookEventScalarFieldEnum | WebhookEventScalarFieldEnum[]
@@ -7710,31 +7984,31 @@ export namespace Prisma {
     where?: WebhookEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of WebhookEvents to fetch.
      */
     orderBy?: WebhookEventOrderByWithRelationInput | WebhookEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing WebhookEvents.
      */
     cursor?: WebhookEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` WebhookEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` WebhookEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of WebhookEvents.
      */
     distinct?: WebhookEventScalarFieldEnum | WebhookEventScalarFieldEnum[]
@@ -7898,6 +8172,7 @@ export namespace Prisma {
     description: string | null
     published: boolean | null
     userId: string | null
+    activeDesignGenerationId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -7908,6 +8183,7 @@ export namespace Prisma {
     description: string | null
     published: boolean | null
     userId: string | null
+    activeDesignGenerationId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -7919,6 +8195,7 @@ export namespace Prisma {
     tree: number
     published: number
     userId: number
+    activeDesignGenerationId: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -7931,6 +8208,7 @@ export namespace Prisma {
     description?: true
     published?: true
     userId?: true
+    activeDesignGenerationId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -7941,6 +8219,7 @@ export namespace Prisma {
     description?: true
     published?: true
     userId?: true
+    activeDesignGenerationId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -7952,6 +8231,7 @@ export namespace Prisma {
     tree?: true
     published?: true
     userId?: true
+    activeDesignGenerationId?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -7964,43 +8244,43 @@ export namespace Prisma {
     where?: EditorWebsiteWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of EditorWebsites to fetch.
      */
     orderBy?: EditorWebsiteOrderByWithRelationInput | EditorWebsiteOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: EditorWebsiteWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` EditorWebsites from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` EditorWebsites.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned EditorWebsites
     **/
     _count?: true | EditorWebsiteCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: EditorWebsiteMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: EditorWebsiteMaxAggregateInputType
@@ -8036,6 +8316,7 @@ export namespace Prisma {
     tree: JsonValue
     published: boolean
     userId: string | null
+    activeDesignGenerationId: string | null
     createdAt: Date
     updatedAt: Date
     _count: EditorWebsiteCountAggregateOutputType | null
@@ -8064,6 +8345,7 @@ export namespace Prisma {
     tree?: boolean
     published?: boolean
     userId?: boolean
+    activeDesignGenerationId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | EditorWebsite$userArgs<ExtArgs>
@@ -8075,6 +8357,8 @@ export namespace Prisma {
     funnels?: boolean | EditorWebsite$funnelsArgs<ExtArgs>
     experiments?: boolean | EditorWebsite$experimentsArgs<ExtArgs>
     aiGenerationJobs?: boolean | EditorWebsite$aiGenerationJobsArgs<ExtArgs>
+    designGenerations?: boolean | EditorWebsite$designGenerationsArgs<ExtArgs>
+    activeDesignGeneration?: boolean | EditorWebsite$activeDesignGenerationArgs<ExtArgs>
     automations?: boolean | EditorWebsite$automationsArgs<ExtArgs>
     _count?: boolean | EditorWebsiteCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["editorWebsite"]>
@@ -8088,11 +8372,12 @@ export namespace Prisma {
     tree?: boolean
     published?: boolean
     userId?: boolean
+    activeDesignGenerationId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type EditorWebsiteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "description" | "tree" | "published" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["editorWebsite"]>
+  export type EditorWebsiteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "description" | "tree" | "published" | "userId" | "activeDesignGenerationId" | "createdAt" | "updatedAt", ExtArgs["result"]["editorWebsite"]>
   export type EditorWebsiteInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | EditorWebsite$userArgs<ExtArgs>
     pages?: boolean | EditorWebsite$pagesArgs<ExtArgs>
@@ -8103,6 +8388,8 @@ export namespace Prisma {
     funnels?: boolean | EditorWebsite$funnelsArgs<ExtArgs>
     experiments?: boolean | EditorWebsite$experimentsArgs<ExtArgs>
     aiGenerationJobs?: boolean | EditorWebsite$aiGenerationJobsArgs<ExtArgs>
+    designGenerations?: boolean | EditorWebsite$designGenerationsArgs<ExtArgs>
+    activeDesignGeneration?: boolean | EditorWebsite$activeDesignGenerationArgs<ExtArgs>
     automations?: boolean | EditorWebsite$automationsArgs<ExtArgs>
     _count?: boolean | EditorWebsiteCountOutputTypeDefaultArgs<ExtArgs>
   }
@@ -8119,6 +8406,8 @@ export namespace Prisma {
       funnels: Prisma.$FunnelPayload<ExtArgs>[]
       experiments: Prisma.$ExperimentPayload<ExtArgs>[]
       aiGenerationJobs: Prisma.$AiGenerationJobPayload<ExtArgs>[]
+      designGenerations: Prisma.$DesignGenerationPayload<ExtArgs>[]
+      activeDesignGeneration: Prisma.$DesignGenerationPayload<ExtArgs> | null
       automations: Prisma.$AutomationPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
@@ -8128,6 +8417,7 @@ export namespace Prisma {
       tree: Prisma.JsonValue
       published: boolean
       userId: string | null
+      activeDesignGenerationId: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["editorWebsite"]>
@@ -8209,13 +8499,13 @@ export namespace Prisma {
      * @example
      * // Get all EditorWebsites
      * const editorWebsites = await prisma.editorWebsite.findMany()
-     * 
+     *
      * // Get first 10 EditorWebsites
      * const editorWebsites = await prisma.editorWebsite.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const editorWebsiteWithIdOnly = await prisma.editorWebsite.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends EditorWebsiteFindManyArgs>(args?: SelectSubset<T, EditorWebsiteFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$EditorWebsitePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -8229,7 +8519,7 @@ export namespace Prisma {
      *     // ... data to create a EditorWebsite
      *   }
      * })
-     * 
+     *
      */
     create<T extends EditorWebsiteCreateArgs>(args: SelectSubset<T, EditorWebsiteCreateArgs<ExtArgs>>): Prisma__EditorWebsiteClient<$Result.GetResult<Prisma.$EditorWebsitePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -8243,7 +8533,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends EditorWebsiteCreateManyArgs>(args?: SelectSubset<T, EditorWebsiteCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -8257,7 +8547,7 @@ export namespace Prisma {
      *     // ... filter to delete one EditorWebsite
      *   }
      * })
-     * 
+     *
      */
     delete<T extends EditorWebsiteDeleteArgs>(args: SelectSubset<T, EditorWebsiteDeleteArgs<ExtArgs>>): Prisma__EditorWebsiteClient<$Result.GetResult<Prisma.$EditorWebsitePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -8274,7 +8564,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends EditorWebsiteUpdateArgs>(args: SelectSubset<T, EditorWebsiteUpdateArgs<ExtArgs>>): Prisma__EditorWebsiteClient<$Result.GetResult<Prisma.$EditorWebsitePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -8288,7 +8578,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends EditorWebsiteDeleteManyArgs>(args?: SelectSubset<T, EditorWebsiteDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -8307,7 +8597,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends EditorWebsiteUpdateManyArgs>(args: SelectSubset<T, EditorWebsiteUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -8396,7 +8686,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends EditorWebsiteGroupByArgs,
@@ -8479,6 +8769,8 @@ export namespace Prisma {
     funnels<T extends EditorWebsite$funnelsArgs<ExtArgs> = {}>(args?: Subset<T, EditorWebsite$funnelsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FunnelPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     experiments<T extends EditorWebsite$experimentsArgs<ExtArgs> = {}>(args?: Subset<T, EditorWebsite$experimentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExperimentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     aiGenerationJobs<T extends EditorWebsite$aiGenerationJobsArgs<ExtArgs> = {}>(args?: Subset<T, EditorWebsite$aiGenerationJobsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AiGenerationJobPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    designGenerations<T extends EditorWebsite$designGenerationsArgs<ExtArgs> = {}>(args?: Subset<T, EditorWebsite$designGenerationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    activeDesignGeneration<T extends EditorWebsite$activeDesignGenerationArgs<ExtArgs> = {}>(args?: Subset<T, EditorWebsite$activeDesignGenerationArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     automations<T extends EditorWebsite$automationsArgs<ExtArgs> = {}>(args?: Subset<T, EditorWebsite$automationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AutomationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -8515,10 +8807,11 @@ export namespace Prisma {
     readonly tree: FieldRef<"EditorWebsite", 'Json'>
     readonly published: FieldRef<"EditorWebsite", 'Boolean'>
     readonly userId: FieldRef<"EditorWebsite", 'String'>
+    readonly activeDesignGenerationId: FieldRef<"EditorWebsite", 'String'>
     readonly createdAt: FieldRef<"EditorWebsite", 'DateTime'>
     readonly updatedAt: FieldRef<"EditorWebsite", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -8587,31 +8880,31 @@ export namespace Prisma {
     where?: EditorWebsiteWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of EditorWebsites to fetch.
      */
     orderBy?: EditorWebsiteOrderByWithRelationInput | EditorWebsiteOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for EditorWebsites.
      */
     cursor?: EditorWebsiteWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` EditorWebsites from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` EditorWebsites.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of EditorWebsites.
      */
     distinct?: EditorWebsiteScalarFieldEnum | EditorWebsiteScalarFieldEnum[]
@@ -8639,31 +8932,31 @@ export namespace Prisma {
     where?: EditorWebsiteWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of EditorWebsites to fetch.
      */
     orderBy?: EditorWebsiteOrderByWithRelationInput | EditorWebsiteOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for EditorWebsites.
      */
     cursor?: EditorWebsiteWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` EditorWebsites from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` EditorWebsites.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of EditorWebsites.
      */
     distinct?: EditorWebsiteScalarFieldEnum | EditorWebsiteScalarFieldEnum[]
@@ -8691,31 +8984,31 @@ export namespace Prisma {
     where?: EditorWebsiteWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of EditorWebsites to fetch.
      */
     orderBy?: EditorWebsiteOrderByWithRelationInput | EditorWebsiteOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing EditorWebsites.
      */
     cursor?: EditorWebsiteWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` EditorWebsites from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` EditorWebsites.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of EditorWebsites.
      */
     distinct?: EditorWebsiteScalarFieldEnum | EditorWebsiteScalarFieldEnum[]
@@ -9071,6 +9364,49 @@ export namespace Prisma {
   }
 
   /**
+   * EditorWebsite.designGenerations
+   */
+  export type EditorWebsite$designGenerationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    where?: DesignGenerationWhereInput
+    orderBy?: DesignGenerationOrderByWithRelationInput | DesignGenerationOrderByWithRelationInput[]
+    cursor?: DesignGenerationWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DesignGenerationScalarFieldEnum | DesignGenerationScalarFieldEnum[]
+  }
+
+  /**
+   * EditorWebsite.activeDesignGeneration
+   */
+  export type EditorWebsite$activeDesignGenerationArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    where?: DesignGenerationWhereInput
+  }
+
+  /**
    * EditorWebsite.automations
    */
   export type EditorWebsite$automationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -9203,43 +9539,43 @@ export namespace Prisma {
     where?: SitePageWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SitePages to fetch.
      */
     orderBy?: SitePageOrderByWithRelationInput | SitePageOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: SitePageWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SitePages from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SitePages.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned SitePages
     **/
     _count?: true | SitePageCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: SitePageMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: SitePageMaxAggregateInputType
@@ -9427,13 +9763,13 @@ export namespace Prisma {
      * @example
      * // Get all SitePages
      * const sitePages = await prisma.sitePage.findMany()
-     * 
+     *
      * // Get first 10 SitePages
      * const sitePages = await prisma.sitePage.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const sitePageWithIdOnly = await prisma.sitePage.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends SitePageFindManyArgs>(args?: SelectSubset<T, SitePageFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SitePagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -9447,7 +9783,7 @@ export namespace Prisma {
      *     // ... data to create a SitePage
      *   }
      * })
-     * 
+     *
      */
     create<T extends SitePageCreateArgs>(args: SelectSubset<T, SitePageCreateArgs<ExtArgs>>): Prisma__SitePageClient<$Result.GetResult<Prisma.$SitePagePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -9461,7 +9797,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends SitePageCreateManyArgs>(args?: SelectSubset<T, SitePageCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -9475,7 +9811,7 @@ export namespace Prisma {
      *     // ... filter to delete one SitePage
      *   }
      * })
-     * 
+     *
      */
     delete<T extends SitePageDeleteArgs>(args: SelectSubset<T, SitePageDeleteArgs<ExtArgs>>): Prisma__SitePageClient<$Result.GetResult<Prisma.$SitePagePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -9492,7 +9828,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends SitePageUpdateArgs>(args: SelectSubset<T, SitePageUpdateArgs<ExtArgs>>): Prisma__SitePageClient<$Result.GetResult<Prisma.$SitePagePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -9506,7 +9842,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends SitePageDeleteManyArgs>(args?: SelectSubset<T, SitePageDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -9525,7 +9861,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends SitePageUpdateManyArgs>(args: SelectSubset<T, SitePageUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -9614,7 +9950,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends SitePageGroupByArgs,
@@ -9729,7 +10065,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"SitePage", 'DateTime'>
     readonly updatedAt: FieldRef<"SitePage", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -9798,31 +10134,31 @@ export namespace Prisma {
     where?: SitePageWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SitePages to fetch.
      */
     orderBy?: SitePageOrderByWithRelationInput | SitePageOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for SitePages.
      */
     cursor?: SitePageWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SitePages from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SitePages.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SitePages.
      */
     distinct?: SitePageScalarFieldEnum | SitePageScalarFieldEnum[]
@@ -9850,31 +10186,31 @@ export namespace Prisma {
     where?: SitePageWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SitePages to fetch.
      */
     orderBy?: SitePageOrderByWithRelationInput | SitePageOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for SitePages.
      */
     cursor?: SitePageWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SitePages from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SitePages.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SitePages.
      */
     distinct?: SitePageScalarFieldEnum | SitePageScalarFieldEnum[]
@@ -9902,31 +10238,31 @@ export namespace Prisma {
     where?: SitePageWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SitePages to fetch.
      */
     orderBy?: SitePageOrderByWithRelationInput | SitePageOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing SitePages.
      */
     cursor?: SitePageWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SitePages from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SitePages.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SitePages.
      */
     distinct?: SitePageScalarFieldEnum | SitePageScalarFieldEnum[]
@@ -10158,43 +10494,43 @@ export namespace Prisma {
     where?: SiteThemeWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SiteThemes to fetch.
      */
     orderBy?: SiteThemeOrderByWithRelationInput | SiteThemeOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: SiteThemeWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SiteThemes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SiteThemes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned SiteThemes
     **/
     _count?: true | SiteThemeCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: SiteThemeMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: SiteThemeMaxAggregateInputType
@@ -10362,13 +10698,13 @@ export namespace Prisma {
      * @example
      * // Get all SiteThemes
      * const siteThemes = await prisma.siteTheme.findMany()
-     * 
+     *
      * // Get first 10 SiteThemes
      * const siteThemes = await prisma.siteTheme.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const siteThemeWithIdOnly = await prisma.siteTheme.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends SiteThemeFindManyArgs>(args?: SelectSubset<T, SiteThemeFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SiteThemePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -10382,7 +10718,7 @@ export namespace Prisma {
      *     // ... data to create a SiteTheme
      *   }
      * })
-     * 
+     *
      */
     create<T extends SiteThemeCreateArgs>(args: SelectSubset<T, SiteThemeCreateArgs<ExtArgs>>): Prisma__SiteThemeClient<$Result.GetResult<Prisma.$SiteThemePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -10396,7 +10732,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends SiteThemeCreateManyArgs>(args?: SelectSubset<T, SiteThemeCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -10410,7 +10746,7 @@ export namespace Prisma {
      *     // ... filter to delete one SiteTheme
      *   }
      * })
-     * 
+     *
      */
     delete<T extends SiteThemeDeleteArgs>(args: SelectSubset<T, SiteThemeDeleteArgs<ExtArgs>>): Prisma__SiteThemeClient<$Result.GetResult<Prisma.$SiteThemePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -10427,7 +10763,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends SiteThemeUpdateArgs>(args: SelectSubset<T, SiteThemeUpdateArgs<ExtArgs>>): Prisma__SiteThemeClient<$Result.GetResult<Prisma.$SiteThemePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -10441,7 +10777,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends SiteThemeDeleteManyArgs>(args?: SelectSubset<T, SiteThemeDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -10460,7 +10796,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends SiteThemeUpdateManyArgs>(args: SelectSubset<T, SiteThemeUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -10549,7 +10885,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends SiteThemeGroupByArgs,
@@ -10659,7 +10995,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"SiteTheme", 'DateTime'>
     readonly updatedAt: FieldRef<"SiteTheme", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -10728,31 +11064,31 @@ export namespace Prisma {
     where?: SiteThemeWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SiteThemes to fetch.
      */
     orderBy?: SiteThemeOrderByWithRelationInput | SiteThemeOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for SiteThemes.
      */
     cursor?: SiteThemeWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SiteThemes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SiteThemes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SiteThemes.
      */
     distinct?: SiteThemeScalarFieldEnum | SiteThemeScalarFieldEnum[]
@@ -10780,31 +11116,31 @@ export namespace Prisma {
     where?: SiteThemeWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SiteThemes to fetch.
      */
     orderBy?: SiteThemeOrderByWithRelationInput | SiteThemeOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for SiteThemes.
      */
     cursor?: SiteThemeWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SiteThemes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SiteThemes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SiteThemes.
      */
     distinct?: SiteThemeScalarFieldEnum | SiteThemeScalarFieldEnum[]
@@ -10832,31 +11168,31 @@ export namespace Prisma {
     where?: SiteThemeWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SiteThemes to fetch.
      */
     orderBy?: SiteThemeOrderByWithRelationInput | SiteThemeOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing SiteThemes.
      */
     cursor?: SiteThemeWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SiteThemes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SiteThemes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SiteThemes.
      */
     distinct?: SiteThemeScalarFieldEnum | SiteThemeScalarFieldEnum[]
@@ -11120,43 +11456,43 @@ export namespace Prisma {
     where?: ProductWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Products to fetch.
      */
     orderBy?: ProductOrderByWithRelationInput | ProductOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: ProductWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Products from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Products.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Products
     **/
     _count?: true | ProductCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: ProductMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: ProductMaxAggregateInputType
@@ -11353,13 +11689,13 @@ export namespace Prisma {
      * @example
      * // Get all Products
      * const products = await prisma.product.findMany()
-     * 
+     *
      * // Get first 10 Products
      * const products = await prisma.product.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const productWithIdOnly = await prisma.product.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends ProductFindManyArgs>(args?: SelectSubset<T, ProductFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProductPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -11373,7 +11709,7 @@ export namespace Prisma {
      *     // ... data to create a Product
      *   }
      * })
-     * 
+     *
      */
     create<T extends ProductCreateArgs>(args: SelectSubset<T, ProductCreateArgs<ExtArgs>>): Prisma__ProductClient<$Result.GetResult<Prisma.$ProductPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -11387,7 +11723,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends ProductCreateManyArgs>(args?: SelectSubset<T, ProductCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -11401,7 +11737,7 @@ export namespace Prisma {
      *     // ... filter to delete one Product
      *   }
      * })
-     * 
+     *
      */
     delete<T extends ProductDeleteArgs>(args: SelectSubset<T, ProductDeleteArgs<ExtArgs>>): Prisma__ProductClient<$Result.GetResult<Prisma.$ProductPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -11418,7 +11754,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends ProductUpdateArgs>(args: SelectSubset<T, ProductUpdateArgs<ExtArgs>>): Prisma__ProductClient<$Result.GetResult<Prisma.$ProductPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -11432,7 +11768,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends ProductDeleteManyArgs>(args?: SelectSubset<T, ProductDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -11451,7 +11787,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends ProductUpdateManyArgs>(args: SelectSubset<T, ProductUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -11540,7 +11876,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends ProductGroupByArgs,
@@ -11657,7 +11993,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Product", 'DateTime'>
     readonly updatedAt: FieldRef<"Product", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -11726,31 +12062,31 @@ export namespace Prisma {
     where?: ProductWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Products to fetch.
      */
     orderBy?: ProductOrderByWithRelationInput | ProductOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Products.
      */
     cursor?: ProductWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Products from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Products.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Products.
      */
     distinct?: ProductScalarFieldEnum | ProductScalarFieldEnum[]
@@ -11778,31 +12114,31 @@ export namespace Prisma {
     where?: ProductWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Products to fetch.
      */
     orderBy?: ProductOrderByWithRelationInput | ProductOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Products.
      */
     cursor?: ProductWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Products from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Products.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Products.
      */
     distinct?: ProductScalarFieldEnum | ProductScalarFieldEnum[]
@@ -11830,31 +12166,31 @@ export namespace Prisma {
     where?: ProductWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Products to fetch.
      */
     orderBy?: ProductOrderByWithRelationInput | ProductOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Products.
      */
     cursor?: ProductWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Products from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Products.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Products.
      */
     distinct?: ProductScalarFieldEnum | ProductScalarFieldEnum[]
@@ -12172,55 +12508,55 @@ export namespace Prisma {
     where?: ProductVariantWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ProductVariants to fetch.
      */
     orderBy?: ProductVariantOrderByWithRelationInput | ProductVariantOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: ProductVariantWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ProductVariants from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ProductVariants.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned ProductVariants
     **/
     _count?: true | ProductVariantCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: ProductVariantAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: ProductVariantSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: ProductVariantMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: ProductVariantMaxAggregateInputType
@@ -12416,13 +12752,13 @@ export namespace Prisma {
      * @example
      * // Get all ProductVariants
      * const productVariants = await prisma.productVariant.findMany()
-     * 
+     *
      * // Get first 10 ProductVariants
      * const productVariants = await prisma.productVariant.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const productVariantWithIdOnly = await prisma.productVariant.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends ProductVariantFindManyArgs>(args?: SelectSubset<T, ProductVariantFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProductVariantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -12436,7 +12772,7 @@ export namespace Prisma {
      *     // ... data to create a ProductVariant
      *   }
      * })
-     * 
+     *
      */
     create<T extends ProductVariantCreateArgs>(args: SelectSubset<T, ProductVariantCreateArgs<ExtArgs>>): Prisma__ProductVariantClient<$Result.GetResult<Prisma.$ProductVariantPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -12450,7 +12786,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends ProductVariantCreateManyArgs>(args?: SelectSubset<T, ProductVariantCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -12464,7 +12800,7 @@ export namespace Prisma {
      *     // ... filter to delete one ProductVariant
      *   }
      * })
-     * 
+     *
      */
     delete<T extends ProductVariantDeleteArgs>(args: SelectSubset<T, ProductVariantDeleteArgs<ExtArgs>>): Prisma__ProductVariantClient<$Result.GetResult<Prisma.$ProductVariantPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -12481,7 +12817,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends ProductVariantUpdateArgs>(args: SelectSubset<T, ProductVariantUpdateArgs<ExtArgs>>): Prisma__ProductVariantClient<$Result.GetResult<Prisma.$ProductVariantPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -12495,7 +12831,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends ProductVariantDeleteManyArgs>(args?: SelectSubset<T, ProductVariantDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -12514,7 +12850,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends ProductVariantUpdateManyArgs>(args: SelectSubset<T, ProductVariantUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -12603,7 +12939,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends ProductVariantGroupByArgs,
@@ -12719,7 +13055,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"ProductVariant", 'DateTime'>
     readonly updatedAt: FieldRef<"ProductVariant", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -12788,31 +13124,31 @@ export namespace Prisma {
     where?: ProductVariantWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ProductVariants to fetch.
      */
     orderBy?: ProductVariantOrderByWithRelationInput | ProductVariantOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for ProductVariants.
      */
     cursor?: ProductVariantWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ProductVariants from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ProductVariants.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ProductVariants.
      */
     distinct?: ProductVariantScalarFieldEnum | ProductVariantScalarFieldEnum[]
@@ -12840,31 +13176,31 @@ export namespace Prisma {
     where?: ProductVariantWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ProductVariants to fetch.
      */
     orderBy?: ProductVariantOrderByWithRelationInput | ProductVariantOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for ProductVariants.
      */
     cursor?: ProductVariantWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ProductVariants from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ProductVariants.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ProductVariants.
      */
     distinct?: ProductVariantScalarFieldEnum | ProductVariantScalarFieldEnum[]
@@ -12892,31 +13228,31 @@ export namespace Prisma {
     where?: ProductVariantWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ProductVariants to fetch.
      */
     orderBy?: ProductVariantOrderByWithRelationInput | ProductVariantOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing ProductVariants.
      */
     cursor?: ProductVariantWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ProductVariants from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ProductVariants.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ProductVariants.
      */
     distinct?: ProductVariantScalarFieldEnum | ProductVariantScalarFieldEnum[]
@@ -13202,55 +13538,55 @@ export namespace Prisma {
     where?: OrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Orders to fetch.
      */
     orderBy?: OrderOrderByWithRelationInput | OrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: OrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Orders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Orders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Orders
     **/
     _count?: true | OrderCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: OrderAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: OrderSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: OrderMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: OrderMaxAggregateInputType
@@ -13446,13 +13782,13 @@ export namespace Prisma {
      * @example
      * // Get all Orders
      * const orders = await prisma.order.findMany()
-     * 
+     *
      * // Get first 10 Orders
      * const orders = await prisma.order.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const orderWithIdOnly = await prisma.order.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends OrderFindManyArgs>(args?: SelectSubset<T, OrderFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -13466,7 +13802,7 @@ export namespace Prisma {
      *     // ... data to create a Order
      *   }
      * })
-     * 
+     *
      */
     create<T extends OrderCreateArgs>(args: SelectSubset<T, OrderCreateArgs<ExtArgs>>): Prisma__OrderClient<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -13480,7 +13816,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends OrderCreateManyArgs>(args?: SelectSubset<T, OrderCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -13494,7 +13830,7 @@ export namespace Prisma {
      *     // ... filter to delete one Order
      *   }
      * })
-     * 
+     *
      */
     delete<T extends OrderDeleteArgs>(args: SelectSubset<T, OrderDeleteArgs<ExtArgs>>): Prisma__OrderClient<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -13511,7 +13847,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends OrderUpdateArgs>(args: SelectSubset<T, OrderUpdateArgs<ExtArgs>>): Prisma__OrderClient<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -13525,7 +13861,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends OrderDeleteManyArgs>(args?: SelectSubset<T, OrderDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -13544,7 +13880,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends OrderUpdateManyArgs>(args: SelectSubset<T, OrderUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -13633,7 +13969,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends OrderGroupByArgs,
@@ -13749,7 +14085,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Order", 'DateTime'>
     readonly updatedAt: FieldRef<"Order", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -13818,31 +14154,31 @@ export namespace Prisma {
     where?: OrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Orders to fetch.
      */
     orderBy?: OrderOrderByWithRelationInput | OrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Orders.
      */
     cursor?: OrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Orders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Orders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Orders.
      */
     distinct?: OrderScalarFieldEnum | OrderScalarFieldEnum[]
@@ -13870,31 +14206,31 @@ export namespace Prisma {
     where?: OrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Orders to fetch.
      */
     orderBy?: OrderOrderByWithRelationInput | OrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Orders.
      */
     cursor?: OrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Orders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Orders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Orders.
      */
     distinct?: OrderScalarFieldEnum | OrderScalarFieldEnum[]
@@ -13922,31 +14258,31 @@ export namespace Prisma {
     where?: OrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Orders to fetch.
      */
     orderBy?: OrderOrderByWithRelationInput | OrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Orders.
      */
     cursor?: OrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Orders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Orders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Orders.
      */
     distinct?: OrderScalarFieldEnum | OrderScalarFieldEnum[]
@@ -14196,43 +14532,43 @@ export namespace Prisma {
     where?: FunnelWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Funnels to fetch.
      */
     orderBy?: FunnelOrderByWithRelationInput | FunnelOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: FunnelWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Funnels from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Funnels.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Funnels
     **/
     _count?: true | FunnelCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: FunnelMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: FunnelMaxAggregateInputType
@@ -14417,13 +14753,13 @@ export namespace Prisma {
      * @example
      * // Get all Funnels
      * const funnels = await prisma.funnel.findMany()
-     * 
+     *
      * // Get first 10 Funnels
      * const funnels = await prisma.funnel.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const funnelWithIdOnly = await prisma.funnel.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends FunnelFindManyArgs>(args?: SelectSubset<T, FunnelFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FunnelPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -14437,7 +14773,7 @@ export namespace Prisma {
      *     // ... data to create a Funnel
      *   }
      * })
-     * 
+     *
      */
     create<T extends FunnelCreateArgs>(args: SelectSubset<T, FunnelCreateArgs<ExtArgs>>): Prisma__FunnelClient<$Result.GetResult<Prisma.$FunnelPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -14451,7 +14787,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends FunnelCreateManyArgs>(args?: SelectSubset<T, FunnelCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -14465,7 +14801,7 @@ export namespace Prisma {
      *     // ... filter to delete one Funnel
      *   }
      * })
-     * 
+     *
      */
     delete<T extends FunnelDeleteArgs>(args: SelectSubset<T, FunnelDeleteArgs<ExtArgs>>): Prisma__FunnelClient<$Result.GetResult<Prisma.$FunnelPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -14482,7 +14818,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends FunnelUpdateArgs>(args: SelectSubset<T, FunnelUpdateArgs<ExtArgs>>): Prisma__FunnelClient<$Result.GetResult<Prisma.$FunnelPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -14496,7 +14832,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends FunnelDeleteManyArgs>(args?: SelectSubset<T, FunnelDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -14515,7 +14851,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends FunnelUpdateManyArgs>(args: SelectSubset<T, FunnelUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -14604,7 +14940,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends FunnelGroupByArgs,
@@ -14718,7 +15054,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Funnel", 'DateTime'>
     readonly updatedAt: FieldRef<"Funnel", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -14787,31 +15123,31 @@ export namespace Prisma {
     where?: FunnelWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Funnels to fetch.
      */
     orderBy?: FunnelOrderByWithRelationInput | FunnelOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Funnels.
      */
     cursor?: FunnelWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Funnels from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Funnels.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Funnels.
      */
     distinct?: FunnelScalarFieldEnum | FunnelScalarFieldEnum[]
@@ -14839,31 +15175,31 @@ export namespace Prisma {
     where?: FunnelWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Funnels to fetch.
      */
     orderBy?: FunnelOrderByWithRelationInput | FunnelOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Funnels.
      */
     cursor?: FunnelWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Funnels from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Funnels.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Funnels.
      */
     distinct?: FunnelScalarFieldEnum | FunnelScalarFieldEnum[]
@@ -14891,31 +15227,31 @@ export namespace Prisma {
     where?: FunnelWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Funnels to fetch.
      */
     orderBy?: FunnelOrderByWithRelationInput | FunnelOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Funnels.
      */
     cursor?: FunnelWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Funnels from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Funnels.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Funnels.
      */
     distinct?: FunnelScalarFieldEnum | FunnelScalarFieldEnum[]
@@ -15207,55 +15543,55 @@ export namespace Prisma {
     where?: FunnelStepWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of FunnelSteps to fetch.
      */
     orderBy?: FunnelStepOrderByWithRelationInput | FunnelStepOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: FunnelStepWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` FunnelSteps from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` FunnelSteps.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned FunnelSteps
     **/
     _count?: true | FunnelStepCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: FunnelStepAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: FunnelStepSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: FunnelStepMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: FunnelStepMaxAggregateInputType
@@ -15439,13 +15775,13 @@ export namespace Prisma {
      * @example
      * // Get all FunnelSteps
      * const funnelSteps = await prisma.funnelStep.findMany()
-     * 
+     *
      * // Get first 10 FunnelSteps
      * const funnelSteps = await prisma.funnelStep.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const funnelStepWithIdOnly = await prisma.funnelStep.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends FunnelStepFindManyArgs>(args?: SelectSubset<T, FunnelStepFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FunnelStepPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -15459,7 +15795,7 @@ export namespace Prisma {
      *     // ... data to create a FunnelStep
      *   }
      * })
-     * 
+     *
      */
     create<T extends FunnelStepCreateArgs>(args: SelectSubset<T, FunnelStepCreateArgs<ExtArgs>>): Prisma__FunnelStepClient<$Result.GetResult<Prisma.$FunnelStepPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -15473,7 +15809,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends FunnelStepCreateManyArgs>(args?: SelectSubset<T, FunnelStepCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -15487,7 +15823,7 @@ export namespace Prisma {
      *     // ... filter to delete one FunnelStep
      *   }
      * })
-     * 
+     *
      */
     delete<T extends FunnelStepDeleteArgs>(args: SelectSubset<T, FunnelStepDeleteArgs<ExtArgs>>): Prisma__FunnelStepClient<$Result.GetResult<Prisma.$FunnelStepPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -15504,7 +15840,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends FunnelStepUpdateArgs>(args: SelectSubset<T, FunnelStepUpdateArgs<ExtArgs>>): Prisma__FunnelStepClient<$Result.GetResult<Prisma.$FunnelStepPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -15518,7 +15854,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends FunnelStepDeleteManyArgs>(args?: SelectSubset<T, FunnelStepDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -15537,7 +15873,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends FunnelStepUpdateManyArgs>(args: SelectSubset<T, FunnelStepUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -15626,7 +15962,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends FunnelStepGroupByArgs,
@@ -15739,7 +16075,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"FunnelStep", 'DateTime'>
     readonly updatedAt: FieldRef<"FunnelStep", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -15808,31 +16144,31 @@ export namespace Prisma {
     where?: FunnelStepWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of FunnelSteps to fetch.
      */
     orderBy?: FunnelStepOrderByWithRelationInput | FunnelStepOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for FunnelSteps.
      */
     cursor?: FunnelStepWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` FunnelSteps from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` FunnelSteps.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of FunnelSteps.
      */
     distinct?: FunnelStepScalarFieldEnum | FunnelStepScalarFieldEnum[]
@@ -15860,31 +16196,31 @@ export namespace Prisma {
     where?: FunnelStepWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of FunnelSteps to fetch.
      */
     orderBy?: FunnelStepOrderByWithRelationInput | FunnelStepOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for FunnelSteps.
      */
     cursor?: FunnelStepWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` FunnelSteps from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` FunnelSteps.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of FunnelSteps.
      */
     distinct?: FunnelStepScalarFieldEnum | FunnelStepScalarFieldEnum[]
@@ -15912,31 +16248,31 @@ export namespace Prisma {
     where?: FunnelStepWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of FunnelSteps to fetch.
      */
     orderBy?: FunnelStepOrderByWithRelationInput | FunnelStepOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing FunnelSteps.
      */
     cursor?: FunnelStepWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` FunnelSteps from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` FunnelSteps.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of FunnelSteps.
      */
     distinct?: FunnelStepScalarFieldEnum | FunnelStepScalarFieldEnum[]
@@ -16198,43 +16534,43 @@ export namespace Prisma {
     where?: ExperimentWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Experiments to fetch.
      */
     orderBy?: ExperimentOrderByWithRelationInput | ExperimentOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: ExperimentWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Experiments from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Experiments.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Experiments
     **/
     _count?: true | ExperimentCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: ExperimentMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: ExperimentMaxAggregateInputType
@@ -16422,13 +16758,13 @@ export namespace Prisma {
      * @example
      * // Get all Experiments
      * const experiments = await prisma.experiment.findMany()
-     * 
+     *
      * // Get first 10 Experiments
      * const experiments = await prisma.experiment.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const experimentWithIdOnly = await prisma.experiment.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends ExperimentFindManyArgs>(args?: SelectSubset<T, ExperimentFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExperimentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -16442,7 +16778,7 @@ export namespace Prisma {
      *     // ... data to create a Experiment
      *   }
      * })
-     * 
+     *
      */
     create<T extends ExperimentCreateArgs>(args: SelectSubset<T, ExperimentCreateArgs<ExtArgs>>): Prisma__ExperimentClient<$Result.GetResult<Prisma.$ExperimentPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -16456,7 +16792,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends ExperimentCreateManyArgs>(args?: SelectSubset<T, ExperimentCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -16470,7 +16806,7 @@ export namespace Prisma {
      *     // ... filter to delete one Experiment
      *   }
      * })
-     * 
+     *
      */
     delete<T extends ExperimentDeleteArgs>(args: SelectSubset<T, ExperimentDeleteArgs<ExtArgs>>): Prisma__ExperimentClient<$Result.GetResult<Prisma.$ExperimentPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -16487,7 +16823,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends ExperimentUpdateArgs>(args: SelectSubset<T, ExperimentUpdateArgs<ExtArgs>>): Prisma__ExperimentClient<$Result.GetResult<Prisma.$ExperimentPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -16501,7 +16837,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends ExperimentDeleteManyArgs>(args?: SelectSubset<T, ExperimentDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -16520,7 +16856,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends ExperimentUpdateManyArgs>(args: SelectSubset<T, ExperimentUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -16609,7 +16945,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends ExperimentGroupByArgs,
@@ -16724,7 +17060,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Experiment", 'DateTime'>
     readonly updatedAt: FieldRef<"Experiment", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -16793,31 +17129,31 @@ export namespace Prisma {
     where?: ExperimentWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Experiments to fetch.
      */
     orderBy?: ExperimentOrderByWithRelationInput | ExperimentOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Experiments.
      */
     cursor?: ExperimentWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Experiments from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Experiments.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Experiments.
      */
     distinct?: ExperimentScalarFieldEnum | ExperimentScalarFieldEnum[]
@@ -16845,31 +17181,31 @@ export namespace Prisma {
     where?: ExperimentWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Experiments to fetch.
      */
     orderBy?: ExperimentOrderByWithRelationInput | ExperimentOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Experiments.
      */
     cursor?: ExperimentWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Experiments from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Experiments.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Experiments.
      */
     distinct?: ExperimentScalarFieldEnum | ExperimentScalarFieldEnum[]
@@ -16897,31 +17233,31 @@ export namespace Prisma {
     where?: ExperimentWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Experiments to fetch.
      */
     orderBy?: ExperimentOrderByWithRelationInput | ExperimentOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Experiments.
      */
     cursor?: ExperimentWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Experiments from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Experiments.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Experiments.
      */
     distinct?: ExperimentScalarFieldEnum | ExperimentScalarFieldEnum[]
@@ -17090,6 +17426,2344 @@ export namespace Prisma {
 
 
   /**
+   * Model DesignGeneration
+   */
+
+  export type AggregateDesignGeneration = {
+    _count: DesignGenerationCountAggregateOutputType | null
+    _avg: DesignGenerationAvgAggregateOutputType | null
+    _sum: DesignGenerationSumAggregateOutputType | null
+    _min: DesignGenerationMinAggregateOutputType | null
+    _max: DesignGenerationMaxAggregateOutputType | null
+  }
+
+  export type DesignGenerationAvgAggregateOutputType = {
+    editDistance: number | null
+    patternVersion: number | null
+    outcomeVersion: number | null
+    outcomeScore: number | null
+  }
+
+  export type DesignGenerationSumAggregateOutputType = {
+    editDistance: number | null
+    patternVersion: number | null
+    outcomeVersion: number | null
+    outcomeScore: number | null
+  }
+
+  export type DesignGenerationMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    siteId: string | null
+    request: string | null
+    industry: string | null
+    siteType: string | null
+    objective: string | null
+    requestedStyle: string | null
+    initialPlanHash: string | null
+    status: string | null
+    editDistance: number | null
+    measuredAt: Date | null
+    patternVersion: number | null
+    patternHash: string | null
+    outcomeVersion: number | null
+    outcomeScore: number | null
+    outcomeQualifiedAt: Date | null
+    siteCreationAttemptId: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DesignGenerationMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    siteId: string | null
+    request: string | null
+    industry: string | null
+    siteType: string | null
+    objective: string | null
+    requestedStyle: string | null
+    initialPlanHash: string | null
+    status: string | null
+    editDistance: number | null
+    measuredAt: Date | null
+    patternVersion: number | null
+    patternHash: string | null
+    outcomeVersion: number | null
+    outcomeScore: number | null
+    outcomeQualifiedAt: Date | null
+    siteCreationAttemptId: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DesignGenerationCountAggregateOutputType = {
+    id: number
+    userId: number
+    siteId: number
+    request: number
+    industry: number
+    siteType: number
+    objective: number
+    requestedStyle: number
+    initialPlan: number
+    initialPlanHash: number
+    status: number
+    editMetrics: number
+    editDistance: number
+    measuredAt: number
+    patternVersion: number
+    patternHash: number
+    patternKey: number
+    outcomeVersion: number
+    outcomeScore: number
+    outcomeQualifiedAt: number
+    siteCreationAttemptId: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type DesignGenerationAvgAggregateInputType = {
+    editDistance?: true
+    patternVersion?: true
+    outcomeVersion?: true
+    outcomeScore?: true
+  }
+
+  export type DesignGenerationSumAggregateInputType = {
+    editDistance?: true
+    patternVersion?: true
+    outcomeVersion?: true
+    outcomeScore?: true
+  }
+
+  export type DesignGenerationMinAggregateInputType = {
+    id?: true
+    userId?: true
+    siteId?: true
+    request?: true
+    industry?: true
+    siteType?: true
+    objective?: true
+    requestedStyle?: true
+    initialPlanHash?: true
+    status?: true
+    editDistance?: true
+    measuredAt?: true
+    patternVersion?: true
+    patternHash?: true
+    outcomeVersion?: true
+    outcomeScore?: true
+    outcomeQualifiedAt?: true
+    siteCreationAttemptId?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DesignGenerationMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    siteId?: true
+    request?: true
+    industry?: true
+    siteType?: true
+    objective?: true
+    requestedStyle?: true
+    initialPlanHash?: true
+    status?: true
+    editDistance?: true
+    measuredAt?: true
+    patternVersion?: true
+    patternHash?: true
+    outcomeVersion?: true
+    outcomeScore?: true
+    outcomeQualifiedAt?: true
+    siteCreationAttemptId?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DesignGenerationCountAggregateInputType = {
+    id?: true
+    userId?: true
+    siteId?: true
+    request?: true
+    industry?: true
+    siteType?: true
+    objective?: true
+    requestedStyle?: true
+    initialPlan?: true
+    initialPlanHash?: true
+    status?: true
+    editMetrics?: true
+    editDistance?: true
+    measuredAt?: true
+    patternVersion?: true
+    patternHash?: true
+    patternKey?: true
+    outcomeVersion?: true
+    outcomeScore?: true
+    outcomeQualifiedAt?: true
+    siteCreationAttemptId?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type DesignGenerationAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DesignGeneration to aggregate.
+     */
+    where?: DesignGenerationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of DesignGenerations to fetch.
+     */
+    orderBy?: DesignGenerationOrderByWithRelationInput | DesignGenerationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the start position
+     */
+    cursor?: DesignGenerationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` DesignGenerations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` DesignGenerations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Count returned DesignGenerations
+    **/
+    _count?: true | DesignGenerationCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to average
+    **/
+    _avg?: DesignGenerationAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to sum
+    **/
+    _sum?: DesignGenerationSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the minimum value
+    **/
+    _min?: DesignGenerationMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the maximum value
+    **/
+    _max?: DesignGenerationMaxAggregateInputType
+  }
+
+  export type GetDesignGenerationAggregateType<T extends DesignGenerationAggregateArgs> = {
+        [P in keyof T & keyof AggregateDesignGeneration]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDesignGeneration[P]>
+      : GetScalarType<T[P], AggregateDesignGeneration[P]>
+  }
+
+
+
+
+  export type DesignGenerationGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DesignGenerationWhereInput
+    orderBy?: DesignGenerationOrderByWithAggregationInput | DesignGenerationOrderByWithAggregationInput[]
+    by: DesignGenerationScalarFieldEnum[] | DesignGenerationScalarFieldEnum
+    having?: DesignGenerationScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DesignGenerationCountAggregateInputType | true
+    _avg?: DesignGenerationAvgAggregateInputType
+    _sum?: DesignGenerationSumAggregateInputType
+    _min?: DesignGenerationMinAggregateInputType
+    _max?: DesignGenerationMaxAggregateInputType
+  }
+
+  export type DesignGenerationGroupByOutputType = {
+    id: string
+    userId: string
+    siteId: string | null
+    request: string
+    industry: string | null
+    siteType: string | null
+    objective: string | null
+    requestedStyle: string | null
+    initialPlan: JsonValue
+    initialPlanHash: string
+    status: string
+    editMetrics: JsonValue | null
+    editDistance: number | null
+    measuredAt: Date | null
+    patternVersion: number | null
+    patternHash: string | null
+    patternKey: JsonValue | null
+    outcomeVersion: number | null
+    outcomeScore: number | null
+    outcomeQualifiedAt: Date | null
+    siteCreationAttemptId: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: DesignGenerationCountAggregateOutputType | null
+    _avg: DesignGenerationAvgAggregateOutputType | null
+    _sum: DesignGenerationSumAggregateOutputType | null
+    _min: DesignGenerationMinAggregateOutputType | null
+    _max: DesignGenerationMaxAggregateOutputType | null
+  }
+
+  type GetDesignGenerationGroupByPayload<T extends DesignGenerationGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DesignGenerationGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DesignGenerationGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DesignGenerationGroupByOutputType[P]>
+            : GetScalarType<T[P], DesignGenerationGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DesignGenerationSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    siteId?: boolean
+    request?: boolean
+    industry?: boolean
+    siteType?: boolean
+    objective?: boolean
+    requestedStyle?: boolean
+    initialPlan?: boolean
+    initialPlanHash?: boolean
+    status?: boolean
+    editMetrics?: boolean
+    editDistance?: boolean
+    measuredAt?: boolean
+    patternVersion?: boolean
+    patternHash?: boolean
+    patternKey?: boolean
+    outcomeVersion?: boolean
+    outcomeScore?: boolean
+    outcomeQualifiedAt?: boolean
+    siteCreationAttemptId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    site?: boolean | DesignGeneration$siteArgs<ExtArgs>
+    activeForSites?: boolean | DesignGeneration$activeForSitesArgs<ExtArgs>
+    siteCreationAttempt?: boolean | DesignGeneration$siteCreationAttemptArgs<ExtArgs>
+    _count?: boolean | DesignGenerationCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["designGeneration"]>
+
+
+
+  export type DesignGenerationSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    siteId?: boolean
+    request?: boolean
+    industry?: boolean
+    siteType?: boolean
+    objective?: boolean
+    requestedStyle?: boolean
+    initialPlan?: boolean
+    initialPlanHash?: boolean
+    status?: boolean
+    editMetrics?: boolean
+    editDistance?: boolean
+    measuredAt?: boolean
+    patternVersion?: boolean
+    patternHash?: boolean
+    patternKey?: boolean
+    outcomeVersion?: boolean
+    outcomeScore?: boolean
+    outcomeQualifiedAt?: boolean
+    siteCreationAttemptId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type DesignGenerationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "siteId" | "request" | "industry" | "siteType" | "objective" | "requestedStyle" | "initialPlan" | "initialPlanHash" | "status" | "editMetrics" | "editDistance" | "measuredAt" | "patternVersion" | "patternHash" | "patternKey" | "outcomeVersion" | "outcomeScore" | "outcomeQualifiedAt" | "siteCreationAttemptId" | "createdAt" | "updatedAt", ExtArgs["result"]["designGeneration"]>
+  export type DesignGenerationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    site?: boolean | DesignGeneration$siteArgs<ExtArgs>
+    activeForSites?: boolean | DesignGeneration$activeForSitesArgs<ExtArgs>
+    siteCreationAttempt?: boolean | DesignGeneration$siteCreationAttemptArgs<ExtArgs>
+    _count?: boolean | DesignGenerationCountOutputTypeDefaultArgs<ExtArgs>
+  }
+
+  export type $DesignGenerationPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DesignGeneration"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+      site: Prisma.$EditorWebsitePayload<ExtArgs> | null
+      activeForSites: Prisma.$EditorWebsitePayload<ExtArgs>[]
+      siteCreationAttempt: Prisma.$AiGenerationJobPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      siteId: string | null
+      request: string
+      industry: string | null
+      siteType: string | null
+      objective: string | null
+      requestedStyle: string | null
+      initialPlan: Prisma.JsonValue
+      initialPlanHash: string
+      status: string
+      editMetrics: Prisma.JsonValue | null
+      editDistance: number | null
+      measuredAt: Date | null
+      patternVersion: number | null
+      patternHash: string | null
+      patternKey: Prisma.JsonValue | null
+      outcomeVersion: number | null
+      outcomeScore: number | null
+      outcomeQualifiedAt: Date | null
+      siteCreationAttemptId: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["designGeneration"]>
+    composites: {}
+  }
+
+  type DesignGenerationGetPayload<S extends boolean | null | undefined | DesignGenerationDefaultArgs> = $Result.GetResult<Prisma.$DesignGenerationPayload, S>
+
+  type DesignGenerationCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DesignGenerationFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DesignGenerationCountAggregateInputType | true
+    }
+
+  export interface DesignGenerationDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DesignGeneration'], meta: { name: 'DesignGeneration' } }
+    /**
+     * Find zero or one DesignGeneration that matches the filter.
+     * @param {DesignGenerationFindUniqueArgs} args - Arguments to find a DesignGeneration
+     * @example
+     * // Get one DesignGeneration
+     * const designGeneration = await prisma.designGeneration.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DesignGenerationFindUniqueArgs>(args: SelectSubset<T, DesignGenerationFindUniqueArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DesignGeneration that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DesignGenerationFindUniqueOrThrowArgs} args - Arguments to find a DesignGeneration
+     * @example
+     * // Get one DesignGeneration
+     * const designGeneration = await prisma.designGeneration.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DesignGenerationFindUniqueOrThrowArgs>(args: SelectSubset<T, DesignGenerationFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DesignGeneration that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignGenerationFindFirstArgs} args - Arguments to find a DesignGeneration
+     * @example
+     * // Get one DesignGeneration
+     * const designGeneration = await prisma.designGeneration.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DesignGenerationFindFirstArgs>(args?: SelectSubset<T, DesignGenerationFindFirstArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DesignGeneration that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignGenerationFindFirstOrThrowArgs} args - Arguments to find a DesignGeneration
+     * @example
+     * // Get one DesignGeneration
+     * const designGeneration = await prisma.designGeneration.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DesignGenerationFindFirstOrThrowArgs>(args?: SelectSubset<T, DesignGenerationFindFirstOrThrowArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DesignGenerations that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignGenerationFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DesignGenerations
+     * const designGenerations = await prisma.designGeneration.findMany()
+     *
+     * // Get first 10 DesignGenerations
+     * const designGenerations = await prisma.designGeneration.findMany({ take: 10 })
+     *
+     * // Only select the `id`
+     * const designGenerationWithIdOnly = await prisma.designGeneration.findMany({ select: { id: true } })
+     *
+     */
+    findMany<T extends DesignGenerationFindManyArgs>(args?: SelectSubset<T, DesignGenerationFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DesignGeneration.
+     * @param {DesignGenerationCreateArgs} args - Arguments to create a DesignGeneration.
+     * @example
+     * // Create one DesignGeneration
+     * const DesignGeneration = await prisma.designGeneration.create({
+     *   data: {
+     *     // ... data to create a DesignGeneration
+     *   }
+     * })
+     *
+     */
+    create<T extends DesignGenerationCreateArgs>(args: SelectSubset<T, DesignGenerationCreateArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DesignGenerations.
+     * @param {DesignGenerationCreateManyArgs} args - Arguments to create many DesignGenerations.
+     * @example
+     * // Create many DesignGenerations
+     * const designGeneration = await prisma.designGeneration.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     */
+    createMany<T extends DesignGenerationCreateManyArgs>(args?: SelectSubset<T, DesignGenerationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a DesignGeneration.
+     * @param {DesignGenerationDeleteArgs} args - Arguments to delete one DesignGeneration.
+     * @example
+     * // Delete one DesignGeneration
+     * const DesignGeneration = await prisma.designGeneration.delete({
+     *   where: {
+     *     // ... filter to delete one DesignGeneration
+     *   }
+     * })
+     *
+     */
+    delete<T extends DesignGenerationDeleteArgs>(args: SelectSubset<T, DesignGenerationDeleteArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DesignGeneration.
+     * @param {DesignGenerationUpdateArgs} args - Arguments to update one DesignGeneration.
+     * @example
+     * // Update one DesignGeneration
+     * const designGeneration = await prisma.designGeneration.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    update<T extends DesignGenerationUpdateArgs>(args: SelectSubset<T, DesignGenerationUpdateArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DesignGenerations.
+     * @param {DesignGenerationDeleteManyArgs} args - Arguments to filter DesignGenerations to delete.
+     * @example
+     * // Delete a few DesignGenerations
+     * const { count } = await prisma.designGeneration.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     *
+     */
+    deleteMany<T extends DesignGenerationDeleteManyArgs>(args?: SelectSubset<T, DesignGenerationDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DesignGenerations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignGenerationUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DesignGenerations
+     * const designGeneration = await prisma.designGeneration.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    updateMany<T extends DesignGenerationUpdateManyArgs>(args: SelectSubset<T, DesignGenerationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one DesignGeneration.
+     * @param {DesignGenerationUpsertArgs} args - Arguments to update or create a DesignGeneration.
+     * @example
+     * // Update or create a DesignGeneration
+     * const designGeneration = await prisma.designGeneration.upsert({
+     *   create: {
+     *     // ... data to create a DesignGeneration
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DesignGeneration we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DesignGenerationUpsertArgs>(args: SelectSubset<T, DesignGenerationUpsertArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DesignGenerations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignGenerationCountArgs} args - Arguments to filter DesignGenerations to count.
+     * @example
+     * // Count the number of DesignGenerations
+     * const count = await prisma.designGeneration.count({
+     *   where: {
+     *     // ... the filter for the DesignGenerations we want to count
+     *   }
+     * })
+    **/
+    count<T extends DesignGenerationCountArgs>(
+      args?: Subset<T, DesignGenerationCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DesignGenerationCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DesignGeneration.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignGenerationAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DesignGenerationAggregateArgs>(args: Subset<T, DesignGenerationAggregateArgs>): Prisma.PrismaPromise<GetDesignGenerationAggregateType<T>>
+
+    /**
+     * Group by DesignGeneration.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignGenerationGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     *
+    **/
+    groupBy<
+      T extends DesignGenerationGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DesignGenerationGroupByArgs['orderBy'] }
+        : { orderBy?: DesignGenerationGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DesignGenerationGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDesignGenerationGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DesignGeneration model
+   */
+  readonly fields: DesignGenerationFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DesignGeneration.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DesignGenerationClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    site<T extends DesignGeneration$siteArgs<ExtArgs> = {}>(args?: Subset<T, DesignGeneration$siteArgs<ExtArgs>>): Prisma__EditorWebsiteClient<$Result.GetResult<Prisma.$EditorWebsitePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    activeForSites<T extends DesignGeneration$activeForSitesArgs<ExtArgs> = {}>(args?: Subset<T, DesignGeneration$activeForSitesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$EditorWebsitePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    siteCreationAttempt<T extends DesignGeneration$siteCreationAttemptArgs<ExtArgs> = {}>(args?: Subset<T, DesignGeneration$siteCreationAttemptArgs<ExtArgs>>): Prisma__AiGenerationJobClient<$Result.GetResult<Prisma.$AiGenerationJobPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DesignGeneration model
+   */
+  interface DesignGenerationFieldRefs {
+    readonly id: FieldRef<"DesignGeneration", 'String'>
+    readonly userId: FieldRef<"DesignGeneration", 'String'>
+    readonly siteId: FieldRef<"DesignGeneration", 'String'>
+    readonly request: FieldRef<"DesignGeneration", 'String'>
+    readonly industry: FieldRef<"DesignGeneration", 'String'>
+    readonly siteType: FieldRef<"DesignGeneration", 'String'>
+    readonly objective: FieldRef<"DesignGeneration", 'String'>
+    readonly requestedStyle: FieldRef<"DesignGeneration", 'String'>
+    readonly initialPlan: FieldRef<"DesignGeneration", 'Json'>
+    readonly initialPlanHash: FieldRef<"DesignGeneration", 'String'>
+    readonly status: FieldRef<"DesignGeneration", 'String'>
+    readonly editMetrics: FieldRef<"DesignGeneration", 'Json'>
+    readonly editDistance: FieldRef<"DesignGeneration", 'Float'>
+    readonly measuredAt: FieldRef<"DesignGeneration", 'DateTime'>
+    readonly patternVersion: FieldRef<"DesignGeneration", 'Int'>
+    readonly patternHash: FieldRef<"DesignGeneration", 'String'>
+    readonly patternKey: FieldRef<"DesignGeneration", 'Json'>
+    readonly outcomeVersion: FieldRef<"DesignGeneration", 'Int'>
+    readonly outcomeScore: FieldRef<"DesignGeneration", 'Float'>
+    readonly outcomeQualifiedAt: FieldRef<"DesignGeneration", 'DateTime'>
+    readonly siteCreationAttemptId: FieldRef<"DesignGeneration", 'String'>
+    readonly createdAt: FieldRef<"DesignGeneration", 'DateTime'>
+    readonly updatedAt: FieldRef<"DesignGeneration", 'DateTime'>
+  }
+
+
+  // Custom InputTypes
+  /**
+   * DesignGeneration findUnique
+   */
+  export type DesignGenerationFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignGeneration to fetch.
+     */
+    where: DesignGenerationWhereUniqueInput
+  }
+
+  /**
+   * DesignGeneration findUniqueOrThrow
+   */
+  export type DesignGenerationFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignGeneration to fetch.
+     */
+    where: DesignGenerationWhereUniqueInput
+  }
+
+  /**
+   * DesignGeneration findFirst
+   */
+  export type DesignGenerationFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignGeneration to fetch.
+     */
+    where?: DesignGenerationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of DesignGenerations to fetch.
+     */
+    orderBy?: DesignGenerationOrderByWithRelationInput | DesignGenerationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for DesignGenerations.
+     */
+    cursor?: DesignGenerationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` DesignGenerations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` DesignGenerations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of DesignGenerations.
+     */
+    distinct?: DesignGenerationScalarFieldEnum | DesignGenerationScalarFieldEnum[]
+  }
+
+  /**
+   * DesignGeneration findFirstOrThrow
+   */
+  export type DesignGenerationFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignGeneration to fetch.
+     */
+    where?: DesignGenerationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of DesignGenerations to fetch.
+     */
+    orderBy?: DesignGenerationOrderByWithRelationInput | DesignGenerationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for DesignGenerations.
+     */
+    cursor?: DesignGenerationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` DesignGenerations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` DesignGenerations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of DesignGenerations.
+     */
+    distinct?: DesignGenerationScalarFieldEnum | DesignGenerationScalarFieldEnum[]
+  }
+
+  /**
+   * DesignGeneration findMany
+   */
+  export type DesignGenerationFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignGenerations to fetch.
+     */
+    where?: DesignGenerationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of DesignGenerations to fetch.
+     */
+    orderBy?: DesignGenerationOrderByWithRelationInput | DesignGenerationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for listing DesignGenerations.
+     */
+    cursor?: DesignGenerationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` DesignGenerations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` DesignGenerations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of DesignGenerations.
+     */
+    distinct?: DesignGenerationScalarFieldEnum | DesignGenerationScalarFieldEnum[]
+  }
+
+  /**
+   * DesignGeneration create
+   */
+  export type DesignGenerationCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DesignGeneration.
+     */
+    data: XOR<DesignGenerationCreateInput, DesignGenerationUncheckedCreateInput>
+  }
+
+  /**
+   * DesignGeneration createMany
+   */
+  export type DesignGenerationCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DesignGenerations.
+     */
+    data: DesignGenerationCreateManyInput | DesignGenerationCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DesignGeneration update
+   */
+  export type DesignGenerationUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DesignGeneration.
+     */
+    data: XOR<DesignGenerationUpdateInput, DesignGenerationUncheckedUpdateInput>
+    /**
+     * Choose, which DesignGeneration to update.
+     */
+    where: DesignGenerationWhereUniqueInput
+  }
+
+  /**
+   * DesignGeneration updateMany
+   */
+  export type DesignGenerationUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DesignGenerations.
+     */
+    data: XOR<DesignGenerationUpdateManyMutationInput, DesignGenerationUncheckedUpdateManyInput>
+    /**
+     * Filter which DesignGenerations to update
+     */
+    where?: DesignGenerationWhereInput
+    /**
+     * Limit how many DesignGenerations to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DesignGeneration upsert
+   */
+  export type DesignGenerationUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DesignGeneration to update in case it exists.
+     */
+    where: DesignGenerationWhereUniqueInput
+    /**
+     * In case the DesignGeneration found by the `where` argument doesn't exist, create a new DesignGeneration with this data.
+     */
+    create: XOR<DesignGenerationCreateInput, DesignGenerationUncheckedCreateInput>
+    /**
+     * In case the DesignGeneration was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DesignGenerationUpdateInput, DesignGenerationUncheckedUpdateInput>
+  }
+
+  /**
+   * DesignGeneration delete
+   */
+  export type DesignGenerationDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    /**
+     * Filter which DesignGeneration to delete.
+     */
+    where: DesignGenerationWhereUniqueInput
+  }
+
+  /**
+   * DesignGeneration deleteMany
+   */
+  export type DesignGenerationDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DesignGenerations to delete
+     */
+    where?: DesignGenerationWhereInput
+    /**
+     * Limit how many DesignGenerations to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DesignGeneration.site
+   */
+  export type DesignGeneration$siteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the EditorWebsite
+     */
+    select?: EditorWebsiteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the EditorWebsite
+     */
+    omit?: EditorWebsiteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: EditorWebsiteInclude<ExtArgs> | null
+    where?: EditorWebsiteWhereInput
+  }
+
+  /**
+   * DesignGeneration.activeForSites
+   */
+  export type DesignGeneration$activeForSitesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the EditorWebsite
+     */
+    select?: EditorWebsiteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the EditorWebsite
+     */
+    omit?: EditorWebsiteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: EditorWebsiteInclude<ExtArgs> | null
+    where?: EditorWebsiteWhereInput
+    orderBy?: EditorWebsiteOrderByWithRelationInput | EditorWebsiteOrderByWithRelationInput[]
+    cursor?: EditorWebsiteWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: EditorWebsiteScalarFieldEnum | EditorWebsiteScalarFieldEnum[]
+  }
+
+  /**
+   * DesignGeneration.siteCreationAttempt
+   */
+  export type DesignGeneration$siteCreationAttemptArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiGenerationJob
+     */
+    select?: AiGenerationJobSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AiGenerationJob
+     */
+    omit?: AiGenerationJobOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AiGenerationJobInclude<ExtArgs> | null
+    where?: AiGenerationJobWhereInput
+  }
+
+  /**
+   * DesignGeneration without action
+   */
+  export type DesignGenerationDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DesignAssistance
+   */
+
+  export type AggregateDesignAssistance = {
+    _count: DesignAssistanceCountAggregateOutputType | null
+    _avg: DesignAssistanceAvgAggregateOutputType | null
+    _sum: DesignAssistanceSumAggregateOutputType | null
+    _min: DesignAssistanceMinAggregateOutputType | null
+    _max: DesignAssistanceMaxAggregateOutputType | null
+  }
+
+  export type DesignAssistanceAvgAggregateOutputType = {
+    version: number | null
+  }
+
+  export type DesignAssistanceSumAggregateOutputType = {
+    version: number | null
+  }
+
+  export type DesignAssistanceMinAggregateOutputType = {
+    id: string | null
+    siteCreationAttemptId: string | null
+    version: number | null
+    roleKey: string | null
+    strategyKey: string | null
+    providerKey: string | null
+    modelKey: string | null
+    status: string | null
+    inputFingerprint: string | null
+    attemptKey: string | null
+    outputFingerprint: string | null
+    failureCode: string | null
+    requestedAt: Date | null
+    completedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DesignAssistanceMaxAggregateOutputType = {
+    id: string | null
+    siteCreationAttemptId: string | null
+    version: number | null
+    roleKey: string | null
+    strategyKey: string | null
+    providerKey: string | null
+    modelKey: string | null
+    status: string | null
+    inputFingerprint: string | null
+    attemptKey: string | null
+    outputFingerprint: string | null
+    failureCode: string | null
+    requestedAt: Date | null
+    completedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DesignAssistanceCountAggregateOutputType = {
+    id: number
+    siteCreationAttemptId: number
+    version: number
+    roleKey: number
+    strategyKey: number
+    providerKey: number
+    modelKey: number
+    status: number
+    inputFingerprint: number
+    attemptKey: number
+    outputFingerprint: number
+    appliedProposal: number
+    failureCode: number
+    requestedAt: number
+    completedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type DesignAssistanceAvgAggregateInputType = {
+    version?: true
+  }
+
+  export type DesignAssistanceSumAggregateInputType = {
+    version?: true
+  }
+
+  export type DesignAssistanceMinAggregateInputType = {
+    id?: true
+    siteCreationAttemptId?: true
+    version?: true
+    roleKey?: true
+    strategyKey?: true
+    providerKey?: true
+    modelKey?: true
+    status?: true
+    inputFingerprint?: true
+    attemptKey?: true
+    outputFingerprint?: true
+    failureCode?: true
+    requestedAt?: true
+    completedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DesignAssistanceMaxAggregateInputType = {
+    id?: true
+    siteCreationAttemptId?: true
+    version?: true
+    roleKey?: true
+    strategyKey?: true
+    providerKey?: true
+    modelKey?: true
+    status?: true
+    inputFingerprint?: true
+    attemptKey?: true
+    outputFingerprint?: true
+    failureCode?: true
+    requestedAt?: true
+    completedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DesignAssistanceCountAggregateInputType = {
+    id?: true
+    siteCreationAttemptId?: true
+    version?: true
+    roleKey?: true
+    strategyKey?: true
+    providerKey?: true
+    modelKey?: true
+    status?: true
+    inputFingerprint?: true
+    attemptKey?: true
+    outputFingerprint?: true
+    appliedProposal?: true
+    failureCode?: true
+    requestedAt?: true
+    completedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type DesignAssistanceAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DesignAssistance to aggregate.
+     */
+    where?: DesignAssistanceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of DesignAssistances to fetch.
+     */
+    orderBy?: DesignAssistanceOrderByWithRelationInput | DesignAssistanceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the start position
+     */
+    cursor?: DesignAssistanceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` DesignAssistances from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` DesignAssistances.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Count returned DesignAssistances
+    **/
+    _count?: true | DesignAssistanceCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to average
+    **/
+    _avg?: DesignAssistanceAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to sum
+    **/
+    _sum?: DesignAssistanceSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the minimum value
+    **/
+    _min?: DesignAssistanceMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the maximum value
+    **/
+    _max?: DesignAssistanceMaxAggregateInputType
+  }
+
+  export type GetDesignAssistanceAggregateType<T extends DesignAssistanceAggregateArgs> = {
+        [P in keyof T & keyof AggregateDesignAssistance]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDesignAssistance[P]>
+      : GetScalarType<T[P], AggregateDesignAssistance[P]>
+  }
+
+
+
+
+  export type DesignAssistanceGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DesignAssistanceWhereInput
+    orderBy?: DesignAssistanceOrderByWithAggregationInput | DesignAssistanceOrderByWithAggregationInput[]
+    by: DesignAssistanceScalarFieldEnum[] | DesignAssistanceScalarFieldEnum
+    having?: DesignAssistanceScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DesignAssistanceCountAggregateInputType | true
+    _avg?: DesignAssistanceAvgAggregateInputType
+    _sum?: DesignAssistanceSumAggregateInputType
+    _min?: DesignAssistanceMinAggregateInputType
+    _max?: DesignAssistanceMaxAggregateInputType
+  }
+
+  export type DesignAssistanceGroupByOutputType = {
+    id: string
+    siteCreationAttemptId: string
+    version: number
+    roleKey: string
+    strategyKey: string
+    providerKey: string
+    modelKey: string
+    status: string
+    inputFingerprint: string
+    attemptKey: string
+    outputFingerprint: string | null
+    appliedProposal: JsonValue | null
+    failureCode: string | null
+    requestedAt: Date
+    completedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: DesignAssistanceCountAggregateOutputType | null
+    _avg: DesignAssistanceAvgAggregateOutputType | null
+    _sum: DesignAssistanceSumAggregateOutputType | null
+    _min: DesignAssistanceMinAggregateOutputType | null
+    _max: DesignAssistanceMaxAggregateOutputType | null
+  }
+
+  type GetDesignAssistanceGroupByPayload<T extends DesignAssistanceGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DesignAssistanceGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DesignAssistanceGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DesignAssistanceGroupByOutputType[P]>
+            : GetScalarType<T[P], DesignAssistanceGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DesignAssistanceSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    siteCreationAttemptId?: boolean
+    version?: boolean
+    roleKey?: boolean
+    strategyKey?: boolean
+    providerKey?: boolean
+    modelKey?: boolean
+    status?: boolean
+    inputFingerprint?: boolean
+    attemptKey?: boolean
+    outputFingerprint?: boolean
+    appliedProposal?: boolean
+    failureCode?: boolean
+    requestedAt?: boolean
+    completedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    siteCreationAttempt?: boolean | AiGenerationJobDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["designAssistance"]>
+
+
+
+  export type DesignAssistanceSelectScalar = {
+    id?: boolean
+    siteCreationAttemptId?: boolean
+    version?: boolean
+    roleKey?: boolean
+    strategyKey?: boolean
+    providerKey?: boolean
+    modelKey?: boolean
+    status?: boolean
+    inputFingerprint?: boolean
+    attemptKey?: boolean
+    outputFingerprint?: boolean
+    appliedProposal?: boolean
+    failureCode?: boolean
+    requestedAt?: boolean
+    completedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type DesignAssistanceOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "siteCreationAttemptId" | "version" | "roleKey" | "strategyKey" | "providerKey" | "modelKey" | "status" | "inputFingerprint" | "attemptKey" | "outputFingerprint" | "appliedProposal" | "failureCode" | "requestedAt" | "completedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["designAssistance"]>
+  export type DesignAssistanceInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    siteCreationAttempt?: boolean | AiGenerationJobDefaultArgs<ExtArgs>
+  }
+
+  export type $DesignAssistancePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DesignAssistance"
+    objects: {
+      siteCreationAttempt: Prisma.$AiGenerationJobPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      siteCreationAttemptId: string
+      version: number
+      roleKey: string
+      strategyKey: string
+      providerKey: string
+      modelKey: string
+      status: string
+      inputFingerprint: string
+      attemptKey: string
+      outputFingerprint: string | null
+      appliedProposal: Prisma.JsonValue | null
+      failureCode: string | null
+      requestedAt: Date
+      completedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["designAssistance"]>
+    composites: {}
+  }
+
+  type DesignAssistanceGetPayload<S extends boolean | null | undefined | DesignAssistanceDefaultArgs> = $Result.GetResult<Prisma.$DesignAssistancePayload, S>
+
+  type DesignAssistanceCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DesignAssistanceFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DesignAssistanceCountAggregateInputType | true
+    }
+
+  export interface DesignAssistanceDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DesignAssistance'], meta: { name: 'DesignAssistance' } }
+    /**
+     * Find zero or one DesignAssistance that matches the filter.
+     * @param {DesignAssistanceFindUniqueArgs} args - Arguments to find a DesignAssistance
+     * @example
+     * // Get one DesignAssistance
+     * const designAssistance = await prisma.designAssistance.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DesignAssistanceFindUniqueArgs>(args: SelectSubset<T, DesignAssistanceFindUniqueArgs<ExtArgs>>): Prisma__DesignAssistanceClient<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DesignAssistance that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DesignAssistanceFindUniqueOrThrowArgs} args - Arguments to find a DesignAssistance
+     * @example
+     * // Get one DesignAssistance
+     * const designAssistance = await prisma.designAssistance.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DesignAssistanceFindUniqueOrThrowArgs>(args: SelectSubset<T, DesignAssistanceFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DesignAssistanceClient<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DesignAssistance that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignAssistanceFindFirstArgs} args - Arguments to find a DesignAssistance
+     * @example
+     * // Get one DesignAssistance
+     * const designAssistance = await prisma.designAssistance.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DesignAssistanceFindFirstArgs>(args?: SelectSubset<T, DesignAssistanceFindFirstArgs<ExtArgs>>): Prisma__DesignAssistanceClient<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DesignAssistance that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignAssistanceFindFirstOrThrowArgs} args - Arguments to find a DesignAssistance
+     * @example
+     * // Get one DesignAssistance
+     * const designAssistance = await prisma.designAssistance.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DesignAssistanceFindFirstOrThrowArgs>(args?: SelectSubset<T, DesignAssistanceFindFirstOrThrowArgs<ExtArgs>>): Prisma__DesignAssistanceClient<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DesignAssistances that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignAssistanceFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DesignAssistances
+     * const designAssistances = await prisma.designAssistance.findMany()
+     *
+     * // Get first 10 DesignAssistances
+     * const designAssistances = await prisma.designAssistance.findMany({ take: 10 })
+     *
+     * // Only select the `id`
+     * const designAssistanceWithIdOnly = await prisma.designAssistance.findMany({ select: { id: true } })
+     *
+     */
+    findMany<T extends DesignAssistanceFindManyArgs>(args?: SelectSubset<T, DesignAssistanceFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DesignAssistance.
+     * @param {DesignAssistanceCreateArgs} args - Arguments to create a DesignAssistance.
+     * @example
+     * // Create one DesignAssistance
+     * const DesignAssistance = await prisma.designAssistance.create({
+     *   data: {
+     *     // ... data to create a DesignAssistance
+     *   }
+     * })
+     *
+     */
+    create<T extends DesignAssistanceCreateArgs>(args: SelectSubset<T, DesignAssistanceCreateArgs<ExtArgs>>): Prisma__DesignAssistanceClient<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DesignAssistances.
+     * @param {DesignAssistanceCreateManyArgs} args - Arguments to create many DesignAssistances.
+     * @example
+     * // Create many DesignAssistances
+     * const designAssistance = await prisma.designAssistance.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     */
+    createMany<T extends DesignAssistanceCreateManyArgs>(args?: SelectSubset<T, DesignAssistanceCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a DesignAssistance.
+     * @param {DesignAssistanceDeleteArgs} args - Arguments to delete one DesignAssistance.
+     * @example
+     * // Delete one DesignAssistance
+     * const DesignAssistance = await prisma.designAssistance.delete({
+     *   where: {
+     *     // ... filter to delete one DesignAssistance
+     *   }
+     * })
+     *
+     */
+    delete<T extends DesignAssistanceDeleteArgs>(args: SelectSubset<T, DesignAssistanceDeleteArgs<ExtArgs>>): Prisma__DesignAssistanceClient<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DesignAssistance.
+     * @param {DesignAssistanceUpdateArgs} args - Arguments to update one DesignAssistance.
+     * @example
+     * // Update one DesignAssistance
+     * const designAssistance = await prisma.designAssistance.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    update<T extends DesignAssistanceUpdateArgs>(args: SelectSubset<T, DesignAssistanceUpdateArgs<ExtArgs>>): Prisma__DesignAssistanceClient<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DesignAssistances.
+     * @param {DesignAssistanceDeleteManyArgs} args - Arguments to filter DesignAssistances to delete.
+     * @example
+     * // Delete a few DesignAssistances
+     * const { count } = await prisma.designAssistance.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     *
+     */
+    deleteMany<T extends DesignAssistanceDeleteManyArgs>(args?: SelectSubset<T, DesignAssistanceDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DesignAssistances.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignAssistanceUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DesignAssistances
+     * const designAssistance = await prisma.designAssistance.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    updateMany<T extends DesignAssistanceUpdateManyArgs>(args: SelectSubset<T, DesignAssistanceUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one DesignAssistance.
+     * @param {DesignAssistanceUpsertArgs} args - Arguments to update or create a DesignAssistance.
+     * @example
+     * // Update or create a DesignAssistance
+     * const designAssistance = await prisma.designAssistance.upsert({
+     *   create: {
+     *     // ... data to create a DesignAssistance
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DesignAssistance we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DesignAssistanceUpsertArgs>(args: SelectSubset<T, DesignAssistanceUpsertArgs<ExtArgs>>): Prisma__DesignAssistanceClient<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DesignAssistances.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignAssistanceCountArgs} args - Arguments to filter DesignAssistances to count.
+     * @example
+     * // Count the number of DesignAssistances
+     * const count = await prisma.designAssistance.count({
+     *   where: {
+     *     // ... the filter for the DesignAssistances we want to count
+     *   }
+     * })
+    **/
+    count<T extends DesignAssistanceCountArgs>(
+      args?: Subset<T, DesignAssistanceCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DesignAssistanceCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DesignAssistance.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignAssistanceAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DesignAssistanceAggregateArgs>(args: Subset<T, DesignAssistanceAggregateArgs>): Prisma.PrismaPromise<GetDesignAssistanceAggregateType<T>>
+
+    /**
+     * Group by DesignAssistance.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DesignAssistanceGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     *
+    **/
+    groupBy<
+      T extends DesignAssistanceGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DesignAssistanceGroupByArgs['orderBy'] }
+        : { orderBy?: DesignAssistanceGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DesignAssistanceGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDesignAssistanceGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DesignAssistance model
+   */
+  readonly fields: DesignAssistanceFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DesignAssistance.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DesignAssistanceClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    siteCreationAttempt<T extends AiGenerationJobDefaultArgs<ExtArgs> = {}>(args?: Subset<T, AiGenerationJobDefaultArgs<ExtArgs>>): Prisma__AiGenerationJobClient<$Result.GetResult<Prisma.$AiGenerationJobPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DesignAssistance model
+   */
+  interface DesignAssistanceFieldRefs {
+    readonly id: FieldRef<"DesignAssistance", 'String'>
+    readonly siteCreationAttemptId: FieldRef<"DesignAssistance", 'String'>
+    readonly version: FieldRef<"DesignAssistance", 'Int'>
+    readonly roleKey: FieldRef<"DesignAssistance", 'String'>
+    readonly strategyKey: FieldRef<"DesignAssistance", 'String'>
+    readonly providerKey: FieldRef<"DesignAssistance", 'String'>
+    readonly modelKey: FieldRef<"DesignAssistance", 'String'>
+    readonly status: FieldRef<"DesignAssistance", 'String'>
+    readonly inputFingerprint: FieldRef<"DesignAssistance", 'String'>
+    readonly attemptKey: FieldRef<"DesignAssistance", 'String'>
+    readonly outputFingerprint: FieldRef<"DesignAssistance", 'String'>
+    readonly appliedProposal: FieldRef<"DesignAssistance", 'Json'>
+    readonly failureCode: FieldRef<"DesignAssistance", 'String'>
+    readonly requestedAt: FieldRef<"DesignAssistance", 'DateTime'>
+    readonly completedAt: FieldRef<"DesignAssistance", 'DateTime'>
+    readonly createdAt: FieldRef<"DesignAssistance", 'DateTime'>
+    readonly updatedAt: FieldRef<"DesignAssistance", 'DateTime'>
+  }
+
+
+  // Custom InputTypes
+  /**
+   * DesignAssistance findUnique
+   */
+  export type DesignAssistanceFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignAssistance to fetch.
+     */
+    where: DesignAssistanceWhereUniqueInput
+  }
+
+  /**
+   * DesignAssistance findUniqueOrThrow
+   */
+  export type DesignAssistanceFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignAssistance to fetch.
+     */
+    where: DesignAssistanceWhereUniqueInput
+  }
+
+  /**
+   * DesignAssistance findFirst
+   */
+  export type DesignAssistanceFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignAssistance to fetch.
+     */
+    where?: DesignAssistanceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of DesignAssistances to fetch.
+     */
+    orderBy?: DesignAssistanceOrderByWithRelationInput | DesignAssistanceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for DesignAssistances.
+     */
+    cursor?: DesignAssistanceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` DesignAssistances from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` DesignAssistances.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of DesignAssistances.
+     */
+    distinct?: DesignAssistanceScalarFieldEnum | DesignAssistanceScalarFieldEnum[]
+  }
+
+  /**
+   * DesignAssistance findFirstOrThrow
+   */
+  export type DesignAssistanceFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignAssistance to fetch.
+     */
+    where?: DesignAssistanceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of DesignAssistances to fetch.
+     */
+    orderBy?: DesignAssistanceOrderByWithRelationInput | DesignAssistanceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for DesignAssistances.
+     */
+    cursor?: DesignAssistanceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` DesignAssistances from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` DesignAssistances.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of DesignAssistances.
+     */
+    distinct?: DesignAssistanceScalarFieldEnum | DesignAssistanceScalarFieldEnum[]
+  }
+
+  /**
+   * DesignAssistance findMany
+   */
+  export type DesignAssistanceFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * Filter, which DesignAssistances to fetch.
+     */
+    where?: DesignAssistanceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of DesignAssistances to fetch.
+     */
+    orderBy?: DesignAssistanceOrderByWithRelationInput | DesignAssistanceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for listing DesignAssistances.
+     */
+    cursor?: DesignAssistanceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` DesignAssistances from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` DesignAssistances.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of DesignAssistances.
+     */
+    distinct?: DesignAssistanceScalarFieldEnum | DesignAssistanceScalarFieldEnum[]
+  }
+
+  /**
+   * DesignAssistance create
+   */
+  export type DesignAssistanceCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DesignAssistance.
+     */
+    data: XOR<DesignAssistanceCreateInput, DesignAssistanceUncheckedCreateInput>
+  }
+
+  /**
+   * DesignAssistance createMany
+   */
+  export type DesignAssistanceCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DesignAssistances.
+     */
+    data: DesignAssistanceCreateManyInput | DesignAssistanceCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DesignAssistance update
+   */
+  export type DesignAssistanceUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DesignAssistance.
+     */
+    data: XOR<DesignAssistanceUpdateInput, DesignAssistanceUncheckedUpdateInput>
+    /**
+     * Choose, which DesignAssistance to update.
+     */
+    where: DesignAssistanceWhereUniqueInput
+  }
+
+  /**
+   * DesignAssistance updateMany
+   */
+  export type DesignAssistanceUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DesignAssistances.
+     */
+    data: XOR<DesignAssistanceUpdateManyMutationInput, DesignAssistanceUncheckedUpdateManyInput>
+    /**
+     * Filter which DesignAssistances to update
+     */
+    where?: DesignAssistanceWhereInput
+    /**
+     * Limit how many DesignAssistances to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DesignAssistance upsert
+   */
+  export type DesignAssistanceUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DesignAssistance to update in case it exists.
+     */
+    where: DesignAssistanceWhereUniqueInput
+    /**
+     * In case the DesignAssistance found by the `where` argument doesn't exist, create a new DesignAssistance with this data.
+     */
+    create: XOR<DesignAssistanceCreateInput, DesignAssistanceUncheckedCreateInput>
+    /**
+     * In case the DesignAssistance was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DesignAssistanceUpdateInput, DesignAssistanceUncheckedUpdateInput>
+  }
+
+  /**
+   * DesignAssistance delete
+   */
+  export type DesignAssistanceDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    /**
+     * Filter which DesignAssistance to delete.
+     */
+    where: DesignAssistanceWhereUniqueInput
+  }
+
+  /**
+   * DesignAssistance deleteMany
+   */
+  export type DesignAssistanceDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DesignAssistances to delete
+     */
+    where?: DesignAssistanceWhereInput
+    /**
+     * Limit how many DesignAssistances to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DesignAssistance without action
+   */
+  export type DesignAssistanceDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Model AiGenerationJob
    */
 
@@ -17179,43 +19853,43 @@ export namespace Prisma {
     where?: AiGenerationJobWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of AiGenerationJobs to fetch.
      */
     orderBy?: AiGenerationJobOrderByWithRelationInput | AiGenerationJobOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: AiGenerationJobWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` AiGenerationJobs from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` AiGenerationJobs.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned AiGenerationJobs
     **/
     _count?: true | AiGenerationJobCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: AiGenerationJobMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: AiGenerationJobMaxAggregateInputType
@@ -17286,6 +19960,9 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     site?: boolean | AiGenerationJob$siteArgs<ExtArgs>
+    designAssistances?: boolean | AiGenerationJob$designAssistancesArgs<ExtArgs>
+    designGeneration?: boolean | AiGenerationJob$designGenerationArgs<ExtArgs>
+    _count?: boolean | AiGenerationJobCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["aiGenerationJob"]>
 
 
@@ -17306,12 +19983,17 @@ export namespace Prisma {
   export type AiGenerationJobOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "siteId" | "pageId" | "type" | "input" | "output" | "status" | "error" | "createdAt" | "updatedAt", ExtArgs["result"]["aiGenerationJob"]>
   export type AiGenerationJobInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     site?: boolean | AiGenerationJob$siteArgs<ExtArgs>
+    designAssistances?: boolean | AiGenerationJob$designAssistancesArgs<ExtArgs>
+    designGeneration?: boolean | AiGenerationJob$designGenerationArgs<ExtArgs>
+    _count?: boolean | AiGenerationJobCountOutputTypeDefaultArgs<ExtArgs>
   }
 
   export type $AiGenerationJobPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "AiGenerationJob"
     objects: {
       site: Prisma.$EditorWebsitePayload<ExtArgs> | null
+      designAssistances: Prisma.$DesignAssistancePayload<ExtArgs>[]
+      designGeneration: Prisma.$DesignGenerationPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -17403,13 +20085,13 @@ export namespace Prisma {
      * @example
      * // Get all AiGenerationJobs
      * const aiGenerationJobs = await prisma.aiGenerationJob.findMany()
-     * 
+     *
      * // Get first 10 AiGenerationJobs
      * const aiGenerationJobs = await prisma.aiGenerationJob.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const aiGenerationJobWithIdOnly = await prisma.aiGenerationJob.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends AiGenerationJobFindManyArgs>(args?: SelectSubset<T, AiGenerationJobFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AiGenerationJobPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -17423,7 +20105,7 @@ export namespace Prisma {
      *     // ... data to create a AiGenerationJob
      *   }
      * })
-     * 
+     *
      */
     create<T extends AiGenerationJobCreateArgs>(args: SelectSubset<T, AiGenerationJobCreateArgs<ExtArgs>>): Prisma__AiGenerationJobClient<$Result.GetResult<Prisma.$AiGenerationJobPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -17437,7 +20119,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends AiGenerationJobCreateManyArgs>(args?: SelectSubset<T, AiGenerationJobCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -17451,7 +20133,7 @@ export namespace Prisma {
      *     // ... filter to delete one AiGenerationJob
      *   }
      * })
-     * 
+     *
      */
     delete<T extends AiGenerationJobDeleteArgs>(args: SelectSubset<T, AiGenerationJobDeleteArgs<ExtArgs>>): Prisma__AiGenerationJobClient<$Result.GetResult<Prisma.$AiGenerationJobPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -17468,7 +20150,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends AiGenerationJobUpdateArgs>(args: SelectSubset<T, AiGenerationJobUpdateArgs<ExtArgs>>): Prisma__AiGenerationJobClient<$Result.GetResult<Prisma.$AiGenerationJobPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -17482,7 +20164,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends AiGenerationJobDeleteManyArgs>(args?: SelectSubset<T, AiGenerationJobDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -17501,7 +20183,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends AiGenerationJobUpdateManyArgs>(args: SelectSubset<T, AiGenerationJobUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -17590,7 +20272,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends AiGenerationJobGroupByArgs,
@@ -17665,6 +20347,8 @@ export namespace Prisma {
   export interface Prisma__AiGenerationJobClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     site<T extends AiGenerationJob$siteArgs<ExtArgs> = {}>(args?: Subset<T, AiGenerationJob$siteArgs<ExtArgs>>): Prisma__EditorWebsiteClient<$Result.GetResult<Prisma.$EditorWebsitePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    designAssistances<T extends AiGenerationJob$designAssistancesArgs<ExtArgs> = {}>(args?: Subset<T, AiGenerationJob$designAssistancesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DesignAssistancePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    designGeneration<T extends AiGenerationJob$designGenerationArgs<ExtArgs> = {}>(args?: Subset<T, AiGenerationJob$designGenerationArgs<ExtArgs>>): Prisma__DesignGenerationClient<$Result.GetResult<Prisma.$DesignGenerationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -17705,7 +20389,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"AiGenerationJob", 'DateTime'>
     readonly updatedAt: FieldRef<"AiGenerationJob", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -17774,31 +20458,31 @@ export namespace Prisma {
     where?: AiGenerationJobWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of AiGenerationJobs to fetch.
      */
     orderBy?: AiGenerationJobOrderByWithRelationInput | AiGenerationJobOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for AiGenerationJobs.
      */
     cursor?: AiGenerationJobWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` AiGenerationJobs from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` AiGenerationJobs.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of AiGenerationJobs.
      */
     distinct?: AiGenerationJobScalarFieldEnum | AiGenerationJobScalarFieldEnum[]
@@ -17826,31 +20510,31 @@ export namespace Prisma {
     where?: AiGenerationJobWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of AiGenerationJobs to fetch.
      */
     orderBy?: AiGenerationJobOrderByWithRelationInput | AiGenerationJobOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for AiGenerationJobs.
      */
     cursor?: AiGenerationJobWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` AiGenerationJobs from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` AiGenerationJobs.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of AiGenerationJobs.
      */
     distinct?: AiGenerationJobScalarFieldEnum | AiGenerationJobScalarFieldEnum[]
@@ -17878,31 +20562,31 @@ export namespace Prisma {
     where?: AiGenerationJobWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of AiGenerationJobs to fetch.
      */
     orderBy?: AiGenerationJobOrderByWithRelationInput | AiGenerationJobOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing AiGenerationJobs.
      */
     cursor?: AiGenerationJobWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` AiGenerationJobs from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` AiGenerationJobs.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of AiGenerationJobs.
      */
     distinct?: AiGenerationJobScalarFieldEnum | AiGenerationJobScalarFieldEnum[]
@@ -18071,6 +20755,49 @@ export namespace Prisma {
   }
 
   /**
+   * AiGenerationJob.designAssistances
+   */
+  export type AiGenerationJob$designAssistancesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignAssistance
+     */
+    select?: DesignAssistanceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignAssistance
+     */
+    omit?: DesignAssistanceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignAssistanceInclude<ExtArgs> | null
+    where?: DesignAssistanceWhereInput
+    orderBy?: DesignAssistanceOrderByWithRelationInput | DesignAssistanceOrderByWithRelationInput[]
+    cursor?: DesignAssistanceWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DesignAssistanceScalarFieldEnum | DesignAssistanceScalarFieldEnum[]
+  }
+
+  /**
+   * AiGenerationJob.designGeneration
+   */
+  export type AiGenerationJob$designGenerationArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DesignGeneration
+     */
+    select?: DesignGenerationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DesignGeneration
+     */
+    omit?: DesignGenerationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DesignGenerationInclude<ExtArgs> | null
+    where?: DesignGenerationWhereInput
+  }
+
+  /**
    * AiGenerationJob without action
    */
   export type AiGenerationJobDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -18171,43 +20898,43 @@ export namespace Prisma {
     where?: AutomationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Automations to fetch.
      */
     orderBy?: AutomationOrderByWithRelationInput | AutomationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: AutomationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Automations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Automations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Automations
     **/
     _count?: true | AutomationCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: AutomationMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: AutomationMaxAggregateInputType
@@ -18387,13 +21114,13 @@ export namespace Prisma {
      * @example
      * // Get all Automations
      * const automations = await prisma.automation.findMany()
-     * 
+     *
      * // Get first 10 Automations
      * const automations = await prisma.automation.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const automationWithIdOnly = await prisma.automation.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends AutomationFindManyArgs>(args?: SelectSubset<T, AutomationFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AutomationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -18407,7 +21134,7 @@ export namespace Prisma {
      *     // ... data to create a Automation
      *   }
      * })
-     * 
+     *
      */
     create<T extends AutomationCreateArgs>(args: SelectSubset<T, AutomationCreateArgs<ExtArgs>>): Prisma__AutomationClient<$Result.GetResult<Prisma.$AutomationPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -18421,7 +21148,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends AutomationCreateManyArgs>(args?: SelectSubset<T, AutomationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -18435,7 +21162,7 @@ export namespace Prisma {
      *     // ... filter to delete one Automation
      *   }
      * })
-     * 
+     *
      */
     delete<T extends AutomationDeleteArgs>(args: SelectSubset<T, AutomationDeleteArgs<ExtArgs>>): Prisma__AutomationClient<$Result.GetResult<Prisma.$AutomationPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -18452,7 +21179,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends AutomationUpdateArgs>(args: SelectSubset<T, AutomationUpdateArgs<ExtArgs>>): Prisma__AutomationClient<$Result.GetResult<Prisma.$AutomationPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -18466,7 +21193,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends AutomationDeleteManyArgs>(args?: SelectSubset<T, AutomationDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -18485,7 +21212,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends AutomationUpdateManyArgs>(args: SelectSubset<T, AutomationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -18574,7 +21301,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends AutomationGroupByArgs,
@@ -18687,7 +21414,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Automation", 'DateTime'>
     readonly updatedAt: FieldRef<"Automation", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -18756,31 +21483,31 @@ export namespace Prisma {
     where?: AutomationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Automations to fetch.
      */
     orderBy?: AutomationOrderByWithRelationInput | AutomationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Automations.
      */
     cursor?: AutomationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Automations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Automations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Automations.
      */
     distinct?: AutomationScalarFieldEnum | AutomationScalarFieldEnum[]
@@ -18808,31 +21535,31 @@ export namespace Prisma {
     where?: AutomationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Automations to fetch.
      */
     orderBy?: AutomationOrderByWithRelationInput | AutomationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Automations.
      */
     cursor?: AutomationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Automations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Automations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Automations.
      */
     distinct?: AutomationScalarFieldEnum | AutomationScalarFieldEnum[]
@@ -18860,31 +21587,31 @@ export namespace Prisma {
     where?: AutomationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Automations to fetch.
      */
     orderBy?: AutomationOrderByWithRelationInput | AutomationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Automations.
      */
     cursor?: AutomationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Automations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Automations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Automations.
      */
     distinct?: AutomationScalarFieldEnum | AutomationScalarFieldEnum[]
@@ -19128,43 +21855,43 @@ export namespace Prisma {
     where?: CollectionWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Collections to fetch.
      */
     orderBy?: CollectionOrderByWithRelationInput | CollectionOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: CollectionWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Collections from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Collections.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Collections
     **/
     _count?: true | CollectionCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: CollectionMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: CollectionMaxAggregateInputType
@@ -19345,13 +22072,13 @@ export namespace Prisma {
      * @example
      * // Get all Collections
      * const collections = await prisma.collection.findMany()
-     * 
+     *
      * // Get first 10 Collections
      * const collections = await prisma.collection.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const collectionWithIdOnly = await prisma.collection.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends CollectionFindManyArgs>(args?: SelectSubset<T, CollectionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CollectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -19365,7 +22092,7 @@ export namespace Prisma {
      *     // ... data to create a Collection
      *   }
      * })
-     * 
+     *
      */
     create<T extends CollectionCreateArgs>(args: SelectSubset<T, CollectionCreateArgs<ExtArgs>>): Prisma__CollectionClient<$Result.GetResult<Prisma.$CollectionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -19379,7 +22106,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends CollectionCreateManyArgs>(args?: SelectSubset<T, CollectionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -19393,7 +22120,7 @@ export namespace Prisma {
      *     // ... filter to delete one Collection
      *   }
      * })
-     * 
+     *
      */
     delete<T extends CollectionDeleteArgs>(args: SelectSubset<T, CollectionDeleteArgs<ExtArgs>>): Prisma__CollectionClient<$Result.GetResult<Prisma.$CollectionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -19410,7 +22137,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends CollectionUpdateArgs>(args: SelectSubset<T, CollectionUpdateArgs<ExtArgs>>): Prisma__CollectionClient<$Result.GetResult<Prisma.$CollectionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -19424,7 +22151,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends CollectionDeleteManyArgs>(args?: SelectSubset<T, CollectionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -19443,7 +22170,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends CollectionUpdateManyArgs>(args: SelectSubset<T, CollectionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -19532,7 +22259,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends CollectionGroupByArgs,
@@ -19645,7 +22372,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Collection", 'DateTime'>
     readonly updatedAt: FieldRef<"Collection", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -19714,31 +22441,31 @@ export namespace Prisma {
     where?: CollectionWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Collections to fetch.
      */
     orderBy?: CollectionOrderByWithRelationInput | CollectionOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Collections.
      */
     cursor?: CollectionWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Collections from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Collections.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Collections.
      */
     distinct?: CollectionScalarFieldEnum | CollectionScalarFieldEnum[]
@@ -19766,31 +22493,31 @@ export namespace Prisma {
     where?: CollectionWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Collections to fetch.
      */
     orderBy?: CollectionOrderByWithRelationInput | CollectionOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Collections.
      */
     cursor?: CollectionWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Collections from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Collections.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Collections.
      */
     distinct?: CollectionScalarFieldEnum | CollectionScalarFieldEnum[]
@@ -19818,31 +22545,31 @@ export namespace Prisma {
     where?: CollectionWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Collections to fetch.
      */
     orderBy?: CollectionOrderByWithRelationInput | CollectionOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Collections.
      */
     cursor?: CollectionWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Collections from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Collections.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Collections.
      */
     distinct?: CollectionScalarFieldEnum | CollectionScalarFieldEnum[]
@@ -20104,43 +22831,43 @@ export namespace Prisma {
     where?: RecordWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Records to fetch.
      */
     orderBy?: RecordOrderByWithRelationInput | RecordOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: RecordWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Records from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Records.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Records
     **/
     _count?: true | RecordCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: RecordMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: RecordMaxAggregateInputType
@@ -20312,13 +23039,13 @@ export namespace Prisma {
      * @example
      * // Get all Records
      * const records = await prisma.record.findMany()
-     * 
+     *
      * // Get first 10 Records
      * const records = await prisma.record.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const recordWithIdOnly = await prisma.record.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends RecordFindManyArgs>(args?: SelectSubset<T, RecordFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -20332,7 +23059,7 @@ export namespace Prisma {
      *     // ... data to create a Record
      *   }
      * })
-     * 
+     *
      */
     create<T extends RecordCreateArgs>(args: SelectSubset<T, RecordCreateArgs<ExtArgs>>): Prisma__RecordClient<$Result.GetResult<Prisma.$RecordPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -20346,7 +23073,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends RecordCreateManyArgs>(args?: SelectSubset<T, RecordCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -20360,7 +23087,7 @@ export namespace Prisma {
      *     // ... filter to delete one Record
      *   }
      * })
-     * 
+     *
      */
     delete<T extends RecordDeleteArgs>(args: SelectSubset<T, RecordDeleteArgs<ExtArgs>>): Prisma__RecordClient<$Result.GetResult<Prisma.$RecordPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -20377,7 +23104,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends RecordUpdateArgs>(args: SelectSubset<T, RecordUpdateArgs<ExtArgs>>): Prisma__RecordClient<$Result.GetResult<Prisma.$RecordPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -20391,7 +23118,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends RecordDeleteManyArgs>(args?: SelectSubset<T, RecordDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -20410,7 +23137,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends RecordUpdateManyArgs>(args: SelectSubset<T, RecordUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -20499,7 +23226,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends RecordGroupByArgs,
@@ -20610,7 +23337,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Record", 'DateTime'>
     readonly updatedAt: FieldRef<"Record", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -20679,31 +23406,31 @@ export namespace Prisma {
     where?: RecordWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Records to fetch.
      */
     orderBy?: RecordOrderByWithRelationInput | RecordOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Records.
      */
     cursor?: RecordWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Records from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Records.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Records.
      */
     distinct?: RecordScalarFieldEnum | RecordScalarFieldEnum[]
@@ -20731,31 +23458,31 @@ export namespace Prisma {
     where?: RecordWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Records to fetch.
      */
     orderBy?: RecordOrderByWithRelationInput | RecordOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Records.
      */
     cursor?: RecordWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Records from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Records.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Records.
      */
     distinct?: RecordScalarFieldEnum | RecordScalarFieldEnum[]
@@ -20783,31 +23510,31 @@ export namespace Prisma {
     where?: RecordWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Records to fetch.
      */
     orderBy?: RecordOrderByWithRelationInput | RecordOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Records.
      */
     cursor?: RecordWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Records from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Records.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Records.
      */
     distinct?: RecordScalarFieldEnum | RecordScalarFieldEnum[]
@@ -21087,43 +23814,43 @@ export namespace Prisma {
     where?: AuditLogWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of AuditLogs to fetch.
      */
     orderBy?: AuditLogOrderByWithRelationInput | AuditLogOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: AuditLogWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` AuditLogs from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` AuditLogs.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned AuditLogs
     **/
     _count?: true | AuditLogCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: AuditLogMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: AuditLogMaxAggregateInputType
@@ -21317,13 +24044,13 @@ export namespace Prisma {
      * @example
      * // Get all AuditLogs
      * const auditLogs = await prisma.auditLog.findMany()
-     * 
+     *
      * // Get first 10 AuditLogs
      * const auditLogs = await prisma.auditLog.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const auditLogWithIdOnly = await prisma.auditLog.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends AuditLogFindManyArgs>(args?: SelectSubset<T, AuditLogFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -21337,7 +24064,7 @@ export namespace Prisma {
      *     // ... data to create a AuditLog
      *   }
      * })
-     * 
+     *
      */
     create<T extends AuditLogCreateArgs>(args: SelectSubset<T, AuditLogCreateArgs<ExtArgs>>): Prisma__AuditLogClient<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -21351,7 +24078,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends AuditLogCreateManyArgs>(args?: SelectSubset<T, AuditLogCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -21365,7 +24092,7 @@ export namespace Prisma {
      *     // ... filter to delete one AuditLog
      *   }
      * })
-     * 
+     *
      */
     delete<T extends AuditLogDeleteArgs>(args: SelectSubset<T, AuditLogDeleteArgs<ExtArgs>>): Prisma__AuditLogClient<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -21382,7 +24109,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends AuditLogUpdateArgs>(args: SelectSubset<T, AuditLogUpdateArgs<ExtArgs>>): Prisma__AuditLogClient<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -21396,7 +24123,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends AuditLogDeleteManyArgs>(args?: SelectSubset<T, AuditLogDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -21415,7 +24142,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends AuditLogUpdateManyArgs>(args: SelectSubset<T, AuditLogUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -21504,7 +24231,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends AuditLogGroupByArgs,
@@ -21621,7 +24348,7 @@ export namespace Prisma {
     readonly message: FieldRef<"AuditLog", 'String'>
     readonly metadata: FieldRef<"AuditLog", 'Json'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -21678,31 +24405,31 @@ export namespace Prisma {
     where?: AuditLogWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of AuditLogs to fetch.
      */
     orderBy?: AuditLogOrderByWithRelationInput | AuditLogOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for AuditLogs.
      */
     cursor?: AuditLogWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` AuditLogs from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` AuditLogs.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of AuditLogs.
      */
     distinct?: AuditLogScalarFieldEnum | AuditLogScalarFieldEnum[]
@@ -21726,31 +24453,31 @@ export namespace Prisma {
     where?: AuditLogWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of AuditLogs to fetch.
      */
     orderBy?: AuditLogOrderByWithRelationInput | AuditLogOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for AuditLogs.
      */
     cursor?: AuditLogWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` AuditLogs from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` AuditLogs.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of AuditLogs.
      */
     distinct?: AuditLogScalarFieldEnum | AuditLogScalarFieldEnum[]
@@ -21774,31 +24501,31 @@ export namespace Prisma {
     where?: AuditLogWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of AuditLogs to fetch.
      */
     orderBy?: AuditLogOrderByWithRelationInput | AuditLogOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing AuditLogs.
      */
     cursor?: AuditLogWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` AuditLogs from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` AuditLogs.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of AuditLogs.
      */
     distinct?: AuditLogScalarFieldEnum | AuditLogScalarFieldEnum[]
@@ -22058,43 +24785,43 @@ export namespace Prisma {
     where?: SubscriptionHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SubscriptionHistories to fetch.
      */
     orderBy?: SubscriptionHistoryOrderByWithRelationInput | SubscriptionHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: SubscriptionHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SubscriptionHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SubscriptionHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned SubscriptionHistories
     **/
     _count?: true | SubscriptionHistoryCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: SubscriptionHistoryMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: SubscriptionHistoryMaxAggregateInputType
@@ -22297,13 +25024,13 @@ export namespace Prisma {
      * @example
      * // Get all SubscriptionHistories
      * const subscriptionHistories = await prisma.subscriptionHistory.findMany()
-     * 
+     *
      * // Get first 10 SubscriptionHistories
      * const subscriptionHistories = await prisma.subscriptionHistory.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const subscriptionHistoryWithIdOnly = await prisma.subscriptionHistory.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends SubscriptionHistoryFindManyArgs>(args?: SelectSubset<T, SubscriptionHistoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SubscriptionHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
@@ -22317,7 +25044,7 @@ export namespace Prisma {
      *     // ... data to create a SubscriptionHistory
      *   }
      * })
-     * 
+     *
      */
     create<T extends SubscriptionHistoryCreateArgs>(args: SelectSubset<T, SubscriptionHistoryCreateArgs<ExtArgs>>): Prisma__SubscriptionHistoryClient<$Result.GetResult<Prisma.$SubscriptionHistoryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -22331,7 +25058,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends SubscriptionHistoryCreateManyArgs>(args?: SelectSubset<T, SubscriptionHistoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -22345,7 +25072,7 @@ export namespace Prisma {
      *     // ... filter to delete one SubscriptionHistory
      *   }
      * })
-     * 
+     *
      */
     delete<T extends SubscriptionHistoryDeleteArgs>(args: SelectSubset<T, SubscriptionHistoryDeleteArgs<ExtArgs>>): Prisma__SubscriptionHistoryClient<$Result.GetResult<Prisma.$SubscriptionHistoryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -22362,7 +25089,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends SubscriptionHistoryUpdateArgs>(args: SelectSubset<T, SubscriptionHistoryUpdateArgs<ExtArgs>>): Prisma__SubscriptionHistoryClient<$Result.GetResult<Prisma.$SubscriptionHistoryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
@@ -22376,7 +25103,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends SubscriptionHistoryDeleteManyArgs>(args?: SelectSubset<T, SubscriptionHistoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -22395,7 +25122,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends SubscriptionHistoryUpdateManyArgs>(args: SelectSubset<T, SubscriptionHistoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -22484,7 +25211,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends SubscriptionHistoryGroupByArgs,
@@ -22603,7 +25330,7 @@ export namespace Prisma {
     readonly metadata: FieldRef<"SubscriptionHistory", 'Json'>
     readonly createdAt: FieldRef<"SubscriptionHistory", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -22672,31 +25399,31 @@ export namespace Prisma {
     where?: SubscriptionHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SubscriptionHistories to fetch.
      */
     orderBy?: SubscriptionHistoryOrderByWithRelationInput | SubscriptionHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for SubscriptionHistories.
      */
     cursor?: SubscriptionHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SubscriptionHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SubscriptionHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SubscriptionHistories.
      */
     distinct?: SubscriptionHistoryScalarFieldEnum | SubscriptionHistoryScalarFieldEnum[]
@@ -22724,31 +25451,31 @@ export namespace Prisma {
     where?: SubscriptionHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SubscriptionHistories to fetch.
      */
     orderBy?: SubscriptionHistoryOrderByWithRelationInput | SubscriptionHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for SubscriptionHistories.
      */
     cursor?: SubscriptionHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SubscriptionHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SubscriptionHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SubscriptionHistories.
      */
     distinct?: SubscriptionHistoryScalarFieldEnum | SubscriptionHistoryScalarFieldEnum[]
@@ -22776,31 +25503,31 @@ export namespace Prisma {
     where?: SubscriptionHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of SubscriptionHistories to fetch.
      */
     orderBy?: SubscriptionHistoryOrderByWithRelationInput | SubscriptionHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing SubscriptionHistories.
      */
     cursor?: SubscriptionHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` SubscriptionHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` SubscriptionHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of SubscriptionHistories.
      */
     distinct?: SubscriptionHistoryScalarFieldEnum | SubscriptionHistoryScalarFieldEnum[]
@@ -23078,6 +25805,7 @@ export namespace Prisma {
     tree: 'tree',
     published: 'published',
     userId: 'userId',
+    activeDesignGenerationId: 'activeDesignGenerationId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -23205,6 +25933,58 @@ export namespace Prisma {
   };
 
   export type ExperimentScalarFieldEnum = (typeof ExperimentScalarFieldEnum)[keyof typeof ExperimentScalarFieldEnum]
+
+
+  export const DesignGenerationScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    siteId: 'siteId',
+    request: 'request',
+    industry: 'industry',
+    siteType: 'siteType',
+    objective: 'objective',
+    requestedStyle: 'requestedStyle',
+    initialPlan: 'initialPlan',
+    initialPlanHash: 'initialPlanHash',
+    status: 'status',
+    editMetrics: 'editMetrics',
+    editDistance: 'editDistance',
+    measuredAt: 'measuredAt',
+    patternVersion: 'patternVersion',
+    patternHash: 'patternHash',
+    patternKey: 'patternKey',
+    outcomeVersion: 'outcomeVersion',
+    outcomeScore: 'outcomeScore',
+    outcomeQualifiedAt: 'outcomeQualifiedAt',
+    siteCreationAttemptId: 'siteCreationAttemptId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type DesignGenerationScalarFieldEnum = (typeof DesignGenerationScalarFieldEnum)[keyof typeof DesignGenerationScalarFieldEnum]
+
+
+  export const DesignAssistanceScalarFieldEnum: {
+    id: 'id',
+    siteCreationAttemptId: 'siteCreationAttemptId',
+    version: 'version',
+    roleKey: 'roleKey',
+    strategyKey: 'strategyKey',
+    providerKey: 'providerKey',
+    modelKey: 'modelKey',
+    status: 'status',
+    inputFingerprint: 'inputFingerprint',
+    attemptKey: 'attemptKey',
+    outputFingerprint: 'outputFingerprint',
+    appliedProposal: 'appliedProposal',
+    failureCode: 'failureCode',
+    requestedAt: 'requestedAt',
+    completedAt: 'completedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type DesignAssistanceScalarFieldEnum = (typeof DesignAssistanceScalarFieldEnum)[keyof typeof DesignAssistanceScalarFieldEnum]
 
 
   export const AiGenerationJobScalarFieldEnum: {
@@ -23420,7 +26200,8 @@ export namespace Prisma {
     id: 'id',
     name: 'name',
     description: 'description',
-    userId: 'userId'
+    userId: 'userId',
+    activeDesignGenerationId: 'activeDesignGenerationId'
   };
 
   export type EditorWebsiteOrderByRelevanceFieldEnum = (typeof EditorWebsiteOrderByRelevanceFieldEnum)[keyof typeof EditorWebsiteOrderByRelevanceFieldEnum]
@@ -23515,6 +26296,41 @@ export namespace Prisma {
   export type ExperimentOrderByRelevanceFieldEnum = (typeof ExperimentOrderByRelevanceFieldEnum)[keyof typeof ExperimentOrderByRelevanceFieldEnum]
 
 
+  export const DesignGenerationOrderByRelevanceFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    siteId: 'siteId',
+    request: 'request',
+    industry: 'industry',
+    siteType: 'siteType',
+    objective: 'objective',
+    requestedStyle: 'requestedStyle',
+    initialPlanHash: 'initialPlanHash',
+    status: 'status',
+    patternHash: 'patternHash',
+    siteCreationAttemptId: 'siteCreationAttemptId'
+  };
+
+  export type DesignGenerationOrderByRelevanceFieldEnum = (typeof DesignGenerationOrderByRelevanceFieldEnum)[keyof typeof DesignGenerationOrderByRelevanceFieldEnum]
+
+
+  export const DesignAssistanceOrderByRelevanceFieldEnum: {
+    id: 'id',
+    siteCreationAttemptId: 'siteCreationAttemptId',
+    roleKey: 'roleKey',
+    strategyKey: 'strategyKey',
+    providerKey: 'providerKey',
+    modelKey: 'modelKey',
+    status: 'status',
+    inputFingerprint: 'inputFingerprint',
+    attemptKey: 'attemptKey',
+    outputFingerprint: 'outputFingerprint',
+    failureCode: 'failureCode'
+  };
+
+  export type DesignAssistanceOrderByRelevanceFieldEnum = (typeof DesignAssistanceOrderByRelevanceFieldEnum)[keyof typeof DesignAssistanceOrderByRelevanceFieldEnum]
+
+
   export const AiGenerationJobOrderByRelevanceFieldEnum: {
     id: 'id',
     siteId: 'siteId',
@@ -23599,49 +26415,49 @@ export namespace Prisma {
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
-    
+
 
 
   /**
    * Reference to a field of type 'DateTime'
    */
   export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-    
+
 
 
   /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
+
 
 
   /**
    * Reference to a field of type 'Boolean'
    */
   export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
-    
+
 
 
   /**
    * Reference to a field of type 'Json'
    */
   export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-    
+
 
 
   /**
    * Reference to a field of type 'QueryMode'
    */
   export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
-    
+
 
 
   /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
-    
+
   /**
    * Deep Input Types
    */
@@ -23659,6 +26475,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     sites?: EditorWebsiteListRelationFilter
+    designGenerations?: DesignGenerationListRelationFilter
     subscription?: XOR<SubscriptionNullableScalarRelationFilter, SubscriptionWhereInput> | null
     subscriptionHistory?: SubscriptionHistoryListRelationFilter
   }
@@ -23672,6 +26489,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     sites?: EditorWebsiteOrderByRelationAggregateInput
+    designGenerations?: DesignGenerationOrderByRelationAggregateInput
     subscription?: SubscriptionOrderByWithRelationInput
     subscriptionHistory?: SubscriptionHistoryOrderByRelationAggregateInput
     _relevance?: UserOrderByRelevanceInput
@@ -23689,6 +26507,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     sites?: EditorWebsiteListRelationFilter
+    designGenerations?: DesignGenerationListRelationFilter
     subscription?: XOR<SubscriptionNullableScalarRelationFilter, SubscriptionWhereInput> | null
     subscriptionHistory?: SubscriptionHistoryListRelationFilter
   }, "id" | "email">
@@ -24118,6 +26937,7 @@ export namespace Prisma {
     tree?: JsonFilter<"EditorWebsite">
     published?: BoolFilter<"EditorWebsite"> | boolean
     userId?: StringNullableFilter<"EditorWebsite"> | string | null
+    activeDesignGenerationId?: StringNullableFilter<"EditorWebsite"> | string | null
     createdAt?: DateTimeFilter<"EditorWebsite"> | Date | string
     updatedAt?: DateTimeFilter<"EditorWebsite"> | Date | string
     user?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
@@ -24129,6 +26949,8 @@ export namespace Prisma {
     funnels?: FunnelListRelationFilter
     experiments?: ExperimentListRelationFilter
     aiGenerationJobs?: AiGenerationJobListRelationFilter
+    designGenerations?: DesignGenerationListRelationFilter
+    activeDesignGeneration?: XOR<DesignGenerationNullableScalarRelationFilter, DesignGenerationWhereInput> | null
     automations?: AutomationListRelationFilter
   }
 
@@ -24139,6 +26961,7 @@ export namespace Prisma {
     tree?: SortOrder
     published?: SortOrder
     userId?: SortOrderInput | SortOrder
+    activeDesignGenerationId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
@@ -24150,6 +26973,8 @@ export namespace Prisma {
     funnels?: FunnelOrderByRelationAggregateInput
     experiments?: ExperimentOrderByRelationAggregateInput
     aiGenerationJobs?: AiGenerationJobOrderByRelationAggregateInput
+    designGenerations?: DesignGenerationOrderByRelationAggregateInput
+    activeDesignGeneration?: DesignGenerationOrderByWithRelationInput
     automations?: AutomationOrderByRelationAggregateInput
     _relevance?: EditorWebsiteOrderByRelevanceInput
   }
@@ -24164,6 +26989,7 @@ export namespace Prisma {
     tree?: JsonFilter<"EditorWebsite">
     published?: BoolFilter<"EditorWebsite"> | boolean
     userId?: StringNullableFilter<"EditorWebsite"> | string | null
+    activeDesignGenerationId?: StringNullableFilter<"EditorWebsite"> | string | null
     createdAt?: DateTimeFilter<"EditorWebsite"> | Date | string
     updatedAt?: DateTimeFilter<"EditorWebsite"> | Date | string
     user?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
@@ -24175,6 +27001,8 @@ export namespace Prisma {
     funnels?: FunnelListRelationFilter
     experiments?: ExperimentListRelationFilter
     aiGenerationJobs?: AiGenerationJobListRelationFilter
+    designGenerations?: DesignGenerationListRelationFilter
+    activeDesignGeneration?: XOR<DesignGenerationNullableScalarRelationFilter, DesignGenerationWhereInput> | null
     automations?: AutomationListRelationFilter
   }, "id">
 
@@ -24185,6 +27013,7 @@ export namespace Prisma {
     tree?: SortOrder
     published?: SortOrder
     userId?: SortOrderInput | SortOrder
+    activeDesignGenerationId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: EditorWebsiteCountOrderByAggregateInput
@@ -24202,6 +27031,7 @@ export namespace Prisma {
     tree?: JsonWithAggregatesFilter<"EditorWebsite">
     published?: BoolWithAggregatesFilter<"EditorWebsite"> | boolean
     userId?: StringNullableWithAggregatesFilter<"EditorWebsite"> | string | null
+    activeDesignGenerationId?: StringNullableWithAggregatesFilter<"EditorWebsite"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"EditorWebsite"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"EditorWebsite"> | Date | string
   }
@@ -24838,6 +27668,281 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"Experiment"> | Date | string
   }
 
+  export type DesignGenerationWhereInput = {
+    AND?: DesignGenerationWhereInput | DesignGenerationWhereInput[]
+    OR?: DesignGenerationWhereInput[]
+    NOT?: DesignGenerationWhereInput | DesignGenerationWhereInput[]
+    id?: StringFilter<"DesignGeneration"> | string
+    userId?: StringFilter<"DesignGeneration"> | string
+    siteId?: StringNullableFilter<"DesignGeneration"> | string | null
+    request?: StringFilter<"DesignGeneration"> | string
+    industry?: StringNullableFilter<"DesignGeneration"> | string | null
+    siteType?: StringNullableFilter<"DesignGeneration"> | string | null
+    objective?: StringNullableFilter<"DesignGeneration"> | string | null
+    requestedStyle?: StringNullableFilter<"DesignGeneration"> | string | null
+    initialPlan?: JsonFilter<"DesignGeneration">
+    initialPlanHash?: StringFilter<"DesignGeneration"> | string
+    status?: StringFilter<"DesignGeneration"> | string
+    editMetrics?: JsonNullableFilter<"DesignGeneration">
+    editDistance?: FloatNullableFilter<"DesignGeneration"> | number | null
+    measuredAt?: DateTimeNullableFilter<"DesignGeneration"> | Date | string | null
+    patternVersion?: IntNullableFilter<"DesignGeneration"> | number | null
+    patternHash?: StringNullableFilter<"DesignGeneration"> | string | null
+    patternKey?: JsonNullableFilter<"DesignGeneration">
+    outcomeVersion?: IntNullableFilter<"DesignGeneration"> | number | null
+    outcomeScore?: FloatNullableFilter<"DesignGeneration"> | number | null
+    outcomeQualifiedAt?: DateTimeNullableFilter<"DesignGeneration"> | Date | string | null
+    siteCreationAttemptId?: StringNullableFilter<"DesignGeneration"> | string | null
+    createdAt?: DateTimeFilter<"DesignGeneration"> | Date | string
+    updatedAt?: DateTimeFilter<"DesignGeneration"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    site?: XOR<EditorWebsiteNullableScalarRelationFilter, EditorWebsiteWhereInput> | null
+    activeForSites?: EditorWebsiteListRelationFilter
+    siteCreationAttempt?: XOR<AiGenerationJobNullableScalarRelationFilter, AiGenerationJobWhereInput> | null
+  }
+
+  export type DesignGenerationOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    siteId?: SortOrderInput | SortOrder
+    request?: SortOrder
+    industry?: SortOrderInput | SortOrder
+    siteType?: SortOrderInput | SortOrder
+    objective?: SortOrderInput | SortOrder
+    requestedStyle?: SortOrderInput | SortOrder
+    initialPlan?: SortOrder
+    initialPlanHash?: SortOrder
+    status?: SortOrder
+    editMetrics?: SortOrderInput | SortOrder
+    editDistance?: SortOrderInput | SortOrder
+    measuredAt?: SortOrderInput | SortOrder
+    patternVersion?: SortOrderInput | SortOrder
+    patternHash?: SortOrderInput | SortOrder
+    patternKey?: SortOrderInput | SortOrder
+    outcomeVersion?: SortOrderInput | SortOrder
+    outcomeScore?: SortOrderInput | SortOrder
+    outcomeQualifiedAt?: SortOrderInput | SortOrder
+    siteCreationAttemptId?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+    site?: EditorWebsiteOrderByWithRelationInput
+    activeForSites?: EditorWebsiteOrderByRelationAggregateInput
+    siteCreationAttempt?: AiGenerationJobOrderByWithRelationInput
+    _relevance?: DesignGenerationOrderByRelevanceInput
+  }
+
+  export type DesignGenerationWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    siteCreationAttemptId?: string
+    AND?: DesignGenerationWhereInput | DesignGenerationWhereInput[]
+    OR?: DesignGenerationWhereInput[]
+    NOT?: DesignGenerationWhereInput | DesignGenerationWhereInput[]
+    userId?: StringFilter<"DesignGeneration"> | string
+    siteId?: StringNullableFilter<"DesignGeneration"> | string | null
+    request?: StringFilter<"DesignGeneration"> | string
+    industry?: StringNullableFilter<"DesignGeneration"> | string | null
+    siteType?: StringNullableFilter<"DesignGeneration"> | string | null
+    objective?: StringNullableFilter<"DesignGeneration"> | string | null
+    requestedStyle?: StringNullableFilter<"DesignGeneration"> | string | null
+    initialPlan?: JsonFilter<"DesignGeneration">
+    initialPlanHash?: StringFilter<"DesignGeneration"> | string
+    status?: StringFilter<"DesignGeneration"> | string
+    editMetrics?: JsonNullableFilter<"DesignGeneration">
+    editDistance?: FloatNullableFilter<"DesignGeneration"> | number | null
+    measuredAt?: DateTimeNullableFilter<"DesignGeneration"> | Date | string | null
+    patternVersion?: IntNullableFilter<"DesignGeneration"> | number | null
+    patternHash?: StringNullableFilter<"DesignGeneration"> | string | null
+    patternKey?: JsonNullableFilter<"DesignGeneration">
+    outcomeVersion?: IntNullableFilter<"DesignGeneration"> | number | null
+    outcomeScore?: FloatNullableFilter<"DesignGeneration"> | number | null
+    outcomeQualifiedAt?: DateTimeNullableFilter<"DesignGeneration"> | Date | string | null
+    createdAt?: DateTimeFilter<"DesignGeneration"> | Date | string
+    updatedAt?: DateTimeFilter<"DesignGeneration"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    site?: XOR<EditorWebsiteNullableScalarRelationFilter, EditorWebsiteWhereInput> | null
+    activeForSites?: EditorWebsiteListRelationFilter
+    siteCreationAttempt?: XOR<AiGenerationJobNullableScalarRelationFilter, AiGenerationJobWhereInput> | null
+  }, "id" | "siteCreationAttemptId">
+
+  export type DesignGenerationOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    siteId?: SortOrderInput | SortOrder
+    request?: SortOrder
+    industry?: SortOrderInput | SortOrder
+    siteType?: SortOrderInput | SortOrder
+    objective?: SortOrderInput | SortOrder
+    requestedStyle?: SortOrderInput | SortOrder
+    initialPlan?: SortOrder
+    initialPlanHash?: SortOrder
+    status?: SortOrder
+    editMetrics?: SortOrderInput | SortOrder
+    editDistance?: SortOrderInput | SortOrder
+    measuredAt?: SortOrderInput | SortOrder
+    patternVersion?: SortOrderInput | SortOrder
+    patternHash?: SortOrderInput | SortOrder
+    patternKey?: SortOrderInput | SortOrder
+    outcomeVersion?: SortOrderInput | SortOrder
+    outcomeScore?: SortOrderInput | SortOrder
+    outcomeQualifiedAt?: SortOrderInput | SortOrder
+    siteCreationAttemptId?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: DesignGenerationCountOrderByAggregateInput
+    _avg?: DesignGenerationAvgOrderByAggregateInput
+    _max?: DesignGenerationMaxOrderByAggregateInput
+    _min?: DesignGenerationMinOrderByAggregateInput
+    _sum?: DesignGenerationSumOrderByAggregateInput
+  }
+
+  export type DesignGenerationScalarWhereWithAggregatesInput = {
+    AND?: DesignGenerationScalarWhereWithAggregatesInput | DesignGenerationScalarWhereWithAggregatesInput[]
+    OR?: DesignGenerationScalarWhereWithAggregatesInput[]
+    NOT?: DesignGenerationScalarWhereWithAggregatesInput | DesignGenerationScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DesignGeneration"> | string
+    userId?: StringWithAggregatesFilter<"DesignGeneration"> | string
+    siteId?: StringNullableWithAggregatesFilter<"DesignGeneration"> | string | null
+    request?: StringWithAggregatesFilter<"DesignGeneration"> | string
+    industry?: StringNullableWithAggregatesFilter<"DesignGeneration"> | string | null
+    siteType?: StringNullableWithAggregatesFilter<"DesignGeneration"> | string | null
+    objective?: StringNullableWithAggregatesFilter<"DesignGeneration"> | string | null
+    requestedStyle?: StringNullableWithAggregatesFilter<"DesignGeneration"> | string | null
+    initialPlan?: JsonWithAggregatesFilter<"DesignGeneration">
+    initialPlanHash?: StringWithAggregatesFilter<"DesignGeneration"> | string
+    status?: StringWithAggregatesFilter<"DesignGeneration"> | string
+    editMetrics?: JsonNullableWithAggregatesFilter<"DesignGeneration">
+    editDistance?: FloatNullableWithAggregatesFilter<"DesignGeneration"> | number | null
+    measuredAt?: DateTimeNullableWithAggregatesFilter<"DesignGeneration"> | Date | string | null
+    patternVersion?: IntNullableWithAggregatesFilter<"DesignGeneration"> | number | null
+    patternHash?: StringNullableWithAggregatesFilter<"DesignGeneration"> | string | null
+    patternKey?: JsonNullableWithAggregatesFilter<"DesignGeneration">
+    outcomeVersion?: IntNullableWithAggregatesFilter<"DesignGeneration"> | number | null
+    outcomeScore?: FloatNullableWithAggregatesFilter<"DesignGeneration"> | number | null
+    outcomeQualifiedAt?: DateTimeNullableWithAggregatesFilter<"DesignGeneration"> | Date | string | null
+    siteCreationAttemptId?: StringNullableWithAggregatesFilter<"DesignGeneration"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"DesignGeneration"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"DesignGeneration"> | Date | string
+  }
+
+  export type DesignAssistanceWhereInput = {
+    AND?: DesignAssistanceWhereInput | DesignAssistanceWhereInput[]
+    OR?: DesignAssistanceWhereInput[]
+    NOT?: DesignAssistanceWhereInput | DesignAssistanceWhereInput[]
+    id?: StringFilter<"DesignAssistance"> | string
+    siteCreationAttemptId?: StringFilter<"DesignAssistance"> | string
+    version?: IntFilter<"DesignAssistance"> | number
+    roleKey?: StringFilter<"DesignAssistance"> | string
+    strategyKey?: StringFilter<"DesignAssistance"> | string
+    providerKey?: StringFilter<"DesignAssistance"> | string
+    modelKey?: StringFilter<"DesignAssistance"> | string
+    status?: StringFilter<"DesignAssistance"> | string
+    inputFingerprint?: StringFilter<"DesignAssistance"> | string
+    attemptKey?: StringFilter<"DesignAssistance"> | string
+    outputFingerprint?: StringNullableFilter<"DesignAssistance"> | string | null
+    appliedProposal?: JsonNullableFilter<"DesignAssistance">
+    failureCode?: StringNullableFilter<"DesignAssistance"> | string | null
+    requestedAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+    completedAt?: DateTimeNullableFilter<"DesignAssistance"> | Date | string | null
+    createdAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+    updatedAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+    siteCreationAttempt?: XOR<AiGenerationJobScalarRelationFilter, AiGenerationJobWhereInput>
+  }
+
+  export type DesignAssistanceOrderByWithRelationInput = {
+    id?: SortOrder
+    siteCreationAttemptId?: SortOrder
+    version?: SortOrder
+    roleKey?: SortOrder
+    strategyKey?: SortOrder
+    providerKey?: SortOrder
+    modelKey?: SortOrder
+    status?: SortOrder
+    inputFingerprint?: SortOrder
+    attemptKey?: SortOrder
+    outputFingerprint?: SortOrderInput | SortOrder
+    appliedProposal?: SortOrderInput | SortOrder
+    failureCode?: SortOrderInput | SortOrder
+    requestedAt?: SortOrder
+    completedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    siteCreationAttempt?: AiGenerationJobOrderByWithRelationInput
+    _relevance?: DesignAssistanceOrderByRelevanceInput
+  }
+
+  export type DesignAssistanceWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DesignAssistanceWhereInput | DesignAssistanceWhereInput[]
+    OR?: DesignAssistanceWhereInput[]
+    NOT?: DesignAssistanceWhereInput | DesignAssistanceWhereInput[]
+    siteCreationAttemptId?: StringFilter<"DesignAssistance"> | string
+    version?: IntFilter<"DesignAssistance"> | number
+    roleKey?: StringFilter<"DesignAssistance"> | string
+    strategyKey?: StringFilter<"DesignAssistance"> | string
+    providerKey?: StringFilter<"DesignAssistance"> | string
+    modelKey?: StringFilter<"DesignAssistance"> | string
+    status?: StringFilter<"DesignAssistance"> | string
+    inputFingerprint?: StringFilter<"DesignAssistance"> | string
+    attemptKey?: StringFilter<"DesignAssistance"> | string
+    outputFingerprint?: StringNullableFilter<"DesignAssistance"> | string | null
+    appliedProposal?: JsonNullableFilter<"DesignAssistance">
+    failureCode?: StringNullableFilter<"DesignAssistance"> | string | null
+    requestedAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+    completedAt?: DateTimeNullableFilter<"DesignAssistance"> | Date | string | null
+    createdAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+    updatedAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+    siteCreationAttempt?: XOR<AiGenerationJobScalarRelationFilter, AiGenerationJobWhereInput>
+  }, "id">
+
+  export type DesignAssistanceOrderByWithAggregationInput = {
+    id?: SortOrder
+    siteCreationAttemptId?: SortOrder
+    version?: SortOrder
+    roleKey?: SortOrder
+    strategyKey?: SortOrder
+    providerKey?: SortOrder
+    modelKey?: SortOrder
+    status?: SortOrder
+    inputFingerprint?: SortOrder
+    attemptKey?: SortOrder
+    outputFingerprint?: SortOrderInput | SortOrder
+    appliedProposal?: SortOrderInput | SortOrder
+    failureCode?: SortOrderInput | SortOrder
+    requestedAt?: SortOrder
+    completedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: DesignAssistanceCountOrderByAggregateInput
+    _avg?: DesignAssistanceAvgOrderByAggregateInput
+    _max?: DesignAssistanceMaxOrderByAggregateInput
+    _min?: DesignAssistanceMinOrderByAggregateInput
+    _sum?: DesignAssistanceSumOrderByAggregateInput
+  }
+
+  export type DesignAssistanceScalarWhereWithAggregatesInput = {
+    AND?: DesignAssistanceScalarWhereWithAggregatesInput | DesignAssistanceScalarWhereWithAggregatesInput[]
+    OR?: DesignAssistanceScalarWhereWithAggregatesInput[]
+    NOT?: DesignAssistanceScalarWhereWithAggregatesInput | DesignAssistanceScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    siteCreationAttemptId?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    version?: IntWithAggregatesFilter<"DesignAssistance"> | number
+    roleKey?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    strategyKey?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    providerKey?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    modelKey?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    status?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    inputFingerprint?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    attemptKey?: StringWithAggregatesFilter<"DesignAssistance"> | string
+    outputFingerprint?: StringNullableWithAggregatesFilter<"DesignAssistance"> | string | null
+    appliedProposal?: JsonNullableWithAggregatesFilter<"DesignAssistance">
+    failureCode?: StringNullableWithAggregatesFilter<"DesignAssistance"> | string | null
+    requestedAt?: DateTimeWithAggregatesFilter<"DesignAssistance"> | Date | string
+    completedAt?: DateTimeNullableWithAggregatesFilter<"DesignAssistance"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"DesignAssistance"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"DesignAssistance"> | Date | string
+  }
+
   export type AiGenerationJobWhereInput = {
     AND?: AiGenerationJobWhereInput | AiGenerationJobWhereInput[]
     OR?: AiGenerationJobWhereInput[]
@@ -24853,6 +27958,8 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"AiGenerationJob"> | Date | string
     updatedAt?: DateTimeFilter<"AiGenerationJob"> | Date | string
     site?: XOR<EditorWebsiteNullableScalarRelationFilter, EditorWebsiteWhereInput> | null
+    designAssistances?: DesignAssistanceListRelationFilter
+    designGeneration?: XOR<DesignGenerationNullableScalarRelationFilter, DesignGenerationWhereInput> | null
   }
 
   export type AiGenerationJobOrderByWithRelationInput = {
@@ -24867,6 +27974,8 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     site?: EditorWebsiteOrderByWithRelationInput
+    designAssistances?: DesignAssistanceOrderByRelationAggregateInput
+    designGeneration?: DesignGenerationOrderByWithRelationInput
     _relevance?: AiGenerationJobOrderByRelevanceInput
   }
 
@@ -24885,6 +27994,8 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"AiGenerationJob"> | Date | string
     updatedAt?: DateTimeFilter<"AiGenerationJob"> | Date | string
     site?: XOR<EditorWebsiteNullableScalarRelationFilter, EditorWebsiteWhereInput> | null
+    designAssistances?: DesignAssistanceListRelationFilter
+    designGeneration?: XOR<DesignGenerationNullableScalarRelationFilter, DesignGenerationWhereInput> | null
   }, "id">
 
   export type AiGenerationJobOrderByWithAggregationInput = {
@@ -25322,6 +28433,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     sites?: EditorWebsiteCreateNestedManyWithoutUserInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
     subscriptionHistory?: SubscriptionHistoryCreateNestedManyWithoutUserInput
   }
@@ -25335,6 +28447,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     sites?: EditorWebsiteUncheckedCreateNestedManyWithoutUserInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
     subscriptionHistory?: SubscriptionHistoryUncheckedCreateNestedManyWithoutUserInput
   }
@@ -25348,6 +28461,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sites?: EditorWebsiteUpdateManyWithoutUserNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
     subscriptionHistory?: SubscriptionHistoryUpdateManyWithoutUserNestedInput
   }
@@ -25361,6 +28475,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sites?: EditorWebsiteUncheckedUpdateManyWithoutUserNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
     subscriptionHistory?: SubscriptionHistoryUncheckedUpdateManyWithoutUserNestedInput
   }
@@ -25863,6 +28978,8 @@ export namespace Prisma {
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -25873,6 +28990,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -25883,6 +29001,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -25903,6 +29022,8 @@ export namespace Prisma {
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -25913,6 +29034,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -25923,6 +29045,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
@@ -25933,6 +29056,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -25954,6 +29078,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -26644,6 +29769,328 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type DesignGenerationCreateInput = {
+    id?: string
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDesignGenerationsInput
+    site?: EditorWebsiteCreateNestedOneWithoutDesignGenerationsInput
+    activeForSites?: EditorWebsiteCreateNestedManyWithoutActiveDesignGenerationInput
+    siteCreationAttempt?: AiGenerationJobCreateNestedOneWithoutDesignGenerationInput
+  }
+
+  export type DesignGenerationUncheckedCreateInput = {
+    id?: string
+    userId: string
+    siteId?: string | null
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    siteCreationAttemptId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    activeForSites?: EditorWebsiteUncheckedCreateNestedManyWithoutActiveDesignGenerationInput
+  }
+
+  export type DesignGenerationUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDesignGenerationsNestedInput
+    site?: EditorWebsiteUpdateOneWithoutDesignGenerationsNestedInput
+    activeForSites?: EditorWebsiteUpdateManyWithoutActiveDesignGenerationNestedInput
+    siteCreationAttempt?: AiGenerationJobUpdateOneWithoutDesignGenerationNestedInput
+  }
+
+  export type DesignGenerationUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    siteCreationAttemptId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    activeForSites?: EditorWebsiteUncheckedUpdateManyWithoutActiveDesignGenerationNestedInput
+  }
+
+  export type DesignGenerationCreateManyInput = {
+    id?: string
+    userId: string
+    siteId?: string | null
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    siteCreationAttemptId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DesignGenerationUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignGenerationUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    siteCreationAttemptId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignAssistanceCreateInput = {
+    id?: string
+    version?: number
+    roleKey: string
+    strategyKey: string
+    providerKey: string
+    modelKey: string
+    status: string
+    inputFingerprint: string
+    attemptKey: string
+    outputFingerprint?: string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: string | null
+    requestedAt?: Date | string
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    siteCreationAttempt: AiGenerationJobCreateNestedOneWithoutDesignAssistancesInput
+  }
+
+  export type DesignAssistanceUncheckedCreateInput = {
+    id?: string
+    siteCreationAttemptId: string
+    version?: number
+    roleKey: string
+    strategyKey: string
+    providerKey: string
+    modelKey: string
+    status: string
+    inputFingerprint: string
+    attemptKey: string
+    outputFingerprint?: string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: string | null
+    requestedAt?: Date | string
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DesignAssistanceUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    version?: IntFieldUpdateOperationsInput | number
+    roleKey?: StringFieldUpdateOperationsInput | string
+    strategyKey?: StringFieldUpdateOperationsInput | string
+    providerKey?: StringFieldUpdateOperationsInput | string
+    modelKey?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    inputFingerprint?: StringFieldUpdateOperationsInput | string
+    attemptKey?: StringFieldUpdateOperationsInput | string
+    outputFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    siteCreationAttempt?: AiGenerationJobUpdateOneRequiredWithoutDesignAssistancesNestedInput
+  }
+
+  export type DesignAssistanceUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteCreationAttemptId?: StringFieldUpdateOperationsInput | string
+    version?: IntFieldUpdateOperationsInput | number
+    roleKey?: StringFieldUpdateOperationsInput | string
+    strategyKey?: StringFieldUpdateOperationsInput | string
+    providerKey?: StringFieldUpdateOperationsInput | string
+    modelKey?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    inputFingerprint?: StringFieldUpdateOperationsInput | string
+    attemptKey?: StringFieldUpdateOperationsInput | string
+    outputFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignAssistanceCreateManyInput = {
+    id?: string
+    siteCreationAttemptId: string
+    version?: number
+    roleKey: string
+    strategyKey: string
+    providerKey: string
+    modelKey: string
+    status: string
+    inputFingerprint: string
+    attemptKey: string
+    outputFingerprint?: string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: string | null
+    requestedAt?: Date | string
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DesignAssistanceUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    version?: IntFieldUpdateOperationsInput | number
+    roleKey?: StringFieldUpdateOperationsInput | string
+    strategyKey?: StringFieldUpdateOperationsInput | string
+    providerKey?: StringFieldUpdateOperationsInput | string
+    modelKey?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    inputFingerprint?: StringFieldUpdateOperationsInput | string
+    attemptKey?: StringFieldUpdateOperationsInput | string
+    outputFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignAssistanceUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteCreationAttemptId?: StringFieldUpdateOperationsInput | string
+    version?: IntFieldUpdateOperationsInput | number
+    roleKey?: StringFieldUpdateOperationsInput | string
+    strategyKey?: StringFieldUpdateOperationsInput | string
+    providerKey?: StringFieldUpdateOperationsInput | string
+    modelKey?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    inputFingerprint?: StringFieldUpdateOperationsInput | string
+    attemptKey?: StringFieldUpdateOperationsInput | string
+    outputFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type AiGenerationJobCreateInput = {
     id?: string
     pageId?: string | null
@@ -26655,6 +30102,8 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     site?: EditorWebsiteCreateNestedOneWithoutAiGenerationJobsInput
+    designAssistances?: DesignAssistanceCreateNestedManyWithoutSiteCreationAttemptInput
+    designGeneration?: DesignGenerationCreateNestedOneWithoutSiteCreationAttemptInput
   }
 
   export type AiGenerationJobUncheckedCreateInput = {
@@ -26668,6 +30117,8 @@ export namespace Prisma {
     error?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    designAssistances?: DesignAssistanceUncheckedCreateNestedManyWithoutSiteCreationAttemptInput
+    designGeneration?: DesignGenerationUncheckedCreateNestedOneWithoutSiteCreationAttemptInput
   }
 
   export type AiGenerationJobUpdateInput = {
@@ -26681,6 +30132,8 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     site?: EditorWebsiteUpdateOneWithoutAiGenerationJobsNestedInput
+    designAssistances?: DesignAssistanceUpdateManyWithoutSiteCreationAttemptNestedInput
+    designGeneration?: DesignGenerationUpdateOneWithoutSiteCreationAttemptNestedInput
   }
 
   export type AiGenerationJobUncheckedUpdateInput = {
@@ -26694,6 +30147,8 @@ export namespace Prisma {
     error?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    designAssistances?: DesignAssistanceUncheckedUpdateManyWithoutSiteCreationAttemptNestedInput
+    designGeneration?: DesignGenerationUncheckedUpdateOneWithoutSiteCreationAttemptNestedInput
   }
 
   export type AiGenerationJobCreateManyInput = {
@@ -27214,6 +30669,12 @@ export namespace Prisma {
     none?: EditorWebsiteWhereInput
   }
 
+  export type DesignGenerationListRelationFilter = {
+    every?: DesignGenerationWhereInput
+    some?: DesignGenerationWhereInput
+    none?: DesignGenerationWhereInput
+  }
+
   export type SubscriptionNullableScalarRelationFilter = {
     is?: SubscriptionWhereInput | null
     isNot?: SubscriptionWhereInput | null
@@ -27231,6 +30692,10 @@ export namespace Prisma {
   }
 
   export type EditorWebsiteOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type DesignGenerationOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -27798,6 +31263,11 @@ export namespace Prisma {
     none?: AiGenerationJobWhereInput
   }
 
+  export type DesignGenerationNullableScalarRelationFilter = {
+    is?: DesignGenerationWhereInput | null
+    isNot?: DesignGenerationWhereInput | null
+  }
+
   export type AutomationListRelationFilter = {
     every?: AutomationWhereInput
     some?: AutomationWhereInput
@@ -27849,6 +31319,7 @@ export namespace Prisma {
     tree?: SortOrder
     published?: SortOrder
     userId?: SortOrder
+    activeDesignGenerationId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -27859,6 +31330,7 @@ export namespace Prisma {
     description?: SortOrder
     published?: SortOrder
     userId?: SortOrder
+    activeDesignGenerationId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -27869,6 +31341,7 @@ export namespace Prisma {
     description?: SortOrder
     published?: SortOrder
     userId?: SortOrder
+    activeDesignGenerationId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -28295,9 +31768,220 @@ export namespace Prisma {
     updatedAt?: SortOrder
   }
 
+  export type FloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
   export type EditorWebsiteNullableScalarRelationFilter = {
     is?: EditorWebsiteWhereInput | null
     isNot?: EditorWebsiteWhereInput | null
+  }
+
+  export type AiGenerationJobNullableScalarRelationFilter = {
+    is?: AiGenerationJobWhereInput | null
+    isNot?: AiGenerationJobWhereInput | null
+  }
+
+  export type DesignGenerationOrderByRelevanceInput = {
+    fields: DesignGenerationOrderByRelevanceFieldEnum | DesignGenerationOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type DesignGenerationCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    siteId?: SortOrder
+    request?: SortOrder
+    industry?: SortOrder
+    siteType?: SortOrder
+    objective?: SortOrder
+    requestedStyle?: SortOrder
+    initialPlan?: SortOrder
+    initialPlanHash?: SortOrder
+    status?: SortOrder
+    editMetrics?: SortOrder
+    editDistance?: SortOrder
+    measuredAt?: SortOrder
+    patternVersion?: SortOrder
+    patternHash?: SortOrder
+    patternKey?: SortOrder
+    outcomeVersion?: SortOrder
+    outcomeScore?: SortOrder
+    outcomeQualifiedAt?: SortOrder
+    siteCreationAttemptId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DesignGenerationAvgOrderByAggregateInput = {
+    editDistance?: SortOrder
+    patternVersion?: SortOrder
+    outcomeVersion?: SortOrder
+    outcomeScore?: SortOrder
+  }
+
+  export type DesignGenerationMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    siteId?: SortOrder
+    request?: SortOrder
+    industry?: SortOrder
+    siteType?: SortOrder
+    objective?: SortOrder
+    requestedStyle?: SortOrder
+    initialPlanHash?: SortOrder
+    status?: SortOrder
+    editDistance?: SortOrder
+    measuredAt?: SortOrder
+    patternVersion?: SortOrder
+    patternHash?: SortOrder
+    outcomeVersion?: SortOrder
+    outcomeScore?: SortOrder
+    outcomeQualifiedAt?: SortOrder
+    siteCreationAttemptId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DesignGenerationMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    siteId?: SortOrder
+    request?: SortOrder
+    industry?: SortOrder
+    siteType?: SortOrder
+    objective?: SortOrder
+    requestedStyle?: SortOrder
+    initialPlanHash?: SortOrder
+    status?: SortOrder
+    editDistance?: SortOrder
+    measuredAt?: SortOrder
+    patternVersion?: SortOrder
+    patternHash?: SortOrder
+    outcomeVersion?: SortOrder
+    outcomeScore?: SortOrder
+    outcomeQualifiedAt?: SortOrder
+    siteCreationAttemptId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DesignGenerationSumOrderByAggregateInput = {
+    editDistance?: SortOrder
+    patternVersion?: SortOrder
+    outcomeVersion?: SortOrder
+    outcomeScore?: SortOrder
+  }
+
+  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
+  }
+
+  export type AiGenerationJobScalarRelationFilter = {
+    is?: AiGenerationJobWhereInput
+    isNot?: AiGenerationJobWhereInput
+  }
+
+  export type DesignAssistanceOrderByRelevanceInput = {
+    fields: DesignAssistanceOrderByRelevanceFieldEnum | DesignAssistanceOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type DesignAssistanceCountOrderByAggregateInput = {
+    id?: SortOrder
+    siteCreationAttemptId?: SortOrder
+    version?: SortOrder
+    roleKey?: SortOrder
+    strategyKey?: SortOrder
+    providerKey?: SortOrder
+    modelKey?: SortOrder
+    status?: SortOrder
+    inputFingerprint?: SortOrder
+    attemptKey?: SortOrder
+    outputFingerprint?: SortOrder
+    appliedProposal?: SortOrder
+    failureCode?: SortOrder
+    requestedAt?: SortOrder
+    completedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DesignAssistanceAvgOrderByAggregateInput = {
+    version?: SortOrder
+  }
+
+  export type DesignAssistanceMaxOrderByAggregateInput = {
+    id?: SortOrder
+    siteCreationAttemptId?: SortOrder
+    version?: SortOrder
+    roleKey?: SortOrder
+    strategyKey?: SortOrder
+    providerKey?: SortOrder
+    modelKey?: SortOrder
+    status?: SortOrder
+    inputFingerprint?: SortOrder
+    attemptKey?: SortOrder
+    outputFingerprint?: SortOrder
+    failureCode?: SortOrder
+    requestedAt?: SortOrder
+    completedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DesignAssistanceMinOrderByAggregateInput = {
+    id?: SortOrder
+    siteCreationAttemptId?: SortOrder
+    version?: SortOrder
+    roleKey?: SortOrder
+    strategyKey?: SortOrder
+    providerKey?: SortOrder
+    modelKey?: SortOrder
+    status?: SortOrder
+    inputFingerprint?: SortOrder
+    attemptKey?: SortOrder
+    outputFingerprint?: SortOrder
+    failureCode?: SortOrder
+    requestedAt?: SortOrder
+    completedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DesignAssistanceSumOrderByAggregateInput = {
+    version?: SortOrder
+  }
+
+  export type DesignAssistanceListRelationFilter = {
+    every?: DesignAssistanceWhereInput
+    some?: DesignAssistanceWhereInput
+    none?: DesignAssistanceWhereInput
+  }
+
+  export type DesignAssistanceOrderByRelationAggregateInput = {
+    _count?: SortOrder
   }
 
   export type AiGenerationJobOrderByRelevanceInput = {
@@ -28579,6 +32263,13 @@ export namespace Prisma {
     connect?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
   }
 
+  export type DesignGenerationCreateNestedManyWithoutUserInput = {
+    create?: XOR<DesignGenerationCreateWithoutUserInput, DesignGenerationUncheckedCreateWithoutUserInput> | DesignGenerationCreateWithoutUserInput[] | DesignGenerationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutUserInput | DesignGenerationCreateOrConnectWithoutUserInput[]
+    createMany?: DesignGenerationCreateManyUserInputEnvelope
+    connect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+  }
+
   export type SubscriptionCreateNestedOneWithoutUserInput = {
     create?: XOR<SubscriptionCreateWithoutUserInput, SubscriptionUncheckedCreateWithoutUserInput>
     connectOrCreate?: SubscriptionCreateOrConnectWithoutUserInput
@@ -28597,6 +32288,13 @@ export namespace Prisma {
     connectOrCreate?: EditorWebsiteCreateOrConnectWithoutUserInput | EditorWebsiteCreateOrConnectWithoutUserInput[]
     createMany?: EditorWebsiteCreateManyUserInputEnvelope
     connect?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+  }
+
+  export type DesignGenerationUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<DesignGenerationCreateWithoutUserInput, DesignGenerationUncheckedCreateWithoutUserInput> | DesignGenerationCreateWithoutUserInput[] | DesignGenerationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutUserInput | DesignGenerationCreateOrConnectWithoutUserInput[]
+    createMany?: DesignGenerationCreateManyUserInputEnvelope
+    connect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
   }
 
   export type SubscriptionUncheckedCreateNestedOneWithoutUserInput = {
@@ -28638,6 +32336,20 @@ export namespace Prisma {
     deleteMany?: EditorWebsiteScalarWhereInput | EditorWebsiteScalarWhereInput[]
   }
 
+  export type DesignGenerationUpdateManyWithoutUserNestedInput = {
+    create?: XOR<DesignGenerationCreateWithoutUserInput, DesignGenerationUncheckedCreateWithoutUserInput> | DesignGenerationCreateWithoutUserInput[] | DesignGenerationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutUserInput | DesignGenerationCreateOrConnectWithoutUserInput[]
+    upsert?: DesignGenerationUpsertWithWhereUniqueWithoutUserInput | DesignGenerationUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: DesignGenerationCreateManyUserInputEnvelope
+    set?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    disconnect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    delete?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    connect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    update?: DesignGenerationUpdateWithWhereUniqueWithoutUserInput | DesignGenerationUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: DesignGenerationUpdateManyWithWhereWithoutUserInput | DesignGenerationUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: DesignGenerationScalarWhereInput | DesignGenerationScalarWhereInput[]
+  }
+
   export type SubscriptionUpdateOneWithoutUserNestedInput = {
     create?: XOR<SubscriptionCreateWithoutUserInput, SubscriptionUncheckedCreateWithoutUserInput>
     connectOrCreate?: SubscriptionCreateOrConnectWithoutUserInput
@@ -28674,6 +32386,20 @@ export namespace Prisma {
     update?: EditorWebsiteUpdateWithWhereUniqueWithoutUserInput | EditorWebsiteUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: EditorWebsiteUpdateManyWithWhereWithoutUserInput | EditorWebsiteUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: EditorWebsiteScalarWhereInput | EditorWebsiteScalarWhereInput[]
+  }
+
+  export type DesignGenerationUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<DesignGenerationCreateWithoutUserInput, DesignGenerationUncheckedCreateWithoutUserInput> | DesignGenerationCreateWithoutUserInput[] | DesignGenerationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutUserInput | DesignGenerationCreateOrConnectWithoutUserInput[]
+    upsert?: DesignGenerationUpsertWithWhereUniqueWithoutUserInput | DesignGenerationUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: DesignGenerationCreateManyUserInputEnvelope
+    set?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    disconnect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    delete?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    connect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    update?: DesignGenerationUpdateWithWhereUniqueWithoutUserInput | DesignGenerationUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: DesignGenerationUpdateManyWithWhereWithoutUserInput | DesignGenerationUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: DesignGenerationScalarWhereInput | DesignGenerationScalarWhereInput[]
   }
 
   export type SubscriptionUncheckedUpdateOneWithoutUserNestedInput = {
@@ -28889,6 +32615,19 @@ export namespace Prisma {
     connect?: AiGenerationJobWhereUniqueInput | AiGenerationJobWhereUniqueInput[]
   }
 
+  export type DesignGenerationCreateNestedManyWithoutSiteInput = {
+    create?: XOR<DesignGenerationCreateWithoutSiteInput, DesignGenerationUncheckedCreateWithoutSiteInput> | DesignGenerationCreateWithoutSiteInput[] | DesignGenerationUncheckedCreateWithoutSiteInput[]
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutSiteInput | DesignGenerationCreateOrConnectWithoutSiteInput[]
+    createMany?: DesignGenerationCreateManySiteInputEnvelope
+    connect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+  }
+
+  export type DesignGenerationCreateNestedOneWithoutActiveForSitesInput = {
+    create?: XOR<DesignGenerationCreateWithoutActiveForSitesInput, DesignGenerationUncheckedCreateWithoutActiveForSitesInput>
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutActiveForSitesInput
+    connect?: DesignGenerationWhereUniqueInput
+  }
+
   export type AutomationCreateNestedManyWithoutSiteInput = {
     create?: XOR<AutomationCreateWithoutSiteInput, AutomationUncheckedCreateWithoutSiteInput> | AutomationCreateWithoutSiteInput[] | AutomationUncheckedCreateWithoutSiteInput[]
     connectOrCreate?: AutomationCreateOrConnectWithoutSiteInput | AutomationCreateOrConnectWithoutSiteInput[]
@@ -28949,6 +32688,13 @@ export namespace Prisma {
     connectOrCreate?: AiGenerationJobCreateOrConnectWithoutSiteInput | AiGenerationJobCreateOrConnectWithoutSiteInput[]
     createMany?: AiGenerationJobCreateManySiteInputEnvelope
     connect?: AiGenerationJobWhereUniqueInput | AiGenerationJobWhereUniqueInput[]
+  }
+
+  export type DesignGenerationUncheckedCreateNestedManyWithoutSiteInput = {
+    create?: XOR<DesignGenerationCreateWithoutSiteInput, DesignGenerationUncheckedCreateWithoutSiteInput> | DesignGenerationCreateWithoutSiteInput[] | DesignGenerationUncheckedCreateWithoutSiteInput[]
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutSiteInput | DesignGenerationCreateOrConnectWithoutSiteInput[]
+    createMany?: DesignGenerationCreateManySiteInputEnvelope
+    connect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
   }
 
   export type AutomationUncheckedCreateNestedManyWithoutSiteInput = {
@@ -29076,6 +32822,30 @@ export namespace Prisma {
     deleteMany?: AiGenerationJobScalarWhereInput | AiGenerationJobScalarWhereInput[]
   }
 
+  export type DesignGenerationUpdateManyWithoutSiteNestedInput = {
+    create?: XOR<DesignGenerationCreateWithoutSiteInput, DesignGenerationUncheckedCreateWithoutSiteInput> | DesignGenerationCreateWithoutSiteInput[] | DesignGenerationUncheckedCreateWithoutSiteInput[]
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutSiteInput | DesignGenerationCreateOrConnectWithoutSiteInput[]
+    upsert?: DesignGenerationUpsertWithWhereUniqueWithoutSiteInput | DesignGenerationUpsertWithWhereUniqueWithoutSiteInput[]
+    createMany?: DesignGenerationCreateManySiteInputEnvelope
+    set?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    disconnect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    delete?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    connect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    update?: DesignGenerationUpdateWithWhereUniqueWithoutSiteInput | DesignGenerationUpdateWithWhereUniqueWithoutSiteInput[]
+    updateMany?: DesignGenerationUpdateManyWithWhereWithoutSiteInput | DesignGenerationUpdateManyWithWhereWithoutSiteInput[]
+    deleteMany?: DesignGenerationScalarWhereInput | DesignGenerationScalarWhereInput[]
+  }
+
+  export type DesignGenerationUpdateOneWithoutActiveForSitesNestedInput = {
+    create?: XOR<DesignGenerationCreateWithoutActiveForSitesInput, DesignGenerationUncheckedCreateWithoutActiveForSitesInput>
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutActiveForSitesInput
+    upsert?: DesignGenerationUpsertWithoutActiveForSitesInput
+    disconnect?: DesignGenerationWhereInput | boolean
+    delete?: DesignGenerationWhereInput | boolean
+    connect?: DesignGenerationWhereUniqueInput
+    update?: XOR<XOR<DesignGenerationUpdateToOneWithWhereWithoutActiveForSitesInput, DesignGenerationUpdateWithoutActiveForSitesInput>, DesignGenerationUncheckedUpdateWithoutActiveForSitesInput>
+  }
+
   export type AutomationUpdateManyWithoutSiteNestedInput = {
     create?: XOR<AutomationCreateWithoutSiteInput, AutomationUncheckedCreateWithoutSiteInput> | AutomationCreateWithoutSiteInput[] | AutomationUncheckedCreateWithoutSiteInput[]
     connectOrCreate?: AutomationCreateOrConnectWithoutSiteInput | AutomationCreateOrConnectWithoutSiteInput[]
@@ -29196,6 +32966,20 @@ export namespace Prisma {
     update?: AiGenerationJobUpdateWithWhereUniqueWithoutSiteInput | AiGenerationJobUpdateWithWhereUniqueWithoutSiteInput[]
     updateMany?: AiGenerationJobUpdateManyWithWhereWithoutSiteInput | AiGenerationJobUpdateManyWithWhereWithoutSiteInput[]
     deleteMany?: AiGenerationJobScalarWhereInput | AiGenerationJobScalarWhereInput[]
+  }
+
+  export type DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput = {
+    create?: XOR<DesignGenerationCreateWithoutSiteInput, DesignGenerationUncheckedCreateWithoutSiteInput> | DesignGenerationCreateWithoutSiteInput[] | DesignGenerationUncheckedCreateWithoutSiteInput[]
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutSiteInput | DesignGenerationCreateOrConnectWithoutSiteInput[]
+    upsert?: DesignGenerationUpsertWithWhereUniqueWithoutSiteInput | DesignGenerationUpsertWithWhereUniqueWithoutSiteInput[]
+    createMany?: DesignGenerationCreateManySiteInputEnvelope
+    set?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    disconnect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    delete?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    connect?: DesignGenerationWhereUniqueInput | DesignGenerationWhereUniqueInput[]
+    update?: DesignGenerationUpdateWithWhereUniqueWithoutSiteInput | DesignGenerationUpdateWithWhereUniqueWithoutSiteInput[]
+    updateMany?: DesignGenerationUpdateManyWithWhereWithoutSiteInput | DesignGenerationUpdateManyWithWhereWithoutSiteInput[]
+    deleteMany?: DesignGenerationScalarWhereInput | DesignGenerationScalarWhereInput[]
   }
 
   export type AutomationUncheckedUpdateManyWithoutSiteNestedInput = {
@@ -29416,10 +33200,146 @@ export namespace Prisma {
     update?: XOR<XOR<EditorWebsiteUpdateToOneWithWhereWithoutExperimentsInput, EditorWebsiteUpdateWithoutExperimentsInput>, EditorWebsiteUncheckedUpdateWithoutExperimentsInput>
   }
 
+  export type UserCreateNestedOneWithoutDesignGenerationsInput = {
+    create?: XOR<UserCreateWithoutDesignGenerationsInput, UserUncheckedCreateWithoutDesignGenerationsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDesignGenerationsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type EditorWebsiteCreateNestedOneWithoutDesignGenerationsInput = {
+    create?: XOR<EditorWebsiteCreateWithoutDesignGenerationsInput, EditorWebsiteUncheckedCreateWithoutDesignGenerationsInput>
+    connectOrCreate?: EditorWebsiteCreateOrConnectWithoutDesignGenerationsInput
+    connect?: EditorWebsiteWhereUniqueInput
+  }
+
+  export type EditorWebsiteCreateNestedManyWithoutActiveDesignGenerationInput = {
+    create?: XOR<EditorWebsiteCreateWithoutActiveDesignGenerationInput, EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput> | EditorWebsiteCreateWithoutActiveDesignGenerationInput[] | EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput[]
+    connectOrCreate?: EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput | EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput[]
+    createMany?: EditorWebsiteCreateManyActiveDesignGenerationInputEnvelope
+    connect?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+  }
+
+  export type AiGenerationJobCreateNestedOneWithoutDesignGenerationInput = {
+    create?: XOR<AiGenerationJobCreateWithoutDesignGenerationInput, AiGenerationJobUncheckedCreateWithoutDesignGenerationInput>
+    connectOrCreate?: AiGenerationJobCreateOrConnectWithoutDesignGenerationInput
+    connect?: AiGenerationJobWhereUniqueInput
+  }
+
+  export type EditorWebsiteUncheckedCreateNestedManyWithoutActiveDesignGenerationInput = {
+    create?: XOR<EditorWebsiteCreateWithoutActiveDesignGenerationInput, EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput> | EditorWebsiteCreateWithoutActiveDesignGenerationInput[] | EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput[]
+    connectOrCreate?: EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput | EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput[]
+    createMany?: EditorWebsiteCreateManyActiveDesignGenerationInputEnvelope
+    connect?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+  }
+
+  export type NullableFloatFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type UserUpdateOneRequiredWithoutDesignGenerationsNestedInput = {
+    create?: XOR<UserCreateWithoutDesignGenerationsInput, UserUncheckedCreateWithoutDesignGenerationsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDesignGenerationsInput
+    upsert?: UserUpsertWithoutDesignGenerationsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutDesignGenerationsInput, UserUpdateWithoutDesignGenerationsInput>, UserUncheckedUpdateWithoutDesignGenerationsInput>
+  }
+
+  export type EditorWebsiteUpdateOneWithoutDesignGenerationsNestedInput = {
+    create?: XOR<EditorWebsiteCreateWithoutDesignGenerationsInput, EditorWebsiteUncheckedCreateWithoutDesignGenerationsInput>
+    connectOrCreate?: EditorWebsiteCreateOrConnectWithoutDesignGenerationsInput
+    upsert?: EditorWebsiteUpsertWithoutDesignGenerationsInput
+    disconnect?: EditorWebsiteWhereInput | boolean
+    delete?: EditorWebsiteWhereInput | boolean
+    connect?: EditorWebsiteWhereUniqueInput
+    update?: XOR<XOR<EditorWebsiteUpdateToOneWithWhereWithoutDesignGenerationsInput, EditorWebsiteUpdateWithoutDesignGenerationsInput>, EditorWebsiteUncheckedUpdateWithoutDesignGenerationsInput>
+  }
+
+  export type EditorWebsiteUpdateManyWithoutActiveDesignGenerationNestedInput = {
+    create?: XOR<EditorWebsiteCreateWithoutActiveDesignGenerationInput, EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput> | EditorWebsiteCreateWithoutActiveDesignGenerationInput[] | EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput[]
+    connectOrCreate?: EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput | EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput[]
+    upsert?: EditorWebsiteUpsertWithWhereUniqueWithoutActiveDesignGenerationInput | EditorWebsiteUpsertWithWhereUniqueWithoutActiveDesignGenerationInput[]
+    createMany?: EditorWebsiteCreateManyActiveDesignGenerationInputEnvelope
+    set?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+    disconnect?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+    delete?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+    connect?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+    update?: EditorWebsiteUpdateWithWhereUniqueWithoutActiveDesignGenerationInput | EditorWebsiteUpdateWithWhereUniqueWithoutActiveDesignGenerationInput[]
+    updateMany?: EditorWebsiteUpdateManyWithWhereWithoutActiveDesignGenerationInput | EditorWebsiteUpdateManyWithWhereWithoutActiveDesignGenerationInput[]
+    deleteMany?: EditorWebsiteScalarWhereInput | EditorWebsiteScalarWhereInput[]
+  }
+
+  export type AiGenerationJobUpdateOneWithoutDesignGenerationNestedInput = {
+    create?: XOR<AiGenerationJobCreateWithoutDesignGenerationInput, AiGenerationJobUncheckedCreateWithoutDesignGenerationInput>
+    connectOrCreate?: AiGenerationJobCreateOrConnectWithoutDesignGenerationInput
+    upsert?: AiGenerationJobUpsertWithoutDesignGenerationInput
+    disconnect?: AiGenerationJobWhereInput | boolean
+    delete?: AiGenerationJobWhereInput | boolean
+    connect?: AiGenerationJobWhereUniqueInput
+    update?: XOR<XOR<AiGenerationJobUpdateToOneWithWhereWithoutDesignGenerationInput, AiGenerationJobUpdateWithoutDesignGenerationInput>, AiGenerationJobUncheckedUpdateWithoutDesignGenerationInput>
+  }
+
+  export type EditorWebsiteUncheckedUpdateManyWithoutActiveDesignGenerationNestedInput = {
+    create?: XOR<EditorWebsiteCreateWithoutActiveDesignGenerationInput, EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput> | EditorWebsiteCreateWithoutActiveDesignGenerationInput[] | EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput[]
+    connectOrCreate?: EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput | EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput[]
+    upsert?: EditorWebsiteUpsertWithWhereUniqueWithoutActiveDesignGenerationInput | EditorWebsiteUpsertWithWhereUniqueWithoutActiveDesignGenerationInput[]
+    createMany?: EditorWebsiteCreateManyActiveDesignGenerationInputEnvelope
+    set?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+    disconnect?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+    delete?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+    connect?: EditorWebsiteWhereUniqueInput | EditorWebsiteWhereUniqueInput[]
+    update?: EditorWebsiteUpdateWithWhereUniqueWithoutActiveDesignGenerationInput | EditorWebsiteUpdateWithWhereUniqueWithoutActiveDesignGenerationInput[]
+    updateMany?: EditorWebsiteUpdateManyWithWhereWithoutActiveDesignGenerationInput | EditorWebsiteUpdateManyWithWhereWithoutActiveDesignGenerationInput[]
+    deleteMany?: EditorWebsiteScalarWhereInput | EditorWebsiteScalarWhereInput[]
+  }
+
+  export type AiGenerationJobCreateNestedOneWithoutDesignAssistancesInput = {
+    create?: XOR<AiGenerationJobCreateWithoutDesignAssistancesInput, AiGenerationJobUncheckedCreateWithoutDesignAssistancesInput>
+    connectOrCreate?: AiGenerationJobCreateOrConnectWithoutDesignAssistancesInput
+    connect?: AiGenerationJobWhereUniqueInput
+  }
+
+  export type AiGenerationJobUpdateOneRequiredWithoutDesignAssistancesNestedInput = {
+    create?: XOR<AiGenerationJobCreateWithoutDesignAssistancesInput, AiGenerationJobUncheckedCreateWithoutDesignAssistancesInput>
+    connectOrCreate?: AiGenerationJobCreateOrConnectWithoutDesignAssistancesInput
+    upsert?: AiGenerationJobUpsertWithoutDesignAssistancesInput
+    connect?: AiGenerationJobWhereUniqueInput
+    update?: XOR<XOR<AiGenerationJobUpdateToOneWithWhereWithoutDesignAssistancesInput, AiGenerationJobUpdateWithoutDesignAssistancesInput>, AiGenerationJobUncheckedUpdateWithoutDesignAssistancesInput>
+  }
+
   export type EditorWebsiteCreateNestedOneWithoutAiGenerationJobsInput = {
     create?: XOR<EditorWebsiteCreateWithoutAiGenerationJobsInput, EditorWebsiteUncheckedCreateWithoutAiGenerationJobsInput>
     connectOrCreate?: EditorWebsiteCreateOrConnectWithoutAiGenerationJobsInput
     connect?: EditorWebsiteWhereUniqueInput
+  }
+
+  export type DesignAssistanceCreateNestedManyWithoutSiteCreationAttemptInput = {
+    create?: XOR<DesignAssistanceCreateWithoutSiteCreationAttemptInput, DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput> | DesignAssistanceCreateWithoutSiteCreationAttemptInput[] | DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput[]
+    connectOrCreate?: DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput | DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput[]
+    createMany?: DesignAssistanceCreateManySiteCreationAttemptInputEnvelope
+    connect?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+  }
+
+  export type DesignGenerationCreateNestedOneWithoutSiteCreationAttemptInput = {
+    create?: XOR<DesignGenerationCreateWithoutSiteCreationAttemptInput, DesignGenerationUncheckedCreateWithoutSiteCreationAttemptInput>
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutSiteCreationAttemptInput
+    connect?: DesignGenerationWhereUniqueInput
+  }
+
+  export type DesignAssistanceUncheckedCreateNestedManyWithoutSiteCreationAttemptInput = {
+    create?: XOR<DesignAssistanceCreateWithoutSiteCreationAttemptInput, DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput> | DesignAssistanceCreateWithoutSiteCreationAttemptInput[] | DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput[]
+    connectOrCreate?: DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput | DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput[]
+    createMany?: DesignAssistanceCreateManySiteCreationAttemptInputEnvelope
+    connect?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+  }
+
+  export type DesignGenerationUncheckedCreateNestedOneWithoutSiteCreationAttemptInput = {
+    create?: XOR<DesignGenerationCreateWithoutSiteCreationAttemptInput, DesignGenerationUncheckedCreateWithoutSiteCreationAttemptInput>
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutSiteCreationAttemptInput
+    connect?: DesignGenerationWhereUniqueInput
   }
 
   export type EditorWebsiteUpdateOneWithoutAiGenerationJobsNestedInput = {
@@ -29430,6 +33350,54 @@ export namespace Prisma {
     delete?: EditorWebsiteWhereInput | boolean
     connect?: EditorWebsiteWhereUniqueInput
     update?: XOR<XOR<EditorWebsiteUpdateToOneWithWhereWithoutAiGenerationJobsInput, EditorWebsiteUpdateWithoutAiGenerationJobsInput>, EditorWebsiteUncheckedUpdateWithoutAiGenerationJobsInput>
+  }
+
+  export type DesignAssistanceUpdateManyWithoutSiteCreationAttemptNestedInput = {
+    create?: XOR<DesignAssistanceCreateWithoutSiteCreationAttemptInput, DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput> | DesignAssistanceCreateWithoutSiteCreationAttemptInput[] | DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput[]
+    connectOrCreate?: DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput | DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput[]
+    upsert?: DesignAssistanceUpsertWithWhereUniqueWithoutSiteCreationAttemptInput | DesignAssistanceUpsertWithWhereUniqueWithoutSiteCreationAttemptInput[]
+    createMany?: DesignAssistanceCreateManySiteCreationAttemptInputEnvelope
+    set?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+    disconnect?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+    delete?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+    connect?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+    update?: DesignAssistanceUpdateWithWhereUniqueWithoutSiteCreationAttemptInput | DesignAssistanceUpdateWithWhereUniqueWithoutSiteCreationAttemptInput[]
+    updateMany?: DesignAssistanceUpdateManyWithWhereWithoutSiteCreationAttemptInput | DesignAssistanceUpdateManyWithWhereWithoutSiteCreationAttemptInput[]
+    deleteMany?: DesignAssistanceScalarWhereInput | DesignAssistanceScalarWhereInput[]
+  }
+
+  export type DesignGenerationUpdateOneWithoutSiteCreationAttemptNestedInput = {
+    create?: XOR<DesignGenerationCreateWithoutSiteCreationAttemptInput, DesignGenerationUncheckedCreateWithoutSiteCreationAttemptInput>
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutSiteCreationAttemptInput
+    upsert?: DesignGenerationUpsertWithoutSiteCreationAttemptInput
+    disconnect?: DesignGenerationWhereInput | boolean
+    delete?: DesignGenerationWhereInput | boolean
+    connect?: DesignGenerationWhereUniqueInput
+    update?: XOR<XOR<DesignGenerationUpdateToOneWithWhereWithoutSiteCreationAttemptInput, DesignGenerationUpdateWithoutSiteCreationAttemptInput>, DesignGenerationUncheckedUpdateWithoutSiteCreationAttemptInput>
+  }
+
+  export type DesignAssistanceUncheckedUpdateManyWithoutSiteCreationAttemptNestedInput = {
+    create?: XOR<DesignAssistanceCreateWithoutSiteCreationAttemptInput, DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput> | DesignAssistanceCreateWithoutSiteCreationAttemptInput[] | DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput[]
+    connectOrCreate?: DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput | DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput[]
+    upsert?: DesignAssistanceUpsertWithWhereUniqueWithoutSiteCreationAttemptInput | DesignAssistanceUpsertWithWhereUniqueWithoutSiteCreationAttemptInput[]
+    createMany?: DesignAssistanceCreateManySiteCreationAttemptInputEnvelope
+    set?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+    disconnect?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+    delete?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+    connect?: DesignAssistanceWhereUniqueInput | DesignAssistanceWhereUniqueInput[]
+    update?: DesignAssistanceUpdateWithWhereUniqueWithoutSiteCreationAttemptInput | DesignAssistanceUpdateWithWhereUniqueWithoutSiteCreationAttemptInput[]
+    updateMany?: DesignAssistanceUpdateManyWithWhereWithoutSiteCreationAttemptInput | DesignAssistanceUpdateManyWithWhereWithoutSiteCreationAttemptInput[]
+    deleteMany?: DesignAssistanceScalarWhereInput | DesignAssistanceScalarWhereInput[]
+  }
+
+  export type DesignGenerationUncheckedUpdateOneWithoutSiteCreationAttemptNestedInput = {
+    create?: XOR<DesignGenerationCreateWithoutSiteCreationAttemptInput, DesignGenerationUncheckedCreateWithoutSiteCreationAttemptInput>
+    connectOrCreate?: DesignGenerationCreateOrConnectWithoutSiteCreationAttemptInput
+    upsert?: DesignGenerationUpsertWithoutSiteCreationAttemptInput
+    disconnect?: DesignGenerationWhereInput | boolean
+    delete?: DesignGenerationWhereInput | boolean
+    connect?: DesignGenerationWhereUniqueInput
+    update?: XOR<XOR<DesignGenerationUpdateToOneWithWhereWithoutSiteCreationAttemptInput, DesignGenerationUpdateWithoutSiteCreationAttemptInput>, DesignGenerationUncheckedUpdateWithoutSiteCreationAttemptInput>
   }
 
   export type EditorWebsiteCreateNestedOneWithoutAutomationsInput = {
@@ -29795,6 +33763,22 @@ export namespace Prisma {
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
+  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
+  }
+
   export type EditorWebsiteCreateWithoutUserInput = {
     id: string
     name: string
@@ -29811,6 +33795,8 @@ export namespace Prisma {
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -29820,6 +33806,7 @@ export namespace Prisma {
     description?: string
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -29830,6 +33817,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -29840,6 +33828,68 @@ export namespace Prisma {
 
   export type EditorWebsiteCreateManyUserInputEnvelope = {
     data: EditorWebsiteCreateManyUserInput | EditorWebsiteCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DesignGenerationCreateWithoutUserInput = {
+    id?: string
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    site?: EditorWebsiteCreateNestedOneWithoutDesignGenerationsInput
+    activeForSites?: EditorWebsiteCreateNestedManyWithoutActiveDesignGenerationInput
+    siteCreationAttempt?: AiGenerationJobCreateNestedOneWithoutDesignGenerationInput
+  }
+
+  export type DesignGenerationUncheckedCreateWithoutUserInput = {
+    id?: string
+    siteId?: string | null
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    siteCreationAttemptId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    activeForSites?: EditorWebsiteUncheckedCreateNestedManyWithoutActiveDesignGenerationInput
+  }
+
+  export type DesignGenerationCreateOrConnectWithoutUserInput = {
+    where: DesignGenerationWhereUniqueInput
+    create: XOR<DesignGenerationCreateWithoutUserInput, DesignGenerationUncheckedCreateWithoutUserInput>
+  }
+
+  export type DesignGenerationCreateManyUserInputEnvelope = {
+    data: DesignGenerationCreateManyUserInput | DesignGenerationCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -29956,8 +34006,54 @@ export namespace Prisma {
     tree?: JsonFilter<"EditorWebsite">
     published?: BoolFilter<"EditorWebsite"> | boolean
     userId?: StringNullableFilter<"EditorWebsite"> | string | null
+    activeDesignGenerationId?: StringNullableFilter<"EditorWebsite"> | string | null
     createdAt?: DateTimeFilter<"EditorWebsite"> | Date | string
     updatedAt?: DateTimeFilter<"EditorWebsite"> | Date | string
+  }
+
+  export type DesignGenerationUpsertWithWhereUniqueWithoutUserInput = {
+    where: DesignGenerationWhereUniqueInput
+    update: XOR<DesignGenerationUpdateWithoutUserInput, DesignGenerationUncheckedUpdateWithoutUserInput>
+    create: XOR<DesignGenerationCreateWithoutUserInput, DesignGenerationUncheckedCreateWithoutUserInput>
+  }
+
+  export type DesignGenerationUpdateWithWhereUniqueWithoutUserInput = {
+    where: DesignGenerationWhereUniqueInput
+    data: XOR<DesignGenerationUpdateWithoutUserInput, DesignGenerationUncheckedUpdateWithoutUserInput>
+  }
+
+  export type DesignGenerationUpdateManyWithWhereWithoutUserInput = {
+    where: DesignGenerationScalarWhereInput
+    data: XOR<DesignGenerationUpdateManyMutationInput, DesignGenerationUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type DesignGenerationScalarWhereInput = {
+    AND?: DesignGenerationScalarWhereInput | DesignGenerationScalarWhereInput[]
+    OR?: DesignGenerationScalarWhereInput[]
+    NOT?: DesignGenerationScalarWhereInput | DesignGenerationScalarWhereInput[]
+    id?: StringFilter<"DesignGeneration"> | string
+    userId?: StringFilter<"DesignGeneration"> | string
+    siteId?: StringNullableFilter<"DesignGeneration"> | string | null
+    request?: StringFilter<"DesignGeneration"> | string
+    industry?: StringNullableFilter<"DesignGeneration"> | string | null
+    siteType?: StringNullableFilter<"DesignGeneration"> | string | null
+    objective?: StringNullableFilter<"DesignGeneration"> | string | null
+    requestedStyle?: StringNullableFilter<"DesignGeneration"> | string | null
+    initialPlan?: JsonFilter<"DesignGeneration">
+    initialPlanHash?: StringFilter<"DesignGeneration"> | string
+    status?: StringFilter<"DesignGeneration"> | string
+    editMetrics?: JsonNullableFilter<"DesignGeneration">
+    editDistance?: FloatNullableFilter<"DesignGeneration"> | number | null
+    measuredAt?: DateTimeNullableFilter<"DesignGeneration"> | Date | string | null
+    patternVersion?: IntNullableFilter<"DesignGeneration"> | number | null
+    patternHash?: StringNullableFilter<"DesignGeneration"> | string | null
+    patternKey?: JsonNullableFilter<"DesignGeneration">
+    outcomeVersion?: IntNullableFilter<"DesignGeneration"> | number | null
+    outcomeScore?: FloatNullableFilter<"DesignGeneration"> | number | null
+    outcomeQualifiedAt?: DateTimeNullableFilter<"DesignGeneration"> | Date | string | null
+    siteCreationAttemptId?: StringNullableFilter<"DesignGeneration"> | string | null
+    createdAt?: DateTimeFilter<"DesignGeneration"> | Date | string
+    updatedAt?: DateTimeFilter<"DesignGeneration"> | Date | string
   }
 
   export type SubscriptionUpsertWithoutUserInput = {
@@ -30189,6 +34285,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     sites?: EditorWebsiteCreateNestedManyWithoutUserInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutUserInput
     subscriptionHistory?: SubscriptionHistoryCreateNestedManyWithoutUserInput
   }
 
@@ -30201,6 +34298,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     sites?: EditorWebsiteUncheckedCreateNestedManyWithoutUserInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutUserInput
     subscriptionHistory?: SubscriptionHistoryUncheckedCreateNestedManyWithoutUserInput
   }
 
@@ -30286,6 +34384,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sites?: EditorWebsiteUpdateManyWithoutUserNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutUserNestedInput
     subscriptionHistory?: SubscriptionHistoryUpdateManyWithoutUserNestedInput
   }
 
@@ -30298,6 +34397,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sites?: EditorWebsiteUncheckedUpdateManyWithoutUserNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutUserNestedInput
     subscriptionHistory?: SubscriptionHistoryUncheckedUpdateManyWithoutUserNestedInput
   }
 
@@ -30356,6 +34456,7 @@ export namespace Prisma {
     role?: string
     createdAt?: Date | string
     updatedAt?: Date | string
+    designGenerations?: DesignGenerationCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
     subscriptionHistory?: SubscriptionHistoryCreateNestedManyWithoutUserInput
   }
@@ -30368,6 +34469,7 @@ export namespace Prisma {
     role?: string
     createdAt?: Date | string
     updatedAt?: Date | string
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
     subscriptionHistory?: SubscriptionHistoryUncheckedCreateNestedManyWithoutUserInput
   }
@@ -30610,6 +34712,8 @@ export namespace Prisma {
     error?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    designAssistances?: DesignAssistanceCreateNestedManyWithoutSiteCreationAttemptInput
+    designGeneration?: DesignGenerationCreateNestedOneWithoutSiteCreationAttemptInput
   }
 
   export type AiGenerationJobUncheckedCreateWithoutSiteInput = {
@@ -30622,6 +34726,8 @@ export namespace Prisma {
     error?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    designAssistances?: DesignAssistanceUncheckedCreateNestedManyWithoutSiteCreationAttemptInput
+    designGeneration?: DesignGenerationUncheckedCreateNestedOneWithoutSiteCreationAttemptInput
   }
 
   export type AiGenerationJobCreateOrConnectWithoutSiteInput = {
@@ -30632,6 +34738,125 @@ export namespace Prisma {
   export type AiGenerationJobCreateManySiteInputEnvelope = {
     data: AiGenerationJobCreateManySiteInput | AiGenerationJobCreateManySiteInput[]
     skipDuplicates?: boolean
+  }
+
+  export type DesignGenerationCreateWithoutSiteInput = {
+    id?: string
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDesignGenerationsInput
+    activeForSites?: EditorWebsiteCreateNestedManyWithoutActiveDesignGenerationInput
+    siteCreationAttempt?: AiGenerationJobCreateNestedOneWithoutDesignGenerationInput
+  }
+
+  export type DesignGenerationUncheckedCreateWithoutSiteInput = {
+    id?: string
+    userId: string
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    siteCreationAttemptId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    activeForSites?: EditorWebsiteUncheckedCreateNestedManyWithoutActiveDesignGenerationInput
+  }
+
+  export type DesignGenerationCreateOrConnectWithoutSiteInput = {
+    where: DesignGenerationWhereUniqueInput
+    create: XOR<DesignGenerationCreateWithoutSiteInput, DesignGenerationUncheckedCreateWithoutSiteInput>
+  }
+
+  export type DesignGenerationCreateManySiteInputEnvelope = {
+    data: DesignGenerationCreateManySiteInput | DesignGenerationCreateManySiteInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DesignGenerationCreateWithoutActiveForSitesInput = {
+    id?: string
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDesignGenerationsInput
+    site?: EditorWebsiteCreateNestedOneWithoutDesignGenerationsInput
+    siteCreationAttempt?: AiGenerationJobCreateNestedOneWithoutDesignGenerationInput
+  }
+
+  export type DesignGenerationUncheckedCreateWithoutActiveForSitesInput = {
+    id?: string
+    userId: string
+    siteId?: string | null
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    siteCreationAttemptId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DesignGenerationCreateOrConnectWithoutActiveForSitesInput = {
+    where: DesignGenerationWhereUniqueInput
+    create: XOR<DesignGenerationCreateWithoutActiveForSitesInput, DesignGenerationUncheckedCreateWithoutActiveForSitesInput>
   }
 
   export type AutomationCreateWithoutSiteInput = {
@@ -30683,6 +34908,7 @@ export namespace Prisma {
     role?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    designGenerations?: DesignGenerationUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
     subscriptionHistory?: SubscriptionHistoryUpdateManyWithoutUserNestedInput
   }
@@ -30695,6 +34921,7 @@ export namespace Prisma {
     role?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
     subscriptionHistory?: SubscriptionHistoryUncheckedUpdateManyWithoutUserNestedInput
   }
@@ -30945,6 +35172,85 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"AiGenerationJob"> | Date | string
   }
 
+  export type DesignGenerationUpsertWithWhereUniqueWithoutSiteInput = {
+    where: DesignGenerationWhereUniqueInput
+    update: XOR<DesignGenerationUpdateWithoutSiteInput, DesignGenerationUncheckedUpdateWithoutSiteInput>
+    create: XOR<DesignGenerationCreateWithoutSiteInput, DesignGenerationUncheckedCreateWithoutSiteInput>
+  }
+
+  export type DesignGenerationUpdateWithWhereUniqueWithoutSiteInput = {
+    where: DesignGenerationWhereUniqueInput
+    data: XOR<DesignGenerationUpdateWithoutSiteInput, DesignGenerationUncheckedUpdateWithoutSiteInput>
+  }
+
+  export type DesignGenerationUpdateManyWithWhereWithoutSiteInput = {
+    where: DesignGenerationScalarWhereInput
+    data: XOR<DesignGenerationUpdateManyMutationInput, DesignGenerationUncheckedUpdateManyWithoutSiteInput>
+  }
+
+  export type DesignGenerationUpsertWithoutActiveForSitesInput = {
+    update: XOR<DesignGenerationUpdateWithoutActiveForSitesInput, DesignGenerationUncheckedUpdateWithoutActiveForSitesInput>
+    create: XOR<DesignGenerationCreateWithoutActiveForSitesInput, DesignGenerationUncheckedCreateWithoutActiveForSitesInput>
+    where?: DesignGenerationWhereInput
+  }
+
+  export type DesignGenerationUpdateToOneWithWhereWithoutActiveForSitesInput = {
+    where?: DesignGenerationWhereInput
+    data: XOR<DesignGenerationUpdateWithoutActiveForSitesInput, DesignGenerationUncheckedUpdateWithoutActiveForSitesInput>
+  }
+
+  export type DesignGenerationUpdateWithoutActiveForSitesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDesignGenerationsNestedInput
+    site?: EditorWebsiteUpdateOneWithoutDesignGenerationsNestedInput
+    siteCreationAttempt?: AiGenerationJobUpdateOneWithoutDesignGenerationNestedInput
+  }
+
+  export type DesignGenerationUncheckedUpdateWithoutActiveForSitesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    siteCreationAttemptId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type AutomationUpsertWithWhereUniqueWithoutSiteInput = {
     where: AutomationWhereUniqueInput
     update: XOR<AutomationUpdateWithoutSiteInput, AutomationUncheckedUpdateWithoutSiteInput>
@@ -30991,6 +35297,8 @@ export namespace Prisma {
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -31001,6 +35309,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     theme?: SiteThemeUncheckedCreateNestedOneWithoutSiteInput
@@ -31010,6 +35319,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -31045,6 +35355,8 @@ export namespace Prisma {
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -31055,6 +35367,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     theme?: SiteThemeUncheckedUpdateOneWithoutSiteNestedInput
@@ -31064,6 +35377,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
@@ -31083,6 +35397,8 @@ export namespace Prisma {
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -31093,6 +35409,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -31102,6 +35419,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -31137,6 +35455,8 @@ export namespace Prisma {
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -31147,6 +35467,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -31156,6 +35477,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
@@ -31175,6 +35497,8 @@ export namespace Prisma {
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -31185,6 +35509,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -31194,6 +35519,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -31265,6 +35591,8 @@ export namespace Prisma {
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -31275,6 +35603,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -31284,6 +35613,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
@@ -31408,6 +35738,8 @@ export namespace Prisma {
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -31418,6 +35750,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -31427,6 +35760,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -31462,6 +35796,8 @@ export namespace Prisma {
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -31472,6 +35808,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -31481,6 +35818,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
@@ -31500,6 +35838,8 @@ export namespace Prisma {
     orders?: OrderCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -31510,6 +35850,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -31519,6 +35860,7 @@ export namespace Prisma {
     orders?: OrderUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -31584,6 +35926,8 @@ export namespace Prisma {
     orders?: OrderUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -31594,6 +35938,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -31603,6 +35948,7 @@ export namespace Prisma {
     orders?: OrderUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
@@ -31712,6 +36058,8 @@ export namespace Prisma {
     orders?: OrderCreateNestedManyWithoutSiteInput
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -31722,6 +36070,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -31731,6 +36080,7 @@ export namespace Prisma {
     orders?: OrderUncheckedCreateNestedManyWithoutSiteInput
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -31766,6 +36116,8 @@ export namespace Prisma {
     orders?: OrderUpdateManyWithoutSiteNestedInput
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -31776,6 +36128,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -31785,7 +36138,388 @@ export namespace Prisma {
     orders?: OrderUncheckedUpdateManyWithoutSiteNestedInput
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
+  }
+
+  export type UserCreateWithoutDesignGenerationsInput = {
+    id?: string
+    email: string
+    name?: string | null
+    password: string
+    role?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sites?: EditorWebsiteCreateNestedManyWithoutUserInput
+    subscription?: SubscriptionCreateNestedOneWithoutUserInput
+    subscriptionHistory?: SubscriptionHistoryCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutDesignGenerationsInput = {
+    id?: string
+    email: string
+    name?: string | null
+    password: string
+    role?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sites?: EditorWebsiteUncheckedCreateNestedManyWithoutUserInput
+    subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
+    subscriptionHistory?: SubscriptionHistoryUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutDesignGenerationsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutDesignGenerationsInput, UserUncheckedCreateWithoutDesignGenerationsInput>
+  }
+
+  export type EditorWebsiteCreateWithoutDesignGenerationsInput = {
+    id: string
+    name: string
+    description?: string
+    tree: JsonNullValueInput | InputJsonValue
+    published?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user?: UserCreateNestedOneWithoutSitesInput
+    pages?: SitePageCreateNestedManyWithoutSiteInput
+    theme?: SiteThemeCreateNestedOneWithoutSiteInput
+    collections?: CollectionCreateNestedManyWithoutSiteInput
+    products?: ProductCreateNestedManyWithoutSiteInput
+    orders?: OrderCreateNestedManyWithoutSiteInput
+    funnels?: FunnelCreateNestedManyWithoutSiteInput
+    experiments?: ExperimentCreateNestedManyWithoutSiteInput
+    aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
+    automations?: AutomationCreateNestedManyWithoutSiteInput
+  }
+
+  export type EditorWebsiteUncheckedCreateWithoutDesignGenerationsInput = {
+    id: string
+    name: string
+    description?: string
+    tree: JsonNullValueInput | InputJsonValue
+    published?: boolean
+    userId?: string | null
+    activeDesignGenerationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
+    theme?: SiteThemeUncheckedCreateNestedOneWithoutSiteInput
+    collections?: CollectionUncheckedCreateNestedManyWithoutSiteInput
+    products?: ProductUncheckedCreateNestedManyWithoutSiteInput
+    orders?: OrderUncheckedCreateNestedManyWithoutSiteInput
+    funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
+    experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
+    aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
+  }
+
+  export type EditorWebsiteCreateOrConnectWithoutDesignGenerationsInput = {
+    where: EditorWebsiteWhereUniqueInput
+    create: XOR<EditorWebsiteCreateWithoutDesignGenerationsInput, EditorWebsiteUncheckedCreateWithoutDesignGenerationsInput>
+  }
+
+  export type EditorWebsiteCreateWithoutActiveDesignGenerationInput = {
+    id: string
+    name: string
+    description?: string
+    tree: JsonNullValueInput | InputJsonValue
+    published?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user?: UserCreateNestedOneWithoutSitesInput
+    pages?: SitePageCreateNestedManyWithoutSiteInput
+    theme?: SiteThemeCreateNestedOneWithoutSiteInput
+    collections?: CollectionCreateNestedManyWithoutSiteInput
+    products?: ProductCreateNestedManyWithoutSiteInput
+    orders?: OrderCreateNestedManyWithoutSiteInput
+    funnels?: FunnelCreateNestedManyWithoutSiteInput
+    experiments?: ExperimentCreateNestedManyWithoutSiteInput
+    aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    automations?: AutomationCreateNestedManyWithoutSiteInput
+  }
+
+  export type EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput = {
+    id: string
+    name: string
+    description?: string
+    tree: JsonNullValueInput | InputJsonValue
+    published?: boolean
+    userId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
+    theme?: SiteThemeUncheckedCreateNestedOneWithoutSiteInput
+    collections?: CollectionUncheckedCreateNestedManyWithoutSiteInput
+    products?: ProductUncheckedCreateNestedManyWithoutSiteInput
+    orders?: OrderUncheckedCreateNestedManyWithoutSiteInput
+    funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
+    experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
+    aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
+    automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
+  }
+
+  export type EditorWebsiteCreateOrConnectWithoutActiveDesignGenerationInput = {
+    where: EditorWebsiteWhereUniqueInput
+    create: XOR<EditorWebsiteCreateWithoutActiveDesignGenerationInput, EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput>
+  }
+
+  export type EditorWebsiteCreateManyActiveDesignGenerationInputEnvelope = {
+    data: EditorWebsiteCreateManyActiveDesignGenerationInput | EditorWebsiteCreateManyActiveDesignGenerationInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type AiGenerationJobCreateWithoutDesignGenerationInput = {
+    id?: string
+    pageId?: string | null
+    type: string
+    input: JsonNullValueInput | InputJsonValue
+    output?: NullableJsonNullValueInput | InputJsonValue
+    status?: string
+    error?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    site?: EditorWebsiteCreateNestedOneWithoutAiGenerationJobsInput
+    designAssistances?: DesignAssistanceCreateNestedManyWithoutSiteCreationAttemptInput
+  }
+
+  export type AiGenerationJobUncheckedCreateWithoutDesignGenerationInput = {
+    id?: string
+    siteId?: string | null
+    pageId?: string | null
+    type: string
+    input: JsonNullValueInput | InputJsonValue
+    output?: NullableJsonNullValueInput | InputJsonValue
+    status?: string
+    error?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    designAssistances?: DesignAssistanceUncheckedCreateNestedManyWithoutSiteCreationAttemptInput
+  }
+
+  export type AiGenerationJobCreateOrConnectWithoutDesignGenerationInput = {
+    where: AiGenerationJobWhereUniqueInput
+    create: XOR<AiGenerationJobCreateWithoutDesignGenerationInput, AiGenerationJobUncheckedCreateWithoutDesignGenerationInput>
+  }
+
+  export type UserUpsertWithoutDesignGenerationsInput = {
+    update: XOR<UserUpdateWithoutDesignGenerationsInput, UserUncheckedUpdateWithoutDesignGenerationsInput>
+    create: XOR<UserCreateWithoutDesignGenerationsInput, UserUncheckedCreateWithoutDesignGenerationsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutDesignGenerationsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutDesignGenerationsInput, UserUncheckedUpdateWithoutDesignGenerationsInput>
+  }
+
+  export type UserUpdateWithoutDesignGenerationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    password?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sites?: EditorWebsiteUpdateManyWithoutUserNestedInput
+    subscription?: SubscriptionUpdateOneWithoutUserNestedInput
+    subscriptionHistory?: SubscriptionHistoryUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutDesignGenerationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    password?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sites?: EditorWebsiteUncheckedUpdateManyWithoutUserNestedInput
+    subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
+    subscriptionHistory?: SubscriptionHistoryUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type EditorWebsiteUpsertWithoutDesignGenerationsInput = {
+    update: XOR<EditorWebsiteUpdateWithoutDesignGenerationsInput, EditorWebsiteUncheckedUpdateWithoutDesignGenerationsInput>
+    create: XOR<EditorWebsiteCreateWithoutDesignGenerationsInput, EditorWebsiteUncheckedCreateWithoutDesignGenerationsInput>
+    where?: EditorWebsiteWhereInput
+  }
+
+  export type EditorWebsiteUpdateToOneWithWhereWithoutDesignGenerationsInput = {
+    where?: EditorWebsiteWhereInput
+    data: XOR<EditorWebsiteUpdateWithoutDesignGenerationsInput, EditorWebsiteUncheckedUpdateWithoutDesignGenerationsInput>
+  }
+
+  export type EditorWebsiteUpdateWithoutDesignGenerationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    tree?: JsonNullValueInput | InputJsonValue
+    published?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneWithoutSitesNestedInput
+    pages?: SitePageUpdateManyWithoutSiteNestedInput
+    theme?: SiteThemeUpdateOneWithoutSiteNestedInput
+    collections?: CollectionUpdateManyWithoutSiteNestedInput
+    products?: ProductUpdateManyWithoutSiteNestedInput
+    orders?: OrderUpdateManyWithoutSiteNestedInput
+    funnels?: FunnelUpdateManyWithoutSiteNestedInput
+    experiments?: ExperimentUpdateManyWithoutSiteNestedInput
+    aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
+    automations?: AutomationUpdateManyWithoutSiteNestedInput
+  }
+
+  export type EditorWebsiteUncheckedUpdateWithoutDesignGenerationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    tree?: JsonNullValueInput | InputJsonValue
+    published?: BoolFieldUpdateOperationsInput | boolean
+    userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
+    theme?: SiteThemeUncheckedUpdateOneWithoutSiteNestedInput
+    collections?: CollectionUncheckedUpdateManyWithoutSiteNestedInput
+    products?: ProductUncheckedUpdateManyWithoutSiteNestedInput
+    orders?: OrderUncheckedUpdateManyWithoutSiteNestedInput
+    funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
+    experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
+    aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
+  }
+
+  export type EditorWebsiteUpsertWithWhereUniqueWithoutActiveDesignGenerationInput = {
+    where: EditorWebsiteWhereUniqueInput
+    update: XOR<EditorWebsiteUpdateWithoutActiveDesignGenerationInput, EditorWebsiteUncheckedUpdateWithoutActiveDesignGenerationInput>
+    create: XOR<EditorWebsiteCreateWithoutActiveDesignGenerationInput, EditorWebsiteUncheckedCreateWithoutActiveDesignGenerationInput>
+  }
+
+  export type EditorWebsiteUpdateWithWhereUniqueWithoutActiveDesignGenerationInput = {
+    where: EditorWebsiteWhereUniqueInput
+    data: XOR<EditorWebsiteUpdateWithoutActiveDesignGenerationInput, EditorWebsiteUncheckedUpdateWithoutActiveDesignGenerationInput>
+  }
+
+  export type EditorWebsiteUpdateManyWithWhereWithoutActiveDesignGenerationInput = {
+    where: EditorWebsiteScalarWhereInput
+    data: XOR<EditorWebsiteUpdateManyMutationInput, EditorWebsiteUncheckedUpdateManyWithoutActiveDesignGenerationInput>
+  }
+
+  export type AiGenerationJobUpsertWithoutDesignGenerationInput = {
+    update: XOR<AiGenerationJobUpdateWithoutDesignGenerationInput, AiGenerationJobUncheckedUpdateWithoutDesignGenerationInput>
+    create: XOR<AiGenerationJobCreateWithoutDesignGenerationInput, AiGenerationJobUncheckedCreateWithoutDesignGenerationInput>
+    where?: AiGenerationJobWhereInput
+  }
+
+  export type AiGenerationJobUpdateToOneWithWhereWithoutDesignGenerationInput = {
+    where?: AiGenerationJobWhereInput
+    data: XOR<AiGenerationJobUpdateWithoutDesignGenerationInput, AiGenerationJobUncheckedUpdateWithoutDesignGenerationInput>
+  }
+
+  export type AiGenerationJobUpdateWithoutDesignGenerationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    pageId?: NullableStringFieldUpdateOperationsInput | string | null
+    type?: StringFieldUpdateOperationsInput | string
+    input?: JsonNullValueInput | InputJsonValue
+    output?: NullableJsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    site?: EditorWebsiteUpdateOneWithoutAiGenerationJobsNestedInput
+    designAssistances?: DesignAssistanceUpdateManyWithoutSiteCreationAttemptNestedInput
+  }
+
+  export type AiGenerationJobUncheckedUpdateWithoutDesignGenerationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    pageId?: NullableStringFieldUpdateOperationsInput | string | null
+    type?: StringFieldUpdateOperationsInput | string
+    input?: JsonNullValueInput | InputJsonValue
+    output?: NullableJsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    designAssistances?: DesignAssistanceUncheckedUpdateManyWithoutSiteCreationAttemptNestedInput
+  }
+
+  export type AiGenerationJobCreateWithoutDesignAssistancesInput = {
+    id?: string
+    pageId?: string | null
+    type: string
+    input: JsonNullValueInput | InputJsonValue
+    output?: NullableJsonNullValueInput | InputJsonValue
+    status?: string
+    error?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    site?: EditorWebsiteCreateNestedOneWithoutAiGenerationJobsInput
+    designGeneration?: DesignGenerationCreateNestedOneWithoutSiteCreationAttemptInput
+  }
+
+  export type AiGenerationJobUncheckedCreateWithoutDesignAssistancesInput = {
+    id?: string
+    siteId?: string | null
+    pageId?: string | null
+    type: string
+    input: JsonNullValueInput | InputJsonValue
+    output?: NullableJsonNullValueInput | InputJsonValue
+    status?: string
+    error?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    designGeneration?: DesignGenerationUncheckedCreateNestedOneWithoutSiteCreationAttemptInput
+  }
+
+  export type AiGenerationJobCreateOrConnectWithoutDesignAssistancesInput = {
+    where: AiGenerationJobWhereUniqueInput
+    create: XOR<AiGenerationJobCreateWithoutDesignAssistancesInput, AiGenerationJobUncheckedCreateWithoutDesignAssistancesInput>
+  }
+
+  export type AiGenerationJobUpsertWithoutDesignAssistancesInput = {
+    update: XOR<AiGenerationJobUpdateWithoutDesignAssistancesInput, AiGenerationJobUncheckedUpdateWithoutDesignAssistancesInput>
+    create: XOR<AiGenerationJobCreateWithoutDesignAssistancesInput, AiGenerationJobUncheckedCreateWithoutDesignAssistancesInput>
+    where?: AiGenerationJobWhereInput
+  }
+
+  export type AiGenerationJobUpdateToOneWithWhereWithoutDesignAssistancesInput = {
+    where?: AiGenerationJobWhereInput
+    data: XOR<AiGenerationJobUpdateWithoutDesignAssistancesInput, AiGenerationJobUncheckedUpdateWithoutDesignAssistancesInput>
+  }
+
+  export type AiGenerationJobUpdateWithoutDesignAssistancesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    pageId?: NullableStringFieldUpdateOperationsInput | string | null
+    type?: StringFieldUpdateOperationsInput | string
+    input?: JsonNullValueInput | InputJsonValue
+    output?: NullableJsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    site?: EditorWebsiteUpdateOneWithoutAiGenerationJobsNestedInput
+    designGeneration?: DesignGenerationUpdateOneWithoutSiteCreationAttemptNestedInput
+  }
+
+  export type AiGenerationJobUncheckedUpdateWithoutDesignAssistancesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    pageId?: NullableStringFieldUpdateOperationsInput | string | null
+    type?: StringFieldUpdateOperationsInput | string
+    input?: JsonNullValueInput | InputJsonValue
+    output?: NullableJsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    designGeneration?: DesignGenerationUncheckedUpdateOneWithoutSiteCreationAttemptNestedInput
   }
 
   export type EditorWebsiteCreateWithoutAiGenerationJobsInput = {
@@ -31804,6 +36538,8 @@ export namespace Prisma {
     orders?: OrderCreateNestedManyWithoutSiteInput
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -31814,6 +36550,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -31823,12 +36560,118 @@ export namespace Prisma {
     orders?: OrderUncheckedCreateNestedManyWithoutSiteInput
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
   export type EditorWebsiteCreateOrConnectWithoutAiGenerationJobsInput = {
     where: EditorWebsiteWhereUniqueInput
     create: XOR<EditorWebsiteCreateWithoutAiGenerationJobsInput, EditorWebsiteUncheckedCreateWithoutAiGenerationJobsInput>
+  }
+
+  export type DesignAssistanceCreateWithoutSiteCreationAttemptInput = {
+    id?: string
+    version?: number
+    roleKey: string
+    strategyKey: string
+    providerKey: string
+    modelKey: string
+    status: string
+    inputFingerprint: string
+    attemptKey: string
+    outputFingerprint?: string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: string | null
+    requestedAt?: Date | string
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput = {
+    id?: string
+    version?: number
+    roleKey: string
+    strategyKey: string
+    providerKey: string
+    modelKey: string
+    status: string
+    inputFingerprint: string
+    attemptKey: string
+    outputFingerprint?: string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: string | null
+    requestedAt?: Date | string
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DesignAssistanceCreateOrConnectWithoutSiteCreationAttemptInput = {
+    where: DesignAssistanceWhereUniqueInput
+    create: XOR<DesignAssistanceCreateWithoutSiteCreationAttemptInput, DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput>
+  }
+
+  export type DesignAssistanceCreateManySiteCreationAttemptInputEnvelope = {
+    data: DesignAssistanceCreateManySiteCreationAttemptInput | DesignAssistanceCreateManySiteCreationAttemptInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DesignGenerationCreateWithoutSiteCreationAttemptInput = {
+    id?: string
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDesignGenerationsInput
+    site?: EditorWebsiteCreateNestedOneWithoutDesignGenerationsInput
+    activeForSites?: EditorWebsiteCreateNestedManyWithoutActiveDesignGenerationInput
+  }
+
+  export type DesignGenerationUncheckedCreateWithoutSiteCreationAttemptInput = {
+    id?: string
+    userId: string
+    siteId?: string | null
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    activeForSites?: EditorWebsiteUncheckedCreateNestedManyWithoutActiveDesignGenerationInput
+  }
+
+  export type DesignGenerationCreateOrConnectWithoutSiteCreationAttemptInput = {
+    where: DesignGenerationWhereUniqueInput
+    create: XOR<DesignGenerationCreateWithoutSiteCreationAttemptInput, DesignGenerationUncheckedCreateWithoutSiteCreationAttemptInput>
   }
 
   export type EditorWebsiteUpsertWithoutAiGenerationJobsInput = {
@@ -31858,6 +36701,8 @@ export namespace Prisma {
     orders?: OrderUpdateManyWithoutSiteNestedInput
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -31868,6 +36713,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -31877,7 +36723,110 @@ export namespace Prisma {
     orders?: OrderUncheckedUpdateManyWithoutSiteNestedInput
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
+  }
+
+  export type DesignAssistanceUpsertWithWhereUniqueWithoutSiteCreationAttemptInput = {
+    where: DesignAssistanceWhereUniqueInput
+    update: XOR<DesignAssistanceUpdateWithoutSiteCreationAttemptInput, DesignAssistanceUncheckedUpdateWithoutSiteCreationAttemptInput>
+    create: XOR<DesignAssistanceCreateWithoutSiteCreationAttemptInput, DesignAssistanceUncheckedCreateWithoutSiteCreationAttemptInput>
+  }
+
+  export type DesignAssistanceUpdateWithWhereUniqueWithoutSiteCreationAttemptInput = {
+    where: DesignAssistanceWhereUniqueInput
+    data: XOR<DesignAssistanceUpdateWithoutSiteCreationAttemptInput, DesignAssistanceUncheckedUpdateWithoutSiteCreationAttemptInput>
+  }
+
+  export type DesignAssistanceUpdateManyWithWhereWithoutSiteCreationAttemptInput = {
+    where: DesignAssistanceScalarWhereInput
+    data: XOR<DesignAssistanceUpdateManyMutationInput, DesignAssistanceUncheckedUpdateManyWithoutSiteCreationAttemptInput>
+  }
+
+  export type DesignAssistanceScalarWhereInput = {
+    AND?: DesignAssistanceScalarWhereInput | DesignAssistanceScalarWhereInput[]
+    OR?: DesignAssistanceScalarWhereInput[]
+    NOT?: DesignAssistanceScalarWhereInput | DesignAssistanceScalarWhereInput[]
+    id?: StringFilter<"DesignAssistance"> | string
+    siteCreationAttemptId?: StringFilter<"DesignAssistance"> | string
+    version?: IntFilter<"DesignAssistance"> | number
+    roleKey?: StringFilter<"DesignAssistance"> | string
+    strategyKey?: StringFilter<"DesignAssistance"> | string
+    providerKey?: StringFilter<"DesignAssistance"> | string
+    modelKey?: StringFilter<"DesignAssistance"> | string
+    status?: StringFilter<"DesignAssistance"> | string
+    inputFingerprint?: StringFilter<"DesignAssistance"> | string
+    attemptKey?: StringFilter<"DesignAssistance"> | string
+    outputFingerprint?: StringNullableFilter<"DesignAssistance"> | string | null
+    appliedProposal?: JsonNullableFilter<"DesignAssistance">
+    failureCode?: StringNullableFilter<"DesignAssistance"> | string | null
+    requestedAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+    completedAt?: DateTimeNullableFilter<"DesignAssistance"> | Date | string | null
+    createdAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+    updatedAt?: DateTimeFilter<"DesignAssistance"> | Date | string
+  }
+
+  export type DesignGenerationUpsertWithoutSiteCreationAttemptInput = {
+    update: XOR<DesignGenerationUpdateWithoutSiteCreationAttemptInput, DesignGenerationUncheckedUpdateWithoutSiteCreationAttemptInput>
+    create: XOR<DesignGenerationCreateWithoutSiteCreationAttemptInput, DesignGenerationUncheckedCreateWithoutSiteCreationAttemptInput>
+    where?: DesignGenerationWhereInput
+  }
+
+  export type DesignGenerationUpdateToOneWithWhereWithoutSiteCreationAttemptInput = {
+    where?: DesignGenerationWhereInput
+    data: XOR<DesignGenerationUpdateWithoutSiteCreationAttemptInput, DesignGenerationUncheckedUpdateWithoutSiteCreationAttemptInput>
+  }
+
+  export type DesignGenerationUpdateWithoutSiteCreationAttemptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDesignGenerationsNestedInput
+    site?: EditorWebsiteUpdateOneWithoutDesignGenerationsNestedInput
+    activeForSites?: EditorWebsiteUpdateManyWithoutActiveDesignGenerationNestedInput
+  }
+
+  export type DesignGenerationUncheckedUpdateWithoutSiteCreationAttemptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    activeForSites?: EditorWebsiteUncheckedUpdateManyWithoutActiveDesignGenerationNestedInput
   }
 
   export type EditorWebsiteCreateWithoutAutomationsInput = {
@@ -31897,6 +36846,8 @@ export namespace Prisma {
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
   }
 
   export type EditorWebsiteUncheckedCreateWithoutAutomationsInput = {
@@ -31906,6 +36857,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -31916,6 +36868,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
   }
 
   export type EditorWebsiteCreateOrConnectWithoutAutomationsInput = {
@@ -31951,6 +36904,8 @@ export namespace Prisma {
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
   }
 
   export type EditorWebsiteUncheckedUpdateWithoutAutomationsInput = {
@@ -31960,6 +36915,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -31970,6 +36926,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
   export type EditorWebsiteCreateWithoutCollectionsInput = {
@@ -31988,6 +36945,8 @@ export namespace Prisma {
     funnels?: FunnelCreateNestedManyWithoutSiteInput
     experiments?: ExperimentCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutSiteInput
+    activeDesignGeneration?: DesignGenerationCreateNestedOneWithoutActiveForSitesInput
     automations?: AutomationCreateNestedManyWithoutSiteInput
   }
 
@@ -31998,6 +36957,7 @@ export namespace Prisma {
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
     userId?: string | null
+    activeDesignGenerationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pages?: SitePageUncheckedCreateNestedManyWithoutSiteInput
@@ -32007,6 +36967,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedCreateNestedManyWithoutSiteInput
     experiments?: ExperimentUncheckedCreateNestedManyWithoutSiteInput
     aiGenerationJobs?: AiGenerationJobUncheckedCreateNestedManyWithoutSiteInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutSiteInput
     automations?: AutomationUncheckedCreateNestedManyWithoutSiteInput
   }
 
@@ -32068,6 +37029,8 @@ export namespace Prisma {
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -32078,6 +37041,7 @@ export namespace Prisma {
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
     userId?: NullableStringFieldUpdateOperationsInput | string | null
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -32087,6 +37051,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
@@ -32230,6 +37195,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     sites?: EditorWebsiteCreateNestedManyWithoutUserInput
+    designGenerations?: DesignGenerationCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
   }
 
@@ -32242,6 +37208,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     sites?: EditorWebsiteUncheckedCreateNestedManyWithoutUserInput
+    designGenerations?: DesignGenerationUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
   }
 
@@ -32323,6 +37290,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sites?: EditorWebsiteUpdateManyWithoutUserNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
   }
 
@@ -32335,6 +37303,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sites?: EditorWebsiteUncheckedUpdateManyWithoutUserNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
   }
 
@@ -32344,6 +37313,32 @@ export namespace Prisma {
     description?: string
     tree: JsonNullValueInput | InputJsonValue
     published?: boolean
+    activeDesignGenerationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DesignGenerationCreateManyUserInput = {
+    id?: string
+    siteId?: string | null
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    siteCreationAttemptId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -32379,6 +37374,8 @@ export namespace Prisma {
     funnels?: FunnelUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    activeDesignGeneration?: DesignGenerationUpdateOneWithoutActiveForSitesNestedInput
     automations?: AutomationUpdateManyWithoutSiteNestedInput
   }
 
@@ -32388,6 +37385,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
@@ -32398,6 +37396,7 @@ export namespace Prisma {
     funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
     experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
     aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
     automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
   }
 
@@ -32407,6 +37406,84 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     tree?: JsonNullValueInput | InputJsonValue
     published?: BoolFieldUpdateOperationsInput | boolean
+    activeDesignGenerationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignGenerationUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    site?: EditorWebsiteUpdateOneWithoutDesignGenerationsNestedInput
+    activeForSites?: EditorWebsiteUpdateManyWithoutActiveDesignGenerationNestedInput
+    siteCreationAttempt?: AiGenerationJobUpdateOneWithoutDesignGenerationNestedInput
+  }
+
+  export type DesignGenerationUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    siteCreationAttemptId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    activeForSites?: EditorWebsiteUncheckedUpdateManyWithoutActiveDesignGenerationNestedInput
+  }
+
+  export type DesignGenerationUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    siteCreationAttemptId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -32679,6 +37756,31 @@ export namespace Prisma {
     updatedAt?: Date | string
   }
 
+  export type DesignGenerationCreateManySiteInput = {
+    id?: string
+    userId: string
+    request: string
+    industry?: string | null
+    siteType?: string | null
+    objective?: string | null
+    requestedStyle?: string | null
+    initialPlan: JsonNullValueInput | InputJsonValue
+    initialPlanHash: string
+    status?: string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: number | null
+    measuredAt?: Date | string | null
+    patternVersion?: number | null
+    patternHash?: string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: number | null
+    outcomeScore?: number | null
+    outcomeQualifiedAt?: Date | string | null
+    siteCreationAttemptId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
   export type AutomationCreateManySiteInput = {
     id?: string
     name: string
@@ -32912,6 +38014,8 @@ export namespace Prisma {
     error?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    designAssistances?: DesignAssistanceUpdateManyWithoutSiteCreationAttemptNestedInput
+    designGeneration?: DesignGenerationUpdateOneWithoutSiteCreationAttemptNestedInput
   }
 
   export type AiGenerationJobUncheckedUpdateWithoutSiteInput = {
@@ -32924,6 +38028,8 @@ export namespace Prisma {
     error?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    designAssistances?: DesignAssistanceUncheckedUpdateManyWithoutSiteCreationAttemptNestedInput
+    designGeneration?: DesignGenerationUncheckedUpdateOneWithoutSiteCreationAttemptNestedInput
   }
 
   export type AiGenerationJobUncheckedUpdateManyWithoutSiteInput = {
@@ -32934,6 +38040,83 @@ export namespace Prisma {
     output?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     error?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignGenerationUpdateWithoutSiteInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDesignGenerationsNestedInput
+    activeForSites?: EditorWebsiteUpdateManyWithoutActiveDesignGenerationNestedInput
+    siteCreationAttempt?: AiGenerationJobUpdateOneWithoutDesignGenerationNestedInput
+  }
+
+  export type DesignGenerationUncheckedUpdateWithoutSiteInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    siteCreationAttemptId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    activeForSites?: EditorWebsiteUncheckedUpdateManyWithoutActiveDesignGenerationNestedInput
+  }
+
+  export type DesignGenerationUncheckedUpdateManyWithoutSiteInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    request?: StringFieldUpdateOperationsInput | string
+    industry?: NullableStringFieldUpdateOperationsInput | string | null
+    siteType?: NullableStringFieldUpdateOperationsInput | string | null
+    objective?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedStyle?: NullableStringFieldUpdateOperationsInput | string | null
+    initialPlan?: JsonNullValueInput | InputJsonValue
+    initialPlanHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    editMetrics?: NullableJsonNullValueInput | InputJsonValue
+    editDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    measuredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    patternVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    patternHash?: NullableStringFieldUpdateOperationsInput | string | null
+    patternKey?: NullableJsonNullValueInput | InputJsonValue
+    outcomeVersion?: NullableIntFieldUpdateOperationsInput | number | null
+    outcomeScore?: NullableFloatFieldUpdateOperationsInput | number | null
+    outcomeQualifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    siteCreationAttemptId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -33056,6 +38239,146 @@ export namespace Prisma {
     kind?: StringFieldUpdateOperationsInput | string
     position?: IntFieldUpdateOperationsInput | number
     settings?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type EditorWebsiteCreateManyActiveDesignGenerationInput = {
+    id: string
+    name: string
+    description?: string
+    tree: JsonNullValueInput | InputJsonValue
+    published?: boolean
+    userId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type EditorWebsiteUpdateWithoutActiveDesignGenerationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    tree?: JsonNullValueInput | InputJsonValue
+    published?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneWithoutSitesNestedInput
+    pages?: SitePageUpdateManyWithoutSiteNestedInput
+    theme?: SiteThemeUpdateOneWithoutSiteNestedInput
+    collections?: CollectionUpdateManyWithoutSiteNestedInput
+    products?: ProductUpdateManyWithoutSiteNestedInput
+    orders?: OrderUpdateManyWithoutSiteNestedInput
+    funnels?: FunnelUpdateManyWithoutSiteNestedInput
+    experiments?: ExperimentUpdateManyWithoutSiteNestedInput
+    aiGenerationJobs?: AiGenerationJobUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUpdateManyWithoutSiteNestedInput
+    automations?: AutomationUpdateManyWithoutSiteNestedInput
+  }
+
+  export type EditorWebsiteUncheckedUpdateWithoutActiveDesignGenerationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    tree?: JsonNullValueInput | InputJsonValue
+    published?: BoolFieldUpdateOperationsInput | boolean
+    userId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    pages?: SitePageUncheckedUpdateManyWithoutSiteNestedInput
+    theme?: SiteThemeUncheckedUpdateOneWithoutSiteNestedInput
+    collections?: CollectionUncheckedUpdateManyWithoutSiteNestedInput
+    products?: ProductUncheckedUpdateManyWithoutSiteNestedInput
+    orders?: OrderUncheckedUpdateManyWithoutSiteNestedInput
+    funnels?: FunnelUncheckedUpdateManyWithoutSiteNestedInput
+    experiments?: ExperimentUncheckedUpdateManyWithoutSiteNestedInput
+    aiGenerationJobs?: AiGenerationJobUncheckedUpdateManyWithoutSiteNestedInput
+    designGenerations?: DesignGenerationUncheckedUpdateManyWithoutSiteNestedInput
+    automations?: AutomationUncheckedUpdateManyWithoutSiteNestedInput
+  }
+
+  export type EditorWebsiteUncheckedUpdateManyWithoutActiveDesignGenerationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    tree?: JsonNullValueInput | InputJsonValue
+    published?: BoolFieldUpdateOperationsInput | boolean
+    userId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignAssistanceCreateManySiteCreationAttemptInput = {
+    id?: string
+    version?: number
+    roleKey: string
+    strategyKey: string
+    providerKey: string
+    modelKey: string
+    status: string
+    inputFingerprint: string
+    attemptKey: string
+    outputFingerprint?: string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: string | null
+    requestedAt?: Date | string
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DesignAssistanceUpdateWithoutSiteCreationAttemptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    version?: IntFieldUpdateOperationsInput | number
+    roleKey?: StringFieldUpdateOperationsInput | string
+    strategyKey?: StringFieldUpdateOperationsInput | string
+    providerKey?: StringFieldUpdateOperationsInput | string
+    modelKey?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    inputFingerprint?: StringFieldUpdateOperationsInput | string
+    attemptKey?: StringFieldUpdateOperationsInput | string
+    outputFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignAssistanceUncheckedUpdateWithoutSiteCreationAttemptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    version?: IntFieldUpdateOperationsInput | number
+    roleKey?: StringFieldUpdateOperationsInput | string
+    strategyKey?: StringFieldUpdateOperationsInput | string
+    providerKey?: StringFieldUpdateOperationsInput | string
+    modelKey?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    inputFingerprint?: StringFieldUpdateOperationsInput | string
+    attemptKey?: StringFieldUpdateOperationsInput | string
+    outputFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DesignAssistanceUncheckedUpdateManyWithoutSiteCreationAttemptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    version?: IntFieldUpdateOperationsInput | number
+    roleKey?: StringFieldUpdateOperationsInput | string
+    strategyKey?: StringFieldUpdateOperationsInput | string
+    providerKey?: StringFieldUpdateOperationsInput | string
+    modelKey?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    inputFingerprint?: StringFieldUpdateOperationsInput | string
+    attemptKey?: StringFieldUpdateOperationsInput | string
+    outputFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedProposal?: NullableJsonNullValueInput | InputJsonValue
+    failureCode?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

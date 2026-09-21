@@ -9,52 +9,104 @@ function businessName(context: BusinessContentContext) {
   return context.name?.trim() || "Tu negocio"
 }
 
-function locationText(context: BusinessContentContext) {
-  return context.location?.trim()
-    ? ` en ${context.location.trim()}`
-    : ""
-}
 
 function industryText(context: BusinessContentContext) {
   return context.industry?.trim() || "servicios profesionales"
 }
 
-function heroCopy(context: BusinessContentContext) {
+function stripDiacritics(value: string): string {
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "")
+}
+
+/**
+ * Builds " en {location}" the way callers below already expect, EXCEPT it
+ * deterministically suppresses itself when `location` is already present
+ * inside `name` (case/diacritic-insensitive) -- eg. businessName "Centro de
+ * Fisioterapia Monterrey" + location "Monterrey" must not become "...
+ * Monterrey en Monterrey". This one guard protects every branch that
+ * concatenates name + locationPhrase.
+ */
+function buildLocationPhrase(name: string, location?: string): string {
+  const trimmedLocation = location?.trim()
+  if (!trimmedLocation) return ""
+
+  const normalizedName = stripDiacritics(name).toLowerCase()
+  const normalizedLocation = stripDiacritics(trimmedLocation).toLowerCase()
+
+  if (normalizedName.includes(normalizedLocation)) return ""
+
+  return ` en ${trimmedLocation}`
+}
+
+function catalogPageHeroCopy(
+  language: ReturnType<typeof getBusinessLanguage>,
+  name?: string,
+) {
+  return {
+    eyebrow: name?.trim() || "Servicios",
+    title:
+      `Conoce nuestros ${language.servicePlural}`,
+    description:
+      `Encuentra información clara sobre las opciones disponibles y elige la que mejor se adapte a lo que necesitas.`,
+    primaryCtaLabel: language.primaryAction,
+    secondaryCtaLabel: "Volver al inicio",
+  }
+}
+
+function conversionPageHeroCopy(
+  name: string,
+  locationPhrase: string,
+  language: ReturnType<typeof getBusinessLanguage>,
+  objective?: string,
+) {
+  const trimmedObjective = objective?.trim()
+
+  return {
+    eyebrow: "Contacto",
+    title:
+      "Estamos aquí para ayudarte a dar el siguiente paso",
+    description: trimmedObjective
+      ? `Comunícate con ${name}${locationPhrase} para ${trimmedObjective.toLowerCase()}.`
+      : `Comunícate con ${name}${locationPhrase} para resolver dudas, solicitar información o comenzar.`,
+    primaryCtaLabel: language.primaryAction,
+    secondaryCtaLabel: "Ver servicios",
+  }
+}
+
+export function getPageAwareHeroCopy(context: BusinessContentContext) {
   const language = getBusinessLanguage(context)
   const name = businessName(context)
   const location = context.location?.trim()
-  const slug = context.page?.slug ?? "home"
+  const archetype = context.page?.archetype
 
-  const locationPhrase =
-    location ? ` en ${location}` : ""
+  const locationPhrase = buildLocationPhrase(name, location)
 
   /*
-   * PAGE: SERVICIOS
+   * PAGE ARCHETYPE (authoritative). The active multipage composer always
+   * sets this, and it always wins over slug-based inference below.
    */
-  if (slug === "servicios") {
-    return {
-      eyebrow: "Servicios",
-      title:
-        `Conoce nuestros ${language.servicePlural}`,
-      description:
-        `Encuentra información clara sobre las opciones disponibles y elige la que mejor se adapte a lo que necesitas.`,
-      primaryCtaLabel: language.primaryAction,
-      secondaryCtaLabel: "Volver al inicio",
-    }
+  if (archetype === "catalog") {
+    return catalogPageHeroCopy(language, context.name)
   }
 
-  /*
-   * PAGE: CONTACTO
-   */
-  if (slug === "contacto") {
-    return {
-      eyebrow: "Contacto",
-      title:
-        "Estamos aquí para ayudarte a dar el siguiente paso",
-      description:
-        `Comunícate con ${name}${locationPhrase} para resolver dudas, solicitar información o comenzar.`,
-      primaryCtaLabel: language.primaryAction,
-      secondaryCtaLabel: "Ver servicios",
+  if (archetype === "conversion") {
+    return conversionPageHeroCopy(name, locationPhrase, language, context.objective)
+  }
+
+  if (!archetype) {
+    /*
+     * LEGACY FALLBACK — backward compatibility only, for callers that
+     * predate PageArchetype (eg. the artisan-template adaptation path).
+     * The multipage composer never hits this branch.
+     */
+    const slug = context.page?.slug ?? "home"
+
+    if (slug === "servicios") {
+      return catalogPageHeroCopy(language, context.name)
+    }
+
+    if (slug === "contacto") {
+      return conversionPageHeroCopy(name, locationPhrase, language, context.objective)
     }
   }
 
@@ -124,7 +176,7 @@ function heroCopy(context: BusinessContentContext) {
       `${name}: una forma más clara de presentar lo que haces`,
     description:
       context.description?.trim() ||
-      `Conoce nuestros ${language.servicePlural} y encuentra una solución pensada para tus necesidades.`,
+      `Conoce nuestros ${language.servicePlural}${locationPhrase} y encuentra una solución pensada para tus necesidades.`,
     primaryCtaLabel: language.primaryAction,
     secondaryCtaLabel: language.secondaryAction,
   }
@@ -134,7 +186,7 @@ function adaptHero(
   props: NodeProps,
   context: BusinessContentContext,
 ): ContentAdaptation {
-  const copy = heroCopy(context)
+  const copy = getPageAwareHeroCopy(context)
 
   return {
     props: {
@@ -215,21 +267,30 @@ function adaptCTA(
   props: NodeProps,
   context: BusinessContentContext,
 ): ContentAdaptation {
-  const copy = heroCopy(context)
+  /*
+   * Ownership: the composer already decided label/href for this button
+   * (page-aware CTA, hero actions, etc). Content adaptation must not
+   * clobber that decision with a generic guess — it only fills a real
+   * gap (href left as the "#" placeholder, eg. composeContact's button)
+   * or adds something it uniquely has: a real configured WhatsApp number.
+   */
+  const isUndecidedHref = props.href === "#" || !props.href
+  const hasRealWhatsapp = typeof context.whatsapp === "string" && context.whatsapp.trim().length > 0
+
+  const href = hasRealWhatsapp
+    ? `https://wa.me/${context.whatsapp}`
+    : isUndecidedHref
+      ? "#contacto"
+      : props.href
 
   return {
     props: {
       ...props,
-      label: copy.primaryCtaLabel,
-      text: copy.primaryCtaLabel,
-      href:
-        context.whatsapp
-          ? `https://wa.me/${context.whatsapp}`
-          : "#contacto",
+      href,
     },
-    notes: [
-      "CTA adaptado al objetivo principal.",
-    ],
+    notes: hasRealWhatsapp
+      ? ["CTA enlazado a WhatsApp real del negocio."]
+      : ["CTA conservado tal como lo definio el composer."],
   }
 }
 

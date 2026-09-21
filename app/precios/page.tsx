@@ -6,7 +6,7 @@ import { FaqAccordion } from '@/components/marketing/sections/FaqAccordion';
 import { CtaSection } from '@/components/marketing/sections/CtaSection';
 import { PricingSection, type PricingPlanView } from '@/components/marketing/home/PricingSection';
 import { REAL_TEMPLATES } from '@/lib/realTemplates';
-import { ArrowRight, CreditCard, CheckCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle } from 'lucide-react';
 import { formatUsd, getOfficialPlan, officialPlanComparison2026, officialPlans2026 } from '@/lib/orvenix-official-2026';
 import { editorPrisma } from '@/lib/editor-db';
 import { getAuthSession } from '@/lib/auth-session';
@@ -303,9 +303,9 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
       <section className="mk-section bg-orvenix-bg">
         <div className="mk-container">
           <SectionHeader
-            tag="¿Suscripción o compra única?"
+            tag="Suscripcion o desarrollo a medida"
             title="Dos formas de tener tu sitio"
-            description="Elige el modelo que mejor se adapta a tu negocio. Ambos incluyen editor visual, soporte y publicación inmediata."
+            description="Elige entre usar la plataforma mensual con catalogo incluido o solicitar un desarrollo personalizado con entrega independiente."
             center
           />
           <div className="mt-10 grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
@@ -316,7 +316,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
                 subtitle: "Desde 15 USD/mes",
                 badge: "Sin pago inicial",
                 badgeColor: "bg-[rgba(0,131,179,0.10)] text-[color:var(--accent-3)] border-[rgba(0,131,179,0.22)]",
-                desc: "Paga mes a mes y ten acceso a plataforma, editor visual, publicacion, hosting administrado y soporte segun el plan elegido.",
+                desc: "Paga mes a mes y accede a la plataforma, el catalogo de diseños segun tu plan, editor visual, publicacion, hosting administrado y soporte.",
                 pros: ["Sin pago inicial grande", "Actualizaciones automáticas", "Soporte incluido", "Cancela con 5 dias de anticipacion"],
                 cta: "Ver planes →",
                 href: "#planes",
@@ -324,14 +324,14 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
               },
               {
                 icon: "💎",
-                title: "Compra o renta un sitio",
-                subtitle: "Cotizacion a medida",
-                badge: "Pago único disponible",
+                title: "Compra definitiva",
+                subtitle: "Desde 799 USD",
+                badge: "Servicio personalizado",
                 badgeColor: "bg-[rgba(0,181,246,0.10)] text-[color:var(--accent)] border-[color:var(--glass-border-hover)]",
-                desc: "Solicita compra definitiva de tu desarrollo para recibir el codigo personalizado y migrarlo o mantenerlo en infraestructura Orvenix.",
-                pros: ["Precio fijo sin sorpresas", "Cesion patrimonial del codigo personalizado", "Templates por industria", "Editable sin código"],
-                cta: "Ver templates →",
-                href: "/templates",
+                desc: "Solicita un desarrollo personalizado con entrega independiente. Es ideal cuando necesitas propiedad del proyecto, alcance especial o una implementacion hecha a medida.",
+                pros: ["Desde 799 USD", "Alcance definido por cotizacion", "Entrega independiente", "Acompanamiento especializado"],
+                cta: "Solicitar cotizacion →",
+                href: "/contacto",
                 primary: true,
               },
             ].map(item => (
@@ -365,14 +365,14 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
       </section>
 
       {/* ──────────────────────────────────────────────────────────────
-          SECCIÓN: Templates disponibles con precios
+          SECCION: Templates incluidos con el plan
       ────────────────────────────────────────────────────────────── */}
       <section className="mk-section-alt">
         <div className="mk-container">
           <SectionHeader
             tag="Catálogo de sitios"
             title="Elige tu sitio por industria"
-            description="Templates profesionales listos para activar. Edita textos, colores e imágenes sin tocar código."
+            description="Diseños profesionales incluidos con tu suscripcion Orvenix. Elige una base por industria y ajusta textos, colores e imagenes sin tocar codigo."
             center
           />
           <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -389,22 +389,16 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
                       <Icon className="h-4 w-4 text-white" />
                     </div>
                   </div>
-                  <div className="flex gap-2 text-center">
-                    <div className="flex-1 rounded-lg bg-white/3 border border-white/6 py-2 px-3">
-                      <p className="text-[10px] text-orvenix-secondary mb-0.5">Compra</p>
-                      <p className="text-sm font-black text-orvenix-text">${t.purchasePriceMxn.toLocaleString("es-MX")}</p>
-                    </div>
-                    <div className="flex-1 rounded-lg bg-white/3 border border-white/6 py-2 px-3">
-                      <p className="text-[10px] text-orvenix-secondary mb-0.5">Renta/mes</p>
-                      <p className="text-sm font-black text-orvenix-text">${t.rentalPriceMxn.toLocaleString("es-MX")}</p>
-                    </div>
+                  <div className="rounded-lg bg-white/3 border border-white/6 py-2.5 px-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orvenix-secondary mb-1">Incluido con tu plan Orvenix</p>
+                    <p className="text-xs leading-5 text-orvenix-secondary">Disponible como punto de partida dentro de la suscripcion correspondiente.</p>
                   </div>
                   <div className="flex gap-2 mt-auto">
                     <Link href={t.livePath} target="_blank" rel="noopener noreferrer" className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg border border-white/10 text-[11px] font-bold text-orvenix-secondary hover:text-orvenix-text transition">
                       Ver demo <ArrowRight size={11} />
                     </Link>
                     <Link href="/templates" className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg bg-[color:var(--accent-2)] hover:bg-[color:var(--accent)] text-[11px] font-bold text-white transition">
-                      <CreditCard size={11} /> Adquirir
+                      Ver catalogo <ArrowRight size={11} />
                     </Link>
                   </div>
                 </div>

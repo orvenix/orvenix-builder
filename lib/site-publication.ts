@@ -14,6 +14,12 @@ import {
   writePublishedSiteArtifacts,
 } from "@/lib/publishedSiteArtifacts"
 
+import {
+  markDesignGenerationPublished,
+  measureAndRecordDesignGenerationEditMetrics,
+  refreshDesignGenerationOutcome,
+} from "@/lib/orvenix-ai/design-memory"
+
 export type SitePublicationMode =
   | "static-artifact"
   | "dynamic-renderer"
@@ -86,6 +92,51 @@ async function updatePublishedStatus(
     )
 
   return result.count
+}
+
+async function markDesignMemoryPublishedBestEffort(
+  siteId: string,
+) {
+  try {
+    await markDesignGenerationPublished({
+      siteId,
+    })
+  } catch (error) {
+    console.error(
+      "[Orvenix Design Memory] No se pudo marcar la generacion como publicada:",
+      error,
+    )
+  }
+}
+
+async function measureDesignMemoryEditMetricsBestEffort(
+  siteId: string,
+) {
+  try {
+    await measureAndRecordDesignGenerationEditMetrics({
+      siteId,
+    })
+  } catch (error) {
+    console.error(
+      "[Orvenix Design Memory] No se pudieron medir las metricas de edicion:",
+      error,
+    )
+  }
+}
+
+async function refreshDesignMemoryOutcomeBestEffort(
+  siteId: string,
+) {
+  try {
+    await refreshDesignGenerationOutcome({
+      siteId,
+    })
+  } catch (error) {
+    console.error(
+      "[Orvenix Design Memory] No se pudo actualizar el resultado estadistico:",
+      error,
+    )
+  }
 }
 
 export async function publishSiteForActor(
@@ -183,6 +234,18 @@ export async function publishSiteForActor(
       "SITE_NOT_FOUND",
     )
   }
+
+  await markDesignMemoryPublishedBestEffort(
+    siteId,
+  )
+
+  await measureDesignMemoryEditMetricsBestEffort(
+    siteId,
+  )
+
+  await refreshDesignMemoryOutcomeBestEffort(
+    siteId,
+  )
 
   return {
     url:

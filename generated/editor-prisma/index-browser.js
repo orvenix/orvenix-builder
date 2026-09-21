@@ -201,6 +201,7 @@ exports.Prisma.EditorWebsiteScalarFieldEnum = {
   tree: 'tree',
   published: 'published',
   userId: 'userId',
+  activeDesignGenerationId: 'activeDesignGenerationId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -299,6 +300,52 @@ exports.Prisma.ExperimentScalarFieldEnum = {
   status: 'status',
   targetType: 'targetType',
   trafficSplit: 'trafficSplit',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DesignGenerationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  siteId: 'siteId',
+  request: 'request',
+  industry: 'industry',
+  siteType: 'siteType',
+  objective: 'objective',
+  requestedStyle: 'requestedStyle',
+  initialPlan: 'initialPlan',
+  initialPlanHash: 'initialPlanHash',
+  status: 'status',
+  editMetrics: 'editMetrics',
+  editDistance: 'editDistance',
+  measuredAt: 'measuredAt',
+  patternVersion: 'patternVersion',
+  patternHash: 'patternHash',
+  patternKey: 'patternKey',
+  outcomeVersion: 'outcomeVersion',
+  outcomeScore: 'outcomeScore',
+  outcomeQualifiedAt: 'outcomeQualifiedAt',
+  siteCreationAttemptId: 'siteCreationAttemptId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DesignAssistanceScalarFieldEnum = {
+  id: 'id',
+  siteCreationAttemptId: 'siteCreationAttemptId',
+  version: 'version',
+  roleKey: 'roleKey',
+  strategyKey: 'strategyKey',
+  providerKey: 'providerKey',
+  modelKey: 'modelKey',
+  status: 'status',
+  inputFingerprint: 'inputFingerprint',
+  attemptKey: 'attemptKey',
+  outputFingerprint: 'outputFingerprint',
+  appliedProposal: 'appliedProposal',
+  failureCode: 'failureCode',
+  requestedAt: 'requestedAt',
+  completedAt: 'completedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -465,7 +512,8 @@ exports.Prisma.EditorWebsiteOrderByRelevanceFieldEnum = {
   id: 'id',
   name: 'name',
   description: 'description',
-  userId: 'userId'
+  userId: 'userId',
+  activeDesignGenerationId: 'activeDesignGenerationId'
 };
 
 exports.Prisma.SitePageOrderByRelevanceFieldEnum = {
@@ -531,6 +579,35 @@ exports.Prisma.ExperimentOrderByRelevanceFieldEnum = {
   name: 'name',
   status: 'status',
   targetType: 'targetType'
+};
+
+exports.Prisma.DesignGenerationOrderByRelevanceFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  siteId: 'siteId',
+  request: 'request',
+  industry: 'industry',
+  siteType: 'siteType',
+  objective: 'objective',
+  requestedStyle: 'requestedStyle',
+  initialPlanHash: 'initialPlanHash',
+  status: 'status',
+  patternHash: 'patternHash',
+  siteCreationAttemptId: 'siteCreationAttemptId'
+};
+
+exports.Prisma.DesignAssistanceOrderByRelevanceFieldEnum = {
+  id: 'id',
+  siteCreationAttemptId: 'siteCreationAttemptId',
+  roleKey: 'roleKey',
+  strategyKey: 'strategyKey',
+  providerKey: 'providerKey',
+  modelKey: 'modelKey',
+  status: 'status',
+  inputFingerprint: 'inputFingerprint',
+  attemptKey: 'attemptKey',
+  outputFingerprint: 'outputFingerprint',
+  failureCode: 'failureCode'
 };
 
 exports.Prisma.AiGenerationJobOrderByRelevanceFieldEnum = {
@@ -606,6 +683,8 @@ exports.Prisma.ModelName = {
   Funnel: 'Funnel',
   FunnelStep: 'FunnelStep',
   Experiment: 'Experiment',
+  DesignGeneration: 'DesignGeneration',
+  DesignAssistance: 'DesignAssistance',
   AiGenerationJob: 'AiGenerationJob',
   Automation: 'Automation',
   Collection: 'Collection',

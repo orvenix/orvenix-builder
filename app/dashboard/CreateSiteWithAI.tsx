@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation"
 import * as Dialog from "@radix-ui/react-dialog"
 import { Bot, Eye, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react"
 
-import { runOrvenixSiteCreationAction, type OrvenixSiteCreationActionResult } from "@/app/actions/ai"
+import {
+  runOrvenixSiteCreationAction,
+  type OrvenixSiteCreationActionResult,
+  type SiteCreationPreviewPageV1,
+  type SiteCreationQualityGatePreviewV1,
+} from "@/app/actions/ai"
 import type { EditorTree } from "@/types/editor"
 
 type ServiceField = {
@@ -18,7 +23,10 @@ type PreviewState = {
   previewId: string
   previewHash: string
   tree: EditorTree
+  pages: SiteCreationPreviewPageV1[]
+  selectedSlug: string
   message: string
+  qualityGate?: SiteCreationQualityGatePreviewV1
 }
 
 function createServiceField(): ServiceField {
@@ -29,6 +37,14 @@ function createServiceField(): ServiceField {
   }
 }
 
+function createClientAttemptKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `client:${crypto.randomUUID()}`
+  }
+
+  return `client:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`
+}
+
 function getPreviewTree(result: OrvenixSiteCreationActionResult): EditorTree | null {
   if (!result.success) return null
   return result.result.plan?.after ?? result.result.tree ?? null
@@ -36,6 +52,22 @@ function getPreviewTree(result: OrvenixSiteCreationActionResult): EditorTree | n
 
 function getPublicError(result: OrvenixSiteCreationActionResult) {
   return "message" in result ? result.message : "Orvenix AI no pudo completar la solicitud."
+}
+
+function getPreviewPages(result: OrvenixSiteCreationActionResult, homeTree: EditorTree): SiteCreationPreviewPageV1[] {
+  if (result.success && Array.isArray(result.previewPages) && result.previewPages.length > 0) {
+    return result.previewPages
+  }
+
+  return [{ slug: "home", title: "Home", isHome: true, tree: homeTree }]
+}
+
+function getInitialPreviewSlug(pages: SiteCreationPreviewPageV1[]) {
+  return pages.find((page) => page.isHome)?.slug ?? pages[0]?.slug ?? "home"
+}
+
+function getSelectedPreviewPage(preview: PreviewState) {
+  return preview.pages.find((page) => page.slug === preview.selectedSlug) ?? preview.pages.find((page) => page.isHome) ?? preview.pages[0]
 }
 
 function getRootSections(tree: EditorTree) {
@@ -55,7 +87,8 @@ export function CreateSiteWithAI() {
   const [isGenerating, startGenerating] = useTransition()
   const [isCreating, startCreating] = useTransition()
 
-  const previewSections = useMemo(() => preview ? getRootSections(preview.tree) : [], [preview])
+  const selectedPreviewPage = useMemo(() => preview ? getSelectedPreviewPage(preview) : null, [preview])
+  const previewSections = useMemo(() => selectedPreviewPage ? getRootSections(selectedPreviewPage.tree) : [], [selectedPreviewPage])
 
   function updateService(id: string, patch: Partial<ServiceField>) {
     setServices((current) => current.map((service) => service.id === id ? { ...service, ...patch } : service))
@@ -89,6 +122,8 @@ export function CreateSiteWithAI() {
       }))
       .filter((service) => service.name)
 
+    const clientAttemptKey = createClientAttemptKey()
+
     const message = [
       name ? `Negocio: ${name}.` : null,
       industry ? `Industria: ${industry}.` : null,
@@ -103,6 +138,7 @@ export function CreateSiteWithAI() {
       const result = await runOrvenixSiteCreationAction({
         mode: "preview",
         message,
+        clientAttemptKey,
         business: {
           name,
           industry,
@@ -125,11 +161,16 @@ export function CreateSiteWithAI() {
         return
       }
 
+      const pages = getPreviewPages(result, tree)
+
       setPreview({
         previewId: result.previewId,
         previewHash: result.previewHash,
         tree,
+        pages,
+        selectedSlug: getInitialPreviewSlug(pages),
         message: result.result.message,
+        qualityGate: result.qualityGate,
       })
     })
   }
@@ -281,10 +322,39 @@ export function CreateSiteWithAI() {
             ) : (
               <div className="space-y-3">
                 <p className="rounded-2xl border border-white/[0.06] bg-white/[0.035] px-4 py-3 text-xs leading-6 text-[color:var(--text-secondary)]">{preview.message}</p>
+                {preview.qualityGate && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-4 py-3 text-xs text-[color:var(--text-secondary)]">
+                    <span className="font-bold text-[color:var(--text)]">Quality Gate</span>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${preview.qualityGate.decision === "pass" ? "bg-emerald-500/10 text-emerald-300" : "bg-amber-500/10 text-amber-300"}`}>
+                      {preview.qualityGate.decision === "pass" ? "PASS" : "REVIEW"}
+                    </span>
+                    <span>{Math.round(preview.qualityGate.score)} pts</span>
+                    {preview.qualityGate.reasonCodes.slice(0, 2).map((code) => (
+                      <span key={code} className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[10px] text-[color:var(--text-muted)]">{code}</span>
+                    ))}
+                  </div>
+                )}
+                {preview.pages.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {preview.pages.map((page) => {
+                      const selected = page.slug === preview.selectedSlug
+                      return (
+                        <button
+                          key={page.slug}
+                          type="button"
+                          onClick={() => setPreview((current) => current ? { ...current, selectedSlug: page.slug } : current)}
+                          className={`shrink-0 rounded-2xl border px-3 py-2 text-xs font-bold transition-all ${selected ? "border-[rgba(27,179,250,0.35)] bg-[rgba(27,179,250,0.12)] text-[color:var(--accent)]" : "border-white/[0.08] bg-white/[0.03] text-[color:var(--text-secondary)] hover:border-white/[0.16] hover:text-[color:var(--text)]"}`}
+                        >
+                          {page.isHome ? "Inicio" : page.title}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
                 <div className="rounded-[24px] border border-white/[0.08] bg-white/[0.035] p-4">
                   <div className="mb-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-                    <span>Home</span>
-                    <span>{Object.keys(preview.tree.nodes).length} bloques</span>
+                    <span>{selectedPreviewPage?.title ?? "Home"}</span>
+                    <span>{selectedPreviewPage ? Object.keys(selectedPreviewPage.tree.nodes).length : Object.keys(preview.tree.nodes).length} bloques</span>
                   </div>
                   <div className="space-y-2">
                     {previewSections.map((section, index) => (

@@ -17,6 +17,7 @@ model User {
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   sites               EditorWebsite[]
+  designGenerations   DesignGeneration[]
   subscription        Subscription?
   subscriptionHistory SubscriptionHistory[]
 
@@ -112,27 +113,31 @@ model WebhookEvent {
 }
 
 model EditorWebsite {
-  id               String            @id @db.VarChar(64)
-  name             String            @db.VarChar(191)
-  description      String            @default("") @db.VarChar(1024)
-  tree             Json
-  published        Boolean           @default(false)
-  userId           String?           @db.VarChar(191)
-  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  pages            SitePage[]
-  theme            SiteTheme?
-  collections      Collection[]
-  products         Product[]
-  orders           Order[]
-  funnels          Funnel[]
-  experiments      Experiment[]
-  aiGenerationJobs AiGenerationJob[]
-  automations      Automation[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                       String             @id @db.VarChar(64)
+  name                     String             @db.VarChar(191)
+  description              String             @default("") @db.VarChar(1024)
+  tree                     Json
+  published                Boolean            @default(false)
+  userId                   String?            @db.VarChar(191)
+  user                     User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  pages                    SitePage[]
+  theme                    SiteTheme?
+  collections              Collection[]
+  products                 Product[]
+  orders                   Order[]
+  funnels                  Funnel[]
+  experiments              Experiment[]
+  aiGenerationJobs         AiGenerationJob[]
+  designGenerations        DesignGeneration[] @relation("DesignGenerationSite")
+  activeDesignGenerationId String?            @db.VarChar(191)
+  activeDesignGeneration   DesignGeneration?  @relation("ActiveDesignGeneration", fields: [activeDesignGenerationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  automations              Automation[]
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
 
   @@index([userId])
   @@index([published])
+  @@index([activeDesignGenerationId])
   @@map("editor_websites")
 }
 
@@ -278,18 +283,90 @@ model Experiment {
   @@map("experiments")
 }
 
+model DesignGeneration {
+  id                    String    @id @default(cuid())
+  userId                String    @db.VarChar(191)
+  siteId                String?   @db.VarChar(64)
+  request               String    @db.Text
+  industry              String?   @db.VarChar(191)
+  siteType              String?   @db.VarChar(64)
+  objective             String?   @db.VarChar(512)
+  requestedStyle        String?   @db.VarChar(191)
+  initialPlan           Json
+  initialPlanHash       String    @db.VarChar(64)
+  status                String    @default("generated") @db.VarChar(32)
+  editMetrics           Json?
+  editDistance          Float?
+  measuredAt            DateTime?
+  patternVersion        Int?
+  patternHash           String?   @db.VarChar(64)
+  patternKey            Json?
+  outcomeVersion        Int?
+  outcomeScore          Float?
+  outcomeQualifiedAt    DateTime?
+  siteCreationAttemptId String?   @unique @db.VarChar(191)
+
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site                EditorWebsite?   @relation("DesignGenerationSite", fields: [siteId], references: [id], onDelete: SetNull)
+  activeForSites      EditorWebsite[]  @relation("ActiveDesignGeneration")
+  siteCreationAttempt AiGenerationJob? @relation("SiteCreationAttemptDesignGeneration", fields: [siteCreationAttemptId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([siteId])
+  @@index([industry])
+  @@index([siteType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([patternHash])
+  @@index([siteCreationAttemptId])
+  @@map("design_generations")
+}
+
+model DesignAssistance {
+  id                    String          @id @default(cuid())
+  siteCreationAttemptId String          @db.VarChar(191)
+  version               Int             @default(1)
+  roleKey               String          @db.VarChar(64)
+  strategyKey           String          @db.VarChar(64)
+  providerKey           String          @db.VarChar(64)
+  modelKey              String          @db.VarChar(64)
+  status                String          @db.VarChar(32)
+  inputFingerprint      String          @db.VarChar(64)
+  attemptKey            String          @db.VarChar(96)
+  outputFingerprint     String?         @db.VarChar(64)
+  appliedProposal       Json?
+  failureCode           String?         @db.VarChar(32)
+  requestedAt           DateTime        @default(now())
+  completedAt           DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  siteCreationAttempt   AiGenerationJob @relation("SiteCreationAttemptDesignAssistances", fields: [siteCreationAttemptId], references: [id], onDelete: Cascade)
+
+  @@index([siteCreationAttemptId])
+  @@index([siteCreationAttemptId, attemptKey])
+  @@index([strategyKey, providerKey, modelKey, status])
+  @@index([inputFingerprint])
+  @@index([status])
+  @@map("design_assistances")
+}
+
 model AiGenerationJob {
-  id        String         @id @default(cuid())
-  siteId    String?        @db.VarChar(64)
-  pageId    String?        @db.VarChar(191)
-  type      String         @db.VarChar(64)
-  input     Json
-  output    Json?
-  status    String         @default("queued") @db.VarChar(32)
-  error     String?        @db.Text
-  site      EditorWebsite? @relation(fields: [siteId], references: [id], onDelete: SetNull)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id                String             @id @default(cuid())
+  siteId            String?            @db.VarChar(64)
+  pageId            String?            @db.VarChar(191)
+  type              String             @db.VarChar(64)
+  input             Json
+  output            Json?
+  status            String             @default("queued") @db.VarChar(32)
+  error             String?            @db.Text
+  site              EditorWebsite?     @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  designAssistances DesignAssistance[] @relation("SiteCreationAttemptDesignAssistances")
+  designGeneration  DesignGeneration?  @relation("SiteCreationAttemptDesignGeneration")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([siteId])
   @@index([pageId])

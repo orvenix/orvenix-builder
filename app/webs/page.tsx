@@ -1,16 +1,11 @@
 import Link from "next/link"
 import Image from "next/image"
 import type { CSSProperties } from "react"
-import { ArrowRight, CreditCard, Edit3, Repeat } from "lucide-react"
+import { ArrowRight, Edit3 } from "lucide-react"
 import { selfEditTemplateAction } from "@/app/templates/actions"
 import { MarketingLayout } from "@/components/marketing/MarketingLayout"
 import { WEB_CATALOG } from "@/app/webs/catalog"
 import { REAL_TEMPLATES } from "@/lib/realTemplates"
-
-// Mapa de precios por ID — para mostrar precio en tarjeta sin repetir datos
-const PRICE_MAP = Object.fromEntries(
-  REAL_TEMPLATES.map(t => [t.id, { buy: t.purchasePriceMxn, rent: t.rentalPriceMxn }])
-)
 
 export default function WebsHub() {
   const categories = Array.from(new Set(WEB_CATALOG.map((app) => app.category)))
@@ -35,7 +30,7 @@ export default function WebsHub() {
               Webs profesionales para activar, editar y escalar <span>sin perder tiempo.</span>
             </h1>
             <p>
-              Explora experiencias completas por industria. Cada demo incluye estructura visual, componentes funcionales y flujos para editar, comprar o rentar dentro de tu cuenta.
+              Explora experiencias completas por industria. Cada demo incluye estructura visual, componentes funcionales y flujos para editar, usar como base dentro de tu suscripcion Orvenix.
             </p>
             <div className="webs-hero-actions">
               <a href="#catalogo" className="webs-primary-link">
@@ -76,7 +71,6 @@ export default function WebsHub() {
           {WEB_CATALOG.map((app, i) => {
             const Icon = app.Icon
             const isEditableTemplate = editableTemplateIds.has(app.id)
-            const price = PRICE_MAP[app.id]
             return (
               <article
                 key={app.id}
@@ -131,24 +125,10 @@ export default function WebsHub() {
                     ))}
                   </div>
 
-                  {/* Precio visible antes de los botones */}
-                  {price && (
-                    <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 mb-3">
-                      <div className="flex-1 text-center">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-white/25">Compra única</p>
-                        <p className="text-sm font-black text-white">
-                          ${price.buy.toLocaleString("es-MX")}
-                          <span className="ml-1 text-[10px] font-medium text-white/35">MXN</span>
-                        </p>
-                      </div>
-                      <div className="h-8 w-px bg-white/[0.07]" />
-                      <div className="flex-1 text-center">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-white/25">Renta mensual</p>
-                        <p className="text-sm font-black text-white">
-                          ${price.rent.toLocaleString("es-MX")}
-                          <span className="ml-1 text-[10px] font-medium text-white/35">/mes</span>
-                        </p>
-                      </div>
+                  {isEditableTemplate && (
+                    <div className="mb-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-2.5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100/55">Incluido con tu plan Orvenix</p>
+                      <p className="mt-1 text-xs leading-5 text-white/42">Activalo desde tu suscripcion y personalizalo en el editor visual.</p>
                     </div>
                   )}
 
@@ -165,17 +145,9 @@ export default function WebsHub() {
                         <form action={selfEditTemplateAction.bind(null, app.id)}>
                           <button type="submit" className="webs-edit-action">
                             <Edit3 size={14} />
-                            Editar
+                            Usar este diseño
                           </button>
                         </form>
-                        <Link href={`/checkout/start?templateId=${app.id}&intent=buy`} className="webs-buy-action">
-                            <CreditCard size={14} />
-                            Comprar
-                        </Link>
-                        <Link href={`/checkout/start?templateId=${app.id}&intent=rent`} className="webs-rent-action">
-                            <Repeat size={14} />
-                            Rentar
-                        </Link>
                       </>
                     ) : (
                       <Link href={app.href} className="webs-real-page-note">

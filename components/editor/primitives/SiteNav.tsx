@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEditorStore } from "@/store/useEditorStore";
-import { resolveRuntimeHref } from "@/lib/builder-core/tree/pageLinks";
+import { resolveRuntimeHref, resolveSiteNavItemTarget } from "@/lib/builder-core/tree/pageLinks";
+import { buildEditorPageUrl } from "@/components/editor/pageNavigation";
 import { resolveSiteNavPages } from "@/lib/builder-core/tree/siteNavigation";
 import type { BlockComponentProps } from "@/types/editor";
 
@@ -82,7 +83,9 @@ export function SiteNav({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const setActivePageContext = useEditorStore((state) => state.setActivePageContext);
+  const flushPendingSave = useEditorStore((state) => state.flushPendingSave);
+  const markError = useEditorStore((state) => state.markError);
+  const navigationInFlightRef = useRef(false);
 
   const currentPageSlug = useMemo(() => {
     if (storeActivePageSlug) return storeActivePageSlug;
@@ -111,14 +114,22 @@ export function SiteNav({
       : "preview";
   const isEditorCanvas = pathname?.startsWith("/editor/") || pathname?.startsWith("/constructor");
 
-  const navigateInsideEditor = (slug: string, name: string) => {
-    if (!pathname) return;
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    if (slug === "home") params.delete("page");
-    else params.set("page", slug);
-    setActivePageContext({ activePageSlug: slug, activePageName: name, availablePages });
-    const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
+  const navigateInsideEditor = async (slug: string) => {
+    if (!pathname || slug === currentPageSlug || navigationInFlightRef.current) return;
+
+    navigationInFlightRef.current = true;
+    try {
+      const saveResult = await flushPendingSave();
+      if (!saveResult.success) {
+        markError(saveResult.error ?? "No se pudieron guardar los cambios antes de cambiar de página.");
+        return;
+      }
+
+      const targetUrl = buildEditorPageUrl(pathname, searchParams?.toString() ?? "", slug);
+      if (targetUrl) router.push(targetUrl);
+    } finally {
+      navigationInFlightRef.current = false;
+    }
   };
 
   const scrollToInlineTarget = (href: string) => {
@@ -231,18 +242,14 @@ export function SiteNav({
       >
         {navPages.map((page) => {
           const label = labelMap.get(page.slug.toLowerCase()) || page.name;
-          const runtimeHref = page.href || resolveRuntimeHref(websiteId, `page:${page.slug}`, hrefMode);
+          const target = resolveSiteNavItemTarget(page, websiteId, hrefMode);
           const editorHref = (() => {
-            if (usesInlinePages) return page.href || runtimeHref;
-            if (!isEditorCanvas || !pathname) return runtimeHref;
-            const params = new URLSearchParams(searchParams?.toString() ?? "");
-            if (page.slug === "home") params.delete("page");
-            else params.set("page", page.slug);
-            const query = params.toString();
-            return query ? `${pathname}?${query}` : pathname;
+            if (!target.isPageLink) return target.runtimeHref;
+            if (!isEditorCanvas || !pathname) return target.runtimeHref;
+            return buildEditorPageHref(pathname, searchParams, target.targetSlug ?? page.slug);
           })();
-          const href = isEditorCanvas ? editorHref : runtimeHref;
-          const isActive = !usesInlinePages && page.slug === currentPageSlug;
+          const href = isEditorCanvas ? editorHref : target.runtimeHref;
+          const isActive = target.isPageLink && (target.targetSlug ?? page.slug) === currentPageSlug;
           const variantClasses = VARIANT_CLASS[surface][variant];
           const linkStyle: React.CSSProperties = {
             color: isActive ? "#ffffff" : surface === "dark" ? "rgba(247, 252, 255, 0.92)" : "#075985",
@@ -261,11 +268,11 @@ export function SiteNav({
               <a
                 href={href}
                 aria-current={isActive ? "page" : undefined}
-                onClick={usesInlinePages ? (event) => {
+                onClick={!target.isPageLink ? (event) => {
                   if (isEditorCanvas && scrollToInlineTarget(href)) event.preventDefault();
                 } : isEditorCanvas ? (event) => {
                   event.preventDefault();
-                  navigateInsideEditor(page.slug, label);
+                  void navigateInsideEditor(target.targetSlug ?? page.slug);
                 } : undefined}
                 className={`${variantClasses.base} ${isActive ? variantClasses.active : ""}`}
                 style={linkStyle}
@@ -289,7 +296,7 @@ export function SiteNav({
                 }
                 if (ctaEditorSlug) {
                   event.preventDefault();
-                  navigateInsideEditor(ctaEditorSlug, ctaLabel);
+                  void navigateInsideEditor(ctaEditorSlug);
                 }
               }}
               className="orvenix-site-nav-cta group relative inline-flex min-h-[44px] items-center overflow-hidden rounded-full px-5 py-2.5 text-sm font-black transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-22px_rgba(27,179,250,0.95)] md:text-[15px]"

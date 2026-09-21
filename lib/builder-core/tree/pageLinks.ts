@@ -51,3 +51,31 @@ export function resolveRuntimeHref(
     ? buildPreviewPageHref(siteId, internalSlug)
     : buildPublishedPageHref(siteId, internalSlug);
 }
+
+export interface SiteNavDispatchTarget {
+  isPageLink: boolean;
+  targetSlug: string | null;
+  runtimeHref: string;
+}
+
+/**
+ * Decides whether a SiteNav entry targets a real site page (the canonical
+ * `page:<slug>` contract, or a store-resolved page with no href at all) or a
+ * plain anchor/external link, and resolves the href a link should render.
+ */
+export function resolveSiteNavItemTarget(
+  page: { slug: string; href?: string | null },
+  siteId: string | null,
+  mode: "preview" | "published" | "export" = "published"
+): SiteNavDispatchTarget {
+  const rawHref = typeof page.href === "string" ? page.href.trim() : "";
+
+  if (rawHref && !isInternalPageLink(rawHref)) {
+    return { isPageLink: false, targetSlug: null, runtimeHref: rawHref };
+  }
+
+  const targetSlug = rawHref ? parseInternalPageLink(rawHref) ?? page.slug : page.slug;
+  const runtimeHref = resolveRuntimeHref(siteId, rawHref || `${INTERNAL_PAGE_LINK_PREFIX}${page.slug}`, mode);
+
+  return { isPageLink: true, targetSlug, runtimeHref };
+}

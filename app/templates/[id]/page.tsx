@@ -4,11 +4,9 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
-  CreditCard,
   Edit3,
   Eye,
   Layers3,
-  Repeat,
   ShieldCheck,
   Sparkles,
   Zap,
@@ -93,7 +91,7 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
             {template.name}
           </h1>
           <p className="mt-5 max-w-xl text-base leading-8 text-white/52">
-            {template.description} Esta versión se presenta como una solución comercial completa: vista real, edición visual, compra, renta y personalización desde tu flujo SaaS.
+            {template.description} Esta versión se presenta como una solución comercial completa: vista real, edición visual y personalización desde tu suscripción Orvenix.
           </p>
 
           <div className="mt-7 grid grid-cols-2 gap-3">
@@ -110,7 +108,7 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
             <form action={selfEditTemplateAction.bind(null, template.id)}>
               <button className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-5 text-sm font-black text-slate-950 transition hover:bg-white/90">
                 <Edit3 size={16} />
-                Editar yo mismo
+                Usar este diseño
               </button>
             </form>
             <Link
@@ -166,8 +164,8 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
           <aside className="rounded-2xl border border-white/[0.1] bg-[#0c0f18] p-5">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Opciones</div>
-                <h2 className="mt-2 text-2xl font-black">Activar esta web</h2>
+                <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Incluido con tu plan Orvenix</div>
+                <h2 className="mt-2 text-2xl font-black">Usa este diseño con tu suscripción</h2>
               </div>
               <div className={`grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br ${template.gradient}`}>
                 <Icon size={22} />
@@ -175,29 +173,20 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
             </div>
 
             <div className="grid gap-3">
-              <Link href={`/checkout/start?templateId=${template.id}&intent=buy`}>
-                <span className="flex w-full items-center justify-between rounded-xl bg-emerald-600 px-4 py-3 text-left font-black text-white transition hover:bg-emerald-500">
-                  <span className="flex items-center gap-2">
-                    <CreditCard size={16} />
-                    Comprar
-                  </span>
-                  <span>${template.purchasePriceMxn.toLocaleString("es-MX")} MXN</span>
-                </span>
-              </Link>
-
-              <Link href={`/checkout/start?templateId=${template.id}&intent=rent`}>
-                <span className="flex w-full items-center justify-between rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-4 py-3 text-left font-black text-cyan-100 transition hover:bg-cyan-400/15">
-                  <span className="flex items-center gap-2">
-                    <Repeat size={16} />
-                    Rentar
-                  </span>
-                  <span>${template.rentalPriceMxn.toLocaleString("es-MX")}/mes</span>
-                </span>
+              <form action={selfEditTemplateAction.bind(null, template.id)}>
+                <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-left font-black text-slate-950 transition hover:bg-white/90">
+                  <Edit3 size={16} />
+                  Usar este diseño
+                </button>
+              </form>
+              <Link href="/precios" className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/15">
+                Ver planes Orvenix
+                <ArrowUpRight size={16} />
               </Link>
             </div>
 
-            <p className="mt-4 text-xs leading-5 text-white/35">
-              Si el usuario no tiene sesión, el flujo conserva la intención y lo devuelve al proceso después del registro.
+            <p className="mt-4 text-xs leading-5 text-white/40">
+              El catalogo de diseños esta disponible dentro de la suscripcion Orvenix correspondiente.
             </p>
           </aside>
         </div>

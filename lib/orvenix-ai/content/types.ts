@@ -1,4 +1,5 @@
 import type { NodeProps } from "@/types/editor"
+import type { PageArchetype } from "@/lib/orvenix-ai/architect"
 
 export interface BusinessContentContext {
   name?: string
@@ -16,6 +17,7 @@ export interface BusinessContentContext {
     name?: string
     slug?: string
     purpose?: string
+    archetype?: PageArchetype
   }
 }
 

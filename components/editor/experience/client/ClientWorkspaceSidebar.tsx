@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   Building2,
@@ -27,6 +27,7 @@ import {
 } from "@/components/editor/sidebar/AiAssistantPanel"
 
 import { useEditorStore } from "@/store/useEditorStore"
+import { buildEditorPageUrl } from "@/components/editor/pageNavigation"
 import { useCheckoutRegistrationFlow } from "@/hooks/useCheckoutRegistrationFlow"
 import {
   closePendingPublishedSiteTab,
@@ -223,23 +224,32 @@ function ClientActionsPanel({ isPro }: { isPro: boolean }) {
 function ClientPagesPanel() {
   const availablePages = useEditorStore((state) => state.availablePages)
   const activePageSlug = useEditorStore((state) => state.activePageSlug)
-  const setActivePageContext = useEditorStore((state) => state.setActivePageContext)
+  const flushPendingSave = useEditorStore((state) => state.flushPendingSave)
+  const markError = useEditorStore((state) => state.markError)
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isNavigatingPage, setIsNavigatingPage] = useState(false)
+  const navigationInFlightRef = useRef(false)
 
-  function navigate(page: { slug: string; name: string }) {
-    const params = new URLSearchParams(searchParams?.toString() ?? "")
-    if (page.slug === "home") params.delete("page")
-    else params.set("page", page.slug)
+  async function navigate(page: { slug: string; name: string }) {
+    if (page.slug === activePageSlug || navigationInFlightRef.current) return
 
-    setActivePageContext({
-      activePageSlug: page.slug,
-      activePageName: page.name,
-      availablePages,
-    })
+    navigationInFlightRef.current = true
+    setIsNavigatingPage(true)
+    try {
+      const saveResult = await flushPendingSave()
+      if (!saveResult.success) {
+        markError(saveResult.error ?? "No se pudieron guardar los cambios antes de cambiar de página.")
+        return
+      }
 
-    router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname)
+      const targetUrl = buildEditorPageUrl(pathname, searchParams?.toString() ?? "", page.slug)
+      if (targetUrl) router.push(targetUrl)
+    } finally {
+      navigationInFlightRef.current = false
+      setIsNavigatingPage(false)
+    }
   }
 
   return (
@@ -251,8 +261,9 @@ function ClientPagesPanel() {
             <button
               key={page.slug}
               type="button"
-              onClick={() => navigate(page)}
-              className={["flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition", active ? "border-cyan-300/35 bg-cyan-300/[0.09] text-white" : "border-white/[0.07] bg-white/[0.035] text-slate-300 hover:border-white/[0.14] hover:bg-white/[0.055]"].join(" ")}
+              onClick={() => void navigate(page)}
+              disabled={isNavigatingPage}
+              className={["flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-70", active ? "border-cyan-300/35 bg-cyan-300/[0.09] text-white" : "border-white/[0.07] bg-white/[0.035] text-slate-300 hover:border-white/[0.14] hover:bg-white/[0.055]"].join(" ")}
             >
               <Globe2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               <span className="min-w-0 flex-1">

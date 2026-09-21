@@ -1,5 +1,5 @@
 import type { NodeProps } from "@/types/editor"
-import type { SectionRole } from "@/lib/orvenix-ai/architect"
+import type { PageArchetype, SectionRole } from "@/lib/orvenix-ai/architect"
 
 export interface ComposedNode {
   tempId: string
@@ -14,4 +14,34 @@ export interface ComposedSection {
   rootId: string
   nodes: Record<string, ComposedNode>
   purpose: string
+}
+
+export interface SectionCompositionContext {
+  siteType?: string
+  industry?: string
+  objective?: string
+  audience?: string
+  businessName?: string
+  services?: Array<{
+    name: string
+    description?: string
+  }>
+  location?: string
+  /** The real, caller-supplied business objective -- see the identically
+   * named field on OrvenixSiteArchitecture for why this is kept separate
+   * from `objective` above. */
+  businessObjective?: string
+  sitePages?: Array<{
+    name: string
+    slug: string
+    isHome?: boolean
+  }>
+  pageName?: string
+  pageSlug?: string
+  pagePurpose?: string
+  archetype?: PageArchetype
+  preferredStyle?: string
+  sectionIndex?: number
+  totalSections?: number
+  compositionSeed?: string
 }

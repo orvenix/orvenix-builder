@@ -3,6 +3,7 @@ import {
   selectBlocksForRoles,
   type SectionRole,
 } from "./block-selector"
+import type { PageArchetype } from "./page-archetype"
 
 export interface OrvenixSiteSectionPlan {
   role: SectionRole
@@ -14,6 +15,7 @@ export interface OrvenixSitePagePlan {
   name: string
   slug: string
   purpose: string
+  archetype: PageArchetype
   sections: OrvenixSiteSectionPlan[]
 }
 
@@ -22,6 +24,18 @@ export interface OrvenixSiteArchitecture {
   industry: string
   objective: string
   pages: OrvenixSitePagePlan[]
+  businessName?: string
+  services?: Array<{ name: string; description?: string }>
+  location?: string
+  /**
+   * The real, caller-supplied business objective (eg. "Conseguir citas de
+   * valoración"), kept separate from `objective` above -- which is an
+   * internal, siteType-driven page-intent string used for page.purpose /
+   * trace text and must not change. Composition-time copy generation
+   * should prefer this field when it wants the business's actual stated
+   * intent.
+   */
+  businessObjective?: string
 }
 
 function normalize(value?: string) {
@@ -29,6 +43,20 @@ function normalize(value?: string) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
+}
+
+/**
+ * True when `keyword` starts a word inside `text` (eg. "dent" matches
+ * "dental"/"dentista"). Plain String.includes() would ALSO match "dent"
+ * inside "identidad", "residente", "presidente", "accidente" -- ordinary
+ * words with no relation to dentistry -- silently misrouting an unrelated
+ * business into the wrong architecture branch. Requiring a word-start
+ * boundary keeps every intended prefix match (the keywords below are all
+ * meant to catch a word BEGINNING with them, eg. plural/derived forms)
+ * while rejecting the keyword appearing mid-word.
+ */
+function startsWordIn(text: string, keyword: string): boolean {
+  return new RegExp(`\\b${keyword}`).test(text)
 }
 
 function inferSiteType(context: OrvenixAIContext) {
@@ -40,34 +68,36 @@ function inferSiteType(context: OrvenixAIContext) {
     ].join(" "),
   )
 
+  const has = (keyword: string) => startsWordIn(text, keyword)
+
   if (
-    text.includes("clinica") ||
-    text.includes("dent") ||
-    text.includes("salud") ||
-    text.includes("doctor")
+    has("clinica") ||
+    has("dent") ||
+    has("salud") ||
+    has("doctor")
   ) {
     return "health"
   }
 
   if (
-    text.includes("restaurante") ||
-    text.includes("cafeteria") ||
-    text.includes("comida")
+    has("restaurante") ||
+    has("cafeteria") ||
+    has("comida")
   ) {
     return "restaurant"
   }
 
   if (
-    text.includes("agencia") ||
-    text.includes("marketing")
+    has("agencia") ||
+    has("marketing")
   ) {
     return "agency"
   }
 
   if (
-    text.includes("tienda") ||
-    text.includes("ecommerce") ||
-    text.includes("producto")
+    has("tienda") ||
+    has("ecommerce") ||
+    has("producto")
   ) {
     return "ecommerce"
   }
@@ -102,6 +132,7 @@ function makePage(
   name: string,
   slug: string,
   purpose: string,
+  archetype: PageArchetype,
   roles: SectionRole[],
 ): OrvenixSitePagePlan {
   const selected = selectBlocksForRoles(
@@ -116,6 +147,7 @@ function makePage(
     name,
     slug,
     purpose,
+    archetype,
     sections: roles.map((role) => {
       const match = selected.find(
         (item) => item.role === role,
@@ -140,11 +172,16 @@ export function buildSiteArchitecture(
       siteType,
       industry: context.business?.industry ?? "salud",
       objective: "Conseguir citas y generar confianza",
+      businessName: context.business?.name,
+      services: context.business?.services,
+      location: context.business?.location,
+      businessObjective: context.business?.objective,
       pages: [
         makePage(siteType,
           "Inicio",
           "home",
           "Presentar la clínica y conseguir citas.",
+          "overview",
           [
             "navigation",
             "hero",
@@ -162,6 +199,7 @@ export function buildSiteArchitecture(
           "Servicios",
           "servicios",
           "Explicar tratamientos y servicios.",
+          "catalog",
           [
             "navigation",
             "hero",
@@ -175,6 +213,7 @@ export function buildSiteArchitecture(
           "Contacto",
           "contacto",
           "Facilitar una cita.",
+          "conversion",
           [
             "navigation",
             "contact",
@@ -190,11 +229,16 @@ export function buildSiteArchitecture(
       siteType,
       industry: context.business?.industry ?? "restaurante",
       objective: "Conseguir reservaciones y visitas",
+      businessName: context.business?.name,
+      services: context.business?.services,
+      location: context.business?.location,
+      businessObjective: context.business?.objective,
       pages: [
         makePage(siteType,
           "Inicio",
           "home",
           "Presentar el restaurante.",
+          "overview",
           [
             "navigation",
             "hero",
@@ -211,6 +255,7 @@ export function buildSiteArchitecture(
           "Menú",
           "menu",
           "Presentar alimentos y bebidas.",
+          "catalog",
           [
             "navigation",
             "hero",
@@ -224,6 +269,7 @@ export function buildSiteArchitecture(
           "Contacto",
           "contacto",
           "Mostrar ubicación y reservaciones.",
+          "conversion",
           [
             "navigation",
             "contact",
@@ -239,11 +285,16 @@ export function buildSiteArchitecture(
       siteType,
       industry: context.business?.industry ?? "agencia",
       objective: "Conseguir prospectos",
+      businessName: context.business?.name,
+      services: context.business?.services,
+      location: context.business?.location,
+      businessObjective: context.business?.objective,
       pages: [
         makePage(siteType,
           "Inicio",
           "home",
           "Presentar posicionamiento y servicios.",
+          "overview",
           [
             "navigation",
             "hero",
@@ -260,6 +311,7 @@ export function buildSiteArchitecture(
           "Servicios",
           "servicios",
           "Explicar capacidades.",
+          "catalog",
           [
             "navigation",
             "hero",
@@ -274,6 +326,7 @@ export function buildSiteArchitecture(
           "Contacto",
           "contacto",
           "Generar oportunidades.",
+          "conversion",
           [
             "navigation",
             "contact",
@@ -289,11 +342,16 @@ export function buildSiteArchitecture(
       siteType,
       industry: context.business?.industry ?? "ecommerce",
       objective: "Vender productos",
+      businessName: context.business?.name,
+      services: context.business?.services,
+      location: context.business?.location,
+      businessObjective: context.business?.objective,
       pages: [
         makePage(siteType,
           "Inicio",
           "home",
           "Presentar la marca y llevar al catálogo.",
+          "overview",
           [
             "navigation",
             "hero",
@@ -309,6 +367,7 @@ export function buildSiteArchitecture(
           "Productos",
           "productos",
           "Presentar el catálogo.",
+          "catalog",
           [
             "navigation",
             "products",
@@ -324,11 +383,16 @@ export function buildSiteArchitecture(
     siteType: "business",
     industry: context.business?.industry ?? "negocio",
     objective: "Presentar el negocio y generar contactos",
+    businessName: context.business?.name,
+    services: context.business?.services,
+    location: context.business?.location,
+    businessObjective: context.business?.objective,
     pages: [
       makePage(siteType,
         "Inicio",
         "home",
         "Presentar el negocio.",
+        "overview",
         [
           "navigation",
           "hero",
@@ -346,6 +410,7 @@ export function buildSiteArchitecture(
         "Servicios",
         "servicios",
         "Explicar la oferta.",
+        "catalog",
         [
           "navigation",
           "hero",
@@ -360,6 +425,7 @@ export function buildSiteArchitecture(
         "Contacto",
         "contacto",
         "Facilitar el contacto.",
+        "conversion",
         [
           "navigation",
           "contact",
