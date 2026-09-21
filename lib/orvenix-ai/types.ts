@@ -75,6 +75,7 @@ export interface OrvenixAIContext {
     location?: string;
     audience?: string;
     objective?: string;
+    services?: Array<{ name: string; description?: string }>;
   };
 }
 

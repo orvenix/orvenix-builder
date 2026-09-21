@@ -672,6 +672,7 @@ export async function runAutonomousMultiPageSiteBuilder(
       location: input.business.location,
       audience: input.business.audience,
       objective: input.business.objective,
+      services: input.business.services,
     },
   })
 

@@ -802,6 +802,43 @@ function cardGridCopy(role: SectionRole, archetype: SectionCompositionContext["a
   return legacy
 }
 
+/**
+ * Real, business-supplied services take over the "services" role's card
+ * items when available -- overview gets a short, deterministic teaser
+ * subset (never the full catalog), catalog gets all of them. Every other
+ * card-grid role (features/products/pricing/process/content) keeps its
+ * existing archetype-keyed scaffolding untouched.
+ */
+const OVERVIEW_SERVICE_TEASER_COUNT = 2
+
+function realServiceItems(
+  services: SectionCompositionContext["services"],
+  archetype: SectionCompositionContext["archetype"],
+): Array<[string, string]> {
+  const usable = (services ?? [])
+    .map((service) => ({
+      name: service.name?.trim(),
+      description: service.description?.trim(),
+    }))
+    .filter(
+      (service): service is { name: string; description: string | undefined } =>
+        Boolean(service.name),
+    )
+
+  if (!usable.length) return []
+
+  const selected =
+    archetype === "overview"
+      ? usable.slice(0, OVERVIEW_SERVICE_TEASER_COUNT)
+      : usable
+
+  return selected.map((service) => [
+    service.name,
+    service.description ||
+      `Conoce mas sobre ${service.name.toLowerCase()} y como puede ayudarte.`,
+  ])
+}
+
 function composeCardGridSection(
   role: SectionRole,
   titleText: string,
@@ -810,10 +847,15 @@ function composeCardGridSection(
   context: SectionCompositionContext = {},
 ): ComposedSection {
   const copy = cardGridCopy(role, context.archetype, { titleText, introText, items })
+  const realItems =
+    role === "services"
+      ? realServiceItems(context.services, context.archetype)
+      : []
+  const finalItems = realItems.length ? realItems : copy.items
   const nodes: Record<string, ComposedNode> = {}
   const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center" })
   const intro = textNode(nodes, "Intro " + role, copy.introText, { align: "center", size: "lg" })
-  const cards = copy.items.map(([title, body]) => {
+  const cards = finalItems.map(([title, body]) => {
     const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
     const cardText = textNode(nodes, title + " texto", body)
     return wrapperNode(nodes, title, "rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-900/10", [cardTitle, cardText], "article")
@@ -889,11 +931,30 @@ function composeCTA(
   return { role: "cta", rootId: root, nodes, purpose: "Cerrar con llamada a la accion." }
 }
 
-function composeFooter(): ComposedSection {
+/**
+ * Legacy fallback nav text, preserved verbatim for callers that don't
+ * supply sitePages (eg. pre-existing tests, non-multipage composition).
+ */
+const FOOTER_NAV_FALLBACK = "Inicio · Servicios · Precios · Contacto"
+
+function footerNavText(
+  sitePages: SectionCompositionContext["sitePages"],
+): string {
+  const names = (sitePages ?? [])
+    .map((page) => page.name?.trim())
+    .filter((name): name is string => Boolean(name))
+
+  return names.length ? names.join(" · ") : FOOTER_NAV_FALLBACK
+}
+
+function composeFooter(
+  context: SectionCompositionContext = {},
+): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  const brand = headingNode(nodes, "Marca footer", "Nombre del negocio", 3, { size: "xl", color: "#ffffff" })
+  const brandName = context.businessName?.trim() || "Nombre del negocio"
+  const brand = headingNode(nodes, "Marca footer", brandName, 3, { size: "xl", color: "#ffffff" })
   const copy = textNode(nodes, "Descripcion footer", "Sitio profesional listo para personalizar, publicar y convertir visitantes en clientes.", { color: "#cbd5e1" })
-  const links = textNode(nodes, "Links footer", "Inicio · Servicios · Precios · Contacto", { color: "#e2e8f0" })
+  const links = textNode(nodes, "Links footer", footerNavText(context.sitePages), { color: "#e2e8f0" })
   const brandStack = wrapperNode(nodes, "Marca y descripcion", "space-y-3", [brand, copy])
   const stack = wrapperNode(nodes, "Contenido footer", "mx-auto grid max-w-6xl gap-6 md:grid-cols-[1fr_auto] md:items-center", [brandStack, links])
   const root = add(nodes, createComposedNode({ type: "section", displayName: "Footer", props: { maxWidth: "full", paddingY: "lg", paddingX: "lg", background: "#071826" }, children: [stack] }))
@@ -935,7 +996,7 @@ export function composeSection(
       return composeCTA(context)
 
     case "footer":
-      return composeFooter()
+      return composeFooter(context)
 
     case "content":
       return composeContent(context)

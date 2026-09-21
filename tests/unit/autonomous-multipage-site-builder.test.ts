@@ -919,3 +919,284 @@ test("Design Memory L1 prior no inventa theme", async () => {
 
   assert.deepEqual(withL1Prior.plan.theme, withoutPrior.plan.theme)
 })
+
+// ---------------------------------------------------------------------------
+// J9-G1: personalizacion esencial (footer business name, footer nav canonica,
+// servicios estructurados en el card-grid "services").
+// ---------------------------------------------------------------------------
+
+// Ubicamos el footer por su texto de navegacion (siempre contiene " · "),
+// ya que displayName no sobrevive la compilacion del pipeline completo.
+function findFooterSection(page: GeneratedPlanPage) {
+  const nodes = page.tree.nodes as Record<string, CompiledNode>
+  for (const node of Object.values(nodes)) {
+    if (node.type !== "text") continue
+    const content = node.props?.content
+    if (typeof content === "string" && content.includes(" · ")) {
+      return { navTextNode: node }
+    }
+  }
+  return null
+}
+
+function footerBrandHeadingText(page: GeneratedPlanPage): string | undefined {
+  const nodes = page.tree.nodes as Record<string, CompiledNode>
+  const nav = findFooterSection(page)
+  if (!nav) return undefined
+  // El heading de marca del footer es "level: 3" y "size: xl" (headingNode con
+  // esos props exactos); lo distinguimos de otros headings nivel-3 por esa combinacion.
+  for (const node of Object.values(nodes)) {
+    if (node.type !== "heading") continue
+    if (node.props?.level === 3 && node.props?.size === "xl" && node.props?.color === "#ffffff") {
+      return typeof node.props?.text === "string" ? node.props.text : undefined
+    }
+  }
+  return undefined
+}
+
+function footerNavText(page: GeneratedPlanPage): string | undefined {
+  const nav = findFooterSection(page)
+  const content = nav?.navTextNode.props?.content
+  return typeof content === "string" ? content : undefined
+}
+
+test("composeSection('footer'): usa el businessName real cuando se provee", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const withName = composeSection("footer", { businessName: "Centro de Fisioterapia Monterrey" })!
+  const texts = headingTexts(withName)
+  assert.ok(texts.includes("Centro de Fisioterapia Monterrey"))
+  assert.equal(texts.includes("Nombre del negocio"), false)
+})
+
+test("composeSection('footer'): conserva el fallback 'Nombre del negocio' cuando no hay businessName (legacy)", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const withoutContext = composeSection("footer")!
+  assert.ok(headingTexts(withoutContext).includes("Nombre del negocio"))
+
+  const withEmptyContext = composeSection("footer", {})!
+  assert.ok(headingTexts(withEmptyContext).includes("Nombre del negocio"))
+})
+
+test("composeSection('footer'): la navegacion visible deriva de sitePages (sin Productos/Precios inventados)", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("footer", {
+    sitePages: [
+      { name: "Inicio", slug: "home", isHome: true },
+      { name: "Servicios", slug: "servicios" },
+      { name: "Contacto", slug: "contacto" },
+    ],
+  })!
+
+  const navText = significantTexts(section).find((text) => text.includes(" · "))
+  assert.ok(navText, "no se encontro el texto de navegacion del footer")
+  assert.equal(navText, "Inicio · Servicios · Contacto")
+  assert.equal(navText!.includes("Precios"), false)
+  assert.equal(navText!.includes("Productos"), false)
+})
+
+test("composeSection('footer'): sin sitePages conserva el fallback legacy exacto", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("footer")!
+  const navText = significantTexts(section).find((text) => text.includes(" · "))
+  assert.equal(navText, "Inicio · Servicios · Precios · Contacto")
+})
+
+const FISIOTERAPIA_SERVICES = [
+  { name: "Fisioterapia deportiva", description: "Recuperacion y rendimiento para deportistas." },
+  { name: "Rehabilitacion fisica", description: "Recuperacion funcional tras lesiones o cirugias." },
+  { name: "Terapia manual", description: "Tecnicas manuales para aliviar dolor y mejorar movilidad." },
+]
+
+test("composeSection('services', catalog): usa los servicios reales del negocio, no las etiquetas genericas", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("services", {
+    archetype: "catalog",
+    services: FISIOTERAPIA_SERVICES,
+  })!
+
+  const titles = headingTexts(section)
+  for (const service of FISIOTERAPIA_SERVICES) {
+    assert.ok(titles.includes(service.name), `catalog no incluye el servicio real "${service.name}"`)
+  }
+
+  // No debe colar la copia generica anterior.
+  assert.equal(titles.includes("Diagnostico inicial"), false)
+  assert.equal(titles.includes("Plan a la medida"), false)
+
+  // La descripcion suministrada se usa tal cual.
+  const texts = significantTexts(section)
+  assert.ok(texts.includes("Recuperacion y rendimiento para deportistas."))
+
+  // El layout de catalog (grid mas ancho) se conserva sin cambios.
+  assert.equal(gridClassName(section, "services"), "grid gap-6 md:grid-cols-2")
+})
+
+test("composeSection('services', overview): usa un subconjunto teaser deterministico de los servicios reales, no el catalogo completo", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("services", {
+    archetype: "overview",
+    services: FISIOTERAPIA_SERVICES,
+  })!
+
+  const titles = headingTexts(section)
+  assert.ok(titles.includes("Fisioterapia deportiva"))
+  assert.ok(titles.includes("Rehabilitacion fisica"))
+  // El teaser NO debe expandirse al catalogo completo (3er servicio afuera).
+  assert.equal(titles.includes("Terapia manual"), false)
+
+  assert.equal(gridClassName(section, "services"), "grid gap-5 md:grid-cols-3")
+
+  // Determinismo: dos corridas con el mismo input producen el mismo subconjunto.
+  const again = composeSection("services", { archetype: "overview", services: FISIOTERAPIA_SERVICES })!
+  assert.deepEqual(headingTexts(again), titles)
+})
+
+test("composeSection('services'): sin descripcion suministrada usa un fallback deterministico, no vacio", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const section = composeSection("services", {
+    archetype: "catalog",
+    services: [{ name: "Terapia manual" }],
+  })!
+
+  const texts = significantTexts(section)
+  const fallback = texts.find((text) => text.toLowerCase().includes("terapia manual") && text !== "Terapia manual")
+  assert.ok(fallback, "no se genero una descripcion fallback para el servicio sin description")
+})
+
+test("composeSection('services'): sin services conserva exactamente el comportamiento CARD_GRID_ARCHETYPE_COPY existente", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const catalogNoServices = composeSection("services", { archetype: "catalog" })!
+  assert.deepEqual(headingTexts(catalogNoServices).slice(1), [
+    "Diagnostico inicial",
+    "Plan a la medida",
+    "Seguimiento cercano",
+    "Entrega y cierre",
+  ])
+
+  const overviewNoServices = composeSection("services", { archetype: "overview" })!
+  assert.deepEqual(headingTexts(overviewNoServices).slice(1), [
+    "Atencion personalizada",
+    "Resultados medibles",
+  ])
+
+  const emptyServices = composeSection("services", { archetype: "catalog", services: [] })!
+  assert.deepEqual(headingTexts(emptyServices).slice(1), [
+    "Diagnostico inicial",
+    "Plan a la medida",
+    "Seguimiento cercano",
+    "Entrega y cierre",
+  ])
+})
+
+test("composeSection('features'): NO consume business.services (solo el role 'services' lo hace)", async () => {
+  const { composeSection } = await import("../../lib/orvenix-ai/composer")
+
+  const withServices = composeSection("features", { archetype: "catalog", services: FISIOTERAPIA_SERVICES })!
+  const withoutServices = composeSection("features", { archetype: "catalog" })!
+  assert.deepEqual(headingTexts(withServices), headingTexts(withoutServices))
+})
+
+test("E2E personalizacion: nombre real, servicios reales y nav de footer canonica sobreviven al pipeline completo (applyBusinessContent incluido)", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+
+  const result = await runAutonomousMultiPageSiteBuilder({
+    request:
+      "Crea un sitio web profesional para Centro de Fisioterapia Monterrey. Ofrecemos fisioterapia deportiva, rehabilitacion fisica y terapia manual en Monterrey. El objetivo principal es conseguir citas de valoracion.",
+    forceFreshComposition: true,
+    business: {
+      name: "Centro de Fisioterapia Monterrey",
+      industry: "fisioterapia",
+      location: "Monterrey",
+      description:
+        "Ofrecemos fisioterapia deportiva, rehabilitacion fisica y terapia manual en Monterrey.",
+      objective: "Conseguir citas de valoracion",
+      services: FISIOTERAPIA_SERVICES,
+    },
+  })
+
+  const home = result.plan.pages.find((page) => page.slug === "home")!
+  const servicios = result.plan.pages.find((page) => page.slug === "servicios")!
+  const contacto = result.plan.pages.find((page) => page.slug === "contacto")!
+
+  // 1) Servicios reales visibles en Servicios (catalog) tras el pipeline completo.
+  const serviciosCardTitle = findSiblingNodeByHeadingText(
+    servicios,
+    "Nuestro catalogo de servicios",
+    "genericWrapper",
+  )
+  assert.ok(serviciosCardTitle, "no se encontro el grid de servicios en Servicios")
+  const serviciosNodes = servicios.tree.nodes as Record<string, CompiledNode>
+  const serviciosCardTexts = (serviciosCardTitle!.children ?? [])
+    .map((id) => serviciosNodes[id])
+    .flatMap((card) => (card?.children ?? []).map((id) => serviciosNodes[id]))
+    .map((node) => node?.props?.text)
+    .filter((value): value is string => typeof value === "string")
+  for (const service of FISIOTERAPIA_SERVICES) {
+    assert.ok(serviciosCardTexts.includes(service.name), `Servicios no muestra "${service.name}" tras el pipeline completo`)
+  }
+
+  // 2) Footer: nombre real del negocio, en las 3 paginas.
+  for (const page of [home, servicios, contacto]) {
+    const brandText = footerBrandHeadingText(page)
+    assert.equal(brandText, "Centro de Fisioterapia Monterrey", `footer de "${page.slug}" no muestra el nombre real del negocio`)
+  }
+
+  // 3) Footer: navegacion canonica (Inicio/Servicios/Contacto), sin Precios/Productos.
+  for (const page of [home, servicios, contacto]) {
+    const navText = footerNavText(page)
+    assert.equal(navText, "Inicio · Servicios · Contacto", `footer de "${page.slug}" no deriva la navegacion real`)
+    assert.equal(navText?.includes("Precios"), false)
+    assert.equal(navText?.includes("Productos"), false)
+  }
+
+  // 4) Regresion J9-E1.1: los CTA de seccion siguen diferenciados (no neutralizados).
+  const homeCtaButton = findSiblingNodeByHeadingText(home, "Descubre todo lo que podemos hacer por ti", "ctaButton")
+  const serviciosCtaButton = findSiblingNodeByHeadingText(servicios, "¿Listo para dar el siguiente paso?", "ctaButton")
+  assert.equal(homeCtaButton?.props?.label, "Ver servicios")
+  assert.equal(homeCtaButton?.props?.href, "#servicios")
+  assert.equal(serviciosCtaButton?.props?.label, "Agendar ahora")
+  assert.equal(serviciosCtaButton?.props?.href, "#contacto")
+
+  // 5) Regresion canonica de nav: sigue siendo exactamente home/servicios/contacto.
+  const navNode = findSiteNavNode(home)
+  const navPages = navNode?.props?.pages as NavPageEntry[] | undefined
+  assert.deepEqual(navPages?.map((entry) => entry.slug), ["home", "servicios", "contacto"])
+})
+
+test("Legacy: runAutonomousMultiPageSiteBuilder sin business.services/business.name explicito sigue compilando y usando el contenido de fallback", async () => {
+  const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
+
+  const result = await runAutonomousMultiPageSiteBuilder({
+    request: "Crea un sitio profesional para una consultoria",
+    forceFreshComposition: true,
+    business: {
+      industry: "consultoria",
+      description: "Consultoria estrategica para pymes.",
+    },
+  })
+
+  assert.equal(result.ok, true)
+  const servicios = result.plan.pages.find((page) => page.slug === "servicios")!
+  const serviciosGrid = findSiblingNodeByHeadingText(servicios, "Nuestro catalogo de servicios", "genericWrapper")
+  const serviciosNodes = servicios.tree.nodes as Record<string, CompiledNode>
+  const cardTitles = (serviciosGrid?.children ?? [])
+    .map((id) => serviciosNodes[id])
+    .flatMap((card) => (card?.children ?? []).map((id) => serviciosNodes[id]))
+    .map((node) => node?.props?.text)
+    .filter((value): value is string => typeof value === "string")
+
+  assert.deepEqual(cardTitles, ["Diagnostico inicial", "Plan a la medida", "Seguimiento cercano", "Entrega y cierre"])
+
+  for (const page of result.plan.pages) {
+    const brandText = footerBrandHeadingText(page)
+    assert.equal(brandText, "Nombre del negocio")
+  }
+})

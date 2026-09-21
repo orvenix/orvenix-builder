@@ -21,6 +21,11 @@ export interface SectionCompositionContext {
   industry?: string
   objective?: string
   audience?: string
+  businessName?: string
+  services?: Array<{
+    name: string
+    description?: string
+  }>
   sitePages?: Array<{
     name: string
     slug: string

@@ -201,6 +201,8 @@ function compilePage(
         siteType: architecture.siteType,
         industry: architecture.industry,
         objective: architecture.objective,
+        businessName: architecture.businessName,
+        services: architecture.services,
         sitePages: architecture.pages.map((pagePlan) => ({
           name: pagePlan.name,
           slug: pagePlan.slug,

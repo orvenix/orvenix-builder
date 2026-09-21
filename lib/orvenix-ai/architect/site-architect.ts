@@ -24,6 +24,8 @@ export interface OrvenixSiteArchitecture {
   industry: string
   objective: string
   pages: OrvenixSitePagePlan[]
+  businessName?: string
+  services?: Array<{ name: string; description?: string }>
 }
 
 function normalize(value?: string) {
@@ -144,6 +146,8 @@ export function buildSiteArchitecture(
       siteType,
       industry: context.business?.industry ?? "salud",
       objective: "Conseguir citas y generar confianza",
+      businessName: context.business?.name,
+      services: context.business?.services,
       pages: [
         makePage(siteType,
           "Inicio",
@@ -197,6 +201,8 @@ export function buildSiteArchitecture(
       siteType,
       industry: context.business?.industry ?? "restaurante",
       objective: "Conseguir reservaciones y visitas",
+      businessName: context.business?.name,
+      services: context.business?.services,
       pages: [
         makePage(siteType,
           "Inicio",
@@ -249,6 +255,8 @@ export function buildSiteArchitecture(
       siteType,
       industry: context.business?.industry ?? "agencia",
       objective: "Conseguir prospectos",
+      businessName: context.business?.name,
+      services: context.business?.services,
       pages: [
         makePage(siteType,
           "Inicio",
@@ -302,6 +310,8 @@ export function buildSiteArchitecture(
       siteType,
       industry: context.business?.industry ?? "ecommerce",
       objective: "Vender productos",
+      businessName: context.business?.name,
+      services: context.business?.services,
       pages: [
         makePage(siteType,
           "Inicio",
@@ -339,6 +349,8 @@ export function buildSiteArchitecture(
     siteType: "business",
     industry: context.business?.industry ?? "negocio",
     objective: "Presentar el negocio y generar contactos",
+    businessName: context.business?.name,
+    services: context.business?.services,
     pages: [
       makePage(siteType,
         "Inicio",
