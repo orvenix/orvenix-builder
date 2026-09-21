@@ -1648,3 +1648,62 @@ test("J9-J N) Determinismo: la misma entrada produce exactamente la misma copy d
   const homeSecond = second.plan.pages.find((p) => p.slug === "home")!
   assert.equal(heroH1Text(homeFirst), heroH1Text(homeSecond))
 })
+
+// ---------------------------------------------------------------------------
+// Regression: inferSiteType must not misroute a business into an unrelated
+// architecture branch merely because its own copy contains a keyword as a
+// MID-WORD substring (found via the final V1 acceptance E2E: "identidad
+// visual" for a graphic design studio was misclassified as "health"
+// because "identidad" contains "dent").
+// ---------------------------------------------------------------------------
+
+test("inferSiteType: una palabra ordinaria que contiene 'dent' a mitad de palabra (p.ej. 'identidad') NO dispara la rama 'health'", async () => {
+  const { buildSiteArchitecture } = await import("../../lib/orvenix-ai/architect")
+
+  const architecture = buildSiteArchitecture({
+    request: "Crea un sitio para un estudio de diseño",
+    business: {
+      name: "Estudio Norte",
+      industry: "diseño gráfico",
+      location: "Guadalajara",
+      description: "Diseñamos logotipos, identidad visual y sitios web para negocios en Guadalajara.",
+      objective: "Conseguir solicitudes de cotización",
+    },
+  })
+
+  assert.equal(architecture.siteType, "business")
+
+  // La copia visible/SEO no debe contener lenguaje de clinica dental.
+  const home = architecture.pages.find((page) => page.slug === "home")!
+  assert.equal(home.purpose.toLowerCase().includes("clinica"), false)
+  assert.equal(home.purpose.toLowerCase().includes("cita"), false)
+})
+
+test("inferSiteType: 'dent' al INICIO de palabra (dental/dentista) sigue disparando 'health' normalmente", async () => {
+  const { buildSiteArchitecture } = await import("../../lib/orvenix-ai/architect")
+
+  const dentalArchitecture = buildSiteArchitecture({
+    request: "Crea un sitio para una clinica dental",
+    business: { industry: "salud dental", description: "Somos una clinica dental en la ciudad." },
+  })
+  assert.equal(dentalArchitecture.siteType, "health")
+
+  const dentistaArchitecture = buildSiteArchitecture({
+    request: "req",
+    business: { description: "Soy dentista y atiendo pacientes particulares." },
+  })
+  assert.equal(dentistaArchitecture.siteType, "health")
+})
+
+test("inferSiteType: otras palabras ordinarias que contienen keywords a mitad de palabra tampoco disparan falsos positivos", async () => {
+  const { buildSiteArchitecture } = await import("../../lib/orvenix-ai/architect")
+
+  // "residente"/"presidente"/"accidente" tambien contienen "dent" a mitad de palabra.
+  const a1 = buildSiteArchitecture({ request: "req", business: { description: "Atendemos a todo residente de la zona tras un accidente." } })
+  assert.equal(a1.siteType, "business")
+
+  // "reproductor"/"productor" contienen "producto" como prefijo real (no deberian dispararlo salvo que sea intencional);
+  // se documenta el comportamiento actual: coincide como prefijo de palabra, igual que antes de este fix.
+  const a2 = buildSiteArchitecture({ request: "req", business: { description: "Vendemos productos artesanales." } })
+  assert.equal(a2.siteType, "ecommerce")
+})

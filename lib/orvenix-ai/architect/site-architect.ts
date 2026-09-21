@@ -45,6 +45,20 @@ function normalize(value?: string) {
     .replace(/\p{Diacritic}/gu, "")
 }
 
+/**
+ * True when `keyword` starts a word inside `text` (eg. "dent" matches
+ * "dental"/"dentista"). Plain String.includes() would ALSO match "dent"
+ * inside "identidad", "residente", "presidente", "accidente" -- ordinary
+ * words with no relation to dentistry -- silently misrouting an unrelated
+ * business into the wrong architecture branch. Requiring a word-start
+ * boundary keeps every intended prefix match (the keywords below are all
+ * meant to catch a word BEGINNING with them, eg. plural/derived forms)
+ * while rejecting the keyword appearing mid-word.
+ */
+function startsWordIn(text: string, keyword: string): boolean {
+  return new RegExp(`\\b${keyword}`).test(text)
+}
+
 function inferSiteType(context: OrvenixAIContext) {
   const text = normalize(
     [
@@ -54,34 +68,36 @@ function inferSiteType(context: OrvenixAIContext) {
     ].join(" "),
   )
 
+  const has = (keyword: string) => startsWordIn(text, keyword)
+
   if (
-    text.includes("clinica") ||
-    text.includes("dent") ||
-    text.includes("salud") ||
-    text.includes("doctor")
+    has("clinica") ||
+    has("dent") ||
+    has("salud") ||
+    has("doctor")
   ) {
     return "health"
   }
 
   if (
-    text.includes("restaurante") ||
-    text.includes("cafeteria") ||
-    text.includes("comida")
+    has("restaurante") ||
+    has("cafeteria") ||
+    has("comida")
   ) {
     return "restaurant"
   }
 
   if (
-    text.includes("agencia") ||
-    text.includes("marketing")
+    has("agencia") ||
+    has("marketing")
   ) {
     return "agency"
   }
 
   if (
-    text.includes("tienda") ||
-    text.includes("ecommerce") ||
-    text.includes("producto")
+    has("tienda") ||
+    has("ecommerce") ||
+    has("producto")
   ) {
     return "ecommerce"
   }
