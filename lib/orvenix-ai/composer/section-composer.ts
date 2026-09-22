@@ -223,8 +223,7 @@ function composeGallery(): ComposedSection {
       type: "text",
       displayName: "Descripción galería",
       props: {
-        content:
-          "Una selección visual que puedes reemplazar con fotografías reales del negocio.",
+        content: "Una muestra visual de nuestro trabajo y espacio.",
         align: "center",
         color: textColors.body,
       },
@@ -234,18 +233,37 @@ function composeGallery(): ComposedSection {
   const images: string[] = []
 
   for (let index = 1; index <= 6; index++) {
+    const image = add(
+      nodes,
+      createComposedNode({
+        type: "image",
+        displayName: `Imagen galería ${index}`,
+        props: {
+          src: "",
+          alt: `Imagen del negocio ${index}`,
+          objectFit: "cover",
+          /*
+           * V2-S1.1: real Pexels sources arrive with mixed intrinsic
+           * aspect ratios (landscape/portrait). Without a fixed frame,
+           * next/image's "h-auto" default lets each cell's height follow
+           * the SOURCE photo's own ratio, so a portrait image renders far
+           * taller than its landscape neighbors in the same grid row --
+           * an irregular, broken-looking grid, independent of which
+           * business/provider supplied the photo. `positionMode: "free"`
+           * is the SAME existing mechanism the immersive hero variant
+           * already uses to make an image fill an absolutely-sized
+           * parent with cover (crop, never stretch) behavior; here the
+           * parent is the fixed aspect-square cell wrapper below, not an
+           * absolutely-positioned overlay -- same primitive, different
+           * fixed frame. Source width/height metadata (asset provenance)
+           * is never touched, only the CSS presentation.
+           */
+          positionMode: "free",
+        },
+      }),
+    )
     images.push(
-      add(
-        nodes,
-        createComposedNode({
-          type: "image",
-          displayName: `Imagen galería ${index}`,
-          props: {
-            src: "",
-            alt: `Imagen del negocio ${index}`,
-          },
-        }),
-      ),
+      wrapperNode(nodes, `Celda galería ${index}`, "relative aspect-square overflow-hidden rounded-xl bg-slate-100", [image]),
     )
   }
 
@@ -1228,7 +1246,7 @@ function composeFooter(
   const nodes: Record<string, ComposedNode> = {}
   const brandName = context.businessName?.trim() || "Nombre del negocio"
   const brand = headingNode(nodes, "Marca footer", brandName, 3, { size: "xl", color: "#ffffff" })
-  const copy = textNode(nodes, "Descripcion footer", "Sitio profesional listo para personalizar, publicar y convertir visitantes en clientes.", { color: "#cbd5e1" })
+  const copy = textNode(nodes, "Descripcion footer", "Gracias por tu visita. Contactanos para conocer mas.", { color: "#cbd5e1" })
   const links = textNode(nodes, "Links footer", footerNavText(context.sitePages), { color: "#e2e8f0" })
   const brandStack = wrapperNode(nodes, "Marca y descripcion", "space-y-3", [brand, copy])
   const stack = wrapperNode(nodes, "Contenido footer", "mx-auto grid max-w-6xl gap-6 md:grid-cols-[1fr_auto] md:items-center", [brandStack, links])
@@ -1236,7 +1254,7 @@ function composeFooter(
   return { role: "footer", rootId: root, nodes, purpose: "Cerrar navegacion, marca y datos basicos." }
 }
 
-function composeContent(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("content", "Contenido principal", "Agrega informacion importante del negocio con una estructura clara y editable.", [["Detalle importante", "Explica aqui un punto clave que ayude a decidir."], ["Diferencial", "Cuenta que hace especial esta oferta frente a otras opciones."], ["Siguiente paso", "Guia al visitante hacia la accion mas importante."]], context) }
+function composeContent(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("content", "Contenido principal", "Informacion clara y organizada sobre lo que ofrecemos.", [["Detalle importante", "Explica aqui un punto clave que ayude a decidir."], ["Diferencial", "Cuenta que hace especial esta oferta frente a otras opciones."], ["Siguiente paso", "Guia al visitante hacia la accion mas importante."]], context) }
 
 export function composeSection(
   role: SectionRole,
