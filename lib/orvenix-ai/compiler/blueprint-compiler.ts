@@ -206,6 +206,7 @@ function compilePage(
         objective: architecture.objective,
         businessName: architecture.businessName,
         services: architecture.services,
+        products: architecture.products,
         location: architecture.location,
         businessObjective: architecture.businessObjective,
         sitePages: architecture.pages.map((pagePlan) => ({

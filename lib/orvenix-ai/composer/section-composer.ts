@@ -907,18 +907,28 @@ function cardGridCopy(role: SectionRole, archetype: SectionCompositionContext["a
  */
 const OVERVIEW_SERVICE_TEASER_COUNT = 2
 
-function realServiceItems(
-  services: SectionCompositionContext["services"],
+/**
+ * V2-S1: generalized from the original services-only `realServiceItems`
+ * -- consumes any real, business-supplied offering collection
+ * (services OR products) with the same teaser/full-catalog archetype
+ * behavior. `fallbackDescription` is role-aware so a dish name doesn't
+ * get a service-flavored sentence ("...y como puede ayudarte") stitched
+ * onto it; it is always GENERIC presentation copy, never an invented
+ * fact (no price/ingredient/claim is ever synthesized here).
+ */
+function realOfferingItems(
+  offerings: SectionCompositionContext["services"],
   archetype: SectionCompositionContext["archetype"],
+  fallbackDescription: (name: string) => string,
 ): Array<[string, string]> {
-  const usable = (services ?? [])
-    .map((service) => ({
-      name: service.name?.trim(),
-      description: service.description?.trim(),
+  const usable = (offerings ?? [])
+    .map((offering) => ({
+      name: offering.name?.trim(),
+      description: offering.description?.trim(),
     }))
     .filter(
-      (service): service is { name: string; description: string | undefined } =>
-        Boolean(service.name),
+      (offering): offering is { name: string; description: string | undefined } =>
+        Boolean(offering.name),
     )
 
   if (!usable.length) return []
@@ -928,10 +938,9 @@ function realServiceItems(
       ? usable.slice(0, OVERVIEW_SERVICE_TEASER_COUNT)
       : usable
 
-  return selected.map((service) => [
-    service.name,
-    service.description ||
-      `Conoce mas sobre ${service.name.toLowerCase()} y como puede ayudarte.`,
+  return selected.map((offering) => [
+    offering.name,
+    offering.description || fallbackDescription(offering.name),
   ])
 }
 
@@ -1038,8 +1047,10 @@ function composeCardGridSection(
   const copy = cardGridCopy(role, context.archetype, { titleText, introText, items })
   const realItems =
     role === "services"
-      ? realServiceItems(context.services, context.archetype)
-      : []
+      ? realOfferingItems(context.services, context.archetype, (name) => `Conoce mas sobre ${name.toLowerCase()} y como puede ayudarte.`)
+      : role === "products"
+        ? realOfferingItems(context.products, context.archetype, (name) => `Descubre mas sobre ${name.toLowerCase()}.`)
+        : []
   const finalItems = realItems.length ? realItems : copy.items
   const nodes: Record<string, ComposedNode> = {}
   const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center" })

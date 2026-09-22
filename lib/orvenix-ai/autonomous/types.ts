@@ -32,6 +32,12 @@ export interface AutonomousBusinessInput {
     description?: string
   }>
 
+  /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
+  products?: Array<{
+    name: string
+    description?: string
+  }>
+
   pricing?: Array<{
     name: string
     price: string

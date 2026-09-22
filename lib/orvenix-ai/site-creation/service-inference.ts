@@ -1,21 +1,37 @@
 /**
- * Deterministic, best-effort extraction of a business's offered services
- * from freeform Spanish prose (eg. the "Descripcion del negocio" textarea
- * in the Site Creation dialog). This is intentionally NOT a general NLP
- * parser -- it recognizes one common Spanish pattern (a lead-in verb like
- * "ofrecemos"/"disenamos"/"brindamos" followed by a comma-and-"y" list)
- * and never invents services that aren't textually present. When no such
- * pattern is found, it returns an empty list rather than guessing.
+ * Deterministic, best-effort extraction of a business's offered
+ * services/products from freeform Spanish prose (eg. the "Descripcion
+ * del negocio" textarea in the Site Creation dialog). This is
+ * intentionally NOT a general NLP parser -- it recognizes a bounded set
+ * of common Spanish patterns (a lead-in verb like "ofrecemos"/
+ * "disenamos"/"brindamos" followed by a comma-and-"y" list, or a short
+ * label header like "Servicios:"/"Platillos:") and never invents
+ * offerings that aren't textually present. When no such pattern is
+ * found, it returns an empty list rather than guessing.
  *
- * This is the ONLY place in the codebase that infers structured services
- * from prose. Callers that already have explicit structured services
- * (eg. the Site Creation form's dedicated "Servicios principales" rows)
- * must not call this at all -- explicit input is always authoritative.
+ * This is the ONLY place in the codebase that infers structured
+ * offerings from prose. Callers that already have explicit structured
+ * services/products (eg. the Site Creation form's dedicated "Servicios
+ * principales" rows) must not call this at all -- explicit input is
+ * always authoritative.
+ *
+ * V2-S1: each result carries a `kind` ("service" | "product"),
+ * determined ONLY by which lead-in phrase the business's OWN text used
+ * -- never by siteType/industry/business-name guessing. A business that
+ * writes "Platillos: ..." is self-evidently describing menu items
+ * regardless of what industry it's classified as; a business that
+ * writes "Ofrecemos ..." is self-evidently describing services. When a
+ * lead-in doesn't clearly signal either, it defaults to "service" -- the
+ * pre-existing, safest category (see V2-S1 Section 5's "preserve the
+ * safest existing category" requirement).
  */
+
+export type OfferingKind = "service" | "product"
 
 export type InferredService = {
   name: string
   description?: string
+  kind: OfferingKind
 }
 
 const MAX_INFERRED_SERVICES = 8
@@ -23,48 +39,68 @@ const MAX_INFERRED_SERVICES = 8
 /*
  * Common Spanish verbs/phrases that introduce a list of offerings. Not
  * exhaustive by design (this is a heuristic, not a parser), but broad
- * enough to not depend on any single exact phrase.
+ * enough to not depend on any single exact phrase. Each entry declares
+ * the OfferingKind its own wording signals.
  */
-const SERVICE_LEAD_INS = [
-  "ofrecemos",
-  "ofrece",
-  "brindamos",
-  "brinda",
-  "proporcionamos",
-  "proporciona",
-  "realizamos",
-  "realiza",
-  "hacemos",
-  "hace",
-  "disenamos",
-  "diseñamos",
-  "disena",
-  "diseña",
-  "desarrollamos",
-  "desarrolla",
-  "fabricamos",
-  "fabrica",
-  "vendemos",
-  "vende",
-  "manejamos",
-  "maneja",
-  "trabajamos con",
-  "trabaja con",
-  "nos especializamos en",
-  "se especializa en",
-  "contamos con",
-  "cuenta con",
-  "incluye",
-  "incluyen",
-  "servicios de",
-  "nuestros servicios incluyen",
-  "nuestros servicios son",
+const SERVICE_LEAD_INS: Array<{ phrase: string; kind: OfferingKind }> = [
+  { phrase: "ofrecemos", kind: "service" },
+  { phrase: "ofrece", kind: "service" },
+  { phrase: "brindamos", kind: "service" },
+  { phrase: "brinda", kind: "service" },
+  { phrase: "proporcionamos", kind: "service" },
+  { phrase: "proporciona", kind: "service" },
+  { phrase: "realizamos", kind: "service" },
+  { phrase: "realiza", kind: "service" },
+  { phrase: "hacemos", kind: "service" },
+  { phrase: "hace", kind: "service" },
+  { phrase: "disenamos", kind: "service" },
+  { phrase: "diseñamos", kind: "service" },
+  { phrase: "disena", kind: "service" },
+  { phrase: "diseña", kind: "service" },
+  { phrase: "desarrollamos", kind: "service" },
+  { phrase: "desarrolla", kind: "service" },
+  { phrase: "fabricamos", kind: "service" },
+  { phrase: "fabrica", kind: "service" },
+  { phrase: "vendemos", kind: "service" },
+  { phrase: "vende", kind: "service" },
+  { phrase: "manejamos", kind: "service" },
+  { phrase: "maneja", kind: "service" },
+  { phrase: "trabajamos con", kind: "service" },
+  { phrase: "trabaja con", kind: "service" },
+  { phrase: "nos especializamos en", kind: "service" },
+  { phrase: "se especializa en", kind: "service" },
+  { phrase: "contamos con", kind: "service" },
+  { phrase: "cuenta con", kind: "service" },
+  { phrase: "incluye", kind: "service" },
+  { phrase: "incluyen", kind: "service" },
+  { phrase: "servicios de", kind: "service" },
+  { phrase: "nuestros servicios incluyen", kind: "service" },
+  { phrase: "nuestros servicios son", kind: "service" },
+]
+
+/*
+ * Short label headers (eg. "Servicios: A, B y C", "Platillos: A, B y C")
+ * -- a DIFFERENT structural pattern from a verb-led sentence: the label
+ * must be the ENTIRE text before the colon (exact match after
+ * normalization, not a substring/prefix check), which keeps this at
+ * least as safe as the verb-lead-in pattern while covering a very common
+ * real-world phrasing the verb list alone missed.
+ */
+const LABEL_LEAD_INS: Array<{ label: string; kind: OfferingKind }> = [
+  { label: "servicios", kind: "service" },
+  { label: "nuestros servicios", kind: "service" },
+  { label: "especialidades", kind: "service" },
+  { label: "productos", kind: "product" },
+  { label: "nuestros productos", kind: "product" },
+  { label: "menu", kind: "product" },
+  { label: "nuestro menu", kind: "product" },
+  { label: "platillos", kind: "product" },
 ]
 
 /* Sorted longest-first so multi-word lead-ins are matched before a
  * shorter prefix of themselves (eg. "trabajamos con" before "trabajamos"
  * would matter if both existed; kept as a general safety net). */
-const SORTED_LEAD_INS = [...SERVICE_LEAD_INS].sort((a, b) => b.length - a.length)
+const SORTED_LEAD_INS = [...SERVICE_LEAD_INS].sort((a, b) => b.phrase.length - a.phrase.length)
 
 function stripDiacritics(value: string): string {
   return value.normalize("NFD").replace(/\p{Diacritic}/gu, "")
@@ -146,11 +182,53 @@ function splitEnumeration(remainder: string): string[] {
   return rawItems.filter(Boolean)
 }
 
+type LeadInMatch = { kind: OfferingKind; remainder: string }
+
 /**
- * Extracts a structured, deduplicated, order-preserving list of services
- * from freeform text. Returns an empty array when no offering-like
- * enumeration is found -- callers must not treat that as an error, just
- * as "nothing to infer".
+ * Label-header pattern: "Servicios: A, B y C" / "Platillos: A, B y C".
+ * The pre-colon segment must EXACTLY equal a known label (after
+ * normalization) -- not a prefix/substring check -- which keeps this
+ * pattern precise even though the labels themselves are short.
+ */
+function matchLabelLeadIn(sentence: string): LeadInMatch | null {
+  const colonIndex = sentence.indexOf(":")
+  if (colonIndex === -1) return null
+
+  const label = normalizeForCompare(sentence.slice(0, colonIndex))
+  const match = LABEL_LEAD_INS.find((entry) => entry.label === label)
+  if (!match) return null
+
+  const remainder = sentence.slice(colonIndex + 1).trim()
+  if (!remainder) return null
+
+  return { kind: match.kind, remainder }
+}
+
+/**
+ * Verb-led pattern: "Ofrecemos A, B y C." The lead-in must START the
+ * sentence and be followed by a word boundary (a space), same word-
+ * boundary discipline established for inferSiteType -- never a raw
+ * substring match.
+ */
+function matchVerbLeadIn(sentence: string): LeadInMatch | null {
+  const normalizedSentence = normalizeForCompare(sentence)
+
+  const leadIn = SORTED_LEAD_INS.find((entry) =>
+    normalizedSentence.startsWith(`${entry.phrase} `),
+  )
+  if (!leadIn) return null
+
+  const remainder = sentence.slice(leadIn.phrase.length).trim()
+  if (!remainder) return null
+
+  return { kind: leadIn.kind, remainder }
+}
+
+/**
+ * Extracts a structured, deduplicated, order-preserving list of
+ * services/products from freeform text. Returns an empty array when no
+ * offering-like enumeration is found -- callers must not treat that as
+ * an error, just as "nothing to infer".
  */
 export function inferServicesFromText(
   text: string | undefined | null,
@@ -162,18 +240,10 @@ export function inferServicesFromText(
   const seen = new Set<string>()
 
   for (const sentence of splitSentences(text)) {
-    const normalizedSentence = normalizeForCompare(sentence)
+    const match = matchLabelLeadIn(sentence) ?? matchVerbLeadIn(sentence)
+    if (!match) continue
 
-    const leadIn = SORTED_LEAD_INS.find((phrase) =>
-      normalizedSentence.startsWith(`${phrase} `),
-    )
-
-    if (!leadIn) continue
-
-    const remainder = sentence.slice(leadIn.length).trim()
-    if (!remainder) continue
-
-    const rawItems = splitEnumeration(remainder)
+    const rawItems = splitEnumeration(match.remainder)
 
     rawItems.forEach((rawItem, index) => {
       const isLast = index === rawItems.length - 1
@@ -188,7 +258,7 @@ export function inferServicesFromText(
       if (seen.has(key)) return
       seen.add(key)
 
-      results.push({ name })
+      results.push({ name, kind: match.kind })
     })
 
     if (results.length >= MAX_INFERRED_SERVICES) break

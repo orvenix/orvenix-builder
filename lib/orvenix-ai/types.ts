@@ -76,6 +76,8 @@ export interface OrvenixAIContext {
     audience?: string;
     objective?: string;
     services?: Array<{ name: string; description?: string }>;
+    /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
+    products?: Array<{ name: string; description?: string }>;
   };
 }
 

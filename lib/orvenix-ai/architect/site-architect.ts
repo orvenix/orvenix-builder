@@ -26,6 +26,8 @@ export interface OrvenixSiteArchitecture {
   pages: OrvenixSitePagePlan[]
   businessName?: string
   services?: Array<{ name: string; description?: string }>
+  /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
+  products?: Array<{ name: string; description?: string }>
   location?: string
   /**
    * The real, caller-supplied business objective (eg. "Conseguir citas de
@@ -174,6 +176,7 @@ export function buildSiteArchitecture(
       objective: "Conseguir citas y generar confianza",
       businessName: context.business?.name,
       services: context.business?.services,
+      products: context.business?.products,
       location: context.business?.location,
       businessObjective: context.business?.objective,
       pages: [
@@ -231,6 +234,7 @@ export function buildSiteArchitecture(
       objective: "Conseguir reservaciones y visitas",
       businessName: context.business?.name,
       services: context.business?.services,
+      products: context.business?.products,
       location: context.business?.location,
       businessObjective: context.business?.objective,
       pages: [
@@ -257,9 +261,17 @@ export function buildSiteArchitecture(
           "Presentar alimentos y bebidas.",
           "catalog",
           [
+            /*
+             * V2-S1: "products" (not "content") so real, business-supplied
+             * dish/menu items (business.products) render as the page's
+             * actual offering surface instead of generic editorial filler
+             * cards. Scoped to the restaurant siteType branch itself --
+             * an architecture/siteType rule, not a slug/business-name
+             * check -- so every restaurant gets this, not just one fixture.
+             */
             "navigation",
             "hero",
-            "content",
+            "products",
             "gallery",
             "cta",
             "footer",
@@ -287,6 +299,7 @@ export function buildSiteArchitecture(
       objective: "Conseguir prospectos",
       businessName: context.business?.name,
       services: context.business?.services,
+      products: context.business?.products,
       location: context.business?.location,
       businessObjective: context.business?.objective,
       pages: [
@@ -344,6 +357,7 @@ export function buildSiteArchitecture(
       objective: "Vender productos",
       businessName: context.business?.name,
       services: context.business?.services,
+      products: context.business?.products,
       location: context.business?.location,
       businessObjective: context.business?.objective,
       pages: [
@@ -385,6 +399,7 @@ export function buildSiteArchitecture(
     objective: "Presentar el negocio y generar contactos",
     businessName: context.business?.name,
     services: context.business?.services,
+    products: context.business?.products,
     location: context.business?.location,
     businessObjective: context.business?.objective,
     pages: [

@@ -729,6 +729,7 @@ export async function runAutonomousMultiPageSiteBuilder(
       audience: input.business.audience,
       objective: input.business.objective,
       services: input.business.services,
+      products: input.business.products,
     },
   })
 

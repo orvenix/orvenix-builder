@@ -28,6 +28,11 @@ export interface SectionCompositionContext {
     name: string
     description?: string
   }>
+  /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
+  products?: Array<{
+    name: string
+    description?: string
+  }>
   location?: string
   /** The real, caller-supplied business objective -- see the identically
    * named field on OrvenixSiteArchitecture for why this is kept separate

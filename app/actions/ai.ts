@@ -1158,6 +1158,7 @@ export async function runOrvenixSiteCreationAction(
           description: business.description,
           objective: business.objective,
           services: business.services,
+          products: business.products,
         },
         preferredStyle,
         designMemoryPrior: designMemoryDecision.designMemoryPrior,
