@@ -51,4 +51,22 @@ export interface SectionCompositionContext {
   sectionIndex?: number
   totalSections?: number
   compositionSeed?: string
+
+  /**
+   * V2-4: bounded, ALREADY-VALIDATED-AND-SANITIZED Creative Director hints
+   * for THIS page specifically (matched by slug upstream in
+   * blueprint-compiler.ts). Absent whenever Creative Director is disabled,
+   * unavailable, or its proposal was rejected/sanitized-away for this
+   * page -- every consumer of these fields must fall back to its existing
+   * V2-1..V2-S3 deterministic behavior when they're undefined, so the
+   * no-AI baseline is always byte/semantically unchanged.
+   */
+  aiHeroTitleSuggestion?: string
+  aiHeroDescriptionSuggestion?: string
+  aiPreferredHeroVariant?: string
+  aiCtaIntent?: "appointment" | "quote" | "contact"
+  aiHighlightedOfferings?: string[]
+  aiAssetIntent?: { subject: string; mood?: string }
+  /** V2-4: site-level (not per-page) -- reuses the SAME "lg"/"xl" paddingY tokens already used throughout section-composer.ts, never a new token. */
+  aiDensity?: "compact" | "standard" | "spacious"
 }

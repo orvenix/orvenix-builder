@@ -46,4 +46,6 @@ export interface AssetSearchContext {
   visualFamily: string
   industry?: string
   services?: Array<{ name?: string; description?: string }>
+  /** V2-4: bounded, already-validated AI search-intent hint -- never a URL, never provider-selected. See search-intent.ts's buildSearchIntentHierarchy. */
+  aiIntent?: { subject: string; mood?: string }
 }

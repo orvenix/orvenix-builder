@@ -83,11 +83,24 @@ export function buildSearchIntentHierarchy(context: AssetSearchContext & { role:
     .join(" ")
   const text = normalize([context.industry, serviceText].join(" "))
 
+  /*
+   * V2-4 section 9/21: the AI's bounded, already-validated subject/mood
+   * hint, when present, is tried FIRST -- ahead of the deterministic
+   * industry-keyword/family/generic tiers below (which are all preserved
+   * unchanged as the fallback chain). Never a URL: the contract schema
+   * has no such field. If this tier's query returns no provider
+   * candidates, callers already fall through to the next tier exactly as
+   * before V2-4.
+   */
+  const aiSubject = context.aiIntent
+    ? `${context.aiIntent.subject}${context.aiIntent.mood ? `, ${context.aiIntent.mood}` : ""}`
+    : undefined
+
   const specific = INDUSTRY_INTENT_KEYWORDS.find((entry) => startsWordIn(text, entry.keyword))?.intent
   const familyIntent = FAMILY_INTENT[context.visualFamily] ?? FAMILY_INTENT.professional
   const genericIntent = ROLE_GENERIC_INTENT[context.role]
 
-  const hierarchy = [specific, familyIntent, genericIntent].filter((value): value is string => Boolean(value))
+  const hierarchy = [aiSubject, specific, familyIntent, genericIntent].filter((value): value is string => Boolean(value))
 
   return [...new Set(hierarchy)].map(boundQuery)
 }

@@ -29,6 +29,20 @@ export interface ResolveTreeAssetsContext {
   services?: Array<{ name?: string; description?: string }>
   /** Local-only label for alt text -- never sent to the provider. */
   businessName?: string
+  /**
+   * V2-4 section 21: bounded AI search-intent hint for the HERO image
+   * only. Deliberately NOT threaded into gallery's search -- gallery has
+   * no per-page AI intent concept in the V2-4 MVP contract, and this hero
+   * intent is not a good gallery query. Known limitation, not fixed here:
+   * hero is resolved ONCE per site (see heroResolutionAttempted below,
+   * unchanged from V2-2), so this intent -- like every other hero search
+   * signal today -- only ever affects the FIRST page encountered with a
+   * hero placeholder, not each page independently. Reported as
+   * PER_PAGE_HERO_ASSET_VARIETY=blocked_by_existing_cache; left for
+   * V2-4.1 per the authorized scope guard (do not modify this caching
+   * mechanic in the V2-4 MVP).
+   */
+  aiHeroIntent?: { subject: string; mood?: string }
 }
 
 /**
@@ -84,7 +98,7 @@ export async function resolveTreeImageAssets<T extends { name: string; slug: str
         const [resolved] = await resolveAssetPlan({
           provider: context.provider,
           role: "hero",
-          context: searchContext,
+          context: { ...searchContext, ...(context.aiHeroIntent ? { aiIntent: context.aiHeroIntent } : {}) },
           altSeed: context.businessName,
           count: 1,
         })

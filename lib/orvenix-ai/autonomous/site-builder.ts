@@ -35,6 +35,10 @@ import {
 } from "@/lib/orvenix-ai/assets/resolve-tree-assets"
 
 import {
+  resolveCreativeDirectorSectionOrderV1,
+} from "@/lib/orvenix-ai/creative-director/section-order"
+
+import {
   createPexelsProvider,
 } from "@/lib/orvenix-ai/assets/pexels-provider"
 
@@ -587,6 +591,20 @@ function applySiteCreationThemeAdvisories(theme: GlobalTheme, input: AutonomousS
     return applyThemeDirection(baseline, externalTheme)
   }
 
+  /*
+   * V2-4 section 22: lowest-priority tier -- only reached when neither
+   * Design Memory L2 nor the (still-dormant) theme_direction_advisor_v1
+   * advisory applied. Reuses applyThemeDirection as-is: any bucket value
+   * that isn't a recognized token is simply ignored per-axis by that
+   * function already, so an invalid/partial visualDirection safely falls
+   * through to the deterministic V2-1 baseline for whichever axes it
+   * didn't validly cover.
+   */
+  const creativeVisualDirection = input.creativeDirection?.visualDirection
+  if (isPlainRecord(creativeVisualDirection)) {
+    return applyThemeDirection(baseline, creativeVisualDirection)
+  }
+
   return baseline
 }
 
@@ -738,6 +756,31 @@ export async function runAutonomousMultiPageSiteBuilder(
   )
 
   /*
+   * V2-4 sections 4/19: bounded section-ORDER authority, applied at the
+   * architecture stage -- BEFORE compileSiteBlueprint runs, never as a
+   * post-hoc reorder of a finished tree. Presence/roles/siteType/
+   * archetype are untouched: only each page's OWN `sections` array order
+   * can change, and only when the AI's proposed order is a validated
+   * permutation of that exact page's existing recipe roles (navigation
+   * first, footer last, same role set -- see section-order.ts). Absent
+   * creativeDirection, or an invalid/missing order for a given page,
+   * `architecture` is unchanged for that page.
+   */
+  const orderedArchitecture = input.creativeDirection?.pageDirections?.length
+    ? {
+        ...architecture,
+        pages: architecture.pages.map((page) => {
+          const direction = input.creativeDirection?.pageDirections.find((entry) => entry.slug === page.slug)
+          const defaultOrder = page.sections.map((section) => section.role)
+          const finalOrder = resolveCreativeDirectorSectionOrderV1(defaultOrder, direction?.preferredSectionOrder)
+          if (finalOrder.join("|") === defaultOrder.join("|")) return page
+          const sectionByRole = new Map(page.sections.map((section) => [section.role as string, section]))
+          return { ...page, sections: finalOrder.map((role) => sectionByRole.get(role)!) }
+        }),
+      }
+    : architecture
+
+  /*
    * V2-3: resolved once, early, so structural composition (which
    * section variant each role gets) can see the same VisualFamily the
    * theme and asset pipelines independently resolve later. Deliberately
@@ -755,10 +798,11 @@ export async function runAutonomousMultiPageSiteBuilder(
   })
 
   const blueprint = compileSiteBlueprint(
-    architecture,
+    orderedArchitecture,
     {
       preferPrimitiveComposition: input.forceFreshComposition,
       visualFamily: compositionVisualFamily,
+      creativeDirection: input.creativeDirection,
     },
   )
 
@@ -810,12 +854,24 @@ export async function runAutonomousMultiPageSiteBuilder(
     siteTypeHint: architecture.siteType,
   })
 
+  /*
+   * V2-4 section 21: hero is resolved ONCE per site (unchanged caching
+   * mechanic, see resolve-tree-assets.ts), so only ONE page's AI asset
+   * intent can practically apply -- the Home page's, when present,
+   * matching which page's hero is composed/encountered first in every
+   * existing site-architect.ts recipe; else the first available
+   * pageDirection's intent, as the closest approximation.
+   */
+  const aiHeroIntent = input.creativeDirection?.pageDirections?.find((direction) => direction.slug === "home")?.assetIntent
+    ?? input.creativeDirection?.pageDirections?.[0]?.assetIntent
+
   const pages = await resolveTreeImageAssets(rawPages, {
     provider: createPexelsProvider(),
     visualFamily: assetVisualFamily,
     industry: input.business.industry,
     services: input.business.services,
     businessName: input.business.name,
+    ...(aiHeroIntent ? { aiHeroIntent } : {}),
   })
 
   const pageQuality = pages.map((page) => {
@@ -862,7 +918,7 @@ export async function runAutonomousMultiPageSiteBuilder(
 
   return {
     ok: true,
-    architecture,
+    architecture: orderedArchitecture,
     selectedTemplate: null,
     plan: validation.plan,
     planHash: validation.planHash,

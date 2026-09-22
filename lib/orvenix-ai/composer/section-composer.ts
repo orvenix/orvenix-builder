@@ -636,8 +636,18 @@ function composeHero(
   context: SectionCompositionContext = {},
 ): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  const variant = selectVariant(context, "hero", HERO_VARIANTS, HERO_WEIGHTS)
-  const heroCopy = getPageAwareHeroCopy({
+  /*
+   * V2-4 section 18: preferredHeroVariant overrides the deterministic
+   * V2-3 selection ONLY when it's one of the actually-registered
+   * HERO_VARIANTS -- schema validation upstream (contract.ts) already
+   * constrains it to that exact set, but this defensive re-check costs
+   * nothing and protects against any future drift between the two lists
+   * (covered by a dedicated cross-module test).
+   */
+  const variant = (context.aiPreferredHeroVariant && (HERO_VARIANTS as readonly string[]).includes(context.aiPreferredHeroVariant))
+    ? (context.aiPreferredHeroVariant as (typeof HERO_VARIANTS)[number])
+    : selectVariant(context, "hero", HERO_VARIANTS, HERO_WEIGHTS)
+  const deterministicHeroCopy = getPageAwareHeroCopy({
     name: context.businessName,
     industry: context.industry,
     objective: context.businessObjective,
@@ -653,6 +663,18 @@ function composeHero(
       archetype: context.archetype,
     },
   })
+  /*
+   * V2-4 section 6/17: AI Hero copy is a TOP-TIER SUGGESTION, already
+   * fact-validated/sanitized upstream (creative-direction.ts) before it
+   * ever reaches this context -- title/description ONLY, never eyebrow
+   * or CTA labels. Absent -> byte-identical to the V2-S3 deterministic
+   * baseline (S3 remains the fallback authority, never weakened).
+   */
+  const heroCopy = {
+    ...deterministicHeroCopy,
+    title: context.aiHeroTitleSuggestion ?? deterministicHeroCopy.title,
+    description: context.aiHeroDescriptionSuggestion ?? deterministicHeroCopy.description,
+  }
 
   const centered = variant === "centered" || variant === "immersive"
   const immersive = variant === "immersive"
@@ -1146,7 +1168,16 @@ function composeCardGridSection(
     grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
   }
 
-  const root = add(nodes, createComposedNode({ type: "section", displayName: `${copy.titleText} (${layoutVariant})`, props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: "#ffffff" }, children: [heading, intro, grid] }))
+  /*
+   * V2-4: density is a SITE-level, bounded, already-validated hint --
+   * reuses the exact "lg"/"xl" paddingY tokens already rendered
+   * elsewhere in this file, never a new token. "spacious" keeps the
+   * existing "xl" default (already the largest token this file uses);
+   * only "compact" changes the render, and only for card-grid roles.
+   */
+  const paddingY = context.aiDensity === "compact" ? "lg" : "xl"
+
+  const root = add(nodes, createComposedNode({ type: "section", displayName: `${copy.titleText} (${layoutVariant})`, props: { maxWidth: "xl", paddingY, paddingX: "lg", background: "#ffffff" }, children: [heading, intro, grid] }))
   return { role, rootId: root, nodes, purpose: copy.introText }
 }
 

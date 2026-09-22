@@ -141,6 +141,15 @@ export function resolveCtaCopy(
     if (!isProductCatalog && !isOverview) {
       label = CTA_INTENT_LABELS[classifyCtaIntent(objective)]
     }
+  } else if (context.aiCtaIntent && !isProductCatalog && !isOverview) {
+    /*
+     * V2-4 section 20: the real businessObjective ALWAYS wins (the branch
+     * above) -- this AI fallback is reachable ONLY when there is no
+     * usable real objective to classify from. Preserves S2.1: a real
+     * quote objective can never be turned into an appointment CTA by AI
+     * input, because this branch never runs when `objective` is truthy.
+     */
+    label = CTA_INTENT_LABELS[context.aiCtaIntent]
   }
 
   return { title, body, label, href }

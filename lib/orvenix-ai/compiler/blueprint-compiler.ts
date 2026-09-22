@@ -27,6 +27,8 @@ import type {
   CompiledSiteBlueprint,
 } from "./types"
 
+import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
+
 function nodeId(prefix: string) {
   return `ai-${prefix}-${randomUUID()}`
 }
@@ -132,6 +134,8 @@ interface CompileBlueprintOptions {
   preferPrimitiveComposition?: boolean
   /** V2-3: structural-variant tendency input, threaded into every section's SectionCompositionContext. */
   visualFamily?: string
+  /** V2-4: optional, already-validated-and-sanitized Creative Director direction, matched per-page by slug below. */
+  creativeDirection?: CreativeSiteDirectionV1 | null
 }
 
 function createBlockSection(
@@ -194,6 +198,9 @@ function compilePage(
   const children: string[] = []
   const totalSections = page.sections.length
 
+  // V2-4: matched once per page (not per section) -- every section on this page sees the SAME page-level AI hints.
+  const pageDirection = options.creativeDirection?.pageDirections?.find((direction) => direction.slug === page.slug)
+
   for (const [sectionIndex, section] of page.sections.entries()) {
     const childId = createBlockSection(
       section,
@@ -221,6 +228,13 @@ function compilePage(
         sectionIndex,
         totalSections,
         compositionSeed: `${architecture.siteType}:${page.slug}:${section.role}:${sectionIndex}`,
+        ...(pageDirection?.heroTitleSuggestion ? { aiHeroTitleSuggestion: pageDirection.heroTitleSuggestion } : {}),
+        ...(pageDirection?.heroDescriptionSuggestion ? { aiHeroDescriptionSuggestion: pageDirection.heroDescriptionSuggestion } : {}),
+        ...(pageDirection?.preferredHeroVariant ? { aiPreferredHeroVariant: pageDirection.preferredHeroVariant } : {}),
+        ...(pageDirection?.ctaIntent ? { aiCtaIntent: pageDirection.ctaIntent } : {}),
+        ...(pageDirection?.highlightedOfferings ? { aiHighlightedOfferings: pageDirection.highlightedOfferings } : {}),
+        ...(pageDirection?.assetIntent ? { aiAssetIntent: pageDirection.assetIntent } : {}),
+        ...(options.creativeDirection?.density ? { aiDensity: options.creativeDirection.density } : {}),
       },
     )
 

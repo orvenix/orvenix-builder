@@ -52,6 +52,9 @@ import {
   resolveSiteCreationDesignMemoryDecisionV1,
   resolveSiteCreationThemeAssistanceAdvisoryV1,
 } from "@/lib/orvenix-ai/site-creation/assistance";
+import { resolveSiteCreationCreativeDirectionV1 } from "@/lib/orvenix-ai/site-creation/creative-direction";
+import { createAnthropicCreativeDirectorProviderV1 } from "@/lib/orvenix-ai/creative-director/anthropic-provider";
+import { buildSiteArchitecture } from "@/lib/orvenix-ai/architect";
 import {
   registerAIUndoForExecutedResult,
   rollbackOrvenixAIChange,
@@ -1146,6 +1149,40 @@ export async function runOrvenixSiteCreationAction(
       ? assistanceAdvisory.advisory
       : null;
 
+    // V2-4: bounded, disabled-by-default (ORVENIX_CREATIVE_DIRECTOR_ENABLED
+    // env flag) -- see site-creation/creative-direction.ts. Any failure
+    // mode resolves to `status !== "applied"`, so `creativeDirection`
+    // stays null and generation proceeds exactly as before V2-4.
+    const creativeDirectionResult = await resolveSiteCreationCreativeDirectionV1({
+      userId: session.user.id,
+      siteCreationAttemptId: attempt.id,
+      designMemoryDecision,
+      business: {
+        name: business.name,
+        industry: business.industry,
+        location: business.location,
+        description: business.description,
+        objective: business.objective,
+        preferredStyle,
+        services: business.services,
+        products: business.products,
+      },
+      architecture: buildSiteArchitecture({
+        request: siteCreationRequest,
+        business: {
+          name: business.name,
+          industry: business.industry,
+          description: business.description,
+          location: business.location,
+          objective: business.objective,
+          services: business.services,
+          products: business.products,
+        },
+      }),
+      provider: createAnthropicCreativeDirectorProviderV1(),
+    });
+    const creativeDirection = creativeDirectionResult.status === "applied" ? creativeDirectionResult.direction : null;
+
     let generated: Awaited<ReturnType<typeof runAutonomousMultiPageSiteBuilder>>;
 
     try {
@@ -1163,6 +1200,7 @@ export async function runOrvenixSiteCreationAction(
         preferredStyle,
         designMemoryPrior: designMemoryDecision.designMemoryPrior,
         externalThemeAdvisory,
+        creativeDirection,
         forceFreshComposition: true,
         minimumQuality: 55,
       });

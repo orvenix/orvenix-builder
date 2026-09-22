@@ -2,6 +2,7 @@ import type { EditorTree } from "@/types/editor"
 import type { DesignPlannerPriorV1 } from "@/lib/orvenix-ai/design-memory/planner-prior"
 import type { SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2"
 import type { SiteCreationExternalThemeAdvisoryV1 } from "@/lib/orvenix-ai/site-creation/assistance"
+import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
 import type {
   OrvenixSiteArchitecture,
 } from "@/lib/orvenix-ai/architect"
@@ -63,6 +64,14 @@ export interface AutonomousSiteBuilderInput {
   designMemoryPrior?: DesignPlannerPriorV1 | null
 
   externalThemeAdvisory?: SiteCreationExternalThemeAdvisoryV1 | null
+
+  /**
+   * V2-4: optional, already-validated-and-sanitized Creative Director
+   * direction. Undefined/null (the default) -> behavior is unchanged from
+   * the deterministic V2-1..V2-S3 baseline; every consumption point is
+   * additive and falls back when this is absent.
+   */
+  creativeDirection?: CreativeSiteDirectionV1 | null
 }
 
 export interface AutonomousSiteBuilderResult {
