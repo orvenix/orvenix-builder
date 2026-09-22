@@ -6,6 +6,7 @@ import type {
 } from "./types"
 import { createComposedNode } from "./node-factory"
 import { getPageAwareHeroCopy } from "@/lib/orvenix-ai/content/content-engine"
+import { hasSafeContrast } from "@/lib/orvenix-ai/theme/visual-direction"
 import { selectVariant } from "./variant-selector"
 import {
   CTA_VARIANTS,
@@ -26,6 +27,25 @@ function add(
 ) {
   nodes[node.tempId] = node
   return node.tempId
+}
+
+const DARK_ON_LIGHT_TEXT = { heading: "#0f172a", body: "#475569" }
+const LIGHT_ON_DARK_TEXT = { heading: "#ffffff", body: "#e2e8f0" }
+
+/**
+ * V2-3.1: generic light/dark foreground pairing for a composer-chosen
+ * section background. Reuses the already-tested contrast check from
+ * theme/visual-direction.ts (V2-1) rather than building a new
+ * accessibility engine. Any section content that sits DIRECTLY on the
+ * section's own background (not inside its own opaque card) should
+ * derive its text color from this instead of assuming a fixed
+ * light-on-white palette -- the exact bug class that let a section
+ * render dark-on-light-assuming text with no explicit background of its
+ * own, silently falling through to Orvenix's own product-chrome dark
+ * navy default instead of a color the generated site actually controls.
+ */
+function readableTextColorsFor(background: string): { heading: string; body: string } {
+  return hasSafeContrast(DARK_ON_LIGHT_TEXT.heading, background) ? DARK_ON_LIGHT_TEXT : LIGHT_ON_DARK_TEXT
 }
 
 function faqCopy(archetype: SectionCompositionContext["archetype"]) {
@@ -55,11 +75,15 @@ function faqCopy(archetype: SectionCompositionContext["archetype"]) {
   }
 }
 
+/** V2-3.1: same fix as trust -- this role never set an explicit section background either (see TRUST_SECTION_BACKGROUND's comment). */
+const FAQ_SECTION_BACKGROUND = "#ffffff"
+
 function composeFAQ(
   context: SectionCompositionContext = {},
 ): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const copy = faqCopy(context.archetype)
+  const textColors = readableTextColorsFor(FAQ_SECTION_BACKGROUND)
 
   const heading = add(
     nodes,
@@ -71,6 +95,7 @@ function composeFAQ(
         level: 2,
         size: "3xl",
         align: "center",
+        color: textColors.heading,
       },
     }),
   )
@@ -83,6 +108,7 @@ function composeFAQ(
       props: {
         content: copy.intro,
         align: "center",
+        color: textColors.body,
       },
     }),
   )
@@ -155,6 +181,7 @@ function composeFAQ(
         paddingY: "xl",
         paddingX: "lg",
         align: "left",
+        background: FAQ_SECTION_BACKGROUND,
       },
       children: [heading, intro, grid],
     }),
@@ -168,8 +195,12 @@ function composeFAQ(
   }
 }
 
+/** V2-3.1: same fix as trust -- this role never set an explicit section background either (see TRUST_SECTION_BACKGROUND's comment). */
+const GALLERY_SECTION_BACKGROUND = "#ffffff"
+
 function composeGallery(): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
+  const textColors = readableTextColorsFor(GALLERY_SECTION_BACKGROUND)
 
   const heading = add(
     nodes,
@@ -181,6 +212,7 @@ function composeGallery(): ComposedSection {
         level: 2,
         size: "3xl",
         align: "center",
+        color: textColors.heading,
       },
     }),
   )
@@ -194,6 +226,7 @@ function composeGallery(): ComposedSection {
         content:
           "Una selección visual que puedes reemplazar con fotografías reales del negocio.",
         align: "center",
+        color: textColors.body,
       },
     }),
   )
@@ -239,6 +272,7 @@ function composeGallery(): ComposedSection {
         maxWidth: "xl",
         paddingY: "xl",
         paddingX: "lg",
+        background: GALLERY_SECTION_BACKGROUND,
       },
       children: [heading, intro, grid],
     }),
@@ -253,9 +287,25 @@ function composeGallery(): ComposedSection {
   }
 }
 
+/**
+ * V2-3.1: trust is the only role composer that never set an explicit
+ * section `background` -- every sibling (hero/services/features/contact/
+ * cta/footer) already does. With no background of its own, the section
+ * fell through to Orvenix's own product-chrome default (a dark navy --
+ * see app/orvenix-tokens.css's --bg), while its heading/item text still
+ * assumed a light background, producing unreadable dark-on-dark text.
+ * Giving it the same kind of explicit background every other role
+ * already has is the fix; readableTextColorsFor keeps the text correct
+ * relative to whatever that background actually is, not a hardcoded
+ * assumption, so this stays correct even if the chosen background ever
+ * changes.
+ */
+const TRUST_SECTION_BACKGROUND = "#ffffff"
+
 function composeTrust(context: SectionCompositionContext = {}): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const variant = selectVariant(context, "trust", TRUST_VARIANTS, TRUST_WEIGHTS)
+  const textColors = readableTextColorsFor(TRUST_SECTION_BACKGROUND)
 
   const heading = add(
     nodes,
@@ -267,6 +317,7 @@ function composeTrust(context: SectionCompositionContext = {}): ComposedSection 
         level: 2,
         size: "3xl",
         align: "center",
+        color: textColors.heading,
       },
     }),
   )
@@ -280,17 +331,22 @@ function composeTrust(context: SectionCompositionContext = {}): ComposedSection 
   let body: string
 
   if (variant === "checklist-row") {
+    // Items sit directly on the section background (no card of their
+    // own) -- they must follow the SAME derived colors as the heading.
     const rows = items.map(([title, text], index) => {
       const iconName = cardIconName("trust", index)
       const icon = iconName ? iconNode(nodes, `${title} ícono`, iconName) : null
       const iconWrap = wrapperNode(nodes, `${title} icono wrap`, "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700", icon ? [icon] : [])
-      const cardTitle = headingNode(nodes, title, title, 3, { size: "md", weight: "bold" })
-      const cardText = textNode(nodes, `${title} descripción`, text, { size: "sm" })
+      const cardTitle = headingNode(nodes, title, title, 3, { size: "md", weight: "bold", color: textColors.heading })
+      const cardText = textNode(nodes, `${title} descripción`, text, { size: "sm", color: textColors.body })
       const textStack = wrapperNode(nodes, `${title} stack`, "flex flex-col gap-1", [cardTitle, cardText])
       return wrapperNode(nodes, title, "flex items-center gap-4", [iconWrap, textStack])
     })
     body = wrapperNode(nodes, "Checklist confianza", "grid gap-5 sm:grid-cols-3", rows)
   } else {
+    // Cards impose their OWN opaque white background regardless of the
+    // section's -- their text intentionally stays the fixed dark-on-white
+    // default, not derived from TRUST_SECTION_BACKGROUND.
     const cards = items.map(([title, text], index) => {
       const iconName = cardIconName("trust", index)
       const icon = iconName ? iconNode(nodes, `${title} ícono`, iconName) : null
@@ -310,6 +366,7 @@ function composeTrust(context: SectionCompositionContext = {}): ComposedSection 
         maxWidth: "xl",
         paddingY: "lg",
         paddingX: "lg",
+        background: TRUST_SECTION_BACKGROUND,
       },
       children: [heading, body],
     }),
@@ -324,8 +381,12 @@ function composeTrust(context: SectionCompositionContext = {}): ComposedSection 
   }
 }
 
+/** V2-3.1: same fix as trust -- this role never set an explicit section background either (see TRUST_SECTION_BACKGROUND's comment). */
+const TESTIMONIALS_SECTION_BACKGROUND = "#ffffff"
+
 function composeTestimonials(): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
+  const textColors = readableTextColorsFor(TESTIMONIALS_SECTION_BACKGROUND)
 
   const heading = add(
     nodes,
@@ -337,6 +398,7 @@ function composeTestimonials(): ComposedSection {
         level: 2,
         size: "3xl",
         align: "center",
+        color: textColors.heading,
       },
     }),
   )
@@ -350,6 +412,7 @@ function composeTestimonials(): ComposedSection {
         content:
           "Agrega aquí opiniones reales de clientes cuando estén disponibles.",
         align: "center",
+        color: textColors.body,
       },
     }),
   )
@@ -425,6 +488,7 @@ function composeTestimonials(): ComposedSection {
         maxWidth: "xl",
         paddingY: "xl",
         paddingX: "lg",
+        background: TESTIMONIALS_SECTION_BACKGROUND,
       },
       children: [
         heading,
