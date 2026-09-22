@@ -1,4 +1,5 @@
 import Link from "next/link"
+import type { ProviderAttribution } from "@/lib/orvenix-ai/assets/attribution"
 
 export type SiteOwnership = "rented" | "purchased" | "unknown"
 
@@ -21,6 +22,33 @@ export function parseSiteOwnership(description: string | null | undefined): Site
 interface SiteCopyrightBarProps {
   siteName: string
   ownership: SiteOwnership
+  /** Provider credits this specific page's tree actually needs -- see resolveTreeAttributions. Omitted/empty renders nothing extra. */
+  attributions?: ProviderAttribution[]
+}
+
+/** Small inline addition to the existing bar, never a second footer element -- renders nothing when there is nothing to credit. */
+function AttributionCredits({ attributions }: { attributions?: ProviderAttribution[] }) {
+  if (!attributions?.length) return null
+
+  return (
+    <>
+      {" "}
+      ·{" "}
+      {attributions.map((attribution, index) => (
+        <span key={attribution.provider}>
+          {index > 0 ? ", " : ""}
+          <Link
+            href={attribution.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-current opacity-80 hover:opacity-100 transition-opacity"
+          >
+            {attribution.label}
+          </Link>
+        </span>
+      ))}
+    </>
+  )
 }
 
 /**
@@ -30,7 +58,7 @@ interface SiteCopyrightBarProps {
  * Compra  → "© 2025 {siteName} · Todos los derechos reservados" (el cliente es dueño)
  * Unknown → "Potenciado por Orvenix" (estado indeterminado — demo o sin pago)
  */
-export function SiteCopyrightBar({ siteName, ownership }: SiteCopyrightBarProps) {
+export function SiteCopyrightBar({ siteName, ownership, attributions }: SiteCopyrightBarProps) {
   const year = new Date().getFullYear()
 
   if (ownership === "purchased") {
@@ -40,6 +68,7 @@ export function SiteCopyrightBar({ siteName, ownership }: SiteCopyrightBarProps)
         aria-label="Copyright"
       >
         © {year} {siteName} · Todos los derechos reservados
+        <AttributionCredits attributions={attributions} />
       </footer>
     )
   }
@@ -60,6 +89,7 @@ export function SiteCopyrightBar({ siteName, ownership }: SiteCopyrightBarProps)
           Orvenix
         </Link>
         {" "}· © {year}
+        <AttributionCredits attributions={attributions} />
       </footer>
     )
   }
@@ -79,6 +109,7 @@ export function SiteCopyrightBar({ siteName, ownership }: SiteCopyrightBarProps)
       >
         Orvenix
       </Link>
+      <AttributionCredits attributions={attributions} />
     </footer>
   )
 }

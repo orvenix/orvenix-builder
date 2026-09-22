@@ -5,6 +5,7 @@ import { getResolvedSiteRuntimeContext } from "@/lib/builder-core/tree/siteRunti
 
 import { trackPageView } from "@/lib/analytics";
 import { SiteCopyrightBar, parseSiteOwnership } from "@/components/SiteCopyrightBar";
+import { resolveTreeAttributions } from "@/lib/orvenix-ai/assets/attribution";
 import { getFunnel } from "@/lib/commerce/funnels";
 import { FunnelStepOfferCallout } from "@/components/FunnelStepOfferCallout";
 import { getPublicFunnelOfferCallout, getPublicFunnelOfferQuery } from "@/lib/commerce/funnel-offer-public";
@@ -174,7 +175,11 @@ export default async function PublicPage({ params, searchParams }: Props) {
           availablePages={runtimeContext.pages}
         />
       </div>
-      <SiteCopyrightBar siteName={site.name} ownership={ownership} />
+      <SiteCopyrightBar
+        siteName={site.name}
+        ownership={ownership}
+        attributions={resolveTreeAttributions(runtimeContext.tree)}
+      />
     </div>
   );
 }
