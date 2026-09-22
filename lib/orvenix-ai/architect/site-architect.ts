@@ -67,6 +67,17 @@ function inferSiteType(context: OrvenixAIContext) {
       context.business?.industry,
       context.business?.description,
       context.request,
+      /*
+       * Site-type follow-up (fisioterapia_not_health): explicit, structured
+       * service/product NAMES are already on this same context object --
+       * no new plumbing, no architectural change -- and are just as
+       * legitimate a factual signal as industry/description/request. A
+       * business whose only mention of what it does lives in a real
+       * service name (not the free-text industry/description fields) was
+       * previously invisible to this classifier.
+       */
+      ...(context.business?.services ?? []).map((service) => service.name),
+      ...(context.business?.products ?? []).map((product) => product.name),
     ].join(" "),
   )
 
@@ -76,7 +87,21 @@ function inferSiteType(context: OrvenixAIContext) {
     has("clinica") ||
     has("dent") ||
     has("salud") ||
-    has("doctor")
+    has("doctor") ||
+    /*
+     * "fisioterap" is a single shared prefix for "fisioterapia",
+     * "fisioterapeuta"/"fisioterapeutas", and "fisioterapéutico"/
+     * "fisioterapéutica" (normalized "fisioterapeutico"/-a) -- the same
+     * startsWordIn word-START mechanism already used for "dent" above, so
+     * "identidad" (which merely CONTAINS "dent" mid-word) stays excluded
+     * and, symmetrically, any word merely containing "fisioterap" or
+     * "terapia" mid-word would too. Deliberately NOT adding the broader,
+     * ambiguous "terapia"/"rehabilitacion" alone: both appear in real
+     * non-medical contexts (eg. "terapia de pareja", generic "risoterapia"/
+     * "musicoterapia" wellness branding) -- see the adversarial regression
+     * tests for both directions.
+     */
+    has("fisioterap")
   ) {
     return "health"
   }

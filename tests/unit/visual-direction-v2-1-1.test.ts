@@ -56,18 +56,30 @@ const ESTUDIO_NORTE = {
   ],
 }
 
-test("V2-1.1 A) benchmark requerido: Fisioterapia / Sabores del Valle / Estudio Norte no colapsan visualmente aunque Fisioterapia y Estudio Norte compartan siteType 'business'", async () => {
+test("V2-1.1 A) benchmark requerido: Fisioterapia / Sabores del Valle / Estudio Norte producen 3 firmas visuales distintas, con VisualFamily independiente de siteType", async () => {
   const { runAutonomousMultiPageSiteBuilder } = await import("../../lib/orvenix-ai/autonomous/site-builder")
 
   const fisioterapia = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: FISIOTERAPIA })
   const sabores = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: SABORES_DEL_VALLE })
   const estudioNorte = await runAutonomousMultiPageSiteBuilder({ request: "req", forceFreshComposition: true, business: ESTUDIO_NORTE })
 
-  // Architecture (siteType) may legitimately collapse -- this is expected.
-  assert.equal(fisioterapia.architecture.siteType, "business")
+  /*
+   * Site-type follow-up (fisioterapia_not_health): this test originally
+   * asserted fisioterapia.architecture.siteType === "business" and used
+   * that SHARED-with-Estudio-Norte siteType as the vehicle for proving
+   * VisualFamily doesn't collapse to siteType. inferSiteType now
+   * correctly recognizes "fisioterapia" as health (siteType authority
+   * itself, untouched here otherwise), so that specific shared-siteType
+   * pairing no longer exists. The actual invariant under test --
+   * VisualFamily is its own independent inference, not derived from
+   * siteType -- still holds and is still demonstrated below: Estudio
+   * Norte alone (siteType "business", a generic catch-all) resolves to
+   * the "creative" family from its own real industry/description/
+   * services text, not from any siteType lookup table.
+   */
+  assert.equal(fisioterapia.architecture.siteType, "health")
   assert.equal(sabores.architecture.siteType, "restaurant")
   assert.equal(estudioNorte.architecture.siteType, "business")
-  assert.equal(fisioterapia.architecture.siteType, estudioNorte.architecture.siteType, "el benchmark asume que ambos comparten siteType 'business'")
 
   // Visual signature (palette + heading font + radius) must NOT collapse.
   const signature = (plan: typeof fisioterapia.plan) =>
@@ -80,7 +92,7 @@ test("V2-1.1 A) benchmark requerido: Fisioterapia / Sabores del Valle / Estudio 
   assert.equal(fisioterapia.plan.theme.colors?.primary, "#1794CC")
   assert.equal(fisioterapia.plan.theme.radius?.card, "16px")
 
-  // Estudio Norte -> creative family (purple/sharp) -- distinct from Fisioterapia despite same siteType.
+  // Estudio Norte -> creative family (purple/sharp) -- distinct from Fisioterapia's health family.
   assert.equal(estudioNorte.plan.theme.colors?.primary, "#7c3aed")
   assert.equal(estudioNorte.plan.theme.fontHeading, "Oswald")
   assert.notEqual(estudioNorte.plan.theme.colors?.primary, fisioterapia.plan.theme.colors?.primary)

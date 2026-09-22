@@ -1305,12 +1305,19 @@ function heroH1Text(page: GeneratedPlanPage): string | undefined {
 }
 
 /**
- * The Hero eyebrow is the only "text" node styled with composeHero's
- * eyebrow color (#0E5C80) anywhere in a composed page.
+ * The Hero eyebrow is the only "text" node styled with one of
+ * composeHero's two eyebrow colors anywhere in a composed page: "#0E5C80"
+ * for the centered/split-left/split-right variants, "#e0f2fe" for the
+ * immersive variant (see composeHero's `eyebrowColor`). Which variant a
+ * given business/page resolves to is decided by V2-3's structural-variant
+ * hash (siteType is one of its inputs, alongside visualFamily/industry/
+ * archetype/etc.) -- checking both colors keeps this helper correct
+ * regardless of which variant a fixture happens to land on, instead of
+ * silently only finding the eyebrow for non-immersive hero renders.
  */
 function heroEyebrowText(page: GeneratedPlanPage): string | undefined {
   for (const node of Object.values(page.tree.nodes) as CompiledNode[]) {
-    if (node.type === "text" && node.props?.color === "#0E5C80") {
+    if (node.type === "text" && (node.props?.color === "#0E5C80" || node.props?.color === "#e0f2fe")) {
       return typeof node.props?.content === "string" ? node.props.content : undefined
     }
   }
