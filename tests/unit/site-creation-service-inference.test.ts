@@ -167,20 +167,38 @@ test("Determinismo: la misma entrada produce exactamente la misma salida estruct
 // from manually-injected services[].
 // ---------------------------------------------------------------------------
 
-type CompiledNode = { type: string; props?: Record<string, unknown>; children?: string[] }
+type CompiledNode = { type: string; props?: Record<string, unknown>; children?: string[]; parentId?: string }
 type GeneratedPlanPage = {
   slug: string
   tree: { rootId: string; nodes: Record<string, CompiledNode> }
 }
 
+/**
+ * V2-3: looks for `siblingType` anywhere within the same top-level
+ * "section" as the matching heading, not strictly as a direct sibling --
+ * structural variants (eg. CTA's split-panel, services' editorial-
+ * list/asymmetric-featured) now legitimately nest the heading and the
+ * target node under different sub-wrappers of the same section.
+ */
 function findSiblingNodeByHeadingText(page: GeneratedPlanPage, headingText: string, siblingType: string): CompiledNode | undefined {
-  const nodes = page.tree.nodes
-  for (const node of Object.values(nodes)) {
-    const children = (node.children ?? []).map((id) => nodes[id])
-    const hasMatchingHeading = children.some((child) => child?.type === "heading" && child.props?.text === headingText)
-    if (hasMatchingHeading) {
-      return children.find((child) => child?.type === siblingType)
-    }
+  const nodes = page.tree.nodes as Record<string, CompiledNode>
+
+  const headingNode = Object.values(nodes).find((node) => node?.type === "heading" && node.props?.text === headingText)
+  if (!headingNode) return undefined
+
+  let sectionRoot: CompiledNode | undefined = headingNode
+  while (sectionRoot && sectionRoot.type !== "section" && sectionRoot.parentId) {
+    sectionRoot = nodes[sectionRoot.parentId]
+  }
+  if (!sectionRoot) return undefined
+
+  const stack = [...(sectionRoot.children ?? [])]
+  while (stack.length) {
+    const id = stack.shift()!
+    const node = nodes[id]
+    if (!node) continue
+    if (node.type === siblingType) return node
+    stack.push(...(node.children ?? []))
   }
   return undefined
 }
@@ -204,13 +222,28 @@ function findFooterBrandText(page: GeneratedPlanPage): string | undefined {
   return undefined
 }
 
+/**
+ * V2-3: recursive, not fixed-depth -- structural-variant treatments nest
+ * card/row/item titles at different depths (editorial-list wraps the
+ * title one level deeper than a plain card; asymmetric-featured nests
+ * supporting items deeper still). Collects level-3 heading texts in
+ * document order, which every treatment preserves from the original
+ * item order.
+ */
 function cardTitlesUnder(page: GeneratedPlanPage, grid: CompiledNode | undefined): string[] {
-  const nodes = page.tree.nodes
-  return (grid?.children ?? [])
-    .map((id) => nodes[id])
-    .flatMap((card) => (card?.children ?? []).map((id) => nodes[id]))
-    .map((node) => node?.props?.text)
-    .filter((value): value is string => typeof value === "string")
+  const nodes = page.tree.nodes as Record<string, CompiledNode>
+  if (!grid) return []
+
+  const texts: string[] = []
+  const visit = (node: CompiledNode | undefined) => {
+    if (!node) return
+    if (node.type === "heading" && node.props?.level === 3 && typeof node.props?.text === "string") {
+      texts.push(node.props.text)
+    }
+    for (const id of node.children ?? []) visit(nodes[id])
+  }
+  visit(grid)
+  return texts
 }
 
 test("J9-G2 + J9-G1 pipeline completo: el request exacto de J9-F1, sin servicios estructurados explicitos, produce servicios reales, footer real y CTAs correctos", async () => {

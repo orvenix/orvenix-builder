@@ -736,10 +736,28 @@ export async function runAutonomousMultiPageSiteBuilder(
     `Tipo de sitio detectado: ${architecture.siteType}`,
   )
 
+  /*
+   * V2-3: resolved once, early, so structural composition (which
+   * section variant each role gets) can see the same VisualFamily the
+   * theme and asset pipelines independently resolve later. Deliberately
+   * a separate call rather than threading a shared value across theme/
+   * asset/composition -- inferVisualFamily is pure, so calling it
+   * multiple times with the same inputs is safe and keeps V2-1/V2-2's
+   * existing call sites completely untouched.
+   */
+  const compositionVisualFamily = inferVisualFamily({
+    industry: input.business.industry,
+    description: input.business.description,
+    services: input.business.services,
+    preferredStyle: input.preferredStyle,
+    siteTypeHint: architecture.siteType,
+  })
+
   const blueprint = compileSiteBlueprint(
     architecture,
     {
       preferPrimitiveComposition: input.forceFreshComposition,
+      visualFamily: compositionVisualFamily,
     },
   )
 

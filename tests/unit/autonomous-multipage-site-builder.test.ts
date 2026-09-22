@@ -354,9 +354,31 @@ function significantTexts(section: { nodes: Record<string, { type: string; props
     .filter((value): value is string => typeof value === "string" && value.trim().length >= 20)
 }
 
+/**
+ * V2-3: "Grid {role}" is only one of several possible layout-wrapper
+ * displayNames now (services/features can also produce "Lista {role}"/
+ * "Asimetrico {role}"/"Matriz {role}"/"Filas {role}", see
+ * composer/section-composer.ts's structural-variant treatments). Still
+ * returns the plain className (existing callers compare it against exact
+ * strings for the "cards" treatment) -- callers that need a
+ * treatment-aware signal use layoutWrapperName() below instead.
+ */
+const LAYOUT_WRAPPER_PREFIXES = ["Grid ", "Lista ", "Asimetrico ", "Matriz ", "Filas ", "Checklist "]
+
+function findLayoutWrapper(section: { nodes: Record<string, { displayName: string; props?: Record<string, unknown> }> }, role: string) {
+  return Object.values(section.nodes).find((node) =>
+    LAYOUT_WRAPPER_PREFIXES.some((prefix) => node.displayName === `${prefix}${role}`),
+  )
+}
+
 function gridClassName(section: { nodes: Record<string, { displayName: string; props?: Record<string, unknown> }> }, role: string) {
-  const grid = Object.values(section.nodes).find((node) => node.displayName === `Grid ${role}`)
-  return typeof grid?.props?.className === "string" ? grid.props.className : undefined
+  const wrapper = findLayoutWrapper(section, role)
+  return typeof wrapper?.props?.className === "string" ? wrapper.props.className : undefined
+}
+
+/** Which structural treatment produced the layout wrapper (eg. "Grid services", "Lista services"). */
+function layoutWrapperName(section: { nodes: Record<string, { displayName: string; props?: Record<string, unknown> }> }, role: string) {
+  return findLayoutWrapper(section, role)?.displayName
 }
 
 test("PageArchetype: home/servicios/contacto quedan anotados como overview/catalog/conversion en el plan interno", async () => {
@@ -430,6 +452,10 @@ test("FAQ: el heading/intro de seccion y la cantidad de preguntas difieren entre
   assert.notEqual(overviewHeadings.length, catalogHeadings.length)
 })
 
+function countLevel3Headings(section: { nodes: Record<string, { type: string; props?: Record<string, unknown> }> }): number {
+  return Object.values(section.nodes).filter((node) => node.type === "heading" && node.props?.level === 3).length
+}
+
 test("Estructura/layout: 'services' se materializa con un grid distinto segun archetype, de forma deterministica", async () => {
   const { composeSection } = await import("../../lib/orvenix-ai/composer")
 
@@ -443,7 +469,14 @@ test("Estructura/layout: 'services' se materializa con un grid distinto segun ar
 
   assert.ok(overviewClassName)
   assert.ok(catalogClassName)
-  assert.notEqual(overviewClassName, catalogClassName)
+
+  // V2-3: the layout wrapper signature (treatment + className) differs in
+  // the overwhelming majority of cases, but isn't the reliable proof
+  // anymore since two different archetypes COULD coincidentally hash
+  // into the same structural-treatment bucket. Item count is guaranteed
+  // to differ by construction (overview teaser vs full catalog copy) --
+  // use that as the primary structural-difference proof.
+  assert.notEqual(countLevel3Headings(overview!), countLevel3Headings(catalog!), "overview (teaser) y catalog (completo) deben tener distinto numero de items")
 
   // Repetir con el mismo input debe reproducir exactamente el mismo layout (determinismo).
   const catalogAgain = composeSection("services", { archetype: "catalog" })
@@ -595,7 +628,25 @@ test("PageArchetype 'conversion': la pagina Contacto conserva su recipe corta y 
   )
 })
 
-type CompiledNode = { type: string; props?: Record<string, unknown>; children?: string[] }
+type CompiledNode = { type: string; props?: Record<string, unknown>; children?: string[]; parentId?: string }
+
+/**
+ * V2-3: collects level-3 heading texts (card/row/item titles) in document
+ * order, anywhere within a subtree -- structural-variant treatments nest
+ * titles at different depths (a plain grid card vs. an editorial-list row
+ * vs. an asymmetric-featured supporting item), so a fixed-depth
+ * `.children[i].children[j]` walk is no longer reliable; a full
+ * recursive walk is treatment-agnostic and still deterministic/ordered.
+ */
+function collectHeadingLevel3Texts(node: CompiledNode | undefined, nodes: Record<string, CompiledNode>): string[] {
+  if (!node) return []
+  const texts: string[] = []
+  if (node.type === "heading" && node.props?.level === 3 && typeof node.props?.text === "string") {
+    texts.push(node.props.text)
+  }
+  for (const childId of node.children ?? []) texts.push(...collectHeadingLevel3Texts(nodes[childId], nodes))
+  return texts
+}
 
 /**
  * Finds the direct-sibling node of a given type next to a heading with
@@ -603,14 +654,32 @@ type CompiledNode = { type: string; props?: Record<string, unknown>; children?: 
  * survives the full pipeline (blueprint-compiler + applyBusinessContent),
  * unlike displayName, which does not persist to the final compiled tree.
  */
+/**
+ * V2-3: looks for `siblingType` anywhere within the same top-level
+ * "section" as the matching heading, not strictly as a direct sibling --
+ * structural variants (eg. CTA's split-panel) now legitimately nest the
+ * heading and the button under different sub-wrappers of the same
+ * section, so a strict same-parent check is too narrow.
+ */
 function findSiblingNodeByHeadingText(page: GeneratedPlanPage, headingText: string, siblingType: string): CompiledNode | undefined {
   const nodes = page.tree.nodes as Record<string, CompiledNode>
-  for (const node of Object.values(nodes)) {
-    const children = (node.children ?? []).map((id) => nodes[id])
-    const hasMatchingHeading = children.some((child) => child?.type === "heading" && child.props?.text === headingText)
-    if (hasMatchingHeading) {
-      return children.find((child) => child?.type === siblingType)
-    }
+
+  const headingNode = Object.values(nodes).find((node) => node?.type === "heading" && node.props?.text === headingText)
+  if (!headingNode) return undefined
+
+  let sectionRoot: CompiledNode | undefined = headingNode
+  while (sectionRoot && sectionRoot.type !== "section" && sectionRoot.parentId) {
+    sectionRoot = nodes[sectionRoot.parentId]
+  }
+  if (!sectionRoot) return undefined
+
+  const stack = [...(sectionRoot.children ?? [])]
+  while (stack.length) {
+    const id = stack.shift()!
+    const node = nodes[id]
+    if (!node) continue
+    if (node.type === siblingType) return node
+    stack.push(...(node.children ?? []))
   }
   return undefined
 }
@@ -700,14 +769,21 @@ test("E2E layout: el grid de 'services' en Home (overview) difiere estructuralme
   assert.ok(homeGrid, "no se encontro el grid de servicios en Home")
   assert.ok(serviciosGrid, "no se encontro el grid de servicios en Servicios")
 
-  assert.notEqual(homeGrid!.props?.className, serviciosGrid!.props?.className)
-  assert.notEqual(homeGrid!.children?.length, serviciosGrid!.children?.length)
+  // V2-3: services can now render through several structural treatments
+  // (cards/editorial-list/asymmetric-featured), so the top wrapper's own
+  // immediate children.length is treatment-dependent (eg.
+  // asymmetric-featured always nests [featured, supporting] = 2,
+  // regardless of real item count) -- count actual level-3 service
+  // titles in the whole subtree instead, which is treatment-agnostic.
+  const homeNodes = home.tree.nodes as Record<string, CompiledNode>
+  const serviciosNodes = servicios.tree.nodes as Record<string, CompiledNode>
 
-  // Valores concretos esperados (teaser compacto vs catalogo profundo).
-  assert.equal(homeGrid!.props?.className, "grid gap-5 md:grid-cols-3")
-  assert.equal(homeGrid!.children?.length, 2)
-  assert.equal(serviciosGrid!.props?.className, "grid gap-6 md:grid-cols-2")
-  assert.equal(serviciosGrid!.children?.length, 4)
+  // Valores concretos esperados (teaser compacto vs catalogo profundo) --
+  // the reliable, treatment-independent proof that Home/Servicios differ
+  // structurally: item count is guaranteed by the teaser-vs-full-catalog
+  // copy, regardless of which structural treatment either one hashed to.
+  assert.equal(collectHeadingLevel3Texts(homeGrid, homeNodes).length, 2)
+  assert.equal(collectHeadingLevel3Texts(serviciosGrid, serviciosNodes).length, 4)
 })
 
 test("CARD_GRID_ARCHETYPE_COPY: features/process/products/pricing/content no reciclan verbatim los items de overview dentro de catalog", async () => {
@@ -1032,8 +1108,10 @@ test("composeSection('services', catalog): usa los servicios reales del negocio,
   const texts = significantTexts(section)
   assert.ok(texts.includes("Recuperacion y rendimiento para deportistas."))
 
-  // El layout de catalog (grid mas ancho) se conserva sin cambios.
-  assert.equal(gridClassName(section, "services"), "grid gap-6 md:grid-cols-2")
+  // El layout se sigue resolviendo (V2-3: el treatment exacto ahora puede
+  // variar deterministicamente; ver el test dedicado de estructura/layout
+  // para la prueba de que overview/catalog difieren).
+  assert.ok(gridClassName(section, "services") || layoutWrapperName(section, "services"))
 })
 
 test("composeSection('services', overview): usa un subconjunto teaser deterministico de los servicios reales, no el catalogo completo", async () => {
@@ -1050,7 +1128,7 @@ test("composeSection('services', overview): usa un subconjunto teaser determinis
   // El teaser NO debe expandirse al catalogo completo (3er servicio afuera).
   assert.equal(titles.includes("Terapia manual"), false)
 
-  assert.equal(gridClassName(section, "services"), "grid gap-5 md:grid-cols-3")
+  assert.ok(gridClassName(section, "services") || layoutWrapperName(section, "services"))
 
   // Determinismo: dos corridas con el mismo input producen el mismo subconjunto.
   const again = composeSection("services", { archetype: "overview", services: FISIOTERAPIA_SERVICES })!
@@ -1187,11 +1265,7 @@ test("Legacy: runAutonomousMultiPageSiteBuilder sin business.services/business.n
   const servicios = result.plan.pages.find((page) => page.slug === "servicios")!
   const serviciosGrid = findSiblingNodeByHeadingText(servicios, "Nuestro catalogo de servicios", "genericWrapper")
   const serviciosNodes = servicios.tree.nodes as Record<string, CompiledNode>
-  const cardTitles = (serviciosGrid?.children ?? [])
-    .map((id) => serviciosNodes[id])
-    .flatMap((card) => (card?.children ?? []).map((id) => serviciosNodes[id]))
-    .map((node) => node?.props?.text)
-    .filter((value): value is string => typeof value === "string")
+  const cardTitles = collectHeadingLevel3Texts(serviciosGrid, serviciosNodes)
 
   assert.deepEqual(cardTitles, ["Diagnostico inicial", "Plan a la medida", "Seguimiento cercano", "Entrega y cierre"])
 

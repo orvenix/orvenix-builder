@@ -130,6 +130,8 @@ function copyComposedSection(
 
 interface CompileBlueprintOptions {
   preferPrimitiveComposition?: boolean
+  /** V2-3: structural-variant tendency input, threaded into every section's SectionCompositionContext. */
+  visualFamily?: string
 }
 
 function createBlockSection(
@@ -198,6 +200,7 @@ function compilePage(
       nodes,
       options,
       {
+        visualFamily: options.visualFamily,
         siteType: architecture.siteType,
         industry: architecture.industry,
         objective: architecture.objective,

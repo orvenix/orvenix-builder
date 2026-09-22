@@ -17,6 +17,8 @@ export interface ComposedSection {
 }
 
 export interface SectionCompositionContext {
+  /** V2-3: structural-variant tendency input. Visual STYLING (color/font/radius) stays owned by theme/visual-direction.ts -- this only informs composition. */
+  visualFamily?: string
   siteType?: string
   industry?: string
   objective?: string

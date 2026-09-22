@@ -6,6 +6,19 @@ import type {
 } from "./types"
 import { createComposedNode } from "./node-factory"
 import { getPageAwareHeroCopy } from "@/lib/orvenix-ai/content/content-engine"
+import { selectVariant } from "./variant-selector"
+import {
+  CTA_VARIANTS,
+  CTA_WEIGHTS,
+  FEATURES_VARIANTS,
+  FEATURES_WEIGHTS,
+  HERO_VARIANTS,
+  HERO_WEIGHTS,
+  SERVICES_VARIANTS,
+  SERVICES_WEIGHTS,
+  TRUST_VARIANTS,
+  TRUST_WEIGHTS,
+} from "./composition-context"
 
 function add(
   nodes: Record<string, ComposedNode>,
@@ -240,8 +253,9 @@ function composeGallery(): ComposedSection {
   }
 }
 
-function composeTrust(): ComposedSection {
+function composeTrust(context: SectionCompositionContext = {}): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
+  const variant = selectVariant(context, "trust", TRUST_VARIANTS, TRUST_WEIGHTS)
 
   const heading = add(
     nodes,
@@ -257,83 +271,47 @@ function composeTrust(): ComposedSection {
     }),
   )
 
-  const cards: string[] = []
-
-  const items = [
+  const items: Array<[string, string]> = [
     ["Atención profesional", "Explica aquí qué hace confiable al negocio."],
     ["Proceso claro", "Describe cómo trabajas y qué puede esperar el cliente."],
     ["Comunicación directa", "Muestra los canales reales de contacto y seguimiento."],
   ]
 
-  items.forEach(([title, text], index) => {
-    const iconName = cardIconName("trust", index)
-    const icon = iconName ? iconNode(nodes, `${title} ícono`, iconName) : null
+  let body: string
 
-    const cardTitle = add(
-      nodes,
-      createComposedNode({
-        type: "heading",
-        displayName: title,
-        props: {
-          text: title,
-          level: 3,
-          size: "lg",
-        },
-      }),
-    )
-
-    const cardText = add(
-      nodes,
-      createComposedNode({
-        type: "text",
-        displayName: `${title} descripción`,
-        props: {
-          content: text,
-        },
-      }),
-    )
-
-    cards.push(
-      add(
-        nodes,
-        createComposedNode({
-          type: "genericWrapper",
-          displayName: title,
-          props: {
-            tag: "article",
-            className:
-              "rounded-2xl border border-slate-200 bg-white p-6",
-          },
-          children: icon ? [icon, cardTitle, cardText] : [cardTitle, cardText],
-        }),
-      ),
-    )
-  })
-
-  const grid = add(
-    nodes,
-    createComposedNode({
-      type: "genericWrapper",
-      displayName: "Grid confianza",
-      props: {
-        tag: "div",
-        className: "grid gap-4 md:grid-cols-3",
-      },
-      children: cards,
-    }),
-  )
+  if (variant === "checklist-row") {
+    const rows = items.map(([title, text], index) => {
+      const iconName = cardIconName("trust", index)
+      const icon = iconName ? iconNode(nodes, `${title} ícono`, iconName) : null
+      const iconWrap = wrapperNode(nodes, `${title} icono wrap`, "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700", icon ? [icon] : [])
+      const cardTitle = headingNode(nodes, title, title, 3, { size: "md", weight: "bold" })
+      const cardText = textNode(nodes, `${title} descripción`, text, { size: "sm" })
+      const textStack = wrapperNode(nodes, `${title} stack`, "flex flex-col gap-1", [cardTitle, cardText])
+      return wrapperNode(nodes, title, "flex items-center gap-4", [iconWrap, textStack])
+    })
+    body = wrapperNode(nodes, "Checklist confianza", "grid gap-5 sm:grid-cols-3", rows)
+  } else {
+    const cards = items.map(([title, text], index) => {
+      const iconName = cardIconName("trust", index)
+      const icon = iconName ? iconNode(nodes, `${title} ícono`, iconName) : null
+      const cardTitle = headingNode(nodes, title, title, 3, { size: "lg" })
+      const cardText = textNode(nodes, `${title} descripción`, text)
+      return wrapperNode(nodes, title, "rounded-2xl border border-slate-200 bg-white p-6", icon ? [icon, cardTitle, cardText] : [cardTitle, cardText], "article")
+    })
+    body = wrapperNode(nodes, "Grid confianza", "grid gap-4 md:grid-cols-3", cards)
+  }
 
   const root = add(
     nodes,
     createComposedNode({
       type: "section",
-      displayName: "Confianza",
+      displayName: `Confianza (${variant})`,
       props: {
         maxWidth: "xl",
         paddingY: "lg",
         paddingX: "lg",
       },
-      children: [heading, grid],
+      children: [heading, body],
     }),
   )
 
@@ -547,39 +525,11 @@ function composeNavigation(
   return { role: "navigation", rootId: root, nodes, purpose: "Navegacion principal editable del sitio." }
 }
 
-function compositionVariant(
-  context: SectionCompositionContext,
-  variants: number,
-): number {
-  const source = [
-    context.siteType,
-    context.industry,
-    context.objective,
-    context.audience,
-    context.pageName,
-    context.pageSlug,
-    context.pagePurpose,
-    context.archetype,
-    context.preferredStyle,
-    context.compositionSeed,
-  ]
-    .filter(Boolean)
-    .join("|")
-
-  let hash = 0
-
-  for (let index = 0; index < source.length; index++) {
-    hash = (hash * 31 + source.charCodeAt(index)) >>> 0
-  }
-
-  return variants > 0 ? hash % variants : 0
-}
-
 function composeHero(
   context: SectionCompositionContext = {},
 ): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  const variant = compositionVariant(context, 3)
+  const variant = selectVariant(context, "hero", HERO_VARIANTS, HERO_WEIGHTS)
   const heroCopy = getPageAwareHeroCopy({
     name: context.businessName,
     industry: context.industry,
@@ -594,14 +544,18 @@ function composeHero(
     },
   })
 
-  const centered = variant === 2
+  const centered = variant === "centered" || variant === "immersive"
+  const immersive = variant === "immersive"
+  const textColor = immersive ? "#ffffff" : undefined
+  const eyebrowColor = immersive ? "#e0f2fe" : "#0E5C80"
+
   const eyebrow = textNode(
     nodes,
     "Etiqueta hero",
     heroCopy.eyebrow,
     {
       size: "sm",
-      color: "#0E5C80",
+      color: eyebrowColor,
       align: centered ? "center" : "left",
     },
   )
@@ -613,6 +567,7 @@ function composeHero(
     1,
     {
       align: centered ? "center" : "left",
+      ...(textColor ? { color: textColor } : {}),
     },
   )
 
@@ -623,6 +578,7 @@ function composeHero(
     {
       size: "lg",
       align: centered ? "center" : "left",
+      ...(textColor ? { color: "#e2e8f0" } : {}),
     },
   )
 
@@ -672,14 +628,56 @@ function composeHero(
         src: "",
         alt: "Imagen principal del negocio",
         objectFit: "cover",
+        ...(immersive ? { positionMode: "free" } : {}),
       },
     }),
   )
 
+  if (immersive) {
+    /*
+     * Full-bleed media with a permanent gradient scrim: text sits on the
+     * solid CSS overlay layer, never directly on unpredictable photo
+     * pixels, so readability holds whether or not the image actually
+     * loads (src=="" until V2-2's asset resolution fills it -- see
+     * autonomous/site-builder.ts). The bg-slate-900 on the media wrapper
+     * itself is the safe fallback backdrop when there is no image at
+     * all, so an unavailable provider never leaves a blank/broken gap.
+     */
+    const mediaLayer = wrapperNode(nodes, "Imagen inmersiva", "absolute inset-0 h-full w-full bg-slate-900", [image])
+    const scrim = wrapperNode(nodes, "Overlay legibilidad", "absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10", [])
+    const content = wrapperNode(
+      nodes,
+      "Contenido hero",
+      "relative z-10 mx-auto flex min-h-[26rem] w-full max-w-4xl flex-col items-center justify-end gap-6 px-4 pb-4 text-center sm:min-h-[30rem]",
+      [eyebrow, title, copy, actions],
+    )
+
+    const root = add(
+      nodes,
+      createComposedNode({
+        type: "section",
+        displayName: "Hero autonomo variante inmersiva",
+        props: {
+          maxWidth: "full",
+          paddingY: "none",
+          paddingX: "none",
+        },
+        children: [wrapperNode(nodes, "Layout hero inmersivo", "relative w-full overflow-hidden", [mediaLayer, scrim, content])],
+      }),
+    )
+
+    return {
+      role: "hero",
+      rootId: root,
+      nodes,
+      purpose: "Presentar promesa, confianza visual y accion principal.",
+    }
+  }
+
   const media = wrapperNode(
     nodes,
     "Visual hero",
-    variant === 2
+    variant === "centered"
       ? "mx-auto w-full max-w-5xl overflow-hidden rounded-[2.5rem] border border-sky-100 bg-sky-50 p-3 shadow-2xl shadow-sky-900/10"
       : "overflow-hidden rounded-[2rem] border border-sky-100 bg-sky-50 p-3 shadow-2xl shadow-sky-900/10",
     [image],
@@ -697,11 +695,11 @@ function composeHero(
   let layoutChildren: string[]
   let layoutClassName: string
 
-  if (variant === 1) {
+  if (variant === "split-left") {
     layoutChildren = [media, content]
     layoutClassName =
       "grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]"
-  } else if (variant === 2) {
+  } else if (variant === "centered") {
     layoutChildren = [content, media]
     layoutClassName = "flex flex-col gap-12"
   } else {
@@ -721,12 +719,12 @@ function composeHero(
     nodes,
     createComposedNode({
       type: "section",
-      displayName: `Hero autonomo variante ${variant + 1}`,
+      displayName: `Hero autonomo variante ${variant}`,
       props: {
         maxWidth: "xl",
         paddingY: "xl",
         paddingX: "lg",
-        background: variant === 2 ? "#ffffff" : "#f8fbff",
+        background: variant === "centered" ? "#ffffff" : "#f8fbff",
       },
       children: [layout],
     }),
@@ -873,6 +871,99 @@ function realServiceItems(
   ])
 }
 
+/** Guardrail (V2-3 Section 12): fancy asymmetric/editorial treatments only make sense for a small, curated item count -- long real-service lists fall back to the safe grid automatically instead of producing an oversized featured card or a very long editorial scroll. */
+const STRUCTURAL_TREATMENT_MAX_ITEMS = 6
+
+function cardsLayout(
+  nodes: Record<string, ComposedNode>,
+  role: SectionRole,
+  items: Array<[string, string]>,
+  gridClassName: string,
+): string {
+  const cards = items.map(([title, body], index) => {
+    const iconName = cardIconName(role, index)
+    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
+    const cardText = textNode(nodes, title + " texto", body)
+    const children = icon ? [icon, cardTitle, cardText] : [cardTitle, cardText]
+    return wrapperNode(nodes, title, "rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-900/10", children, "article")
+  })
+  return wrapperNode(nodes, "Grid " + role, gridClassName, cards)
+}
+
+/** FEATURES: alternating icon/text rows instead of a grid -- visual rhythm down the page. */
+function alternatingRowsLayout(nodes: Record<string, ComposedNode>, role: SectionRole, items: Array<[string, string]>): string {
+  const rows = items.map(([title, body], index) => {
+    const iconName = cardIconName(role, index)
+    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
+    const iconWrap = wrapperNode(nodes, title + " icono wrap", "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700", icon ? [icon] : [])
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
+    const cardText = textNode(nodes, title + " texto", body)
+    const textStack = wrapperNode(nodes, title + " stack", "flex flex-col gap-2", [cardTitle, cardText])
+    const reversed = index % 2 === 1
+    return wrapperNode(
+      nodes,
+      title + " fila",
+      `flex flex-col items-center gap-6 border-b border-slate-100 py-6 last:border-0 sm:items-center sm:text-left ${reversed ? "sm:flex-row-reverse sm:text-right" : "sm:flex-row"}`,
+      [iconWrap, textStack],
+    )
+  })
+  return wrapperNode(nodes, "Filas " + role, "flex flex-col", rows)
+}
+
+/** FEATURES: compact icon/list matrix -- denser, no card chrome, scan-friendly. */
+function compactMatrixLayout(nodes: Record<string, ComposedNode>, role: SectionRole, items: Array<[string, string]>): string {
+  const entries = items.map(([title, body], index) => {
+    const iconName = cardIconName(role, index)
+    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "lg", weight: "bold" })
+    const cardText = textNode(nodes, title + " texto", body, { size: "sm" })
+    const header = icon
+      ? wrapperNode(nodes, title + " header", "flex items-center gap-2", [icon, cardTitle])
+      : cardTitle
+    return wrapperNode(nodes, title, "flex flex-col gap-1.5 rounded-xl bg-slate-50 p-4", [header, cardText])
+  })
+  return wrapperNode(nodes, "Matriz " + role, "grid gap-3 sm:grid-cols-2 lg:grid-cols-4", entries)
+}
+
+/** SERVICES: numbered editorial list, no card borders -- reads like a menu/spec sheet rather than a grid. */
+function editorialListLayout(nodes: Record<string, ComposedNode>, role: SectionRole, items: Array<[string, string]>): string {
+  const rows = items.map(([title, body], index) => {
+    const number = textNode(nodes, title + " numero", String(index + 1).padStart(2, "0"), { size: "sm", color: "#94a3b8" })
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
+    const cardText = textNode(nodes, title + " texto", body)
+    const textStack = wrapperNode(nodes, title + " stack", "flex flex-col gap-2", [cardTitle, cardText])
+    return wrapperNode(nodes, title + " fila", "flex items-start gap-5 border-b border-slate-100 py-6 last:border-0", [number, textStack])
+  })
+  return wrapperNode(nodes, "Lista " + role, "flex flex-col", rows)
+}
+
+/** SERVICES: first item featured large, remaining items stacked smaller beside it. Falls back to a plain grid when there's only one item (nothing to be "supporting"). */
+function asymmetricFeaturedLayout(nodes: Record<string, ComposedNode>, role: SectionRole, items: Array<[string, string]>): string {
+  const [[featuredTitle, featuredBody], ...rest] = items
+
+  const featuredIconName = cardIconName(role, 0)
+  const featuredIcon = featuredIconName ? iconNode(nodes, featuredTitle + " ícono", featuredIconName) : null
+  const featuredHeading = headingNode(nodes, featuredTitle, featuredTitle, 3, { size: "2xl", weight: "extrabold" })
+  const featuredText = textNode(nodes, featuredTitle + " texto", featuredBody, { size: "lg" })
+  const featuredChildren = featuredIcon ? [featuredIcon, featuredHeading, featuredText] : [featuredHeading, featuredText]
+  const featured = wrapperNode(nodes, featuredTitle + " destacado", "flex flex-col justify-center gap-4 rounded-[2rem] bg-gradient-to-br from-sky-50 to-white border border-sky-100 p-8", featuredChildren, "article")
+
+  if (rest.length === 0) return featured
+
+  const supportingItems = rest.map(([title, body], index) => {
+    const iconName = cardIconName(role, index + 1)
+    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "lg", weight: "bold" })
+    const cardText = textNode(nodes, title + " texto", body, { size: "sm" })
+    const children = icon ? [icon, cardTitle, cardText] : [cardTitle, cardText]
+    return wrapperNode(nodes, title, "flex flex-col gap-1.5 rounded-xl border border-slate-100 p-4", children)
+  })
+  const supporting = wrapperNode(nodes, "Servicios secundarios", "flex flex-col gap-3", supportingItems)
+
+  return wrapperNode(nodes, "Asimetrico " + role, "grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-stretch", [featured, supporting])
+}
+
 function composeCardGridSection(
   role: SectionRole,
   titleText: string,
@@ -889,24 +980,36 @@ function composeCardGridSection(
   const nodes: Record<string, ComposedNode> = {}
   const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center" })
   const intro = textNode(nodes, "Intro " + role, copy.introText, { align: "center", size: "lg" })
-  const cards = finalItems.map(([title, body], index) => {
-    const iconName = cardIconName(role, index)
-    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
-    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
-    const cardText = textNode(nodes, title + " texto", body)
-    const children = icon ? [icon, cardTitle, cardText] : [cardTitle, cardText]
-    return wrapperNode(nodes, title, "rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-900/10", children, "article")
-  })
+
   /*
    * "services" is the flagship role shared between overview and catalog
-   * pages: give catalog a visibly different grid (fewer, wider columns)
-   * instead of layering layout variance onto every role.
+   * pages: give catalog a visibly different default grid (fewer, wider
+   * columns) instead of layering layout variance onto every role.
    */
-  const gridClassName = role === "services" && context.archetype === "catalog"
+  const defaultGridClassName = role === "services" && context.archetype === "catalog"
     ? "grid gap-6 md:grid-cols-2"
     : "grid gap-5 md:grid-cols-3"
-  const grid = wrapperNode(nodes, "Grid " + role, gridClassName, cards)
-  const root = add(nodes, createComposedNode({ type: "section", displayName: copy.titleText, props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: "#ffffff" }, children: [heading, intro, grid] }))
+
+  const canUseStructuralTreatment = finalItems.length >= 2 && finalItems.length <= STRUCTURAL_TREATMENT_MAX_ITEMS
+
+  let grid: string
+  let layoutVariant = "cards"
+
+  if (role === "features" && canUseStructuralTreatment) {
+    layoutVariant = selectVariant(context, "features", FEATURES_VARIANTS, FEATURES_WEIGHTS)
+    if (layoutVariant === "alternating-rows") grid = alternatingRowsLayout(nodes, role, finalItems)
+    else if (layoutVariant === "compact-matrix") grid = compactMatrixLayout(nodes, role, finalItems)
+    else grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
+  } else if (role === "services" && canUseStructuralTreatment) {
+    layoutVariant = selectVariant(context, "services", SERVICES_VARIANTS, SERVICES_WEIGHTS)
+    if (layoutVariant === "editorial-list") grid = editorialListLayout(nodes, role, finalItems)
+    else if (layoutVariant === "asymmetric-featured") grid = asymmetricFeaturedLayout(nodes, role, finalItems)
+    else grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
+  } else {
+    grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
+  }
+
+  const root = add(nodes, createComposedNode({ type: "section", displayName: `${copy.titleText} (${layoutVariant})`, props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: "#ffffff" }, children: [heading, intro, grid] }))
   return { role, rootId: root, nodes, purpose: copy.introText }
 }
 
@@ -1007,11 +1110,24 @@ function composeCTA(
 ): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const copy = ctaCopy(context.archetype)
+  const variant = selectVariant(context, "cta", CTA_VARIANTS, CTA_WEIGHTS)
+
+  if (variant === "split-panel") {
+    const heading = headingNode(nodes, "Titulo CTA", copy.title, 2, { align: "left", color: "#ffffff" })
+    const body = textNode(nodes, "Texto CTA", copy.body, { align: "left", color: "#dbeafe", size: "lg" })
+    const textStack = wrapperNode(nodes, "Texto CTA stack", "flex flex-col gap-4", [heading, body])
+    const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "CTA final", props: { label: copy.label, href: copy.href, variant: "primary", size: "lg" } }))
+    const actionWrap = wrapperNode(nodes, "Accion CTA", "flex items-center justify-start lg:justify-end", [cta])
+    const panel = wrapperNode(nodes, "Panel CTA", "mx-auto grid w-full max-w-5xl items-center gap-8 lg:grid-cols-[1.3fr_1fr]", [textStack, actionWrap])
+    const root = add(nodes, createComposedNode({ type: "section", displayName: "CTA final (panel)", props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background: "#0A3E57" }, children: [panel] }))
+    return { role: "cta", rootId: root, nodes, purpose: "Cerrar con llamada a la accion." }
+  }
+
   const heading = headingNode(nodes, "Titulo CTA", copy.title, 2, { align: "center", color: "#ffffff" })
   const body = textNode(nodes, "Texto CTA", copy.body, { align: "center", color: "#dbeafe", size: "lg" })
   const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "CTA final", props: { label: copy.label, href: copy.href, variant: "primary", size: "lg" } }))
   const stack = wrapperNode(nodes, "Contenido CTA", "mx-auto flex max-w-3xl flex-col items-center gap-6 text-center", [heading, body, cta])
-  const root = add(nodes, createComposedNode({ type: "section", displayName: "CTA final", props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background: "#0A3E57" }, children: [stack] }))
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "CTA final (banner)", props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background: "#0A3E57" }, children: [stack] }))
   return { role: "cta", rootId: root, nodes, purpose: "Cerrar con llamada a la accion." }
 }
 
@@ -1092,7 +1208,7 @@ export function composeSection(
       return composeGallery()
 
     case "trust":
-      return composeTrust()
+      return composeTrust(context)
 
     case "testimonials":
       return composeTestimonials()
