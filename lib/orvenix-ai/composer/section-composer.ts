@@ -20,6 +20,12 @@ import {
   TRUST_VARIANTS,
   TRUST_WEIGHTS,
 } from "./composition-context"
+import {
+  resolveCtaCopy,
+  resolveFeatureItems,
+  resolveProcessIntro,
+  resolveTrustItems,
+} from "./semantic-copy"
 
 function add(
   nodes: Record<string, ComposedNode>,
@@ -340,11 +346,20 @@ function composeTrust(context: SectionCompositionContext = {}): ComposedSection 
     }),
   )
 
-  const items: Array<[string, string]> = [
+  const defaultItems: Array<[string, string]> = [
     ["Atención profesional", "Explica aquí qué hace confiable al negocio."],
     ["Proceso claro", "Describe cómo trabajas y qué puede esperar el cliente."],
     ["Comunicación directa", "Muestra los canales reales de contacto y seguimiento."],
   ]
+
+  /*
+   * V2-S2 section 3: when the business supplied real services/products,
+   * the first item names what's actually offered instead of staying
+   * generic (bounded, no fabricated quality claim). No facts -> returns
+   * `defaultItems` unchanged, so the V2-3.1-accepted no-facts render is
+   * byte-identical to before.
+   */
+  const items = resolveTrustItems(context, defaultItems)
 
   let body: string
 
@@ -1069,10 +1084,18 @@ function composeCardGridSection(
       : role === "products"
         ? realOfferingItems(context.products, context.archetype, (name) => `Descubre mas sobre ${name.toLowerCase()}.`)
         : []
-  const finalItems = realItems.length ? realItems : copy.items
+  /*
+   * V2-S2 sections 5/6: features/process get a small, fact-gated copy
+   * override (never a real-offering listing -- that would just duplicate
+   * the services/products role's own grid). Every other role's `copy`
+   * passes through unchanged.
+   */
+  const personalizedItems = role === "features" ? resolveFeatureItems(context, copy.items) : copy.items
+  const personalizedIntro = role === "process" ? resolveProcessIntro(context, copy.introText) : copy.introText
+  const finalItems = realItems.length ? realItems : personalizedItems
   const nodes: Record<string, ComposedNode> = {}
   const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center" })
-  const intro = textNode(nodes, "Intro " + role, copy.introText, { align: "center", size: "lg" })
+  const intro = textNode(nodes, "Intro " + role, personalizedIntro, { align: "center", size: "lg" })
 
   /*
    * "services" is the flagship role shared between overview and catalog
@@ -1202,7 +1225,12 @@ function composeCTA(
   context: SectionCompositionContext = {},
 ): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  const copy = ctaCopy(context.archetype)
+  /*
+   * V2-S2 section 4: layers real, explicit facts (offering kind +
+   * businessObjective) onto the existing archetype fallback. No facts ->
+   * `copy` is `ctaCopy(context.archetype)` unchanged.
+   */
+  const copy = resolveCtaCopy(context, ctaCopy(context.archetype))
   const variant = selectVariant(context, "cta", CTA_VARIANTS, CTA_WEIGHTS)
 
   if (variant === "split-panel") {

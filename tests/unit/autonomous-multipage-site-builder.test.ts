@@ -1174,12 +1174,23 @@ test("composeSection('services'): sin services conserva exactamente el comportam
   ])
 })
 
-test("composeSection('features'): NO consume business.services (solo el role 'services' lo hace)", async () => {
+test("composeSection('features'): nunca lista los NOMBRES reales de business.services (eso es exclusivo del role 'services'); V2-S2 solo permite una senal no-duplicativa (el conteo)", async () => {
   const { composeSection } = await import("../../lib/orvenix-ai/composer")
 
   const withServices = composeSection("features", { archetype: "catalog", services: FISIOTERAPIA_SERVICES })!
   const withoutServices = composeSection("features", { archetype: "catalog" })!
-  assert.deepEqual(headingTexts(withServices), headingTexts(withoutServices))
+
+  // La duplicacion prohibida es que aparezcan los NOMBRES reales como
+  // encabezado de una card de features -- eso es lo que ya hace el role
+  // 'services' con realOfferingItems, y no debe repetirse aqui.
+  const realNames = FISIOTERAPIA_SERVICES.map((service) => service.name)
+  for (const heading of headingTexts(withServices)) {
+    assert.ok(!realNames.includes(heading), `features no debe listar el nombre real de servicio '${heading}' como encabezado`)
+  }
+
+  // Fuera de ese ultimo item (V2-S2: conteo real, sin nombres), el resto
+  // del contenido de features permanece identico con o sin servicios.
+  assert.deepEqual(headingTexts(withServices).slice(0, -1), headingTexts(withoutServices).slice(0, -1))
 })
 
 test("E2E personalizacion: nombre real, servicios reales y nav de footer canonica sobreviven al pipeline completo (applyBusinessContent incluido)", async () => {
