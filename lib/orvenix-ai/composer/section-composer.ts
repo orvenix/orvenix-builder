@@ -347,8 +347,18 @@ function composeTrust(context: SectionCompositionContext = {}): ComposedSection 
   )
 
   const defaultItems: Array<[string, string]> = [
-    ["Atención profesional", "Explica aquí qué hace confiable al negocio."],
-    ["Proceso claro", "Describe cómo trabajas y qué puede esperar el cliente."],
+    /*
+     * V2-S2.1 section B: these two bodies used to read as instructions
+     * TO WHOEVER IS BUILDING the page ("explain here...", "describe how
+     * you work...") rather than something a real visitor would ever
+     * read on a live site -- found during real-copy E2E review. Neutral,
+     * truthful, visitor-facing replacements: no guarantee/certification/
+     * experience/result is claimed, since none was supplied. Item 3
+     * ("Comunicación directa") is intentionally untouched -- only these
+     * two were identified as live leaks in this pass.
+     */
+    ["Atención profesional", "Resolvemos tus dudas de forma clara y directa."],
+    ["Proceso claro", "Sabrás en todo momento cuál es el siguiente paso."],
     ["Comunicación directa", "Muestra los canales reales de contacto y seguimiento."],
   ]
 
@@ -865,7 +875,15 @@ const CARD_GRID_ARCHETYPE_COPY: Partial<Record<SectionRole, Record<"overview" | 
     overview: {
       titleText: "Por que elegirnos",
       introText: "Las razones principales por las que los clientes se quedan con nosotros.",
-      items: [["Mas confianza", "Presenta pruebas, garantias o detalles que reduzcan dudas."], ["Menos friccion", "Haz facil pedir informacion, reservar, comprar o cotizar."]],
+      /*
+       * V2-S2.1 section B: "Presenta pruebas, garantias o detalles que
+       * reduzcan dudas." read as an instruction to whoever is BUILDING
+       * the page, not visitor copy -- found during real-copy E2E review.
+       * Replaced with a neutral, truthful line that claims no guarantee/
+       * proof actually exists. "Menos friccion" item is untouched (not
+       * identified as a live leak in this pass).
+       */
+      items: [["Mas confianza", "Encuentra la información que necesitas para decidir con confianza."], ["Menos friccion", "Haz facil pedir informacion, reservar, comprar o cotizar."]],
     },
     catalog: {
       titleText: "Beneficios de cada opcion",
@@ -1130,7 +1148,8 @@ function composeCardGridSection(
 }
 
 function composeServices(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("services", "Servicios pensados para vender mejor", "Organiza tu oferta para que el visitante entienda rapido que haces y por que debe contactarte.", [["Servicio principal", "Explica el resultado mas valioso que obtiene tu cliente."], ["Acompanamiento experto", "Muestra como guias al cliente antes, durante y despues del servicio."], ["Entrega clara", "Convierte tu proceso en una razon para confiar y avanzar."]], context) }
-function composeFeatures(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("features", "Beneficios que se entienden al instante", "Transforma caracteristicas en razones claras para elegir tu negocio.", [["Mas confianza", "Presenta pruebas, garantias o detalles que reduzcan dudas."], ["Menos friccion", "Haz facil pedir informacion, reservar, comprar o cotizar."], ["Mejor experiencia", "Cuida cada punto de contacto para que el sitio se sienta profesional."]], context) }
+/** V2-S2.1 section B: same "Presenta pruebas..." live leak, same fix, in the legacy (non-overview/catalog) default -- see the CARD_GRID_ARCHETYPE_COPY.features.overview comment above. */
+function composeFeatures(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("features", "Beneficios que se entienden al instante", "Transforma caracteristicas en razones claras para elegir tu negocio.", [["Mas confianza", "Encuentra la información que necesitas para decidir con confianza."], ["Menos friccion", "Haz facil pedir informacion, reservar, comprar o cotizar."], ["Mejor experiencia", "Cuida cada punto de contacto para que el sitio se sienta profesional."]], context) }
 function composeProcess(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("process", "Un proceso simple para empezar", "Ayuda al cliente a saber que pasara despues de dar clic.", [["1. Cuentanos tu objetivo", "Recibe la informacion clave sin formularios largos."], ["2. Revisamos la mejor ruta", "Muestra una propuesta clara y adaptada al caso."], ["3. Activamos el siguiente paso", "Cierra con una accion concreta y facil de completar."]], context) }
 function composeProducts(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("products", "Productos destacados", "Muestra opciones faciles de comparar y listas para llevar al usuario a comprar.", [["Producto estrella", "Describe el beneficio principal, precio o diferencial."], ["Opcion recomendada", "Resalta el producto ideal para la mayoria de clientes."], ["Paquete premium", "Presenta la alternativa con mayor valor percibido."]], context) }
 function composePricing(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("pricing", "Elige la opcion ideal", "Presenta precios, paquetes u ofertas sin confundir al comprador.", [["Inicial", "Para comenzar con lo esencial y validar interes."], ["Recomendado", "La opcion con mejor balance entre alcance, soporte y crecimiento."], ["Premium", "Para clientes que quieren una experiencia mas completa."]], context) }

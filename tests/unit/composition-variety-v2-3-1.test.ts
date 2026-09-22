@@ -81,7 +81,14 @@ test("V2-3.1 C) contraste correcto en el treatment 'checklist-row' de trust (ite
   const trust = composeSection("trust", checklistContext!)
   const nodes = nodesOf(trust)
   const itemHeading = Object.values(nodes).find((n) => n.type === "heading" && n.props?.text === "Atención profesional")
-  const itemText = Object.values(nodes).find((n) => n.type === "text" && n.props?.content === "Explica aquí qué hace confiable al negocio.")
+  // V2-S2.1: the literal body text this test locks onto was deliberately
+  // updated -- "Explica aquí qué hace confiable al negocio." read as a
+  // builder instruction, not visitor copy (real-copy E2E finding), and
+  // was replaced with a neutral, truthful line. The invariant THIS test
+  // actually verifies (contrast: item color derived correctly from the
+  // section's own light background) is unchanged and still holds against
+  // the new literal.
+  const itemText = Object.values(nodes).find((n) => n.type === "text" && n.props?.content === "Resolvemos tus dudas de forma clara y directa.")
   assert.ok(itemHeading && itemText)
   // Section background is #ffffff (light) -- item text sitting directly on it must be dark, matching the derived color, never the light-on-dark fallback.
   assert.equal(itemHeading!.props?.color, "#0f172a")

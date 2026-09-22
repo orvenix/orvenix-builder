@@ -98,25 +98,101 @@ export interface CtaCopy {
   href: string
 }
 
+export type CtaIntent = "appointment" | "quote" | "contact"
+
 /**
- * CTA -- V2-S2 section 4. Layers two real, explicit facts onto the
- * caller's archetype fallback; it never replaces it wholesale, so a
- * business with no objective/offerings returns `fallback` unchanged.
+ * V2-S2.1: a real business writes "cita"/"cotización"/etc as its own
+ * complete word ("Conseguir citas de valoración"), never buried inside an
+ * unrelated word -- but Spanish has real words that contain these as a
+ * raw substring (eg. "explícita" contains "cita"; "solicitud" does not,
+ * but the historical inferSiteType bug ["identidad" contains "dent"] is
+ * exactly this class of mistake). `\bword\b` requires a real word
+ * boundary on both sides, so "explícita" (normalized "explicita") is
+ * never mistaken for "cita".
+ */
+function containsWord(normalizedText: string, word: string): boolean {
+  return new RegExp(`\\b${word}\\b`).test(normalizedText)
+}
+
+function normalizeForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+}
+
+const APPOINTMENT_INTENT_WORDS = [
+  "cita",
+  "citas",
+  "consulta",
+  "consultas",
+  "valoracion",
+  "valoraciones",
+  "reservacion",
+  "reservaciones",
+  "reserva",
+  "reservas",
+  "agendar",
+]
+
+const QUOTE_INTENT_WORDS = [
+  "cotizacion",
+  "cotizaciones",
+  "cotizar",
+  "presupuesto",
+  "presupuestos",
+  "propuesta",
+  "propuestas",
+]
+
+/**
+ * V2-S2.1: bounded, deterministic, word-boundary-safe classification of
+ * the business's OWN explicit objective text into one of 3 CTA-relevant
+ * intents. Deliberately small: this is not a general intent classifier,
+ * it only recognizes the two intents whose real-world CTA action differs
+ * from a generic "contact us" (appointment vs. quote) -- anything that
+ * doesn't clearly match one of those falls to "contact", the safest,
+ * most generic action, never a guess at an unsupported capability.
+ */
+export function classifyCtaIntent(objective: string): CtaIntent {
+  const normalized = normalizeForMatch(objective)
+  if (APPOINTMENT_INTENT_WORDS.some((word) => containsWord(normalized, word))) return "appointment"
+  if (QUOTE_INTENT_WORDS.some((word) => containsWord(normalized, word))) return "quote"
+  return "contact"
+}
+
+const CTA_INTENT_LABELS: Record<CtaIntent, string> = {
+  appointment: "Agendar ahora",
+  quote: "Solicitar cotización",
+  contact: "Contactar",
+}
+
+/**
+ * CTA -- V2-S2 section 4 + V2-S2.1 coherence fix. Resolves heading/body/
+ * label as ONE decision instead of personalizing the body in isolation --
+ * that isolation was the confirmed V2-S2.1 defect (eg. body "...conseguir
+ * solicitudes de cotización." next to a button that said "Agendar ahora",
+ * an appointment-booking label the business never asked for). A business
+ * with no objective/offerings still returns `fallback` unchanged.
  *
  * - catalog + real PRODUCTS (a menu/catalog surface, eg. a restaurant's
- *   Menú page): the pre-existing fallback body ("Agenda una valoración
- *   ...") is appointment/assessment language that never fit a product
- *   listing. This swaps to an explore/contact framing instead -- neither
- *   version claims ordering, delivery, inventory, or pricing capability.
- * - businessObjective (explicit, caller-typed free text) always wins
- *   last over the above, reusing the exact "para {objective}" idiom
- *   already shipped and tested in content-engine.ts's
- *   conversionPageHeroCopy -- not a new grammar rule.
- *
- * catalog + real SERVICES (eg. a clinic's Servicios page) is deliberately
- * left untouched: the existing fallback ("Agenda una valoración..." /
- * "Agendar ahora") already IS the appointment-oriented CTA the spec asks
- * for, so there's nothing to override.
+ *   Menú page) ALWAYS wins the label, regardless of objective: a listing
+ *   of dishes/items is never a booking or ordering system, so the label
+ *   stays an explore/contact action no matter what the business's
+ *   unrelated objective text says.
+ * - otherwise, when the business supplied an explicit objective, the
+ *   label is chosen to match what that objective actually says
+ *   (classifyCtaIntent), not the page archetype's unrelated pre-existing
+ *   default -- this is the fix itself.
+ * - the OVERVIEW archetype's label is the one deliberate exception: a
+ *   Home overview CTA is a bridge that always points at "Ver servicios"
+ *   (an already-accepted, hard-locked V1/V2-3 invariant -- Home and
+ *   Servicios CTAs must keep visibly different labels), never a final
+ *   appointment/quote action itself, so its label is never intent-swapped
+ *   -- only its body reflects the real objective.
+ * - businessObjective always drives the body via the same "para
+ *   {objective}" idiom already shipped in content-engine.ts's
+ *   conversionPageHeroCopy.
  */
 export function resolveCtaCopy(
   context: SectionCompositionContext,
@@ -124,17 +200,22 @@ export function resolveCtaCopy(
 ): CtaCopy {
   const facts = offeringFacts(context)
   const objective = cleanText(context.businessObjective)
+  const isOverview = context.archetype === "overview"
+  const isProductCatalog = context.archetype === "catalog" && facts.kind === "products"
 
   const { title, href } = fallback
   let { body, label } = fallback
 
-  if (context.archetype === "catalog" && facts.kind === "products") {
+  if (isProductCatalog) {
     body = "Contáctanos para conocer más sobre lo que ofrecemos."
     label = "Ver catálogo"
   }
 
   if (objective) {
     body = `Escríbenos para ${objective.toLowerCase()}.`
+    if (!isProductCatalog && !isOverview) {
+      label = CTA_INTENT_LABELS[classifyCtaIntent(objective)]
+    }
   }
 
   return { title, body, label, href }

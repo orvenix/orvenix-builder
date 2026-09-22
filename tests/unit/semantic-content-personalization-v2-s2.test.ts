@@ -246,7 +246,11 @@ test("V2-S2 F) sin hechos de negocio: trust/cta/features/process son identicos a
 
   const trust = composeSection("trust", {})
   const trustTexts = allTexts(trust)
-  assert.ok(trustTexts.includes("Explica aquí qué hace confiable al negocio."))
+  // V2-S2.1 updated this literal (builder-facing leak fix) -- see
+  // semantic-content-personalization-v2-s2-1.test.ts for the dedicated
+  // coverage. This test's own job (safe fallback when no facts) still
+  // holds: the fallback is still fixed, generic, and fact-free.
+  assert.ok(trustTexts.includes("Resolvemos tus dudas de forma clara y directa."))
 
   const ctaOverview = composeSection("cta", { archetype: "overview" })
   const ctaBody = Object.values(nodesOf(ctaOverview)).find((n) => n.type === "text" && n.props?.color === "#dbeafe")
