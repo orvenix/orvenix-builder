@@ -1337,7 +1337,14 @@ test("J9-I1a A) composeSection('hero'), overview: el H1 contiene el businessName
 
   const h1 = Object.values(section.nodes).find((node) => node.type === "heading" && node.props?.level === 1)
   assert.ok(h1, "no se encontro el H1 del hero")
-  assert.equal(h1!.props?.text, `${HERO_BUSINESS_NAME}: una forma más clara de presentar lo que haces`)
+  // V2-S3: no visualFamily/services/objective in this minimal context ->
+  // family-grounded fallback lands on the "professional" default pool,
+  // deterministically selected by business name (see hero-narrative.ts).
+  // The literal tail changed (fixing the universal-template collision
+  // this exact fixture was cited as an example of); the invariant this
+  // test actually protects -- H1 contains the real business name, never
+  // the generic "Tu negocio" placeholder -- still holds.
+  assert.equal(h1!.props?.text, `${HERO_BUSINESS_NAME}: un aliado para tus próximos pasos`)
   assert.equal(String(h1!.props?.text).includes("Tu negocio"), false)
 })
 
@@ -1346,7 +1353,10 @@ test("J9-I1a B) composeSection('hero'), overview: sin businessName conserva el f
 
   const section = composeSection("hero", { archetype: "overview", industry: "fisioterapia" })!
   const h1 = Object.values(section.nodes).find((node) => node.type === "heading" && node.props?.level === 1)
-  assert.equal(h1!.props?.text, "Tu negocio: una forma más clara de presentar lo que haces")
+  // V2-S3: same deterministic "professional" default tail as test A above
+  // (same name -> same hash -> same phrase); the "Tu negocio" placeholder
+  // name-fallback itself is unchanged.
+  assert.equal(h1!.props?.text, "Tu negocio: un aliado para tus próximos pasos")
 })
 
 test("J9-I1a C) composeSection('hero'), catalog: el eyebrow contiene el businessName real, no el H1", async () => {
@@ -1413,7 +1423,14 @@ test("J9-I1a F) Pipeline completo: el H1 de Home y el eyebrow de Servicios sobre
   const servicios = result.plan.pages.find((page) => page.slug === "servicios")!
   const contacto = result.plan.pages.find((page) => page.slug === "contacto")!
 
-  assert.equal(heroH1Text(home), `${HERO_BUSINESS_NAME}: una forma más clara de presentar lo que haces`)
+  // V2-S3: no explicit business.services in this fixture (only free-text
+  // description), so the Home H1 grounds in the explicit businessObjective
+  // instead (rank 2 of the fact precedence) -- "Conseguir citas de
+  // valoracion" classifies as an appointment intent (same classifier CTA
+  // already uses), replacing the old universal fallback sentence this
+  // exact fixture was cited as a real collision example of. Servicios
+  // (catalog archetype) is untouched by V2-S3.
+  assert.equal(heroH1Text(home), `${HERO_BUSINESS_NAME}: conoce cómo agendar tu cita`)
   assert.equal(heroEyebrowText(servicios), HERO_BUSINESS_NAME)
   assert.equal(heroH1Text(servicios), "Conoce nuestros servicios")
 
@@ -1540,8 +1557,14 @@ test("J9-J B.1) Sin superposicion nombre/ubicacion: la ubicacion SI aparece expl
 test("J9-J C) Sin ubicacion: se conserva el fallback generico exacto, sin 'en undefined' ni 'en ' colgante", async () => {
   const { getPageAwareHeroCopy } = await import("../../lib/orvenix-ai/content/content-engine")
 
+  // V2-S3: family-grounded fallback description now always names the
+  // business (falling back to "Tu negocio" here, same as the pre-existing
+  // name default) instead of a name-less generic sentence; still no
+  // location supplied, so no "en undefined"/dangling "en " either.
   const overview = getPageAwareHeroCopy({ industry: "fisioterapia", page: { archetype: "overview" } })
-  assert.equal(overview.description, "Conoce nuestros servicios y encuentra una solución pensada para tus necesidades.")
+  assert.equal(overview.description, "Conoce más sobre Tu negocio y descubre cómo podemos ayudarte.")
+  assert.equal(overview.description.includes("undefined"), false)
+  assert.equal(/\sen\s*$/.test(overview.description.replace(/\.$/, "")), false)
 
   const conversion = getPageAwareHeroCopy({ name: "Centro de Fisioterapia Monterrey", page: { archetype: "conversion" } })
   assert.equal(conversion.description, "Comunícate con Centro de Fisioterapia Monterrey para resolver dudas, solicitar información o comenzar.")
@@ -1590,7 +1613,11 @@ test("J9-J G) Home y Servicios siguen siendo purpose-distinct tras los cambios d
   const home = result.plan.pages.find((p) => p.slug === "home")!
   const servicios = result.plan.pages.find((p) => p.slug === "servicios")!
 
-  assert.equal(heroH1Text(home), "Centro de Fisioterapia Monterrey: una forma más clara de presentar lo que haces")
+  // V2-S3: FISIO_BUSINESS has real services -- Home H1 now grounds in the
+  // primary one (rank 1 of the fact precedence, beating the businessObjective
+  // it also has), replacing the old universal fallback. Servicios (catalog
+  // archetype) is untouched; Home/Servicios still visibly differ.
+  assert.equal(heroH1Text(home), "Centro de Fisioterapia Monterrey: fisioterapia deportiva y más")
   assert.equal(heroEyebrowText(servicios), "Centro de Fisioterapia Monterrey")
   assert.equal(heroH1Text(servicios), "Conoce nuestros servicios")
   assert.notEqual(heroH1Text(home), heroH1Text(servicios))

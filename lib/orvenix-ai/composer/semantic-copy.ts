@@ -1,17 +1,5 @@
 import type { SectionCompositionContext } from "./types"
-
-type Offering = { name: string; description?: string }
-
-function cleanText(value?: string): string | undefined {
-  const trimmed = value?.trim()
-  return trimmed ? trimmed : undefined
-}
-
-function offeringNames(offerings?: Offering[]): string[] {
-  return (offerings ?? [])
-    .map((offering) => offering.name?.trim())
-    .filter((name): name is string => Boolean(name))
-}
+import { classifyCtaIntent, cleanText, offeringNames, type CtaIntent } from "@/lib/orvenix-ai/content/copy-helpers"
 
 const MAX_LISTED_OFFERINGS = 3
 
@@ -96,69 +84,6 @@ export interface CtaCopy {
   body: string
   label: string
   href: string
-}
-
-export type CtaIntent = "appointment" | "quote" | "contact"
-
-/**
- * V2-S2.1: a real business writes "cita"/"cotización"/etc as its own
- * complete word ("Conseguir citas de valoración"), never buried inside an
- * unrelated word -- but Spanish has real words that contain these as a
- * raw substring (eg. "explícita" contains "cita"; "solicitud" does not,
- * but the historical inferSiteType bug ["identidad" contains "dent"] is
- * exactly this class of mistake). `\bword\b` requires a real word
- * boundary on both sides, so "explícita" (normalized "explicita") is
- * never mistaken for "cita".
- */
-function containsWord(normalizedText: string, word: string): boolean {
-  return new RegExp(`\\b${word}\\b`).test(normalizedText)
-}
-
-function normalizeForMatch(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-}
-
-const APPOINTMENT_INTENT_WORDS = [
-  "cita",
-  "citas",
-  "consulta",
-  "consultas",
-  "valoracion",
-  "valoraciones",
-  "reservacion",
-  "reservaciones",
-  "reserva",
-  "reservas",
-  "agendar",
-]
-
-const QUOTE_INTENT_WORDS = [
-  "cotizacion",
-  "cotizaciones",
-  "cotizar",
-  "presupuesto",
-  "presupuestos",
-  "propuesta",
-  "propuestas",
-]
-
-/**
- * V2-S2.1: bounded, deterministic, word-boundary-safe classification of
- * the business's OWN explicit objective text into one of 3 CTA-relevant
- * intents. Deliberately small: this is not a general intent classifier,
- * it only recognizes the two intents whose real-world CTA action differs
- * from a generic "contact us" (appointment vs. quote) -- anything that
- * doesn't clearly match one of those falls to "contact", the safest,
- * most generic action, never a guess at an unsupported capability.
- */
-export function classifyCtaIntent(objective: string): CtaIntent {
-  const normalized = normalizeForMatch(objective)
-  if (APPOINTMENT_INTENT_WORDS.some((word) => containsWord(normalized, word))) return "appointment"
-  if (QUOTE_INTENT_WORDS.some((word) => containsWord(normalized, word))) return "quote"
-  return "contact"
 }
 
 const CTA_INTENT_LABELS: Record<CtaIntent, string> = {

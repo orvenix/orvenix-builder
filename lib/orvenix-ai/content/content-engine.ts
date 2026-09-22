@@ -4,6 +4,7 @@ import type {
   ContentAdaptation,
 } from "./types"
 import { getBusinessLanguage } from "./business-language"
+import { resolveFamilyGroundedHeroCopy } from "./hero-narrative"
 
 function businessName(context: BusinessContentContext) {
   return context.name?.trim() || "Tu negocio"
@@ -170,13 +171,30 @@ export function getPageAwareHeroCopy(context: BusinessContentContext) {
     }
   }
 
+  /*
+   * HOME — everything outside the 4 specialized categories above (V2-S3).
+   * Previously a single universal sentence, identical for ANY unmatched
+   * industry (confirmed by the V2-S3 audit: physiotherapy, creative
+   * studios, and professional/consulting all produced the byte-identical
+   * "${name}: una forma más clara de presentar lo que haces"). Grounded in
+   * real facts already on this same context object (a real offering,
+   * businessObjective, location) via VisualFamily as a broad narrative-
+   * mode selector -- see hero-narrative.ts. eyebrow/CTA labels are
+   * untouched, still from getBusinessLanguage exactly as before.
+   */
+  const grounded = resolveFamilyGroundedHeroCopy({
+    name,
+    locationPhrase,
+    visualFamily: context.visualFamily,
+    services: context.services,
+    products: context.products,
+    objective: context.objective,
+  })
+
   return {
     eyebrow: language.categorySingular,
-    title:
-      `${name}: una forma más clara de presentar lo que haces`,
-    description:
-      context.description?.trim() ||
-      `Conoce nuestros ${language.servicePlural}${locationPhrase} y encuentra una solución pensada para tus necesidades.`,
+    title: grounded.title,
+    description: grounded.description,
     primaryCtaLabel: language.primaryAction,
     secondaryCtaLabel: language.secondaryAction,
   }

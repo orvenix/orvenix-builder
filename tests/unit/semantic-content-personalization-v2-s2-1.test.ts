@@ -167,7 +167,10 @@ test("V2-S2.1 E) objective libre/ambiguo sin señal clara: fallback de contacto 
 // ---------------------------------------------------------------------------
 
 test("V2-S2.1 F) clasificador de intencion: palabras que CONTIENEN un fragmento reconocido a mitad de palabra no disparan falsos positivos", async () => {
-  const { classifyCtaIntent } = await import("../../lib/orvenix-ai/composer/semantic-copy")
+  // V2-S3: classifyCtaIntent moved to content/copy-helpers.ts (shared with
+  // the new Hero narrative layer) -- same function, same behavior, new
+  // canonical home; composer/semantic-copy.ts now imports it from there.
+  const { classifyCtaIntent } = await import("../../lib/orvenix-ai/content/copy-helpers")
 
   // "explícita"/"explicitas" contains "cita" as a raw substring -- must NOT classify as appointment.
   assert.equal(classifyCtaIntent("Ser una marca explícita en sus valores"), "contact")

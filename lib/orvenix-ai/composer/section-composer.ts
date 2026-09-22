@@ -643,6 +643,9 @@ function composeHero(
     objective: context.businessObjective,
     location: context.location,
     audience: context.audience,
+    visualFamily: context.visualFamily,
+    services: context.services,
+    products: context.products,
     page: {
       name: context.pageName,
       slug: context.pageSlug,

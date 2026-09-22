@@ -12,6 +12,11 @@ export interface BusinessContentContext {
   whatsapp?: string
   email?: string
   address?: string
+  /** V2-S3: already resolved elsewhere in the pipeline (V2-1.1) -- never re-derived here, only consumed by getPageAwareHeroCopy's family-grounded fallback tier. */
+  visualFamily?: string
+  /** V2-S3: real, business-supplied offerings -- same shape as SectionCompositionContext's services/products. */
+  services?: Array<{ name: string; description?: string }>
+  products?: Array<{ name: string; description?: string }>
 
   page?: {
     name?: string
