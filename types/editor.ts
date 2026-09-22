@@ -22,7 +22,27 @@ export type NodeProps = Record<string, unknown> & {
   styleBorderColor?: string;
   styleShadow?: string;
   _bindings?: Record<string, DataBinding>;
+  /** Provider-neutral provenance for a generated/selected media asset (eg. a stock photo). Never contains secrets or raw provider responses. */
+  asset?: AssetProvenance;
 };
+
+/**
+ * Serializable, provider-neutral asset provenance -- deliberately a
+ * single nested object rather than one field per provider, so a second
+ * provider never needs new top-level NodeProps keys. `provider` is a
+ * free string (not a union) so a future provider adapter needs no type
+ * change here.
+ */
+export interface AssetProvenance {
+  provider: string;
+  providerAssetId: string;
+  photographer?: string;
+  photographerUrl?: string;
+  attributionUrl?: string;
+  width?: number;
+  height?: number;
+  dominantColor?: string;
+}
 
 export type ResponsiveContract = Partial<Record<Breakpoint, NodeProps>>;
 

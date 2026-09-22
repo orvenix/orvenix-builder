@@ -34,10 +34,12 @@ export interface AssetPlanItem {
   dominantColor?: string
 }
 
+export type AssetOrientation = "landscape" | "portrait" | "square"
+
 export interface AssetProvider {
   readonly name: string
   isAvailable(): boolean
-  search(query: string, options?: { perPage?: number }): Promise<ProviderCandidate[]>
+  search(query: string, options?: { perPage?: number; orientation?: AssetOrientation }): Promise<ProviderCandidate[]>
 }
 
 export interface AssetSearchContext {

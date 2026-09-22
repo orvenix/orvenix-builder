@@ -1,6 +1,26 @@
-import type { EditorTree } from "@/types/editor"
+import type { AssetProvenance, EditorTree } from "@/types/editor"
 import type { AssetPlanItem, AssetProvider } from "./types"
 import { resolveAssetPlan } from "./asset-plan"
+
+/**
+ * Provider-neutral provenance subset of an AssetPlanItem, persisted onto
+ * the node (see types/editor.ts NodeProps.asset). Deliberately excludes
+ * role/searchIntent/src/alt -- those already live as ordinary node props
+ * or aren't needed post-selection -- and never includes API keys or raw
+ * provider response bodies.
+ */
+function toAssetProvenance(item: AssetPlanItem): AssetProvenance {
+  return {
+    provider: item.provider,
+    providerAssetId: item.providerAssetId,
+    photographer: item.photographer,
+    photographerUrl: item.photographerUrl,
+    attributionUrl: item.attributionUrl,
+    width: item.width,
+    height: item.height,
+    dominantColor: item.dominantColor,
+  }
+}
 
 export interface ResolveTreeAssetsContext {
   provider: AssetProvider
@@ -76,7 +96,10 @@ export async function resolveTreeImageAssets<T extends { name: string; slug: str
 
     if (heroItem) {
       for (const id of heroNodeIds) {
-        nodes[id] = { ...nodes[id], props: { ...nodes[id].props, src: heroItem.src, alt: heroItem.alt } }
+        nodes[id] = {
+          ...nodes[id],
+          props: { ...nodes[id].props, src: heroItem.src, alt: heroItem.alt, asset: toAssetProvenance(heroItem) },
+        }
         changed = true
       }
     }
@@ -98,7 +121,10 @@ export async function resolveTreeImageAssets<T extends { name: string; slug: str
       galleryNodeIds.forEach((id, index) => {
         const item = galleryItems[index]
         if (!item) return
-        nodes[id] = { ...nodes[id], props: { ...nodes[id].props, src: item.src, alt: item.alt } }
+        nodes[id] = {
+          ...nodes[id],
+          props: { ...nodes[id].props, src: item.src, alt: item.alt, asset: toAssetProvenance(item) },
+        }
         changed = true
       })
     }

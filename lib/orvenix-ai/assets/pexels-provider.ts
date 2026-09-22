@@ -1,4 +1,4 @@
-import type { AssetProvider, ProviderCandidate } from "./types"
+import type { AssetOrientation, AssetProvider, ProviderCandidate } from "./types"
 
 /**
  * Server-only Pexels REST adapter. No SDK installed -- plain fetch.
@@ -74,8 +74,18 @@ async function fetchWithTimeout(url: string, apiKey: string, timeoutMs: number):
   }
 }
 
-async function searchPexels(query: string, apiKey: string, perPage: number): Promise<ProviderCandidate[]> {
-  const url = `${PEXELS_SEARCH_URL}?query=${encodeURIComponent(query)}&per_page=${Math.min(Math.max(perPage, 1), 80)}`
+function buildSearchUrl(query: string, perPage: number, orientation?: AssetOrientation): string {
+  const params = new URLSearchParams({
+    query,
+    per_page: String(Math.min(Math.max(perPage, 1), 80)),
+  })
+  // Pexels' own orientation values are exactly "landscape" | "portrait" | "square" -- no translation needed.
+  if (orientation) params.set("orientation", orientation)
+  return `${PEXELS_SEARCH_URL}?${params.toString()}`
+}
+
+async function searchPexels(query: string, apiKey: string, perPage: number, orientation?: AssetOrientation): Promise<ProviderCandidate[]> {
+  const url = buildSearchUrl(query, perPage, orientation)
 
   let attempt = 0
   let lastStatus: number | null = null
@@ -131,7 +141,7 @@ export function createPexelsProvider(): AssetProvider {
       if (!query.trim()) return []
 
       try {
-        return await searchPexels(query, apiKey, options?.perPage ?? 6)
+        return await searchPexels(query, apiKey, options?.perPage ?? 6, options?.orientation)
       } catch {
         // Defensive: search() must never throw, regardless of cause.
         return []

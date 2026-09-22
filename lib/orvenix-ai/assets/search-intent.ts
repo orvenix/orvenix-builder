@@ -43,17 +43,25 @@ const INDUSTRY_INTENT_KEYWORDS: Array<{ keyword: string; intent: string }> = [
   { keyword: "restaurante", intent: "restaurant dining" },
   { keyword: "cafeteria", intent: "cafe coffee shop" },
   { keyword: "gastronom", intent: "restaurant kitchen" },
-  { keyword: "diseno", intent: "graphic design studio" },
-  { keyword: "branding", intent: "brand identity studio" },
+  { keyword: "diseno", intent: "graphic designer workspace" },
+  { keyword: "branding", intent: "branding design workspace" },
   { keyword: "marketing", intent: "creative agency office" },
   { keyword: "tienda", intent: "retail store" },
   { keyword: "ecommerce", intent: "online store packaging" },
 ]
 
+/**
+ * V2-2.1: "graphic design studio" (the original creative family fallback)
+ * returned a weak/unprofessional hero in the real-provider E2E. Replaced
+ * with "creative design studio" -- still a small, general, role-agnostic
+ * phrase, not tuned to any one fixture -- per the reviewed direction in
+ * V2-2.1 Section 4. Restaurant/health intents were explicitly accepted
+ * as-is in that review; left untouched here.
+ */
 const FAMILY_INTENT: Record<string, string> = {
   health: "healthcare clinic professional",
   hospitality: "restaurant dining experience",
-  creative: "creative studio design workspace",
+  creative: "creative design studio",
   commerce: "retail store products",
   professional: "modern office business",
 }

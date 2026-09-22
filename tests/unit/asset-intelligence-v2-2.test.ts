@@ -95,7 +95,7 @@ test("V2-2 B) search-intent: restaurante produce intent de hospitalidad", async 
 test("V2-2 C) search-intent: diseno grafico produce intent creativo", async () => {
   const { buildSearchIntentHierarchy } = await import("../../lib/orvenix-ai/assets/search-intent")
   const hierarchy = buildSearchIntentHierarchy({ visualFamily: "creative", industry: "diseno grafico", role: "hero" })
-  assert.equal(hierarchy[0], "graphic design studio")
+  assert.equal(hierarchy[0], "graphic designer workspace")
 })
 
 test("V2-2 D) search-intent: negocio sin industria reconocible cae a intent de familia visual, luego generico de rol", async () => {
@@ -394,7 +394,7 @@ test("V2-2 X) evidencia local (mock): Fisioterapia/Sabores del Valle/Estudio Nor
 
   assert.equal(results.FISIOTERAPIA.intent, "physical therapy clinic")
   assert.equal(results.SABORES_DEL_VALLE.intent, "restaurant dining")
-  assert.equal(results.ESTUDIO_NORTE.intent, "graphic design studio")
+  assert.equal(results.ESTUDIO_NORTE.intent, "graphic designer workspace")
 
   const srcs = new Set(Object.values(results).map((r) => r.src))
   assert.equal(srcs.size, 3, "las 3 fixtures deben resolver assets distintos")

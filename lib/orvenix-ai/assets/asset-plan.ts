@@ -1,4 +1,4 @@
-import type { AssetPlanItem, AssetProvider, AssetRole, AssetSearchContext, ProviderCandidate } from "./types"
+import type { AssetOrientation, AssetPlanItem, AssetProvider, AssetRole, AssetSearchContext, ProviderCandidate } from "./types"
 import { buildSearchIntentHierarchy } from "./search-intent"
 
 export interface ResolveAssetPlanParams {
@@ -28,6 +28,35 @@ function hasRequiredProvenance(candidate: ProviderCandidate): boolean {
   return Boolean(candidate.photographer && candidate.attributionUrl);
 }
 
+function aspectRatio(candidate: ProviderCandidate): number {
+  return candidate.height > 0 ? candidate.width / candidate.height : 0;
+}
+
+/**
+ * V2-2.1: role-based geometry fit rank (0 = best fit, higher = worse
+ * but still usable). Real E2E evidence showed a strongly-portrait
+ * source (4016x6016) selected for a landscape hero slot. Hero strongly
+ * prefers landscape but never hard-rejects a portrait candidate -- if a
+ * batch has only portrait results, the least-bad one still gets used
+ * rather than falling back to no image at all. Gallery cards already
+ * crop/cover, so gallery only penalizes the most extreme, unusable-in-
+ * a-card shapes. Pure function of width/height only -- no fixture/
+ * business-specific branching (see V2-2.1 Section 2).
+ */
+function geometryFitRank(role: AssetRole, candidate: ProviderCandidate): number {
+  const ratio = aspectRatio(candidate);
+  if (ratio <= 0) return 3;
+
+  if (role === "hero") {
+    if (ratio >= 1.3) return 0;
+    if (ratio >= 0.9) return 1;
+    return 2;
+  }
+
+  if (ratio < 0.3 || ratio > 3.5) return 1;
+  return 0;
+}
+
 function toAssetPlanItem(role: AssetRole, searchIntent: string, altSeed: string | undefined, candidate: ProviderCandidate): AssetPlanItem {
   return {
     role,
@@ -52,6 +81,18 @@ function toAssetPlanItem(role: AssetRole, searchIntent: string, altSeed: string 
  * checked) candidate. Never throws: a provider failure at any tier just
  * moves to the next tier, and an empty hierarchy result yields [].
  */
+/**
+ * Layered orientation policy (V2-2.1 Section 3): the provider orientation
+ * hint narrows results at the source for hero (fewer wasted candidates,
+ * better average relevance); geometryFitRank below is the second,
+ * local-validation layer, since not every provider/response strictly
+ * honors an orientation hint. Gallery requests no orientation filter --
+ * it tolerates a much wider range.
+ */
+function orientationHintForRole(role: AssetRole): AssetOrientation | undefined {
+  return role === "hero" ? "landscape" : undefined;
+}
+
 async function searchFirstUsableTier(
   provider: AssetProvider,
   role: AssetRole,
@@ -59,17 +100,23 @@ async function searchFirstUsableTier(
   perPage: number,
 ): Promise<{ searchIntent: string; candidates: ProviderCandidate[] } | null> {
   const hierarchy = buildSearchIntentHierarchy({ ...context, role });
+  const orientation = orientationHintForRole(role);
 
   for (const searchIntent of hierarchy) {
     let candidates: ProviderCandidate[];
     try {
-      candidates = await provider.search(searchIntent, { perPage });
+      candidates = await provider.search(searchIntent, { perPage, orientation });
     } catch {
       continue;
     }
 
     const usable = candidates.filter(hasRequiredProvenance);
-    if (usable.length > 0) return { searchIntent, candidates: usable };
+    if (usable.length > 0) {
+      // Stable sort (same-rank candidates keep the provider's own
+      // relevance order) -- deterministic, no randomness.
+      const ranked = [...usable].sort((a, b) => geometryFitRank(role, a) - geometryFitRank(role, b));
+      return { searchIntent, candidates: ranked };
+    }
   }
 
   return null;
