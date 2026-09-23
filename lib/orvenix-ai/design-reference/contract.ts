@@ -106,6 +106,7 @@ export const SECTION_TREATMENTS = [
   "logo-strip",
   "pricing-tiers",
   "credibility-stat-row",
+  "paired-layout",
   "unknown",
 ] as const
 export type SectionTreatment = (typeof SECTION_TREATMENTS)[number]
@@ -175,6 +176,7 @@ export const DISTINCTIVE_TRAITS = [
   "credibility-stat-row",
   "numbered-process",
   "logo-strip",
+  "paired-layout-section",
 ] as const
 export type DistinctiveTrait = (typeof DISTINCTIVE_TRAITS)[number]
 
@@ -198,6 +200,7 @@ export type ExtractionSignal =
   | "numbered-steps-array"
   | "rating-and-star-icon"
   | "animate-pulse-with-status-copy"
+  | "paired-column-grid"
 
 export type ExtractionConfidence = "high" | "medium" | "low"
 

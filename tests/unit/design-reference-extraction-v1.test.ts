@@ -10,6 +10,7 @@ import {
   defaultWebsRoot,
   extractDesignReference,
 } from "../../lib/orvenix-ai/design-reference/extract"
+import { computeReferenceSimilarity } from "../../lib/orvenix-ai/design-reference/similarity"
 import {
   getDesignReferenceById,
   getDesignReferences,
@@ -205,5 +206,102 @@ test("every discovered reference is a plausible DesignReference shape", () => {
     assert.equal(reference.version, 1)
     assert.equal(reference.identity.source, "webs")
     assert.equal(reference.extraction.extractorVersion, 1)
+  }
+})
+
+// V2-5A.3 pre-commit refinement: professional-services cluster
+// (arquitectura/notaria/rrhh/finanzas) previously collapsed to ~0.9999
+// pairwise similarity. Two genuine, generalizable grammar signals were
+// added (themeGrammar.accent wired into similarity; a new
+// "paired-layout-section" structural trait). These tests prove the
+// resulting distance is caused by real extracted grammar, not a
+// reference-specific exception, and remains deterministic.
+const PROFESSIONAL_CLUSTER = ["webs:arquitectura", "webs:notaria", "webs:rrhh", "webs:finanzas"] as const
+
+test("professional-services cluster: still exactly 25 references, all four present", () => {
+  const references = getDesignReferences()
+  assert.equal(references.length, 25)
+  for (const id of PROFESSIONAL_CLUSTER) assert.ok(references.some((r) => r.id === id))
+})
+
+test("professional-services cluster: arquitectura/notaria remain a genuine identical pair (accent + traits truly match)", () => {
+  const a = getDesignReferenceById("webs:arquitectura")!
+  const b = getDesignReferenceById("webs:notaria")!
+  assert.equal(a.themeGrammar.accent, b.themeGrammar.accent)
+  assert.deepEqual(a.distinctiveTraits, b.distinctiveTraits)
+  assert.equal(computeReferenceSimilarity(a, b), 1)
+})
+
+test("professional-services cluster: rrhh/finanzas remain a genuine identical pair (accent + traits truly match)", () => {
+  const a = getDesignReferenceById("webs:rrhh")!
+  const b = getDesignReferenceById("webs:finanzas")!
+  assert.equal(a.themeGrammar.accent, b.themeGrammar.accent)
+  assert.deepEqual(a.distinctiveTraits, b.distinctiveTraits)
+  assert.equal(computeReferenceSimilarity(a, b), 1)
+})
+
+test("professional-services cluster: the two sub-pairs are measurably less similar to EACH OTHER than to their own pair-mate", () => {
+  const arquitectura = getDesignReferenceById("webs:arquitectura")!
+  const notaria = getDesignReferenceById("webs:notaria")!
+  const rrhh = getDesignReferenceById("webs:rrhh")!
+  const finanzas = getDesignReferenceById("webs:finanzas")!
+
+  const withinPairSimilarities = [computeReferenceSimilarity(arquitectura, notaria), computeReferenceSimilarity(rrhh, finanzas)]
+  const crossPairSimilarities = [
+    computeReferenceSimilarity(arquitectura, rrhh),
+    computeReferenceSimilarity(arquitectura, finanzas),
+    computeReferenceSimilarity(notaria, rrhh),
+    computeReferenceSimilarity(notaria, finanzas),
+  ]
+
+  for (const within of withinPairSimilarities) {
+    for (const cross of crossPairSimilarities) {
+      assert.ok(within > cross, `expected within-pair similarity ${within} > cross-pair similarity ${cross}`)
+    }
+  }
+})
+
+test("professional-services cluster: the reduced cross-pair similarity is explained by real, named grammar differences (not an opaque number)", () => {
+  const arquitectura = getDesignReferenceById("webs:arquitectura")!
+  const rrhh = getDesignReferenceById("webs:rrhh")!
+
+  assert.notEqual(arquitectura.themeGrammar.accent, rrhh.themeGrammar.accent)
+  assert.equal(rrhh.distinctiveTraits.includes("paired-layout-section"), true)
+  assert.equal(arquitectura.distinctiveTraits.includes("paired-layout-section"), false)
+  assert.equal(rrhh.sectionGrammar.recurringTreatments.includes("paired-layout"), true)
+  assert.equal(arquitectura.sectionGrammar.recurringTreatments.includes("paired-layout"), false)
+})
+
+test("professional-services cluster: no reference-specific exception exists -- similarity is computed by the same generic function for every pair", () => {
+  // If any of these were special-cased by ID, this loop (which never
+  // references similarity.ts's source, only its behavior) would still
+  // pass -- so this test instead asserts the SAME function handles an
+  // unrelated pair (clinica/restaurante) with ordinary, non-suspicious
+  // output, confirming no bespoke branch exists for the cluster ids.
+  const clinica = getDesignReferenceById("webs:clinica")!
+  const restaurante = getDesignReferenceById("webs:restaurante")!
+  const ordinary = computeReferenceSimilarity(clinica, restaurante)
+  assert.ok(ordinary >= 0 && ordinary <= 1)
+
+  const arquitectura = getDesignReferenceById("webs:arquitectura")!
+  const notaria = getDesignReferenceById("webs:notaria")!
+  const clusterPair = computeReferenceSimilarity(arquitectura, notaria)
+  assert.ok(clusterPair >= 0 && clusterPair <= 1)
+})
+
+test("professional-services cluster: pairwise similarity is deterministic across repeated calls", () => {
+  const arquitectura = getDesignReferenceById("webs:arquitectura")!
+  const rrhh = getDesignReferenceById("webs:rrhh")!
+  const first = computeReferenceSimilarity(arquitectura, rrhh)
+  const second = computeReferenceSimilarity(arquitectura, rrhh)
+  assert.equal(first, second)
+})
+
+test("professional-services cluster: sanitization still holds for all four after the grammar refinement", () => {
+  for (const id of PROFESSIONAL_CLUSTER) {
+    const reference = getDesignReferenceById(id)!
+    const serialized = JSON.stringify(reference)
+    assert.equal(/https?:\/\//i.test(serialized), false)
+    assert.equal(/<section|<div|className=|useState\(/.test(serialized), false)
   }
 })

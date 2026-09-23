@@ -351,12 +351,45 @@ function detectRoleSequence(
   return sequence
 }
 
+/**
+ * V2-5A.3 refinement: a section whose card grid caps at 2 columns
+ * (e.g. "grid-cols-1 md:grid-cols-2" with no lg:3/4 breakpoint) while
+ * OTHER sections on the same home page reach 3+ columns is a real,
+ * recurring "paired/featured" layout treatment -- distinct from the
+ * page's otherwise-uniform grid rhythm. Scoped to content AFTER the
+ * first <section> tag so the near-universal 4-column hero stat-badge
+ * row (see credibility-stat-row) never counts as one of the grids
+ * being compared -- it would otherwise dominate and hide real variety
+ * elsewhere on the page.
+ */
+function detectPairedLayoutSection(homeText: string): boolean {
+  const firstSection = homeText.indexOf("<section")
+  if (firstSection === -1) return false
+  const secondSection = homeText.indexOf("<section", firstSection + 8)
+  if (secondSection === -1) return false
+  const scope = homeText.slice(secondSection)
+
+  const gridClassNames = scope.match(/className="[^"]*\bgrid\b[^"]*"/g) ?? []
+  const maxColsPerGrid: number[] = []
+  for (const className of gridClassNames) {
+    const columnNumbers = [...className.matchAll(/grid-cols-(\d+)/g)].map((m) => Number(m[1]))
+    if (columnNumbers.length > 0) maxColsPerGrid.push(Math.max(...columnNumbers))
+  }
+  if (maxColsPerGrid.length < 2) return false
+
+  const hasPairedGrid = maxColsPerGrid.some((n) => n <= 2)
+  const hasWiderGrid = maxColsPerGrid.some((n) => n >= 3)
+  return hasPairedGrid && hasWiderGrid
+}
+
 function detectDistinctiveTraits(
   text: string,
   pageFolders: string[],
+  homeText: string,
 ): DistinctiveTrait[] {
   const traits = new Set<DistinctiveTrait>()
 
+  if (detectPairedLayoutSection(homeText)) traits.add("paired-layout-section")
   if (pageFolders.includes("carrito")) traits.add("cart-flow")
   if (["catalogo", "producto", "propiedades", "destinos", "paquetes", "habitaciones"].some((f) => pageFolders.includes(f))) {
     traits.add("catalog-browsing")
@@ -393,6 +426,7 @@ function deriveRecurringTreatments(
   if (traits.includes("rated-person-card")) treatments.add("rated-card-grid")
   if (traits.includes("tabbed-content-switcher")) treatments.add("tabbed-switcher")
   if (traits.includes("credibility-stat-row")) treatments.add("credibility-stat-row")
+  if (traits.includes("paired-layout-section")) treatments.add("paired-layout")
 
   const genericGridRoles: SectionRole[] = ["services", "features", "products", "content"]
   if (genericGridRoles.some((role) => roleSequence.includes(role)) && treatments.size === 0) {
@@ -455,13 +489,14 @@ export function extractDesignReference(candidate: WebsCandidate, repoRoot: strin
   const ctaArrangement = detectCtaArrangement(heroRegion)
 
   const roleSequence = detectRoleSequence(homeText, layoutText, sharedNavPresent, signals)
-  const traits = detectDistinctiveTraits(fullText, pageFolders)
+  const traits = detectDistinctiveTraits(fullText, pageFolders, homeText)
   if (traits.includes("cart-flow")) signals.add("cart-route-present")
   if (traits.includes("catalog-browsing")) signals.add("catalog-route-present")
   if (traits.includes("pricing-tier-highlight")) signals.add("pricing-popular-flag")
   if (traits.includes("numbered-process")) signals.add("numbered-steps-array")
   if (traits.includes("rated-person-card")) signals.add("rating-and-star-icon")
   if (traits.includes("live-status-indicator")) signals.add("animate-pulse-with-status-copy")
+  if (traits.includes("paired-layout-section")) signals.add("paired-column-grid")
 
   const recurringTreatments = deriveRecurringTreatments(roleSequence, traits)
 
