@@ -69,4 +69,43 @@ export interface SectionCompositionContext {
   aiAssetIntent?: { subject: string; mood?: string }
   /** V2-4: site-level (not per-page) -- reuses the SAME "lg"/"xl" paddingY tokens already used throughout section-composer.ts, never a new token. */
   aiDensity?: "compact" | "standard" | "spacious"
+
+  /**
+   * V2-5B: real, structured, caller-supplied content ONLY -- consumed
+   * exactly like `services`/`products` above (same shape, same
+   * "absent/empty -> deterministic generic fallback, never fabricated"
+   * rule). Nothing in this phase populates these yet (no Creative
+   * Director/retrieval wiring), so composing without them is the
+   * current, unchanged default behavior everywhere.
+   */
+  processSteps?: Array<{
+    name: string
+    description?: string
+  }>
+  /** Real numeric/stat facts only -- e.g. a caller-verified years-active count. Never invented by the composer itself. */
+  credibilityStats?: Array<{
+    value: string
+    label: string
+  }>
+
+  /**
+   * V2-5B: explicit opt-in for the new hero-treatment/background-rhythm/
+   * paired-layout/numbered-process capabilities. Absent/false ->
+   * byte-identical to pre-V2-5B output (this is what every existing
+   * caller/test gets, unchanged). No Creative Director/retrieval wires
+   * this yet in this phase -- it exists so the new capabilities are
+   * real and independently exercisable/testable without silently
+   * changing the current deterministic pipeline's default output.
+   */
+  richComposition?: boolean
+
+  /**
+   * V2-5B refinement: the ONE resolved theme value composition
+   * currently has any reason to need -- not the whole GlobalTheme
+   * object, which nothing upstream of composeSection currently passes
+   * through anyway. Optional and additive: absent -> the existing
+   * neutral (non-blue-presuming) fallback. Used only by SectionTone's
+   * "accent-soft" background.
+   */
+  accentColor?: string
 }

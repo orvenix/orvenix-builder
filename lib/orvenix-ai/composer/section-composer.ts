@@ -6,19 +6,26 @@ import type {
 } from "./types"
 import { createComposedNode } from "./node-factory"
 import { getPageAwareHeroCopy } from "@/lib/orvenix-ai/content/content-engine"
-import { hasSafeContrast } from "@/lib/orvenix-ai/theme/visual-direction"
-import { selectVariant } from "./variant-selector"
+import { hasSafeContrast, lightAccentTint } from "@/lib/orvenix-ai/theme/visual-direction"
+import { selectVariant, stableHash } from "./variant-selector"
 import {
   CTA_VARIANTS,
   CTA_WEIGHTS,
   FEATURES_VARIANTS,
   FEATURES_WEIGHTS,
+  HERO_TREATMENTS,
+  HERO_TREATMENT_WEIGHTS,
   HERO_VARIANTS,
   HERO_WEIGHTS,
+  PROCESS_VARIANTS,
+  PROCESS_WEIGHTS,
   SERVICES_VARIANTS,
   SERVICES_WEIGHTS,
   TRUST_VARIANTS,
   TRUST_WEIGHTS,
+  TWO_ITEM_LAYOUT_VARIANTS,
+  TWO_ITEM_LAYOUT_WEIGHTS,
+  type SectionTone,
 } from "./composition-context"
 import {
   resolveCtaCopy,
@@ -52,6 +59,94 @@ const LIGHT_ON_DARK_TEXT = { heading: "#ffffff", body: "#e2e8f0" }
  */
 function readableTextColorsFor(background: string): { heading: string; body: string } {
   return hasSafeContrast(DARK_ON_LIGHT_TEXT.heading, background) ? DARK_ON_LIGHT_TEXT : LIGHT_ON_DARK_TEXT
+}
+
+/**
+ * V2-5B: background rhythm. Bounded tone tokens map to concrete
+ * backgrounds; "contrast" is the only non-light one, and every caller
+ * MUST derive its on-background text color from
+ * readableTextColorsFor(resolveToneBackground(tone, context)) rather
+ * than assuming light -- see composeCardGridSection and its row-based
+ * layouts below. "accent-soft" is NOT in this static map -- it's
+ * resolved dynamically (see resolveToneBackground) since it depends on
+ * the caller's real theme accent when one is available.
+ */
+const TONE_BACKGROUNDS: Record<Exclude<SectionTone, "accent-soft">, string> = {
+  base: "#ffffff",
+  muted: "#f8fafc",
+  contrast: "#0b1220",
+}
+
+/**
+ * V2-5B refinement: no more fixed blue. When the caller supplies a real
+ * resolved theme accent (context.accentColor), "accent-soft" is a
+ * light tint of THAT color (lightAccentTint, theme/visual-direction.ts
+ * -- reused, not duplicated). No accent color available -> the SAME
+ * neutral gray-tinted surface "muted" already uses, never a
+ * hardcoded/presumed hue. Every existing caller (no accentColor) gets
+ * this neutral fallback -- their exact old #f0f7ff output is gone, but
+ * that value was only ever reachable via richComposition:true, which
+ * nothing before this feature ever set.
+ */
+const NEUTRAL_ACCENT_SOFT_FALLBACK = TONE_BACKGROUNDS.muted
+
+function resolveToneBackground(tone: SectionTone, context: SectionCompositionContext): string {
+  if (tone === "accent-soft") {
+    const tint = context.accentColor ? lightAccentTint(context.accentColor) : null
+    return tint ?? NEUTRAL_ACCENT_SOFT_FALLBACK
+  }
+  return TONE_BACKGROUNDS[tone]
+}
+
+/**
+ * Deterministic, index-SENSITIVE on purpose (the opposite of
+ * selectVariant, which deliberately excludes sectionIndex -- see its
+ * own comment). Two sections of the same role on a page are rare, but
+ * a page's sequence of DIFFERENT roles should not all flatten onto the
+ * same white background; hashing sectionIndex in is what makes that
+ * vary without being a mechanical index % 2 alternation. "contrast" is
+ * intentionally rare in the pool (a full tone-flip is a strong visual
+ * move) and light tones dominate, since most sub-layouts assume a
+ * light background unless explicitly made contrast-safe.
+ */
+const TONE_POOL: SectionTone[] = ["base", "base", "base", "muted", "muted", "accent-soft", "contrast"]
+
+function resolveSectionTone(context: SectionCompositionContext, role: SectionRole): SectionTone {
+  const source = [role, context.visualFamily, context.archetype, String(context.sectionIndex ?? 0)].filter(Boolean).join("|")
+  const hash = stableHash(source)
+  return TONE_POOL[hash % TONE_POOL.length]
+}
+
+/**
+ * V2-5B C5: shared by composeHero's abstract-glow treatment and
+ * composeTrust's stats mode -- ONE implementation, never duplicated.
+ * Renders ONLY when real, caller-supplied stats exist; returns null
+ * otherwise (never fabricates a placeholder row). `value`/`label` are
+ * rendered verbatim as already-trusted content -- this function never
+ * invents, rounds, or appends units to them.
+ */
+function credibilityStatRow(
+  nodes: Record<string, ComposedNode>,
+  stats: Array<{ value: string; label: string }> | undefined,
+  textColors: { heading: string; body: string },
+): string | null {
+  const usable = (stats ?? [])
+    .map((s) => ({ value: s.value?.trim(), label: s.label?.trim() }))
+    .filter((s): s is { value: string; label: string } => Boolean(s.value) && Boolean(s.label))
+  if (usable.length === 0) return null
+
+  const isDark = textColors.heading === "#ffffff"
+  const badgeClassName = isDark
+    ? "flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-4"
+    : "flex flex-col items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+
+  const badges = usable.map((stat) => {
+    const value = headingNode(nodes, `${stat.label} valor`, stat.value, 3, { size: "2xl", weight: "extrabold", align: "center", color: textColors.heading })
+    const label = textNode(nodes, `${stat.label} etiqueta`, stat.label, { size: "sm", align: "center", color: textColors.body })
+    return wrapperNode(nodes, `Estadistica ${stat.label}`, badgeClassName, [value, label])
+  })
+
+  return wrapperNode(nodes, "Fila de credibilidad", "grid grid-cols-2 gap-4 sm:grid-cols-4", badges)
 }
 
 function faqCopy(archetype: SectionCompositionContext["archetype"]) {
@@ -326,8 +421,42 @@ function composeGallery(): ComposedSection {
  */
 const TRUST_SECTION_BACKGROUND = "#ffffff"
 
+/**
+ * V2-5B C5: credibility/stat presentation -- a SEPARATE, non-numeric-
+ * safe mode of the existing "trust" role, gated behind
+ * context.richComposition AND real context.credibilityStats (both
+ * required; either absent falls straight through to the existing
+ * checklist/card-grid trust treatment below, unchanged). Never called
+ * when no real stats exist -- credibilityStatRow itself also refuses
+ * to render a fabricated placeholder, so this is defense in depth, not
+ * the only guard.
+ */
+function composeCredibilityStats(context: SectionCompositionContext, nodes: Record<string, ComposedNode>): ComposedSection | null {
+  const textColors = readableTextColorsFor(TRUST_SECTION_BACKGROUND)
+  const statRow = credibilityStatRow(nodes, context.credibilityStats, textColors)
+  if (!statRow) return null
+
+  const heading = headingNode(nodes, "Título confianza", "Razones para confiar", 2, { align: "center", color: textColors.heading })
+  const root = add(
+    nodes,
+    createComposedNode({
+      type: "section",
+      displayName: "Confianza (stats)",
+      props: { maxWidth: "xl", paddingY: "lg", paddingX: "lg", background: TRUST_SECTION_BACKGROUND },
+      children: [heading, statRow],
+    }),
+  )
+  return { role: "trust", rootId: root, nodes, purpose: "Generar confianza con cifras reales, sin inventar estadisticas." }
+}
+
 function composeTrust(context: SectionCompositionContext = {}): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
+
+  if (context.richComposition) {
+    const stats = composeCredibilityStats(context, nodes)
+    if (stats) return stats
+  }
+
   const variant = selectVariant(context, "trust", TRUST_VARIANTS, TRUST_WEIGHTS)
   const textColors = readableTextColorsFor(TRUST_SECTION_BACKGROUND)
 
@@ -632,21 +761,26 @@ function composeNavigation(
   return { role: "navigation", rootId: root, nodes, purpose: "Navegacion principal editable del sitio." }
 }
 
+/** Shared by composeHero's abstract-glow treatment: single CTA when there's nothing real for a secondary button to link to, dual otherwise. New code path only -- the 4 pre-existing HeroVariants keep their exact original always-dual behavior, unchanged. */
+function resolveHeroCtaButtons(nodes: Record<string, ComposedNode>, context: SectionCompositionContext): string[] {
+  const primary = add(
+    nodes,
+    createComposedNode({ type: "ctaButton", displayName: "CTA principal", props: { label: "Solicitar informacion", href: "#contacto", variant: "primary", size: "lg" } }),
+  )
+  const hasSecondaryTarget = Boolean(context.services?.length) || Boolean(context.products?.length)
+  if (!hasSecondaryTarget) return [primary]
+  const secondary = add(
+    nodes,
+    createComposedNode({ type: "ctaButton", displayName: "CTA secundario", props: { label: "Ver servicios", href: "#servicios", variant: "secondary", size: "lg" } }),
+  )
+  return [primary, secondary]
+}
+
 function composeHero(
   context: SectionCompositionContext = {},
 ): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  /*
-   * V2-4 section 18: preferredHeroVariant overrides the deterministic
-   * V2-3 selection ONLY when it's one of the actually-registered
-   * HERO_VARIANTS -- schema validation upstream (contract.ts) already
-   * constrains it to that exact set, but this defensive re-check costs
-   * nothing and protects against any future drift between the two lists
-   * (covered by a dedicated cross-module test).
-   */
-  const variant = (context.aiPreferredHeroVariant && (HERO_VARIANTS as readonly string[]).includes(context.aiPreferredHeroVariant))
-    ? (context.aiPreferredHeroVariant as (typeof HERO_VARIANTS)[number])
-    : selectVariant(context, "hero", HERO_VARIANTS, HERO_WEIGHTS)
+
   const deterministicHeroCopy = getPageAwareHeroCopy({
     name: context.businessName,
     industry: context.industry,
@@ -676,10 +810,51 @@ function composeHero(
     description: context.aiHeroDescriptionSuggestion ?? deterministicHeroCopy.description,
   }
 
+  /*
+   * V2-5B C1: an ADDITIONAL, INDEPENDENT decision -- see HERO_TREATMENTS'
+   * doc comment for why this isn't a 5th HeroVariant. Gated behind
+   * context.richComposition (see its doc comment): every EXISTING
+   * caller leaves this unset, so this whole branch is dead code for
+   * them and the V2-3 variant flow below is reached byte-identically
+   * to before. Only when it resolves to "abstract-glow" does
+   * composition diverge.
+   */
+  if (context.richComposition && selectVariant(context, "hero-treatment", HERO_TREATMENTS, HERO_TREATMENT_WEIGHTS) === "abstract-glow") {
+    return composeAbstractGlowHero(context, nodes, heroCopy)
+  }
+
+  /*
+   * V2-4 section 18: preferredHeroVariant overrides the deterministic
+   * V2-3 selection ONLY when it's one of the actually-registered
+   * HERO_VARIANTS -- schema validation upstream (contract.ts) already
+   * constrains it to that exact set, but this defensive re-check costs
+   * nothing and protects against any future drift between the two lists
+   * (covered by a dedicated cross-module test).
+   */
+  const variant = (context.aiPreferredHeroVariant && (HERO_VARIANTS as readonly string[]).includes(context.aiPreferredHeroVariant))
+    ? (context.aiPreferredHeroVariant as (typeof HERO_VARIANTS)[number])
+    : selectVariant(context, "hero", HERO_VARIANTS, HERO_WEIGHTS)
+
   const centered = variant === "centered" || variant === "immersive"
   const immersive = variant === "immersive"
   const textColor = immersive ? "#ffffff" : undefined
   const eyebrowColor = immersive ? "#e0f2fe" : "#0E5C80"
+  /*
+   * V2-5B C2: immersive-photo content composition -- left or centered,
+   * resolved independently of every other variant's alignment (which
+   * stays exactly as before). New role tag ("hero-immersive-alignment")
+   * so this can never collide with the existing "hero" selection hash.
+   */
+  const immersiveAlignment: "left" | "center" = immersive && context.richComposition
+    ? selectVariant(context, "hero-immersive-alignment", ["left", "center"] as const, {
+        health: { center: 3, left: 1 },
+        hospitality: { center: 2, left: 2 },
+        creative: { left: 3, center: 1 },
+        commerce: { center: 2, left: 2 },
+        professional: { center: 3, left: 1 },
+      })
+    : "center"
+  const textAlign: "left" | "center" = immersive ? immersiveAlignment : centered ? "center" : "left"
 
   const eyebrow = textNode(
     nodes,
@@ -688,7 +863,7 @@ function composeHero(
     {
       size: "sm",
       color: eyebrowColor,
-      align: centered ? "center" : "left",
+      align: textAlign,
     },
   )
 
@@ -698,7 +873,7 @@ function composeHero(
     heroCopy.title,
     1,
     {
-      align: centered ? "center" : "left",
+      align: textAlign,
       ...(textColor ? { color: textColor } : {}),
     },
   )
@@ -709,7 +884,7 @@ function composeHero(
     heroCopy.description,
     {
       size: "lg",
-      align: centered ? "center" : "left",
+      align: textAlign,
       ...(textColor ? { color: "#e2e8f0" } : {}),
     },
   )
@@ -780,7 +955,9 @@ function composeHero(
     const content = wrapperNode(
       nodes,
       "Contenido hero",
-      "relative z-10 mx-auto flex min-h-[26rem] w-full max-w-4xl flex-col items-center justify-end gap-6 px-4 pb-4 text-center sm:min-h-[30rem]",
+      immersiveAlignment === "left"
+        ? "relative z-10 mx-auto flex min-h-[26rem] w-full max-w-5xl flex-col items-start justify-end gap-6 px-6 pb-4 text-left sm:min-h-[30rem]"
+        : "relative z-10 mx-auto flex min-h-[26rem] w-full max-w-4xl flex-col items-center justify-end gap-6 px-4 pb-4 text-center sm:min-h-[30rem]",
       [eyebrow, title, copy, actions],
     )
 
@@ -868,6 +1045,87 @@ function composeHero(
     nodes,
     purpose:
       "Presentar promesa, confianza visual y accion principal.",
+  }
+}
+
+/**
+ * V2-5B C1: abstract-glow hero -- the reusable GRAMMAR of the
+ * ambient-dark reference family (strong display hierarchy, bounded
+ * decorative glow shapes, no external image required), never their
+ * literal JSX/classes/copy. Every decorative shape below is an empty,
+ * non-interactive genericWrapper div (aria-hidden, pointer-events-none)
+ * positioned with composer-authored Tailwind classes -- never
+ * arbitrary CSS/className from AI, since there IS no AI in this
+ * composition path. Business-category-independent: reached only via
+ * HERO_TREATMENT_WEIGHTS' per-family bias, which (like every V2-3
+ * weight table) never locks any family out of any treatment.
+ */
+function composeAbstractGlowHero(
+  context: SectionCompositionContext,
+  nodes: Record<string, ComposedNode>,
+  heroCopy: { eyebrow: string; title: string; description: string },
+): ComposedSection {
+  const background = TONE_BACKGROUNDS.contrast
+  const textColors = readableTextColorsFor(background)
+
+  const glowOne = add(
+    nodes,
+    createComposedNode({
+      type: "genericWrapper",
+      displayName: "Decoracion glow 1",
+      props: {
+        tag: "div",
+        className: "pointer-events-none absolute -top-24 right-0 h-[28rem] w-[28rem] rounded-full bg-sky-400/20 blur-[110px]",
+        "aria-hidden": "true",
+      },
+    }),
+  )
+  const glowTwo = add(
+    nodes,
+    createComposedNode({
+      type: "genericWrapper",
+      displayName: "Decoracion glow 2",
+      props: {
+        tag: "div",
+        className: "pointer-events-none absolute bottom-0 left-0 h-80 w-80 rounded-full bg-indigo-400/10 blur-[100px]",
+        "aria-hidden": "true",
+      },
+    }),
+  )
+
+  const eyebrow = textNode(nodes, "Etiqueta hero", heroCopy.eyebrow, { size: "sm", align: "center", color: textColors.body })
+  const title = headingNode(nodes, "Titulo hero", heroCopy.title, 1, { align: "center", color: textColors.heading })
+  const description = textNode(nodes, "Descripcion hero", heroCopy.description, { size: "lg", align: "center", color: textColors.body })
+  const ctaButtons = resolveHeroCtaButtons(nodes, context)
+  const actions = wrapperNode(nodes, "Acciones hero", "flex flex-col justify-center gap-3 sm:flex-row", ctaButtons)
+
+  const statRow = credibilityStatRow(nodes, context.credibilityStats, textColors)
+
+  const contentChildren = statRow ? [eyebrow, title, description, actions, statRow] : [eyebrow, title, description, actions]
+  const content = wrapperNode(
+    nodes,
+    "Contenido hero",
+    "relative z-10 mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 text-center",
+    contentChildren,
+  )
+
+  const layout = wrapperNode(nodes, "Layout hero abstracto", "relative isolate overflow-hidden", [glowOne, glowTwo, content])
+
+  const root = add(
+    nodes,
+    createComposedNode({
+      type: "section",
+      displayName: "Hero autonomo variante abstract-glow",
+      props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background },
+      children: [layout],
+    }),
+  )
+
+  return {
+    role: "hero",
+    rootId: root,
+    nodes,
+    purpose: "Presentar promesa, confianza visual y accion principal.",
   }
 }
 
@@ -1041,13 +1299,18 @@ function cardsLayout(
 }
 
 /** FEATURES: alternating icon/text rows instead of a grid -- visual rhythm down the page. */
-function alternatingRowsLayout(nodes: Record<string, ComposedNode>, role: SectionRole, items: Array<[string, string]>): string {
+function alternatingRowsLayout(
+  nodes: Record<string, ComposedNode>,
+  role: SectionRole,
+  items: Array<[string, string]>,
+  textColors: { heading: string; body: string } = DARK_ON_LIGHT_TEXT,
+): string {
   const rows = items.map(([title, body], index) => {
     const iconName = cardIconName(role, index)
     const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
     const iconWrap = wrapperNode(nodes, title + " icono wrap", "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700", icon ? [icon] : [])
-    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
-    const cardText = textNode(nodes, title + " texto", body)
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold", color: textColors.heading })
+    const cardText = textNode(nodes, title + " texto", body, { color: textColors.body })
     const textStack = wrapperNode(nodes, title + " stack", "flex flex-col gap-2", [cardTitle, cardText])
     const reversed = index % 2 === 1
     return wrapperNode(
@@ -1076,11 +1339,16 @@ function compactMatrixLayout(nodes: Record<string, ComposedNode>, role: SectionR
 }
 
 /** SERVICES: numbered editorial list, no card borders -- reads like a menu/spec sheet rather than a grid. */
-function editorialListLayout(nodes: Record<string, ComposedNode>, role: SectionRole, items: Array<[string, string]>): string {
+function editorialListLayout(
+  nodes: Record<string, ComposedNode>,
+  role: SectionRole,
+  items: Array<[string, string]>,
+  textColors: { heading: string; body: string } = DARK_ON_LIGHT_TEXT,
+): string {
   const rows = items.map(([title, body], index) => {
     const number = textNode(nodes, title + " numero", String(index + 1).padStart(2, "0"), { size: "sm", color: "#94a3b8" })
-    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold" })
-    const cardText = textNode(nodes, title + " texto", body)
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold", color: textColors.heading })
+    const cardText = textNode(nodes, title + " texto", body, { color: textColors.body })
     const textStack = wrapperNode(nodes, title + " stack", "flex flex-col gap-2", [cardTitle, cardText])
     return wrapperNode(nodes, title + " fila", "flex items-start gap-5 border-b border-slate-100 py-6 last:border-0", [number, textStack])
   })
@@ -1088,7 +1356,12 @@ function editorialListLayout(nodes: Record<string, ComposedNode>, role: SectionR
 }
 
 /** SERVICES: first item featured large, remaining items stacked smaller beside it. Falls back to a plain grid when there's only one item (nothing to be "supporting"). */
-function asymmetricFeaturedLayout(nodes: Record<string, ComposedNode>, role: SectionRole, items: Array<[string, string]>): string {
+function asymmetricFeaturedLayout(
+  nodes: Record<string, ComposedNode>,
+  role: SectionRole,
+  items: Array<[string, string]>,
+  textColors: { heading: string; body: string } = DARK_ON_LIGHT_TEXT,
+): string {
   const [[featuredTitle, featuredBody], ...rest] = items
 
   const featuredIconName = cardIconName(role, 0)
@@ -1103,14 +1376,72 @@ function asymmetricFeaturedLayout(nodes: Record<string, ComposedNode>, role: Sec
   const supportingItems = rest.map(([title, body], index) => {
     const iconName = cardIconName(role, index + 1)
     const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
-    const cardTitle = headingNode(nodes, title, title, 3, { size: "lg", weight: "bold" })
-    const cardText = textNode(nodes, title + " texto", body, { size: "sm" })
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "lg", weight: "bold", color: textColors.heading })
+    const cardText = textNode(nodes, title + " texto", body, { size: "sm", color: textColors.body })
     const children = icon ? [icon, cardTitle, cardText] : [cardTitle, cardText]
     return wrapperNode(nodes, title, "flex flex-col gap-1.5 rounded-xl border border-slate-100 p-4", children)
   })
   const supporting = wrapperNode(nodes, "Servicios secundarios", "flex flex-col gap-3", supportingItems)
 
   return wrapperNode(nodes, "Asimetrico " + role, "grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-stretch", [featured, supporting])
+}
+
+/**
+ * V2-5B C4: PROCESS -- bold ordered numerals, visually distinct from
+ * every card-grid treatment above (large ghost numeral beside the
+ * step, not a small inline prefix like editorialListLayout's). Never
+ * invents steps: `items` are whatever composeCardGridSection already
+ * resolved (real context.processSteps when supplied, the existing
+ * deterministic 3-step placeholder copy otherwise -- exactly the same
+ * "real facts override generic copy, never fabricated" rule services/
+ * products already follow).
+ */
+function numberedProcessLayout(
+  nodes: Record<string, ComposedNode>,
+  role: SectionRole,
+  items: Array<[string, string]>,
+  textColors: { heading: string; body: string },
+): string {
+  const accentNumberColor = textColors.heading === "#ffffff" ? "rgba(255,255,255,0.35)" : "#cbd5e1"
+  const steps = items.map(([title, body], index) => {
+    const number = textNode(nodes, title + " numero", String(index + 1).padStart(2, "0"), { size: "4xl", weight: "extrabold", color: accentNumberColor })
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold", color: textColors.heading })
+    const cardText = textNode(nodes, title + " texto", body, { color: textColors.body })
+    const textStack = wrapperNode(nodes, title + " stack", "flex flex-col gap-2", [cardTitle, cardText])
+    return wrapperNode(nodes, title + " paso", "flex flex-col gap-3", [number, textStack])
+  })
+  return wrapperNode(nodes, "Pasos " + role, "grid gap-8 sm:grid-cols-2 lg:grid-cols-3", steps)
+}
+
+/**
+ * V2-5B C3: PAIRED LAYOUT -- two emphasized panels side by side,
+ * instead of forcing everything through a 3-column grid. Deliberately
+ * role-agnostic (works for any role's exactly-two-items case) and
+ * content-driven, never a "case studies" component: whatever [title,
+ * body] pairs the caller already resolved (real services/products/
+ * process content, or the existing generic placeholder copy) render
+ * here unchanged.
+ */
+function pairedLayout(
+  nodes: Record<string, ComposedNode>,
+  role: SectionRole,
+  items: Array<[string, string]>,
+  textColors: { heading: string; body: string },
+): string {
+  const isDark = textColors.heading === "#ffffff"
+  const panelClassName = isDark
+    ? "flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-8"
+    : "flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm"
+
+  const panels = items.map(([title, body], index) => {
+    const iconName = cardIconName(role, index)
+    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "2xl", weight: "extrabold", color: textColors.heading })
+    const cardText = textNode(nodes, title + " texto", body, { size: "lg", color: textColors.body })
+    const children = icon ? [icon, cardTitle, cardText] : [cardTitle, cardText]
+    return wrapperNode(nodes, title, panelClassName, children, "article")
+  })
+  return wrapperNode(nodes, "Pareja " + role, "grid gap-6 md:grid-cols-2", panels)
 }
 
 function composeCardGridSection(
@@ -1126,7 +1457,16 @@ function composeCardGridSection(
       ? realOfferingItems(context.services, context.archetype, (name) => `Conoce mas sobre ${name.toLowerCase()} y como puede ayudarte.`)
       : role === "products"
         ? realOfferingItems(context.products, context.archetype, (name) => `Descubre mas sobre ${name.toLowerCase()}.`)
-        : []
+        : role === "process"
+          /*
+           * V2-5B C4: same "real facts override generic copy, never
+           * fabricated" rule services/products already follow --
+           * processSteps is nothing today calls with real data yet (no
+           * Creative Director/retrieval wiring in this phase), so this
+           * stays a no-op until a future phase supplies it.
+           */
+          ? realOfferingItems(context.processSteps, context.archetype, (name) => `Explica que sucede en el paso "${name.toLowerCase()}".`)
+          : []
   /*
    * V2-S2 sections 5/6: features/process get a small, fact-gated copy
    * override (never a real-offering listing -- that would just duplicate
@@ -1137,8 +1477,22 @@ function composeCardGridSection(
   const personalizedIntro = role === "process" ? resolveProcessIntro(context, copy.introText) : copy.introText
   const finalItems = realItems.length ? realItems : personalizedItems
   const nodes: Record<string, ComposedNode> = {}
-  const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center" })
-  const intro = textNode(nodes, "Intro " + role, personalizedIntro, { align: "center", size: "lg" })
+
+  /*
+   * V2-5B C6: background rhythm. "hero"/"trust"/"faq"/"testimonials"/
+   * "footer"/"navigation" keep their own established fixed backgrounds
+   * (untouched) -- this only varies the shared card-grid roles
+   * (services/features/products/pricing/process/content), which
+   * previously ALWAYS hardcoded white regardless of position. Gated
+   * behind context.richComposition -- unset resolves to the exact
+   * pre-V2-5B "base" (#ffffff) every existing caller already gets.
+   */
+  const tone = context.richComposition ? resolveSectionTone(context, role) : "base"
+  const background = resolveToneBackground(tone, context)
+  const textColors = readableTextColorsFor(background)
+
+  const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center", color: textColors.heading })
+  const intro = textNode(nodes, "Intro " + role, personalizedIntro, { align: "center", size: "lg", color: textColors.body })
 
   /*
    * "services" is the flagship role shared between overview and catalog
@@ -1154,15 +1508,42 @@ function composeCardGridSection(
   let grid: string
   let layoutVariant = "cards"
 
-  if (role === "features" && canUseStructuralTreatment) {
+  if (context.richComposition && finalItems.length === 2) {
+    /*
+     * V2-5B C3 refinement: exactly two real items makes paired-layout
+     * ELIGIBLE, not mandatory -- resolved through the same deterministic
+     * weighted-selection mechanism every other role uses (see
+     * TWO_ITEM_LAYOUT_VARIANTS' doc comment for why this is its own
+     * small vocabulary rather than folded into ServicesVariant/
+     * FeaturesVariant/ProcessVariant). The "cards" alternative reuses
+     * the existing generic grid, which already handles a 2-item list
+     * correctly -- no third/fake item, no duplication, still exactly
+     * the same two real items either way. Gated the same way as tone:
+     * unset context.richComposition means every existing caller keeps
+     * its exact pre-V2-5B 2-item behavior (whichever role-specific
+     * branch below it already fell into).
+     */
+    const twoItemTreatment = selectVariant(context, "two-item-layout", TWO_ITEM_LAYOUT_VARIANTS, TWO_ITEM_LAYOUT_WEIGHTS)
+    if (twoItemTreatment === "paired") {
+      layoutVariant = "paired-layout"
+      grid = pairedLayout(nodes, role, finalItems, textColors)
+    } else {
+      layoutVariant = "cards"
+      grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
+    }
+  } else if (role === "features" && canUseStructuralTreatment) {
     layoutVariant = selectVariant(context, "features", FEATURES_VARIANTS, FEATURES_WEIGHTS)
-    if (layoutVariant === "alternating-rows") grid = alternatingRowsLayout(nodes, role, finalItems)
+    if (layoutVariant === "alternating-rows") grid = alternatingRowsLayout(nodes, role, finalItems, textColors)
     else if (layoutVariant === "compact-matrix") grid = compactMatrixLayout(nodes, role, finalItems)
     else grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
   } else if (role === "services" && canUseStructuralTreatment) {
     layoutVariant = selectVariant(context, "services", SERVICES_VARIANTS, SERVICES_WEIGHTS)
-    if (layoutVariant === "editorial-list") grid = editorialListLayout(nodes, role, finalItems)
-    else if (layoutVariant === "asymmetric-featured") grid = asymmetricFeaturedLayout(nodes, role, finalItems)
+    if (layoutVariant === "editorial-list") grid = editorialListLayout(nodes, role, finalItems, textColors)
+    else if (layoutVariant === "asymmetric-featured") grid = asymmetricFeaturedLayout(nodes, role, finalItems, textColors)
+    else grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
+  } else if (role === "process" && canUseStructuralTreatment && context.richComposition) {
+    layoutVariant = selectVariant(context, "process", PROCESS_VARIANTS, PROCESS_WEIGHTS)
+    if (layoutVariant === "numbered") grid = numberedProcessLayout(nodes, role, finalItems, textColors)
     else grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
   } else {
     grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
@@ -1177,7 +1558,7 @@ function composeCardGridSection(
    */
   const paddingY = context.aiDensity === "compact" ? "lg" : "xl"
 
-  const root = add(nodes, createComposedNode({ type: "section", displayName: `${copy.titleText} (${layoutVariant})`, props: { maxWidth: "xl", paddingY, paddingX: "lg", background: "#ffffff" }, children: [heading, intro, grid] }))
+  const root = add(nodes, createComposedNode({ type: "section", displayName: `${copy.titleText} (${layoutVariant})`, props: { maxWidth: "xl", paddingY, paddingX: "lg", background }, children: [heading, intro, grid] }))
   return { role, rootId: root, nodes, purpose: copy.introText }
 }
 

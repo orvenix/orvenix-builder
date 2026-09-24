@@ -90,4 +90,76 @@ export const TRUST_WEIGHTS: VariantWeightTable<TrustVariant> = {
   professional: { "card-grid": 2, "checklist-row": 1 },
 }
 
+/**
+ * V2-5B: an ADDITIONAL, INDEPENDENT decision resolved before the
+ * existing HeroVariant pick -- deliberately NOT a 5th HeroVariant.
+ * HERO_VARIANTS/HERO_WEIGHTS are also the exact set the Creative
+ * Director contract validates `preferredHeroVariant` against (see
+ * creative-director-contract-gateway-v1.test.ts's cross-module
+ * equality check and composition-variety-v2-3-1's HERO_VARIANTS.length
+ * === 4 assertion) -- growing that shared set would either break both
+ * of those or require touching the CD contract, which this phase must
+ * not do. A same-shape, same-weighted-pool, but SEPARATE vocabulary
+ * gets the identical "biased, never locked" selection behavior without
+ * touching either.
+ */
+export type HeroTreatment = "standard" | "abstract-glow"
+
+export const HERO_TREATMENTS: readonly HeroTreatment[] = ["standard", "abstract-glow"]
+
+export const HERO_TREATMENT_WEIGHTS: VariantWeightTable<HeroTreatment> = {
+  health: { standard: 3, "abstract-glow": 1 },
+  hospitality: { standard: 3, "abstract-glow": 1 },
+  creative: { standard: 2, "abstract-glow": 2 },
+  commerce: { standard: 3, "abstract-glow": 1 },
+  professional: { standard: 2, "abstract-glow": 2 },
+}
+
+export type ProcessVariant = "cards" | "numbered"
+
+export const PROCESS_VARIANTS: readonly ProcessVariant[] = ["cards", "numbered"]
+
+export const PROCESS_WEIGHTS: VariantWeightTable<ProcessVariant> = {
+  health: { numbered: 2, cards: 2 },
+  hospitality: { numbered: 2, cards: 2 },
+  creative: { numbered: 3, cards: 1 },
+  commerce: { numbered: 2, cards: 2 },
+  professional: { numbered: 3, cards: 1 },
+}
+
+/**
+ * V2-5B: section-background rhythm. Deliberately not a per-family
+ * VariantWeightTable like the others above -- tone is about a
+ * section's POSITION in the page (it must vary WITHIN one page, which
+ * is exactly what selectVariant's hash intentionally ignores -- see
+ * variant-selector.ts's sectionIndex exclusion comment), not about
+ * business family. resolveSectionTone in section-composer.ts uses its
+ * own small index-sensitive hash instead.
+ */
+export type SectionTone = "base" | "muted" | "accent-soft" | "contrast"
+
+export const SECTION_TONES: readonly SectionTone[] = ["base", "muted", "accent-soft", "contrast"]
+
+/**
+ * V2-5B refinement: exactly-two-real-items makes paired-layout
+ * ELIGIBLE, not mandatory. A dedicated, bounded vocabulary rather than
+ * folding "paired" into ServicesVariant/FeaturesVariant/ProcessVariant
+ * -- those three are role-specific structural families already
+ * consumed elsewhere on their own terms (eg. "editorial-list" only
+ * makes sense as a services concept); this concept is role-agnostic
+ * (any role, exactly two real items) and orthogonal to them, so it
+ * gets its own small enum instead of changing their shape.
+ */
+export type TwoItemLayoutTreatment = "paired" | "cards"
+
+export const TWO_ITEM_LAYOUT_VARIANTS: readonly TwoItemLayoutTreatment[] = ["paired", "cards"]
+
+export const TWO_ITEM_LAYOUT_WEIGHTS: VariantWeightTable<TwoItemLayoutTreatment> = {
+  health: { paired: 2, cards: 2 },
+  hospitality: { paired: 2, cards: 2 },
+  creative: { paired: 3, cards: 1 },
+  commerce: { paired: 2, cards: 2 },
+  professional: { paired: 2, cards: 2 },
+}
+
 export { resolveContentDensity, type ContentDensity } from "./variant-selector"

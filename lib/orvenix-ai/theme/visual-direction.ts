@@ -244,3 +244,21 @@ export function hasSafeContrast(foregroundHex: string, backgroundHex: string): b
   const ratio = contrastRatio(foregroundHex, backgroundHex)
   return ratio !== null && ratio >= MIN_SAFE_CONTRAST
 }
+
+/**
+ * V2-5B refinement: a light, theme-CONSISTENT tint of a real accent
+ * color (mixed toward white) -- no external color library, reuses the
+ * same hexToRgb this file already has for contrast checking. `mix` is
+ * deliberately high (default 0.92) so the result stays a genuinely
+ * LIGHT background regardless of how light/dark/saturated the input
+ * hue itself is -- callers that pair this with dark-on-light text
+ * (e.g. composer "accent-soft" section tone) can rely on that. Returns
+ * null for an unparseable hex, same fail-safe convention as
+ * contrastRatio/hasSafeContrast above -- callers decide the fallback.
+ */
+export function lightAccentTint(hex: string, mix = 0.92): string | null {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return null
+  const blended = rgb.map((channel) => Math.round(channel * (1 - mix) + 255 * mix))
+  return `#${blended.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`
+}

@@ -12,7 +12,7 @@ import type { SectionCompositionContext } from "./types"
  * STRUCTURAL treatment a section gets, never colors/fonts/radius.
  */
 
-function stableHash(source: string): number {
+export function stableHash(source: string): number {
   let hash = 0
   for (let index = 0; index < source.length; index++) {
     hash = (hash * 31 + source.charCodeAt(index)) >>> 0
