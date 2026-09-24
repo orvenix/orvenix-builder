@@ -71,6 +71,21 @@ export interface SectionCompositionContext {
   aiDensity?: "compact" | "standard" | "spacious"
 
   /**
+   * V2-5C: bounded, ALREADY-VALIDATED-AND-SANITIZED Creative Director
+   * overrides for the V2-5B executable vocabulary -- same "absent ->
+   * existing weighted/deterministic selection, never a lock" contract
+   * as aiPreferredHeroVariant above. Each is defensively re-checked
+   * against its composition-context.ts source-of-truth array at the
+   * point of use (never trusted blindly), matching the existing
+   * aiPreferredHeroVariant re-check pattern.
+   */
+  aiPreferredHeroTreatment?: "standard" | "abstract-glow"
+  aiPreferredProcessTreatment?: "cards" | "numbered"
+  aiPreferredTwoItemLayoutTreatment?: "paired" | "cards"
+  /** V2-5C: a STRATEGY, never a color/class -- Orvenix resolves the actual per-section tone pool from it (see SECTION_TONE_POOLS). */
+  aiSectionToneStrategy?: "standard" | "soft-rhythm" | "contrast-led"
+
+  /**
    * V2-5B: real, structured, caller-supplied content ONLY -- consumed
    * exactly like `services`/`products` above (same shape, same
    * "absent/empty -> deterministic generic fallback, never fabricated"

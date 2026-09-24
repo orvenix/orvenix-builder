@@ -666,21 +666,31 @@ function averageScore(scores: number[]) {
   )
 }
 
+/**
+ * V2-5C fix 1: `theme` is now the caller's ALREADY-RESOLVED, authoritative
+ * theme (applySiteCreationThemeAdvisories, called exactly once in
+ * runAutonomousMultiPageSiteBuilder, before compileSiteBlueprint --
+ * see there) rather than being recomputed here from `siteType`. This is
+ * the single call to theme resolution for the whole site build; this
+ * function no longer calls applySiteCreationThemeAdvisories/getStarterTheme
+ * itself, so there is exactly one authority for both the final plan's
+ * theme AND the composer's accentColor, never two independently-resolved
+ * values that could diverge if advisory state differs between calls.
+ */
 function createMultiPagePlan(params: {
   input: AutonomousSiteBuilderInput
-  siteType: string
+  theme: GlobalTheme
   pages: Array<{ name: string; slug: string; tree: EditorTree }>
   pageQuality: Array<{ slug: string; score: number }>
   warnings: string[]
 }): SiteCreationPlanV2 {
   const {
     input,
-    siteType,
+    theme,
     pages,
     pageQuality,
     warnings,
   } = params
-  const theme = applySiteCreationThemeAdvisories(getStarterTheme(), input, siteType)
 
   return normalizeSiteCreationPlanV2({
     version: 2,
@@ -797,12 +807,34 @@ export async function runAutonomousMultiPageSiteBuilder(
     siteTypeHint: architecture.siteType,
   })
 
+  /*
+   * V2-5C fix 1: the theme is now resolved ONCE, here -- BEFORE
+   * compileSiteBlueprint -- and this SAME resolved GlobalTheme is reused
+   * both for the composer's accentColor (below) and, unchanged, as the
+   * site's actually-applied theme (passed into createMultiPagePlan
+   * further down). Previously, an EARLY read called
+   * applyDeterministicVisualDirection alone (the baseline only) while
+   * the LATE, authoritative call inside createMultiPagePlan additionally
+   * layered Design Memory L2 / external theme advisory / Creative
+   * Director visualDirection on top -- those two calls could disagree on
+   * accent whenever a higher-priority advisory changed it, since only
+   * the late call ever saw it. Hoisting applySiteCreationThemeAdvisories
+   * itself (not just its baseline) to run first eliminates that
+   * divergence structurally: there is now exactly one call, one
+   * resolved theme, reused by both consumers -- never two independently-
+   * resolved values. Advisory precedence inside applySiteCreationThemeAdvisories
+   * is completely unchanged (same function, same inputs, same
+   * deterministic output); it simply runs earlier in the sequence.
+   */
+  const theme = applySiteCreationThemeAdvisories(getStarterTheme(), input, architecture.siteType)
+
   const blueprint = compileSiteBlueprint(
     orderedArchitecture,
     {
       preferPrimitiveComposition: input.forceFreshComposition,
       visualFamily: compositionVisualFamily,
       creativeDirection: input.creativeDirection,
+      accentColor: themeColors(theme).accent,
     },
   )
 
@@ -891,7 +923,7 @@ export async function runAutonomousMultiPageSiteBuilder(
 
   const plan = createMultiPagePlan({
     input,
-    siteType: architecture.siteType,
+    theme,
     pages,
     pageQuality,
     warnings,

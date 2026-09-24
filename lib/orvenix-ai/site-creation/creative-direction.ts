@@ -6,6 +6,9 @@ import {
 } from "@/lib/orvenix-ai/creative-director/orchestrator"
 import { validateCreativeSiteDirectionV1, type CreativeDirectorProviderV1, type CreativeDirectorRequestV1, type CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
 import { sanitizeCreativeSiteDirectionV1, type RealFactsV1 } from "@/lib/orvenix-ai/creative-director/fact-validation"
+import { buildDesignReferenceRetrievalQueryV1 } from "@/lib/orvenix-ai/creative-director/retrieval-query"
+import { buildCreativeDirectorReferenceContextV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
+import { retrieveDesignReferences } from "@/lib/orvenix-ai/design-reference/retrieve"
 import type { DesignAssistanceLifecycleClientV1 } from "@/lib/orvenix-ai/assistance/lifecycle"
 import type { SiteCreationDesignMemoryDecisionV1 } from "./assistance"
 
@@ -103,6 +106,23 @@ export function buildCreativeDirectorRequestV1(params: {
   }
 }
 
+/**
+ * V2-5C: runs the accepted deterministic retrieveDesignReferences() ONCE
+ * per site creative-direction request (section D) and attaches its
+ * sanitized reference context to the request -- reusing `request`'s own
+ * already-normalized/bounded business+pages facts to build the query
+ * (retrieval-query.ts), never a raw prompt. No-op (returns `request`
+ * unchanged) when retrieval returns nothing, so a request built before
+ * this phase existed and a request with an empty library are
+ * indistinguishable to the gateway/provider.
+ */
+export function attachDesignReferenceContextV1(request: CreativeDirectorRequestV1, siteType: string): CreativeDirectorRequestV1 {
+  const query = buildDesignReferenceRetrievalQueryV1(request, siteType)
+  const retrieval = retrieveDesignReferences(query)
+  const referenceContext = buildCreativeDirectorReferenceContextV1(retrieval)
+  return referenceContext.length ? { ...request, referenceContext } : request
+}
+
 export function decideCreativeDirectorProposalV1(input: DecideCreativeDirectionInputV1): CreativeDirectorDecisionV1 {
   const validation = validateCreativeSiteDirectionV1(input.proposal)
   if (validation.ok === false) return { decision: "reject" }
@@ -154,12 +174,13 @@ export async function resolveSiteCreationCreativeDirectionV1(
   if (eligibility.eligible === false) return { ok: true, status: "skipped", reason: eligibility.reason }
   if (!input.provider) return { ok: true, status: "skipped", reason: "provider_unavailable" }
 
-  const request = buildCreativeDirectorRequestV1({
+  const baseRequest = buildCreativeDirectorRequestV1({
     business: input.business,
     architecture: input.architecture,
     // Every SiteCreationDesignMemoryDecisionV1 variant carries `context` (bucketed signals only, never raw prose).
     designMemoryContext: input.designMemoryDecision.context,
   })
+  const request = attachDesignReferenceContextV1(baseRequest, input.architecture.siteType)
 
   try {
     const result = await runCreativeDirectorV1({

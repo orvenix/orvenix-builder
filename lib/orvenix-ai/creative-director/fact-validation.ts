@@ -138,6 +138,19 @@ export function sanitizeCreativeDirectorPageDirectionV1(
     sanitized.preferredSectionOrder = direction.preferredSectionOrder
   }
 
+  /*
+   * V2-5C: heroTreatment/processTreatment/twoItemLayoutTreatment/
+   * sectionToneStrategy are bounded enums, already schema-validated
+   * against CREATIVE_DIRECTOR_*_V1 (contract.ts) -- unlike offering
+   * names or free-text copy, there is no fabricated-fact or unsafe-copy
+   * risk for a closed-vocabulary token, so they pass through unchanged
+   * (same treatment ctaIntent/preferredHeroVariant already get above).
+   */
+  if (direction.heroTreatment) sanitized.heroTreatment = direction.heroTreatment
+  if (direction.processTreatment) sanitized.processTreatment = direction.processTreatment
+  if (direction.twoItemLayoutTreatment) sanitized.twoItemLayoutTreatment = direction.twoItemLayoutTreatment
+  if (direction.sectionToneStrategy) sanitized.sectionToneStrategy = direction.sectionToneStrategy
+
   return sanitized
 }
 

@@ -162,4 +162,26 @@ export const TWO_ITEM_LAYOUT_WEIGHTS: VariantWeightTable<TwoItemLayoutTreatment>
   professional: { paired: 2, cards: 2 },
 }
 
+/**
+ * V2-5C: a BOUNDED strategy the Creative Director may choose -- never a
+ * raw color/class. Each strategy resolves to its own fixed SectionTone
+ * POOL that resolveSectionTone (section-composer.ts) hashes into
+ * exactly like V2-5B's original single pool did; "standard" IS that
+ * original V2-5B pool, unchanged element-for-element, so a page with no
+ * CD-chosen strategy (or richComposition off) reproduces byte-identical
+ * V2-5B output. "soft-rhythm" biases toward muted/accent-soft and never
+ * includes "contrast"; "contrast-led" gives "contrast" more weight in
+ * the pool than V2-5B's default. Orvenix owns every concrete value in
+ * these pools -- the AI only ever names a strategy.
+ */
+export type SectionToneStrategy = "standard" | "soft-rhythm" | "contrast-led"
+
+export const SECTION_TONE_STRATEGIES: readonly SectionToneStrategy[] = ["standard", "soft-rhythm", "contrast-led"]
+
+export const SECTION_TONE_POOLS: Record<SectionToneStrategy, readonly SectionTone[]> = {
+  standard: ["base", "base", "base", "muted", "muted", "accent-soft", "contrast"],
+  "soft-rhythm": ["base", "muted", "muted", "accent-soft", "accent-soft", "base", "muted"],
+  "contrast-led": ["base", "muted", "accent-soft", "contrast", "contrast", "base", "contrast"],
+}
+
 export { resolveContentDensity, type ContentDensity } from "./variant-selector"

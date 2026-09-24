@@ -19,6 +19,8 @@ import {
   HERO_WEIGHTS,
   PROCESS_VARIANTS,
   PROCESS_WEIGHTS,
+  SECTION_TONE_POOLS,
+  SECTION_TONE_STRATEGIES,
   SERVICES_VARIANTS,
   SERVICES_WEIGHTS,
   TRUST_VARIANTS,
@@ -105,16 +107,27 @@ function resolveToneBackground(tone: SectionTone, context: SectionCompositionCon
  * a page's sequence of DIFFERENT roles should not all flatten onto the
  * same white background; hashing sectionIndex in is what makes that
  * vary without being a mechanical index % 2 alternation. "contrast" is
- * intentionally rare in the pool (a full tone-flip is a strong visual
- * move) and light tones dominate, since most sub-layouts assume a
- * light background unless explicitly made contrast-safe.
+ * intentionally rare in the default pool (a full tone-flip is a strong
+ * visual move) and light tones dominate, since most sub-layouts assume
+ * a light background unless explicitly made contrast-safe.
+ *
+ * V2-5C: which POOL gets hashed into is now selectable via a bounded
+ * context.aiSectionToneStrategy (see SECTION_TONE_POOLS,
+ * composition-context.ts) -- the Creative Director may name a
+ * strategy, never a color/class. Absent/invalid strategy (or
+ * richComposition off, enforced by the caller) resolves to "standard",
+ * whose pool is byte-identical to V2-5B's original TONE_POOL, so
+ * default output is unchanged.
  */
-const TONE_POOL: SectionTone[] = ["base", "base", "base", "muted", "muted", "accent-soft", "contrast"]
-
 function resolveSectionTone(context: SectionCompositionContext, role: SectionRole): SectionTone {
+  const strategy =
+    context.aiSectionToneStrategy && (SECTION_TONE_STRATEGIES as readonly string[]).includes(context.aiSectionToneStrategy)
+      ? context.aiSectionToneStrategy
+      : "standard"
+  const pool = SECTION_TONE_POOLS[strategy]
   const source = [role, context.visualFamily, context.archetype, String(context.sectionIndex ?? 0)].filter(Boolean).join("|")
   const hash = stableHash(source)
-  return TONE_POOL[hash % TONE_POOL.length]
+  return pool[hash % pool.length]
 }
 
 /**
@@ -818,8 +831,18 @@ function composeHero(
    * them and the V2-3 variant flow below is reached byte-identically
    * to before. Only when it resolves to "abstract-glow" does
    * composition diverge.
+   *
+   * V2-5C: aiPreferredHeroTreatment overrides the weighted pick ONLY
+   * when it's one of the actually-registered HERO_TREATMENTS -- same
+   * defensive re-check pattern as aiPreferredHeroVariant below, even
+   * though contract.ts already constrains it upstream.
    */
-  if (context.richComposition && selectVariant(context, "hero-treatment", HERO_TREATMENTS, HERO_TREATMENT_WEIGHTS) === "abstract-glow") {
+  const heroTreatment =
+    context.aiPreferredHeroTreatment && (HERO_TREATMENTS as readonly string[]).includes(context.aiPreferredHeroTreatment)
+      ? context.aiPreferredHeroTreatment
+      : selectVariant(context, "hero-treatment", HERO_TREATMENTS, HERO_TREATMENT_WEIGHTS)
+
+  if (context.richComposition && heroTreatment === "abstract-glow") {
     return composeAbstractGlowHero(context, nodes, heroCopy)
   }
 
@@ -1523,7 +1546,16 @@ function composeCardGridSection(
      * its exact pre-V2-5B 2-item behavior (whichever role-specific
      * branch below it already fell into).
      */
-    const twoItemTreatment = selectVariant(context, "two-item-layout", TWO_ITEM_LAYOUT_VARIANTS, TWO_ITEM_LAYOUT_WEIGHTS)
+    /*
+     * V2-5C: aiPreferredTwoItemLayoutTreatment overrides the weighted
+     * pick ONLY when it's one of the actually-registered
+     * TWO_ITEM_LAYOUT_VARIANTS -- same defensive re-check pattern as
+     * aiPreferredHeroVariant.
+     */
+    const twoItemTreatment =
+      context.aiPreferredTwoItemLayoutTreatment && (TWO_ITEM_LAYOUT_VARIANTS as readonly string[]).includes(context.aiPreferredTwoItemLayoutTreatment)
+        ? context.aiPreferredTwoItemLayoutTreatment
+        : selectVariant(context, "two-item-layout", TWO_ITEM_LAYOUT_VARIANTS, TWO_ITEM_LAYOUT_WEIGHTS)
     if (twoItemTreatment === "paired") {
       layoutVariant = "paired-layout"
       grid = pairedLayout(nodes, role, finalItems, textColors)
@@ -1542,7 +1574,15 @@ function composeCardGridSection(
     else if (layoutVariant === "asymmetric-featured") grid = asymmetricFeaturedLayout(nodes, role, finalItems, textColors)
     else grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
   } else if (role === "process" && canUseStructuralTreatment && context.richComposition) {
-    layoutVariant = selectVariant(context, "process", PROCESS_VARIANTS, PROCESS_WEIGHTS)
+    /*
+     * V2-5C: aiPreferredProcessTreatment overrides the weighted pick
+     * ONLY when it's one of the actually-registered PROCESS_VARIANTS --
+     * same defensive re-check pattern as aiPreferredHeroVariant.
+     */
+    layoutVariant =
+      context.aiPreferredProcessTreatment && (PROCESS_VARIANTS as readonly string[]).includes(context.aiPreferredProcessTreatment)
+        ? context.aiPreferredProcessTreatment
+        : selectVariant(context, "process", PROCESS_VARIANTS, PROCESS_WEIGHTS)
     if (layoutVariant === "numbered") grid = numberedProcessLayout(nodes, role, finalItems, textColors)
     else grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
   } else {

@@ -4,6 +4,7 @@ import {
   type DesignAssistanceThemeDirectionV1,
 } from "@/lib/orvenix-ai/assistance/contract"
 import type { CtaIntent } from "@/lib/orvenix-ai/content/copy-helpers"
+import type { CreativeDesignReferenceV1 } from "./reference-context"
 
 /**
  * V2-4: bounded, provider-neutral contract for the AI Creative Director.
@@ -53,6 +54,22 @@ export const CREATIVE_DIRECTOR_CTA_INTENT_V1 = ["appointment", "quote", "contact
  */
 export const CREATIVE_DIRECTOR_HERO_VARIANTS_V1 = ["centered", "split-left", "split-right", "immersive"] as const
 
+/**
+ * V2-5C: must match composition-context.ts's HERO_TREATMENTS/
+ * PROCESS_VARIANTS/TWO_ITEM_LAYOUT_VARIANTS/SECTION_TONE_STRATEGIES
+ * exactly (checked by a dedicated cross-module test), kept as
+ * independent literals here for the same reason CREATIVE_DIRECTOR_HERO_VARIANTS_V1
+ * is -- this module never depends on the composer layer. Each of these
+ * is orthogonal to HeroVariant (heroTreatment) or an independent
+ * per-role structural choice (the other three): every value maps to a
+ * capability V2-5B/V2-5C's composer can actually execute -- no
+ * aspirational enum values.
+ */
+export const CREATIVE_DIRECTOR_HERO_TREATMENTS_V1 = ["standard", "abstract-glow"] as const
+export const CREATIVE_DIRECTOR_PROCESS_TREATMENTS_V1 = ["cards", "numbered"] as const
+export const CREATIVE_DIRECTOR_TWO_ITEM_LAYOUT_TREATMENTS_V1 = ["paired", "cards"] as const
+export const CREATIVE_DIRECTOR_SECTION_TONE_STRATEGIES_V1 = ["standard", "soft-rhythm", "contrast-led"] as const
+
 export type CreativeDirectorRoleKeyV1 = (typeof CREATIVE_DIRECTOR_ROLE_KEYS_V1)[number]
 export type CreativeDirectorStrategyKeyV1 = (typeof CREATIVE_DIRECTOR_STRATEGY_KEYS_V1)[number]
 export type CreativeDirectorStatusV1 = (typeof CREATIVE_DIRECTOR_STATUSES_V1)[number]
@@ -62,6 +79,10 @@ export type CreativeDirectorDensityV1 = (typeof CREATIVE_DIRECTOR_DENSITY_V1)[nu
 export type CreativeDirectorHeroEmphasisV1 = (typeof CREATIVE_DIRECTOR_HERO_EMPHASIS_V1)[number]
 export type CreativeDirectorCtaIntentV1 = (typeof CREATIVE_DIRECTOR_CTA_INTENT_V1)[number]
 export type CreativeDirectorHeroVariantV1 = (typeof CREATIVE_DIRECTOR_HERO_VARIANTS_V1)[number]
+export type CreativeDirectorHeroTreatmentV1 = (typeof CREATIVE_DIRECTOR_HERO_TREATMENTS_V1)[number]
+export type CreativeDirectorProcessTreatmentV1 = (typeof CREATIVE_DIRECTOR_PROCESS_TREATMENTS_V1)[number]
+export type CreativeDirectorTwoItemLayoutTreatmentV1 = (typeof CREATIVE_DIRECTOR_TWO_ITEM_LAYOUT_TREATMENTS_V1)[number]
+export type CreativeDirectorSectionToneStrategyV1 = (typeof CREATIVE_DIRECTOR_SECTION_TONE_STRATEGIES_V1)[number]
 
 export type CreativeDirectorOfferingV1 = { name: string; description?: string }
 
@@ -101,6 +122,18 @@ export type CreativeDirectorRequestV1 = {
   business: CreativeDirectorBusinessContextV1
   designMemory?: CreativeDirectorDesignMemoryContextV1
   pages: CreativeDirectorPageContextV1[]
+  /**
+   * V2-5C: up to 4 SANITIZED, provider-neutral design grammars (see
+   * reference-context.ts) selected by the deterministic Design
+   * Reference retrieval for this request -- design EXPERIENCE for the
+   * provider to reason from, never a template to clone. Absent when
+   * retrieval returned nothing (eg. an empty/uninitialized library).
+   * Outgoing/trusted data (Orvenix builds this itself from its own
+   * retrieval output), so it is not subject to the untrusted-response
+   * validation below -- that governs the PROVIDER's reply, not this
+   * request.
+   */
+  referenceContext?: CreativeDesignReferenceV1[]
 }
 
 export type CreativeDirectorHeroDirectionV1 = {
@@ -124,6 +157,21 @@ export type CreativeDirectorPageDirectionV1 = {
   ctaIntent?: CreativeDirectorCtaIntentV1
   assetIntent?: CreativeDirectorAssetIntentV1
   preferredSectionOrder?: string[]
+  /**
+   * V2-5C: bounded V2-5B executable-vocabulary requests. Each is
+   * independent of preferredHeroVariant/assetIntent (which already
+   * cover WHICH hero layout and WHAT imagery/mood to seek -- see this
+   * module's header for why immersive photography gets no new field
+   * here) and of each other. Orvenix's composer treats every one of
+   * these as an override on top of its own deterministic/weighted
+   * selection, never a requirement to invent new composition
+   * capability -- see composer/section-composer.ts.
+   */
+  heroTreatment?: CreativeDirectorHeroTreatmentV1
+  processTreatment?: CreativeDirectorProcessTreatmentV1
+  twoItemLayoutTreatment?: CreativeDirectorTwoItemLayoutTreatmentV1
+  /** A STRATEGY, never a color/class -- see composition-context.ts's SECTION_TONE_POOLS for how Orvenix deterministically resolves it. */
+  sectionToneStrategy?: CreativeDirectorSectionToneStrategyV1
 }
 
 export type CreativeSiteDirectionV1 = {
@@ -371,6 +419,10 @@ function normalizePageDirection(value: unknown): CreativeDirectorPageDirectionV1
     "ctaIntent",
     "assetIntent",
     "preferredSectionOrder",
+    "heroTreatment",
+    "processTreatment",
+    "twoItemLayoutTreatment",
+    "sectionToneStrategy",
   ]
 
   // A structurally suspicious sub-object (private-key smuggling, unknown
@@ -396,6 +448,10 @@ function normalizePageDirection(value: unknown): CreativeDirectorPageDirectionV1
   const ctaIntent = optionalEnumValue(value.ctaIntent, CREATIVE_DIRECTOR_CTA_INTENT_V1)
   const assetIntent = normalizeAssetIntent(value.assetIntent)
   const preferredSectionOrder = normalizeSectionOrder(value.preferredSectionOrder)
+  const heroTreatment = optionalEnumValue(value.heroTreatment, CREATIVE_DIRECTOR_HERO_TREATMENTS_V1)
+  const processTreatment = optionalEnumValue(value.processTreatment, CREATIVE_DIRECTOR_PROCESS_TREATMENTS_V1)
+  const twoItemLayoutTreatment = optionalEnumValue(value.twoItemLayoutTreatment, CREATIVE_DIRECTOR_TWO_ITEM_LAYOUT_TREATMENTS_V1)
+  const sectionToneStrategy = optionalEnumValue(value.sectionToneStrategy, CREATIVE_DIRECTOR_SECTION_TONE_STRATEGIES_V1)
 
   return {
     slug,
@@ -408,6 +464,10 @@ function normalizePageDirection(value: unknown): CreativeDirectorPageDirectionV1
     ...(ctaIntent ? { ctaIntent } : {}),
     ...(assetIntent ? { assetIntent } : {}),
     ...(preferredSectionOrder ? { preferredSectionOrder } : {}),
+    ...(heroTreatment ? { heroTreatment } : {}),
+    ...(processTreatment ? { processTreatment } : {}),
+    ...(twoItemLayoutTreatment ? { twoItemLayoutTreatment } : {}),
+    ...(sectionToneStrategy ? { sectionToneStrategy } : {}),
   }
 }
 

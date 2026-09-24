@@ -136,6 +136,21 @@ interface CompileBlueprintOptions {
   visualFamily?: string
   /** V2-4: optional, already-validated-and-sanitized Creative Director direction, matched per-page by slug below. */
   creativeDirection?: CreativeSiteDirectionV1 | null
+  /**
+   * V2-5C (fix 1): the ACTUALLY-APPLIED site theme's resolved accent hex
+   * -- site-builder.ts now resolves the full theme (applySiteCreationThemeAdvisories,
+   * including Design Memory L2 / external theme advisory / Creative
+   * Director visualDirection precedence) exactly ONCE, before calling
+   * compileSiteBlueprint, and reuses that SAME resolved theme as both
+   * this accentColor and the site's final theme -- never two
+   * independently-resolved values that could diverge. A REAL,
+   * non-fabricated, theme-derived color, never AI-invented. Threaded
+   * unconditionally (harmless no-op when richComposition is off for a
+   * given page -- see section-composer.ts's resolveToneBackground, only
+   * reached when tone==="accent-soft", which itself only happens under
+   * richComposition).
+   */
+  accentColor?: string
 }
 
 function createBlockSection(
@@ -201,6 +216,20 @@ function compilePage(
   // V2-4: matched once per page (not per section) -- every section on this page sees the SAME page-level AI hints.
   const pageDirection = options.creativeDirection?.pageDirections?.find((direction) => direction.slug === page.slug)
 
+  /*
+   * V2-5C: richComposition becomes true for THIS page only when the
+   * validated, sanitized Creative Director direction actually requests
+   * one of the V2-5B executable capabilities -- presence of any one of
+   * these four bounded fields IS the activation signal (section I: "do
+   * not globally switch richComposition on"). No creativeDirection, no
+   * pageDirection for this slug, or a pageDirection with none of these
+   * fields set (eg. only heroTitleSuggestion) all correctly resolve to
+   * false, reproducing exact pre-V2-5C/V2-5B behavior.
+   */
+  const richComposition = Boolean(
+    pageDirection?.heroTreatment || pageDirection?.processTreatment || pageDirection?.twoItemLayoutTreatment || pageDirection?.sectionToneStrategy,
+  )
+
   for (const [sectionIndex, section] of page.sections.entries()) {
     const childId = createBlockSection(
       section,
@@ -235,6 +264,12 @@ function compilePage(
         ...(pageDirection?.highlightedOfferings ? { aiHighlightedOfferings: pageDirection.highlightedOfferings } : {}),
         ...(pageDirection?.assetIntent ? { aiAssetIntent: pageDirection.assetIntent } : {}),
         ...(options.creativeDirection?.density ? { aiDensity: options.creativeDirection.density } : {}),
+        ...(pageDirection?.heroTreatment ? { aiPreferredHeroTreatment: pageDirection.heroTreatment } : {}),
+        ...(pageDirection?.processTreatment ? { aiPreferredProcessTreatment: pageDirection.processTreatment } : {}),
+        ...(pageDirection?.twoItemLayoutTreatment ? { aiPreferredTwoItemLayoutTreatment: pageDirection.twoItemLayoutTreatment } : {}),
+        ...(pageDirection?.sectionToneStrategy ? { aiSectionToneStrategy: pageDirection.sectionToneStrategy } : {}),
+        ...(richComposition ? { richComposition: true } : {}),
+        ...(options.accentColor ? { accentColor: options.accentColor } : {}),
       },
     )
 
