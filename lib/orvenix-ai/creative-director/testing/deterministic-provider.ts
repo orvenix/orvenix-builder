@@ -38,10 +38,13 @@ export type DeterministicCreativeDirectorModeV1 =
   | "invalid_process_treatment"
   | "invalid_two_item_layout_treatment"
   | "invalid_section_tone_strategy"
+  | "invalid_navigation_surface_style"
+  | "invalid_navigation_containment"
 
 export type DeterministicRichCompositionOverridesV1 = Partial<
   Pick<CreativeDirectorPageDirectionV1, "heroTreatment" | "processTreatment" | "twoItemLayoutTreatment" | "sectionToneStrategy">
->
+> &
+  Partial<Pick<CreativeSiteDirectionV1, "navigationSurfaceStyle" | "navigationContainment" | "navigationLinkStyle" | "navigationCtaEmphasis">>
 
 function baseValidProposal(request: CreativeDirectorRequestV1): CreativeSiteDirectionV1 {
   const firstPage = request.pages[0]
@@ -82,8 +85,15 @@ export function createDeterministicCreativeDirectorProviderV1(
 
         case "rich_valid": {
           const proposal = baseValidProposal(request)
+          const { navigationSurfaceStyle, navigationContainment, navigationLinkStyle, navigationCtaEmphasis, ...pageLevelOverrides } = richOverrides ?? {}
+          Object.assign(proposal, {
+            ...(navigationSurfaceStyle ? { navigationSurfaceStyle } : {}),
+            ...(navigationContainment ? { navigationContainment } : {}),
+            ...(navigationLinkStyle ? { navigationLinkStyle } : {}),
+            ...(navigationCtaEmphasis ? { navigationCtaEmphasis } : {}),
+          })
           for (const direction of proposal.pageDirections) {
-            Object.assign(direction, richOverrides ?? {})
+            Object.assign(direction, pageLevelOverrides)
           }
           return proposal
         }
@@ -132,6 +142,21 @@ export function createDeterministicCreativeDirectorProviderV1(
             direction.processTreatment = numberedProcessDominant ? "numbered" : "cards"
             direction.twoItemLayoutTreatment = pairedLayoutDominant ? "paired" : "cards"
           }
+
+          /*
+           * V2-5C.1: navigation is SITE-level (see contract.ts), so its
+           * dominant-signal reasoning is computed ONCE per request, not
+           * per page -- same dominant-signal policy as the hero/process/
+           * two-item reasoning above, over navGrammar instead of hero/
+           * sectionGrammar. The header's light/dark color pairing itself
+           * is deliberately never decided here -- that stays Orvenix-
+           * resolved downstream (resolveNavigationSurface).
+           */
+          const solidNavDominant = dominant((r) => r.navGrammar.surfaceTreatment === "solid")
+          const noNavCtaDominant = dominant((r) => r.navGrammar.ctaPattern === "icon-actions-only" || r.navGrammar.ctaPattern === "none")
+          proposal.navigationSurfaceStyle = solidNavDominant ? "solid" : "glass"
+          proposal.navigationCtaEmphasis = noNavCtaDominant ? "none" : "prominent"
+
           return proposal
         }
 
@@ -160,6 +185,20 @@ export function createDeterministicCreativeDirectorProviderV1(
           const proposal = baseValidProposal(request)
           // @ts-expect-error -- deliberately invalid for the test
           proposal.pageDirections[0].sectionToneStrategy = "neon"
+          return proposal
+        }
+
+        case "invalid_navigation_surface_style": {
+          const proposal = baseValidProposal(request)
+          // @ts-expect-error -- deliberately invalid for the test
+          proposal.navigationSurfaceStyle = "frosted"
+          return proposal
+        }
+
+        case "invalid_navigation_containment": {
+          const proposal = baseValidProposal(request)
+          // @ts-expect-error -- deliberately invalid for the test
+          proposal.navigationContainment = "sidebar"
           return proposal
         }
 

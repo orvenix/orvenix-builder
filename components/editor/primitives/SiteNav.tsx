@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEditorStore } from "@/store/useEditorStore";
 import { resolveRuntimeHref, resolveSiteNavItemTarget } from "@/lib/builder-core/tree/pageLinks";
 import { buildEditorPageUrl } from "@/components/editor/pageNavigation";
 import { resolveSiteNavPages } from "@/lib/builder-core/tree/siteNavigation";
+import { readableTextOn } from "@/lib/orvenix-ai/theme/visual-direction";
 import type { BlockComponentProps } from "@/types/editor";
 
 type InlineNavLink = {
@@ -29,6 +30,18 @@ export interface SiteNavProps {
   variant?: "pill" | "minimal";
   surface?: "dark" | "light";
   chrome?: "floating" | "integrated";
+  /** V2-5C.1: "glass" (default) is the existing translucent gradient + backdrop-blur shell, unchanged. "solid" is a flat, opaque, non-blurred shell in the same surface color family -- a real pattern found in the reference audit (bg-white, no blur) that the glass-only shell couldn't express. */
+  surfaceStyle?: "glass" | "solid";
+  /**
+   * V2-5C.1 refinement: the site's real, already-resolved theme accent
+   * hex (Orvenix-owned -- see composeNavigation's context.accentColor,
+   * itself the single-theme-authority value from the V2-5C accent fix;
+   * the Creative Director never sets this). Absent -> every accent-
+   * colored element (brand mark, CTA, active link) keeps its EXACT
+   * original fixed-blue styling, unchanged, for full backward
+   * compatibility with nodes persisted before this prop existed.
+   */
+  accent?: string;
   pages?: InlineNavLink[];
 }
 
@@ -75,6 +88,8 @@ export function SiteNav({
   variant = "pill",
   surface = "dark",
   chrome = "floating",
+  surfaceStyle = "glass",
+  accent,
   pages,
 }: BlockComponentProps<SiteNavProps>) {
   const availablePages = useEditorStore((state) => state.availablePages);
@@ -86,6 +101,19 @@ export function SiteNav({
   const flushPendingSave = useEditorStore((state) => state.flushPendingSave);
   const markError = useEditorStore((state) => state.markError);
   const navigationInFlightRef = useRef(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const mobilePanelId = useId();
+
+  // Close the mobile panel on route change -- otherwise a client-side
+  // editor-canvas page switch (no component unmount) can leave it stuck
+  // open. Adjusted DURING RENDER (React's own recommended pattern for
+  // "reset state when a prop changes"), not in a useEffect -- avoids an
+  // extra commit/cascading-render entirely, rather than merely guarding one.
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    if (mobileOpen) setMobileOpen(false);
+  }
 
   const currentPageSlug = useMemo(() => {
     if (storeActivePageSlug) return storeActivePageSlug;
@@ -149,6 +177,7 @@ export function SiteNav({
   }
 
   const isIntegratedChrome = chrome === "integrated" || (!usesInlinePages && navPages.length > 1);
+  const isSolidSurface = surfaceStyle === "solid";
 
   const shellStyle: React.CSSProperties = {
     display: "flex",
@@ -160,8 +189,11 @@ export function SiteNav({
     padding: isIntegratedChrome ? "0 clamp(1.25rem, 4vw, 4.5rem)" : "0.58rem 0.62rem",
     borderRadius: isIntegratedChrome ? "0" : "999px",
     border: isIntegratedChrome ? "0" : surface === "dark" ? "1px solid rgba(154, 229, 255, 0.14)" : "1px solid rgba(255,255,255,0.74)",
-    background:
-      isIntegratedChrome
+    background: isSolidSurface
+      ? surface === "dark"
+        ? "#070E18"
+        : "#ffffff"
+      : isIntegratedChrome
         ? surface === "dark"
           ? "linear-gradient(135deg, rgba(7,14,24,0.96), rgba(8,31,49,0.92) 52%, rgba(23,148,204,0.22))"
           : "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(247,252,255,0.94) 52%, rgba(229,246,255,0.88))"
@@ -176,8 +208,7 @@ export function SiteNav({
         : surface === "dark"
           ? "0 28px 80px -52px rgba(0,0,0,0.88), inset 0 1px 0 rgba(255,255,255,0.12)"
           : "0 26px 72px -48px rgba(7,89,133,0.38), inset 0 1px 0 rgba(255,255,255,0.96)",
-    backdropFilter: "blur(24px) saturate(1.18)",
-    WebkitBackdropFilter: "blur(24px) saturate(1.18)",
+    ...(isSolidSurface ? {} : { backdropFilter: "blur(24px) saturate(1.18)", WebkitBackdropFilter: "blur(24px) saturate(1.18)" }),
   };
 
   const titleStyle: React.CSSProperties = {
@@ -187,6 +218,12 @@ export function SiteNav({
     letterSpacing: "0.005em",
     lineHeight: 1,
     whiteSpace: "nowrap",
+    // V2-5C.1: a long real business name (vs. the short placeholder) must
+    // never overflow the header row on narrow viewports -- the brand's
+    // parent already has min-w-0 (flex truncation needs both).
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: "min(52vw, 320px)",
   };
 
   const titleAccentStyle: React.CSSProperties = {
@@ -204,119 +241,260 @@ export function SiteNav({
     : ctaHref || "page:contacto";
   const ctaRuntimeHref = resolveRuntimeHref(websiteId, effectiveCtaHref, hrefMode);
   const ctaEditorSlug = parseEditorPageHref(effectiveCtaHref);
+  const brandInitials = deriveBrandInitials(title);
+
+  /*
+   * V2-5C.1 refinement: when a real resolved theme accent is supplied,
+   * every accent-colored element (brand mark, active link, CTA) becomes
+   * a SOLID accent background with a contrast-CHECKED text color
+   * (readableTextOn, theme/visual-direction.ts -- the same deterministic
+   * safeguard already used elsewhere, never a new heuristic), instead of
+   * the fixed "#1BB3FA" blue family. Absent accent -> `navAccent` stays
+   * null and every consumer below falls through to its EXACT original
+   * fixed-color expression, unchanged.
+   */
+  const navAccent = accent ? { background: accent, text: readableTextOn(accent) } : null;
+
+  /*
+   * V2-5C.1: link descriptors are computed ONCE and rendered TWICE
+   * (desktop pill/minimal list + mobile stacked panel) -- the canonical
+   * href/onClick resolution (real page routes, editor-canvas SPA
+   * navigation) is exactly the logic that must never drift between the
+   * two, so it lives here, not duplicated per rendering.
+   */
+  const linkDescriptors = navPages.map((page) => {
+    const label = labelMap.get(page.slug.toLowerCase()) || page.name;
+    const target = resolveSiteNavItemTarget(page, websiteId, hrefMode);
+    const editorHref = (() => {
+      if (!target.isPageLink) return target.runtimeHref;
+      if (!isEditorCanvas || !pathname) return target.runtimeHref;
+      return buildEditorPageHref(pathname, searchParams, target.targetSlug ?? page.slug);
+    })();
+    const href = isEditorCanvas ? editorHref : target.runtimeHref;
+    const isActive = target.isPageLink && (target.targetSlug ?? page.slug) === currentPageSlug;
+    const onClick = !target.isPageLink
+      ? (event: React.MouseEvent) => {
+          if (isEditorCanvas && scrollToInlineTarget(href)) event.preventDefault();
+        }
+      : isEditorCanvas
+        ? (event: React.MouseEvent) => {
+            event.preventDefault();
+            void navigateInsideEditor(target.targetSlug ?? page.slug);
+          }
+        : undefined;
+    return { key: `${page.slug}-${page.href}`, label, href, isActive, onClick };
+  });
+
+  const ctaHrefResolved = isEditorCanvas && ctaEditorSlug && pathname ? buildEditorPageHref(pathname, searchParams, ctaEditorSlug) : ctaRuntimeHref;
+  const ctaOnClick = (event: React.MouseEvent) => {
+    if (!isEditorCanvas) return;
+    const rawHref = effectiveCtaHref;
+    if (rawHref.startsWith("#")) {
+      if (scrollToInlineTarget(rawHref)) event.preventDefault();
+      return;
+    }
+    if (ctaEditorSlug) {
+      event.preventDefault();
+      void navigateInsideEditor(ctaEditorSlug);
+    }
+  };
+
+  const ctaBackground = navAccent
+    ? navAccent.background
+    : surface === "dark"
+      ? "linear-gradient(135deg, #E6F8FF, #9AE5FF, #1BB3FA)"
+      : "linear-gradient(135deg, #1BB3FA, #1794CC 52%, #075985)";
+  const ctaTextColor = navAccent ? navAccent.text : surface === "dark" ? "#062F44" : "#ffffff";
+
+  const mobileTriggerColor = surface === "dark" ? "#ffffff" : "#075985";
 
   return (
-    <nav aria-label={title} className={`orvenix-premium-site-nav ${isIntegratedChrome ? "orvenix-premium-site-nav--integrated" : ""} w-full`} style={shellStyle}>
-      <div className="orvenix-site-brand relative flex min-w-0 items-center gap-3">
-        <span
-          aria-hidden="true"
-          className="orvenix-site-brand-mark relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-[18px] text-[13px] font-black text-white shadow-[0_20px_42px_-24px_rgba(27,179,250,0.95)]"
+    <>
+      <nav aria-label={title} className={`orvenix-premium-site-nav ${isIntegratedChrome ? "orvenix-premium-site-nav--integrated" : ""} w-full`} style={shellStyle}>
+        <div className="orvenix-site-brand relative flex min-w-0 items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="orvenix-site-brand-mark relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-[18px] text-[13px] font-black shadow-[0_20px_42px_-24px_rgba(27,179,250,0.95)]"
+            style={{
+              background: navAccent
+                ? navAccent.background
+                : surface === "dark"
+                  ? "linear-gradient(145deg, #075985, #1BB3FA)"
+                  : "linear-gradient(145deg, #1BB3FA, #1379A8 58%, #075985)",
+              color: navAccent ? navAccent.text : "#ffffff",
+              border: surface === "dark" ? "1px solid rgba(154,229,255,0.28)" : "1px solid rgba(255,255,255,0.72)",
+            }}
+          >
+            <span className="absolute inset-[5px] rounded-[14px] border border-white/20 bg-white/10" />
+            <span className="relative tracking-[0.12em]">{brandInitials}</span>
+          </span>
+          <div className="orvenix-site-brand-copy min-w-0">
+            <div style={titleStyle}>{title}</div>
+            {subtitle ? <div style={titleAccentStyle}>{subtitle}</div> : null}
+          </div>
+        </div>
+
+        <ul
+          className={[
+            "orvenix-site-nav-links hidden md:flex list-none flex-wrap items-center gap-1.5 p-1.5 m-0 border",
+            layout === "column" ? "flex-col items-start" : JUSTIFY_CLASS[justify],
+          ].join(" ")}
           style={{
-            background: surface === "dark"
-              ? "linear-gradient(145deg, #075985, #1BB3FA)"
-              : "linear-gradient(145deg, #1BB3FA, #1379A8 58%, #075985)",
-            border: surface === "dark" ? "1px solid rgba(154,229,255,0.28)" : "1px solid rgba(255,255,255,0.72)",
+            justifyContent: "flex-end",
+            borderRadius: isIntegratedChrome ? "0" : "999px",
+            borderColor: isIntegratedChrome ? "transparent" : surface === "dark" ? "rgba(255,255,255,0.075)" : "rgba(27,179,250,0.08)",
+            background: isIntegratedChrome ? "transparent" : surface === "dark" ? "rgba(255,255,255,0.035)" : "rgba(255,255,255,0.38)",
+            boxShadow: isIntegratedChrome ? "none" : surface === "dark" ? "inset 0 1px 0 rgba(255,255,255,0.045)" : "inset 0 1px 0 rgba(255,255,255,0.62)",
           }}
         >
-          <span className="absolute inset-[5px] rounded-[14px] border border-white/20 bg-white/10" />
-          <span className="relative tracking-[0.12em]">OV</span>
-        </span>
-        <div className="orvenix-site-brand-copy min-w-0">
-          <div style={titleStyle}>{title}</div>
-          {subtitle ? <div style={titleAccentStyle}>{subtitle}</div> : null}
-        </div>
-      </div>
+          {linkDescriptors.map(({ key, label, href, isActive, onClick }) => {
+            const variantClasses = VARIANT_CLASS[surface][variant];
+            const linkStyle: React.CSSProperties = {
+              color: isActive ? (navAccent ? navAccent.text : "#ffffff") : surface === "dark" ? "rgba(247, 252, 255, 0.92)" : "#075985",
+              background: isActive ? (navAccent ? navAccent.background : "linear-gradient(135deg, #075985, #1794CC)") : undefined,
+              borderColor: isActive ? "rgba(27, 179, 250, 0.55)" : undefined,
+              fontSize: "15px",
+              fontWeight: 780,
+              letterSpacing: "0.01em",
+              minHeight: isIntegratedChrome ? "46px" : "40px",
+              display: "inline-flex",
+              alignItems: "center",
+            };
 
-      <ul
-        className={[
-          "orvenix-site-nav-links flex list-none flex-wrap items-center gap-1.5 p-1.5 m-0 border",
-          layout === "column" ? "flex-col items-start" : JUSTIFY_CLASS[justify],
-        ].join(" ")}
+            return (
+              <li key={key}>
+                <a
+                  href={href}
+                  aria-current={isActive ? "page" : undefined}
+                  onClick={onClick}
+                  className={`${variantClasses.base} ${isActive ? variantClasses.active : ""}`}
+                  style={linkStyle}
+                >
+                  <span className="pointer-events-none absolute inset-x-4 bottom-1.5 h-px origin-center scale-x-0 rounded-full bg-current opacity-45 transition-transform duration-300 group-hover:scale-x-100" />
+                  <span className="relative z-10">{label}</span>
+                </a>
+              </li>
+            );
+          })}
+          {showCta && ctaLabel ? (
+            <li>
+              <a
+                href={ctaHrefResolved}
+                onClick={ctaOnClick}
+                className="orvenix-site-nav-cta group relative inline-flex min-h-[44px] items-center overflow-hidden rounded-full px-5 py-2.5 text-sm font-black transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-22px_rgba(27,179,250,0.95)] md:text-[15px]"
+                style={{
+                  background: ctaBackground,
+                  color: ctaTextColor,
+                  boxShadow: surface === "dark" ? "0 18px 34px -20px rgba(154,229,255,0.85)" : "0 18px 36px -18px rgba(7,89,133,0.62)",
+                }}
+              >
+                <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/28 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                <span className="relative z-10">{ctaLabel}</span>
+                <span className="relative z-10 ml-2 transition-transform duration-300 group-hover:translate-x-0.5">{">"}</span>
+              </a>
+            </li>
+          ) : null}
+        </ul>
+
+        {/* V2-5C.1: mobile menu trigger -- desktop keeps its unchanged link list above; this button (and the panel below) only ever render meaningfully at <md, via Tailwind's md:hidden. */}
+        <button
+          type="button"
+          className="orvenix-site-nav-trigger relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors md:hidden"
+          style={{
+            borderColor: surface === "dark" ? "rgba(255,255,255,0.16)" : "rgba(7,89,133,0.18)",
+            color: mobileTriggerColor,
+            background: surface === "dark" ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.55)",
+          }}
+          aria-expanded={mobileOpen}
+          aria-controls={mobilePanelId}
+          aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+          onClick={() => setMobileOpen((value) => !value)}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            {mobileOpen ? (
+              <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            ) : (
+              <>
+                <path d="M3 5H15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M3 9H15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M3 13H15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </>
+            )}
+          </svg>
+        </button>
+      </nav>
+
+      {/* V2-5C.1: mobile navigation panel -- same real canonical links/CTA as
+          desktop (linkDescriptors, computed once above), a simple stacked
+          shell coherent with the header's own surface/accent. Structurally
+          always present (so aria-controls always resolves to a real element
+          and layout never shifts); visibility toggles via className only. */}
+      <div
+        id={mobilePanelId}
+        className={`orvenix-site-nav-mobile-panel md:hidden w-full ${mobileOpen ? "block" : "hidden"}`}
         style={{
-          justifyContent: "flex-end",
-          borderRadius: isIntegratedChrome ? "0" : "999px",
-          borderColor: isIntegratedChrome ? "transparent" : surface === "dark" ? "rgba(255,255,255,0.075)" : "rgba(27,179,250,0.08)",
-          background: isIntegratedChrome ? "transparent" : surface === "dark" ? "rgba(255,255,255,0.035)" : "rgba(255,255,255,0.38)",
-          boxShadow: isIntegratedChrome ? "none" : surface === "dark" ? "inset 0 1px 0 rgba(255,255,255,0.045)" : "inset 0 1px 0 rgba(255,255,255,0.62)",
+          marginTop: "0.5rem",
+          borderRadius: isIntegratedChrome ? "16px" : "20px",
+          padding: "0.65rem",
+          background: surface === "dark" ? "#0b1a29" : "#ffffff",
+          border: surface === "dark" ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(7,89,133,0.12)",
+          boxShadow: "0 18px 40px -28px rgba(0,0,0,0.45)",
         }}
       >
-        {navPages.map((page) => {
-          const label = labelMap.get(page.slug.toLowerCase()) || page.name;
-          const target = resolveSiteNavItemTarget(page, websiteId, hrefMode);
-          const editorHref = (() => {
-            if (!target.isPageLink) return target.runtimeHref;
-            if (!isEditorCanvas || !pathname) return target.runtimeHref;
-            return buildEditorPageHref(pathname, searchParams, target.targetSlug ?? page.slug);
-          })();
-          const href = isEditorCanvas ? editorHref : target.runtimeHref;
-          const isActive = target.isPageLink && (target.targetSlug ?? page.slug) === currentPageSlug;
-          const variantClasses = VARIANT_CLASS[surface][variant];
-          const linkStyle: React.CSSProperties = {
-            color: isActive ? "#ffffff" : surface === "dark" ? "rgba(247, 252, 255, 0.92)" : "#075985",
-            background: isActive ? "linear-gradient(135deg, #075985, #1794CC)" : undefined,
-            borderColor: isActive ? "rgba(27, 179, 250, 0.55)" : undefined,
-            fontSize: "15px",
-            fontWeight: 780,
-            letterSpacing: "0.01em",
-            minHeight: isIntegratedChrome ? "46px" : "40px",
-            display: "inline-flex",
-            alignItems: "center",
-          };
-
-          return (
-            <li key={`${page.slug}-${page.href}`}>
+        <ul className="m-0 flex list-none flex-col gap-1 p-0">
+          {linkDescriptors.map(({ key, label, href, isActive, onClick }) => (
+            <li key={key}>
               <a
                 href={href}
                 aria-current={isActive ? "page" : undefined}
-                onClick={!target.isPageLink ? (event) => {
-                  if (isEditorCanvas && scrollToInlineTarget(href)) event.preventDefault();
-                } : isEditorCanvas ? (event) => {
-                  event.preventDefault();
-                  void navigateInsideEditor(target.targetSlug ?? page.slug);
-                } : undefined}
-                className={`${variantClasses.base} ${isActive ? variantClasses.active : ""}`}
-                style={linkStyle}
+                onClick={onClick}
+                className="block w-full rounded-lg px-3 py-2.5 text-sm font-bold transition-colors"
+                style={{
+                  color: isActive ? (navAccent ? navAccent.text : "#ffffff") : surface === "dark" ? "rgba(247,252,255,0.92)" : "#075985",
+                  background: isActive ? (navAccent ? navAccent.background : surface === "dark" ? "rgba(255,255,255,0.08)" : "rgba(7,89,133,0.08)") : "transparent",
+                }}
               >
-                <span className="pointer-events-none absolute inset-x-4 bottom-1.5 h-px origin-center scale-x-0 rounded-full bg-current opacity-45 transition-transform duration-300 group-hover:scale-x-100" />
-                <span className="relative z-10">{label}</span>
+                {label}
               </a>
             </li>
-          );
-        })}
-        {showCta && ctaLabel ? (
-          <li>
-            <a
-              href={isEditorCanvas && ctaEditorSlug && pathname ? buildEditorPageHref(pathname, searchParams, ctaEditorSlug) : ctaRuntimeHref}
-              onClick={(event) => {
-                if (!isEditorCanvas) return;
-                const rawHref = effectiveCtaHref;
-                if (rawHref.startsWith("#")) {
-                  if (scrollToInlineTarget(rawHref)) event.preventDefault();
-                  return;
-                }
-                if (ctaEditorSlug) {
-                  event.preventDefault();
-                  void navigateInsideEditor(ctaEditorSlug);
-                }
-              }}
-              className="orvenix-site-nav-cta group relative inline-flex min-h-[44px] items-center overflow-hidden rounded-full px-5 py-2.5 text-sm font-black transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-22px_rgba(27,179,250,0.95)] md:text-[15px]"
-              style={{
-                background: surface === "dark"
-                  ? "linear-gradient(135deg, #E6F8FF, #9AE5FF, #1BB3FA)"
-                  : "linear-gradient(135deg, #1BB3FA, #1794CC 52%, #075985)",
-                color: surface === "dark" ? "#062F44" : "#ffffff",
-                boxShadow: surface === "dark" ? "0 18px 34px -20px rgba(154,229,255,0.85)" : "0 18px 36px -18px rgba(7,89,133,0.62)",
-              }}
-            >
-              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/28 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              <span className="relative z-10">{ctaLabel}</span>
-              <span className="relative z-10 ml-2 transition-transform duration-300 group-hover:translate-x-0.5">{">"}</span>
-            </a>
-          </li>
-        ) : null}
-      </ul>
-    </nav>
+          ))}
+          {showCta && ctaLabel ? (
+            <li className="pt-1">
+              <a
+                href={ctaHrefResolved}
+                onClick={ctaOnClick}
+                className="block w-full rounded-lg px-3 py-2.5 text-center text-sm font-black"
+                style={{ background: ctaBackground, color: ctaTextColor }}
+              >
+                {ctaLabel}
+              </a>
+            </li>
+          ) : null}
+        </ul>
+      </div>
+    </>
   );
+}
+
+/**
+ * V2-5C.1 refinement: a bounded, deterministic 1-2 character monogram
+ * derived from the REAL title text already passed in (Orvenix-owned --
+ * composeNavigation already resolves title to the real business name
+ * when known, "Nombre del negocio" otherwise; this never invents a
+ * name, it only summarizes whatever real/placeholder text it is given).
+ * Unicode-safe (Array.from + toLocaleUpperCase, not raw .slice/.toUpperCase,
+ * so accented/multi-byte first characters like "Ñ"/"É" are never split
+ * mid-codepoint). Falls back to "OV" -- the ORIGINAL hardcoded value --
+ * only when the title is genuinely empty, preserving the old visual
+ * identity in that edge case.
+ */
+export function deriveBrandInitials(title: string): string {
+  const trimmed = title.trim();
+  if (!trimmed) return "OV";
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  const firstChar = (word: string) => Array.from(word)[0] ?? "";
+  const initials = words.length >= 2 ? firstChar(words[0]) + firstChar(words[1]) : Array.from(words[0]).slice(0, 2).join("");
+  return (initials || "OV").toLocaleUpperCase();
 }
 
 function parseEditorPageHref(href: string) {
@@ -387,4 +565,5 @@ SiteNav.defaults = {
   variant: "pill",
   surface: "light",
   chrome: "floating",
+  surfaceStyle: "glass",
 } satisfies SiteNavProps;

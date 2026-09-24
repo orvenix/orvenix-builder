@@ -100,6 +100,7 @@ function fixtureReference(overrides: Partial<CreativeDesignReferenceV1> = {}): C
     sectionGrammar: { recurringTreatments: ["standard-grid"], density: "standard", backgroundRhythm: "alternating" },
     assetGrammar: { strategy: "abstract", placement: "none" },
     conversionGrammar: { ctaStrategy: "dual-action", contactPattern: "generic-form" },
+    navGrammar: { surfaceTreatment: "dark-glass", position: "fixed", shadowBehavior: "scroll-triggered", ctaPattern: "prominent-single", hasTwoTierBar: false },
     distinctiveTraits: [],
     ...overrides,
   }

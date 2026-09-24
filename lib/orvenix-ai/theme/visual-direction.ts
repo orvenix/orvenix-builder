@@ -262,3 +262,17 @@ export function lightAccentTint(hex: string, mix = 0.92): string | null {
   const blended = rgb.map((channel) => Math.round(channel * (1 - mix) + 255 * mix))
   return `#${blended.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`
 }
+
+/**
+ * V2-5C.1 refinement: which of two fixed, already-tested text colors is
+ * safe to place directly ON a given background -- reuses hasSafeContrast
+ * (never a new contrast heuristic), same "prefer dark, fall back to
+ * light" convention section-composer.ts's readableTextColorsFor already
+ * established for section backgrounds. No caller may pass an arbitrary
+ * pair of colors here; the two candidates are fixed, known-safe-against-
+ * each-other tokens, so this only ever answers "which one, of these two,
+ * fits THIS background" -- never invents a third color.
+ */
+export function readableTextOn(backgroundHex: string): "#0f172a" | "#ffffff" {
+  return hasSafeContrast("#0f172a", backgroundHex) ? "#0f172a" : "#ffffff"
+}

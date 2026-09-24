@@ -14,6 +14,10 @@ import type {
   DistinctiveTrait,
   HeroBackgroundTreatment,
   HeroMediaStrategy,
+  NavCtaPattern,
+  NavPosition,
+  NavShadowBehavior,
+  NavSurfaceTreatment,
   RadiusTendency,
   SectionTreatment,
   ShadowTendency,
@@ -82,6 +86,14 @@ export interface CreativeDesignReferenceV1 {
     ctaStrategy: CtaStrategy
     contactPattern: ContactPattern
   }
+  /** V2-5C.1: header/navigation grammar -- see design-reference/contract.ts's DesignReferenceNavGrammar for the audit this comes from. */
+  navGrammar: {
+    surfaceTreatment: NavSurfaceTreatment
+    position: NavPosition
+    shadowBehavior: NavShadowBehavior
+    ctaPattern: NavCtaPattern
+    hasTwoTierBar: boolean
+  }
   distinctiveTraits: DistinctiveTrait[]
 }
 
@@ -125,6 +137,13 @@ function sanitizeSelection(selection: DesignReferenceSelection): CreativeDesignR
     conversionGrammar: {
       ctaStrategy: reference.conversionGrammar.ctaStrategy,
       contactPattern: reference.conversionGrammar.contactPattern,
+    },
+    navGrammar: {
+      surfaceTreatment: reference.navGrammar.surfaceTreatment,
+      position: reference.navGrammar.position,
+      shadowBehavior: reference.navGrammar.shadowBehavior,
+      ctaPattern: reference.navGrammar.ctaPattern,
+      hasTwoTierBar: reference.navGrammar.hasTwoTierBar,
     },
     distinctiveTraits: [...reference.distinctiveTraits],
   }

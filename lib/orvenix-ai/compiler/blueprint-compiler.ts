@@ -219,15 +219,25 @@ function compilePage(
   /*
    * V2-5C: richComposition becomes true for THIS page only when the
    * validated, sanitized Creative Director direction actually requests
-   * one of the V2-5B executable capabilities -- presence of any one of
-   * these four bounded fields IS the activation signal (section I: "do
+   * one of the V2-5B/V2-5C.1 executable capabilities -- presence of any
+   * one of these bounded fields IS the activation signal (section I: "do
    * not globally switch richComposition on"). No creativeDirection, no
-   * pageDirection for this slug, or a pageDirection with none of these
-   * fields set (eg. only heroTitleSuggestion) all correctly resolve to
-   * false, reproducing exact pre-V2-5C/V2-5B behavior.
+   * pageDirection for this slug, or a pageDirection/site direction with
+   * none of these fields set (eg. only heroTitleSuggestion) all
+   * correctly resolve to false, reproducing exact pre-V2-5C/V2-5B
+   * behavior. V2-5C.1: navigation fields are SITE-level (options.creativeDirection,
+   * not pageDirection), so a navigation-only decision also activates
+   * richComposition for every page uniformly.
    */
   const richComposition = Boolean(
-    pageDirection?.heroTreatment || pageDirection?.processTreatment || pageDirection?.twoItemLayoutTreatment || pageDirection?.sectionToneStrategy,
+    pageDirection?.heroTreatment ||
+      pageDirection?.processTreatment ||
+      pageDirection?.twoItemLayoutTreatment ||
+      pageDirection?.sectionToneStrategy ||
+      options.creativeDirection?.navigationSurfaceStyle ||
+      options.creativeDirection?.navigationContainment ||
+      options.creativeDirection?.navigationLinkStyle ||
+      options.creativeDirection?.navigationCtaEmphasis,
   )
 
   for (const [sectionIndex, section] of page.sections.entries()) {
@@ -268,6 +278,10 @@ function compilePage(
         ...(pageDirection?.processTreatment ? { aiPreferredProcessTreatment: pageDirection.processTreatment } : {}),
         ...(pageDirection?.twoItemLayoutTreatment ? { aiPreferredTwoItemLayoutTreatment: pageDirection.twoItemLayoutTreatment } : {}),
         ...(pageDirection?.sectionToneStrategy ? { aiSectionToneStrategy: pageDirection.sectionToneStrategy } : {}),
+        ...(options.creativeDirection?.navigationSurfaceStyle ? { aiPreferredNavigationSurfaceStyle: options.creativeDirection.navigationSurfaceStyle } : {}),
+        ...(options.creativeDirection?.navigationContainment ? { aiPreferredNavigationContainment: options.creativeDirection.navigationContainment } : {}),
+        ...(options.creativeDirection?.navigationLinkStyle ? { aiPreferredNavigationLinkStyle: options.creativeDirection.navigationLinkStyle } : {}),
+        ...(options.creativeDirection?.navigationCtaEmphasis ? { aiPreferredNavigationCtaEmphasis: options.creativeDirection.navigationCtaEmphasis } : {}),
         ...(richComposition ? { richComposition: true } : {}),
         ...(options.accentColor ? { accentColor: options.accentColor } : {}),
       },

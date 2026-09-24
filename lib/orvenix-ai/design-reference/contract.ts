@@ -165,6 +165,33 @@ export type ContactPattern = (typeof CONTACT_PATTERNS)[number]
 export const CTA_STRATEGIES = ["single-action", "dual-action", "pricing-driven", "unknown"] as const
 export type CtaStrategy = (typeof CTA_STRATEGIES)[number]
 
+/**
+ * V2-5C.1: header/navigation grammar. Derived from a structural audit of
+ * the 25 real app/webs references (not invented before the audit) --
+ * every value below corresponds to a REAL, observed pattern. Two axes
+ * the audit also checked (nav alignment: logo-left/links-right, and
+ * containment: full-width-with-contained-inner-row) turned out
+ * essentially UNIFORM across all 25 references (no centered/split
+ * alignment, no floating-pill-with-margin pattern exists anywhere in
+ * the set) -- so neither became a bounded field here, even though
+ * Orvenix's OWN composer/renderer independently supports a
+ * floating/contained treatment as executable vocabulary (see
+ * composition-context.ts's NavigationContainment) that just isn't
+ * reference-sourced.
+ */
+export const NAV_SURFACE_TREATMENTS = ["dark-glass", "light-glass", "solid", "unknown"] as const
+export type NavSurfaceTreatment = (typeof NAV_SURFACE_TREATMENTS)[number]
+
+export const NAV_POSITIONS = ["fixed", "sticky", "static", "unknown"] as const
+export type NavPosition = (typeof NAV_POSITIONS)[number]
+
+/** "scroll-triggered" = shadow/border only appears once the page has scrolled (a dynamic behavior our static SSR renderer cannot reproduce, but still a real, worth-recording grammar fact). */
+export const NAV_SHADOW_BEHAVIORS = ["none", "static", "scroll-triggered", "unknown"] as const
+export type NavShadowBehavior = (typeof NAV_SHADOW_BEHAVIORS)[number]
+
+export const NAV_CTA_PATTERNS = ["prominent-single", "dual-cta", "icon-actions-only", "none", "unknown"] as const
+export type NavCtaPattern = (typeof NAV_CTA_PATTERNS)[number]
+
 /** Bounded structural/visual trait slugs -- never a copy of source text, always one of these fixed tokens. */
 export const DISTINCTIVE_TRAITS = [
   "rated-person-card",
@@ -201,6 +228,10 @@ export type ExtractionSignal =
   | "rating-and-star-icon"
   | "animate-pulse-with-status-copy"
   | "paired-column-grid"
+  | "custom-navbar-component-file"
+  | "nav-scroll-state-shadow"
+  | "nav-icon-actions"
+  | "nav-two-tier-bar"
 
 export type ExtractionConfidence = "high" | "medium" | "low"
 
@@ -263,6 +294,16 @@ export interface DesignReferenceConversionGrammar {
   contactPattern: ContactPattern
 }
 
+/** V2-5C.1: header/navigation grammar -- see NAV_* vocabulary above for why each field exists (and what didn't make the cut). */
+export interface DesignReferenceNavGrammar {
+  surfaceTreatment: NavSurfaceTreatment
+  position: NavPosition
+  shadowBehavior: NavShadowBehavior
+  ctaPattern: NavCtaPattern
+  /** A secondary bar above the main nav row (info/contact/promo strip) -- present in a minority of references, worth a plain boolean rather than its own enum. */
+  hasTwoTierBar: boolean
+}
+
 export interface DesignReferenceExtractionMetadata {
   extractorVersion: 1
   confidence: ExtractionConfidence
@@ -281,6 +322,7 @@ export interface DesignReference {
   assetGrammar: DesignReferenceAssetGrammar
   compositionGrammar: DesignReferenceCompositionGrammar
   conversionGrammar: DesignReferenceConversionGrammar
+  navGrammar: DesignReferenceNavGrammar
   distinctiveTraits: DistinctiveTrait[]
   extraction: DesignReferenceExtractionMetadata
 }

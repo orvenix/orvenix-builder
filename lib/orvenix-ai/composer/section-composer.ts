@@ -17,6 +17,10 @@ import {
   HERO_TREATMENT_WEIGHTS,
   HERO_VARIANTS,
   HERO_WEIGHTS,
+  NAVIGATION_CONTAINMENTS,
+  NAVIGATION_CTA_EMPHASES,
+  NAVIGATION_LINK_STYLES,
+  NAVIGATION_SURFACE_STYLES,
   PROCESS_VARIANTS,
   PROCESS_WEIGHTS,
   SECTION_TONE_POOLS,
@@ -733,6 +737,24 @@ function iconNode(nodes: Record<string, ComposedNode>, displayName: string, name
   return add(nodes, createComposedNode({ type: "icon", displayName, props: { name, size: 24 } }))
 }
 
+/**
+ * V2-5C.1 Phase F: the header's light/dark color PAIRING is never an AI
+ * choice -- it is derived deterministically from the SAME page-level
+ * hero signals already validated/sanitized upstream (aiPreferredHeroTreatment/
+ * aiPreferredHeroVariant, both already present in context for every
+ * section on this page). A dark hero (abstract-glow treatment, or the
+ * immersive variant's own dark gradient overlay) gets a dark-surfaced
+ * header (light text, safe against a dark background); anything else
+ * gets the light surface. This is the deterministic contrast safeguard
+ * -- the AI never emits a hex color, a Tailwind class, or "dark"/"light"
+ * directly; it only ever requests a STYLE (glass/solid, containment,
+ * link style, CTA emphasis), and Orvenix alone resolves the safe pairing.
+ */
+function resolveNavigationSurface(context: SectionCompositionContext): "dark" | "light" {
+  const heroIsDark = context.aiPreferredHeroTreatment === "abstract-glow" || context.aiPreferredHeroVariant === "immersive"
+  return heroIsDark ? "dark" : "light"
+}
+
 function composeNavigation(
   context: SectionCompositionContext = {},
 ): ComposedSection {
@@ -752,23 +774,83 @@ function composeNavigation(
     })
     .filter((page) => page.slug)
 
+  /*
+   * V2-5C.1: navigation richness activates ONLY when a validated
+   * navigation-specific decision actually exists on THIS site's
+   * CreativeDirection (site-level, so identical across every page --
+   * see Phase N) -- deliberately NOT just "context.richComposition",
+   * since richComposition can also be true purely because of an
+   * unrelated hero/process/tone decision on this page, in which case
+   * the header must stay byte-identical to its pre-V2-5C.1 output
+   * (Phase K: "preserve old output when no navigation decision
+   * exists"). Each override is defensively re-checked against its
+   * composition-context.ts source-of-truth array, same pattern as
+   * aiPreferredHeroVariant.
+   */
+  const navigationRichnessRequested = Boolean(
+    context.richComposition &&
+      (context.aiPreferredNavigationSurfaceStyle ||
+        context.aiPreferredNavigationContainment ||
+        context.aiPreferredNavigationLinkStyle ||
+        context.aiPreferredNavigationCtaEmphasis),
+  )
+
+  const navigationSurfaceStyle =
+    navigationRichnessRequested && context.aiPreferredNavigationSurfaceStyle && (NAVIGATION_SURFACE_STYLES as readonly string[]).includes(context.aiPreferredNavigationSurfaceStyle)
+      ? context.aiPreferredNavigationSurfaceStyle
+      : undefined
+  const navigationContainment =
+    navigationRichnessRequested && context.aiPreferredNavigationContainment && (NAVIGATION_CONTAINMENTS as readonly string[]).includes(context.aiPreferredNavigationContainment)
+      ? context.aiPreferredNavigationContainment
+      : undefined
+  const navigationLinkStyle =
+    navigationRichnessRequested && context.aiPreferredNavigationLinkStyle && (NAVIGATION_LINK_STYLES as readonly string[]).includes(context.aiPreferredNavigationLinkStyle)
+      ? context.aiPreferredNavigationLinkStyle
+      : "minimal"
+  const navigationCtaEmphasis =
+    navigationRichnessRequested && context.aiPreferredNavigationCtaEmphasis && (NAVIGATION_CTA_EMPHASES as readonly string[]).includes(context.aiPreferredNavigationCtaEmphasis)
+      ? context.aiPreferredNavigationCtaEmphasis
+      : "prominent"
+
+  const resolvedSurface = navigationRichnessRequested ? resolveNavigationSurface(context) : undefined
+
+  /*
+   * V2-5C.1 refinement: real brand identity + real theme accent are
+   * UNCONDITIONAL (never gated behind navigationRichnessRequested) --
+   * this mirrors composeFooter's own existing, already-shipped
+   * `context.businessName?.trim() || "Nombre del negocio"` pattern
+   * exactly (see composeFooter above), and reuses the SAME
+   * context.accentColor every other richComposition-gated "accent-soft"
+   * tone already reads (see resolveToneBackground) -- both are
+   * Orvenix-owned, already-available, already-computed data, never a
+   * Creative Director field. Executor-quality output (a real name, a
+   * theme-coherent accent) should improve for every generated site, not
+   * only ones where V2-5C.1's separate navigation TREATMENT selection
+   * also happened to activate.
+   */
+  const brandName = context.businessName?.trim() || "Nombre del negocio"
+
   const root = add(nodes, createComposedNode({
     type: "siteNav",
     displayName: "Menu principal",
     props: {
-      title: "Nombre del negocio",
+      title: brandName,
       subtitle: "Sitio profesional",
       labelOverrides: pages.length
         ? pages.map((page) => `${page.slug}=${page.label}`).join("\n")
         : "home=Inicio\nservicios=Servicios\nproductos=Productos\nprecios=Precios\ncontacto=Contacto",
       ...(pages.length ? { pages } : {}),
       showHome: true,
-      showCta: true,
+      showCta: navigationCtaEmphasis !== "none",
       ctaLabel: "Contactar",
       ctaHref: "#contacto",
       layout: "row",
       justify: "center",
-      variant: "minimal",
+      variant: navigationLinkStyle,
+      ...(navigationContainment ? { chrome: navigationContainment } : {}),
+      ...(navigationSurfaceStyle ? { surfaceStyle: navigationSurfaceStyle } : {}),
+      ...(resolvedSurface ? { surface: resolvedSurface } : {}),
+      ...(context.accentColor ? { accent: context.accentColor } : {}),
     },
   }))
   return { role: "navigation", rootId: root, nodes, purpose: "Navegacion principal editable del sitio." }

@@ -184,4 +184,44 @@ export const SECTION_TONE_POOLS: Record<SectionToneStrategy, readonly SectionTon
   "contrast-led": ["base", "muted", "accent-soft", "contrast", "contrast", "base", "contrast"],
 }
 
+/**
+ * V2-5C.1: Navigation & Header Composition Intelligence -- bounded
+ * vocabulary derived from a structural audit of the 25 real app/webs
+ * references AND Orvenix's own existing siteNav renderer
+ * (components/editor/primitives/SiteNav.tsx). No AI-facing enum value
+ * here is aspirational: every one maps to an already-executable prop
+ * on the SAME siteNav primitive node -- no new node type, no new
+ * client-side navigation system.
+ *
+ * Four INDEPENDENT axes (not a handful of named composite "template"
+ * treatments) because the audit found genuinely orthogonal real
+ * variety along these specific dimensions -- see composition-context's
+ * sibling doc comments below for what did NOT become a field (nav
+ * alignment and containment-with-margin turned out uniform across the
+ * real reference set) and design-reference/contract.ts's own header
+ * comment for the full audit reasoning.
+ *
+ * Deliberately EXCLUDED from this vocabulary: the actual light/dark
+ * color pairing (SiteNav's own `surface` prop). That is resolved
+ * DETERMINISTICALLY by the composer from the page's real hero
+ * treatment (see resolveNavigationSurface, section-composer.ts) --
+ * never a direct AI choice -- so a transparent/glass header can never
+ * land on the wrong light/dark pairing against its own hero and become
+ * unreadable.
+ */
+export type NavigationSurfaceStyle = "glass" | "solid"
+export const NAVIGATION_SURFACE_STYLES: readonly NavigationSurfaceStyle[] = ["glass", "solid"]
+
+/** Maps 1:1 onto SiteNav's existing `chrome` prop -- "integrated" (full-width bar) is what the real reference set overwhelmingly uses; "floating" (contained pill-shaped bar with margin) is Orvenix's own existing, already-shipped, already-tested treatment, kept available even though no reference in the current library exhibits it. */
+export type NavigationContainment = "integrated" | "floating"
+export const NAVIGATION_CONTAINMENTS: readonly NavigationContainment[] = ["integrated", "floating"]
+
+/** Maps 1:1 onto SiteNav's existing `variant` prop. */
+export type NavigationLinkStyle = "pill" | "minimal"
+export const NAVIGATION_LINK_STYLES: readonly NavigationLinkStyle[] = ["pill", "minimal"]
+
+/** Maps onto SiteNav's existing `showCta` boolean -- "none" relies on the hero's own CTA instead of duplicating one in the header, a real pattern the audit found (icon-actions-only / no-text-CTA headers). */
+export type NavigationCtaEmphasis = "prominent" | "none"
+export const NAVIGATION_CTA_EMPHASES: readonly NavigationCtaEmphasis[] = ["prominent", "none"]
+
 export { resolveContentDensity, type ContentDensity } from "./variant-selector"

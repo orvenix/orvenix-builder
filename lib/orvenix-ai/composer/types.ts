@@ -86,6 +86,22 @@ export interface SectionCompositionContext {
   aiSectionToneStrategy?: "standard" | "soft-rhythm" | "contrast-led"
 
   /**
+   * V2-5C.1: bounded, ALREADY-VALIDATED-AND-SANITIZED Creative Director
+   * navigation overrides, site-level (spread into every section's
+   * context alongside aiDensity, so every page's siteNav sees the same
+   * choice -- see NAVIGATION_* vocabulary, composition-context.ts).
+   * Absent -> composeNavigation's existing pre-V2-5C.1 defaults,
+   * unchanged. The header's light/dark color pairing itself is never
+   * one of these -- see aiPreferredHeroTreatment/aiPreferredHeroVariant
+   * above, which resolveNavigationSurface (section-composer.ts) reads
+   * to derive it safely.
+   */
+  aiPreferredNavigationSurfaceStyle?: "glass" | "solid"
+  aiPreferredNavigationContainment?: "integrated" | "floating"
+  aiPreferredNavigationLinkStyle?: "pill" | "minimal"
+  aiPreferredNavigationCtaEmphasis?: "prominent" | "none"
+
+  /**
    * V2-5B: real, structured, caller-supplied content ONLY -- consumed
    * exactly like `services`/`products` above (same shape, same
    * "absent/empty -> deterministic generic fallback, never fabricated"

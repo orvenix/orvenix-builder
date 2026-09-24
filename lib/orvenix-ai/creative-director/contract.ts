@@ -70,6 +70,22 @@ export const CREATIVE_DIRECTOR_PROCESS_TREATMENTS_V1 = ["cards", "numbered"] as 
 export const CREATIVE_DIRECTOR_TWO_ITEM_LAYOUT_TREATMENTS_V1 = ["paired", "cards"] as const
 export const CREATIVE_DIRECTOR_SECTION_TONE_STRATEGIES_V1 = ["standard", "soft-rhythm", "contrast-led"] as const
 
+/**
+ * V2-5C.1: Navigation & Header Composition Intelligence. Must match
+ * composition-context.ts's NAVIGATION_SURFACE_STYLES/CONTAINMENTS/
+ * LINK_STYLES/CTA_EMPHASES exactly (cross-module test), kept as
+ * independent literals for the same reason as the other V2-5B/C
+ * vocabulary above. Deliberately does NOT include the header's actual
+ * light/dark color pairing -- that stays Orvenix-resolved (see
+ * section-composer.ts's resolveNavigationSurface) -- so there is no
+ * value here the AI could use to make navigation text unreadable
+ * against its own background.
+ */
+export const CREATIVE_DIRECTOR_NAVIGATION_SURFACE_STYLES_V1 = ["glass", "solid"] as const
+export const CREATIVE_DIRECTOR_NAVIGATION_CONTAINMENTS_V1 = ["integrated", "floating"] as const
+export const CREATIVE_DIRECTOR_NAVIGATION_LINK_STYLES_V1 = ["pill", "minimal"] as const
+export const CREATIVE_DIRECTOR_NAVIGATION_CTA_EMPHASES_V1 = ["prominent", "none"] as const
+
 export type CreativeDirectorRoleKeyV1 = (typeof CREATIVE_DIRECTOR_ROLE_KEYS_V1)[number]
 export type CreativeDirectorStrategyKeyV1 = (typeof CREATIVE_DIRECTOR_STRATEGY_KEYS_V1)[number]
 export type CreativeDirectorStatusV1 = (typeof CREATIVE_DIRECTOR_STATUSES_V1)[number]
@@ -83,6 +99,10 @@ export type CreativeDirectorHeroTreatmentV1 = (typeof CREATIVE_DIRECTOR_HERO_TRE
 export type CreativeDirectorProcessTreatmentV1 = (typeof CREATIVE_DIRECTOR_PROCESS_TREATMENTS_V1)[number]
 export type CreativeDirectorTwoItemLayoutTreatmentV1 = (typeof CREATIVE_DIRECTOR_TWO_ITEM_LAYOUT_TREATMENTS_V1)[number]
 export type CreativeDirectorSectionToneStrategyV1 = (typeof CREATIVE_DIRECTOR_SECTION_TONE_STRATEGIES_V1)[number]
+export type CreativeDirectorNavigationSurfaceStyleV1 = (typeof CREATIVE_DIRECTOR_NAVIGATION_SURFACE_STYLES_V1)[number]
+export type CreativeDirectorNavigationContainmentV1 = (typeof CREATIVE_DIRECTOR_NAVIGATION_CONTAINMENTS_V1)[number]
+export type CreativeDirectorNavigationLinkStyleV1 = (typeof CREATIVE_DIRECTOR_NAVIGATION_LINK_STYLES_V1)[number]
+export type CreativeDirectorNavigationCtaEmphasisV1 = (typeof CREATIVE_DIRECTOR_NAVIGATION_CTA_EMPHASES_V1)[number]
 
 export type CreativeDirectorOfferingV1 = { name: string; description?: string }
 
@@ -182,6 +202,17 @@ export type CreativeSiteDirectionV1 = {
   tone?: CreativeDirectorToneV1
   visualDirection?: DesignAssistanceThemeDirectionV1
   density?: CreativeDirectorDensityV1
+  /**
+   * V2-5C.1: SITE-level (sibling to density/tone above), not per-page --
+   * navigation provides site-wide identity coherence (Phase N), so the
+   * SAME choice threads into every page's header, the same way density
+   * already does. Absent -> composeNavigation's existing pre-V2-5C.1
+   * defaults, unchanged.
+   */
+  navigationSurfaceStyle?: CreativeDirectorNavigationSurfaceStyleV1
+  navigationContainment?: CreativeDirectorNavigationContainmentV1
+  navigationLinkStyle?: CreativeDirectorNavigationLinkStyleV1
+  navigationCtaEmphasis?: CreativeDirectorNavigationCtaEmphasisV1
   pageDirections: CreativeDirectorPageDirectionV1[]
 }
 
@@ -484,7 +515,23 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
     return { ok: false, errors: ["CreativeSiteDirectionV1 debe ser un objeto."] }
   }
 
-  if (hasPrivateKey(value) || !hasOnlyKeys(value, ["version", "roleKey", "strategyKey", "siteNarrative", "tone", "visualDirection", "density", "pageDirections"])) {
+  if (
+    hasPrivateKey(value) ||
+    !hasOnlyKeys(value, [
+      "version",
+      "roleKey",
+      "strategyKey",
+      "siteNarrative",
+      "tone",
+      "visualDirection",
+      "density",
+      "navigationSurfaceStyle",
+      "navigationContainment",
+      "navigationLinkStyle",
+      "navigationCtaEmphasis",
+      "pageDirections",
+    ])
+  ) {
     errors.push("CreativeSiteDirectionV1 contiene campos no permitidos.")
   }
 
@@ -497,6 +544,10 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
   const tone = optionalEnumValue(value.tone, CREATIVE_DIRECTOR_TONE_V1)
   const visualDirection = normalizeVisualDirection(value.visualDirection)
   const density = optionalEnumValue(value.density, CREATIVE_DIRECTOR_DENSITY_V1)
+  const navigationSurfaceStyle = optionalEnumValue(value.navigationSurfaceStyle, CREATIVE_DIRECTOR_NAVIGATION_SURFACE_STYLES_V1)
+  const navigationContainment = optionalEnumValue(value.navigationContainment, CREATIVE_DIRECTOR_NAVIGATION_CONTAINMENTS_V1)
+  const navigationLinkStyle = optionalEnumValue(value.navigationLinkStyle, CREATIVE_DIRECTOR_NAVIGATION_LINK_STYLES_V1)
+  const navigationCtaEmphasis = optionalEnumValue(value.navigationCtaEmphasis, CREATIVE_DIRECTOR_NAVIGATION_CTA_EMPHASES_V1)
 
   // HARD requirements: a role/strategy mismatch is a different contract
   // entirely (not a "bad field"), and a proposal with zero usable page
@@ -535,6 +586,10 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
       ...(tone ? { tone } : {}),
       ...(visualDirection && Object.keys(visualDirection).length ? { visualDirection } : {}),
       ...(density ? { density } : {}),
+      ...(navigationSurfaceStyle ? { navigationSurfaceStyle } : {}),
+      ...(navigationContainment ? { navigationContainment } : {}),
+      ...(navigationLinkStyle ? { navigationLinkStyle } : {}),
+      ...(navigationCtaEmphasis ? { navigationCtaEmphasis } : {}),
       pageDirections,
     },
   }

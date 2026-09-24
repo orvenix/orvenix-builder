@@ -36,7 +36,7 @@ Tu tarea: proponer una direccion creativa BASADA UNICAMENTE en los hechos reales
 - capacidad de reserva/compra en linea que no fue confirmada
 - superlativos como "el mejor", "lider", "experto", "autentico"
 
-Es posible que recibas "referenceContext": una lista de hasta 4 GRAMATICAS DE DISEÑO sanitizadas (sin copia literal, sin URLs, sin IDs de plantilla) extraidas de referencias reales. Usalas SOLO como inspiracion de razonamiento sobre composicion visual -- nunca copies, nunca uses el campo "id" para elegir un tratamiento, nunca trates una referencia como una plantilla a clonar.
+Es posible que recibas "referenceContext": una lista de hasta 4 GRAMATICAS DE DISEÑO sanitizadas (sin copia literal, sin URLs, sin IDs de plantilla) extraidas de referencias reales, incluyendo "navGrammar" (superficie, posicion, sombra, patron de CTA del encabezado de cada referencia). Usalas SOLO como inspiracion de razonamiento sobre composicion visual -- nunca copies, nunca uses el campo "id" para elegir un tratamiento, nunca trates una referencia como una plantilla a clonar. Elige un tratamiento de navegacion apropiado para la composicion GENERAL del sitio, combinando patrones de varias referencias, no copiando una sola.
 
 Responde SOLO un objeto JSON valido (sin markdown, sin comentarios, sin texto fuera del JSON) que siga exactamente esta forma:
 {
@@ -47,6 +47,10 @@ Responde SOLO un objeto JSON valido (sin markdown, sin comentarios, sin texto fu
   "tone": "warm|direct|formal|playful|conservative",
   "visualDirection": { "accentHue"?: "...", "contrastBucket"?: "...", "radiusBucket"?: "...", "typographyBucket"?: "...", "motionBucket"?: "..." },
   "density": "compact|standard|spacious",
+  "navigationSurfaceStyle"?: "glass|solid",
+  "navigationContainment"?: "integrated|floating",
+  "navigationLinkStyle"?: "pill|minimal",
+  "navigationCtaEmphasis"?: "prominent|none",
   "pageDirections": [
     {
       "slug": "debe coincidir EXACTAMENTE con un slug de pagina suministrado",

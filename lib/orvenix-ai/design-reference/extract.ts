@@ -15,10 +15,15 @@ import {
   type DesignPersonality,
   type DesignReference,
   type DesignReferenceExtractionMetadata,
+  type DesignReferenceNavGrammar,
   type DistinctiveTrait,
   type ExtractionSignal,
   type HeroBackgroundTreatment,
   type HeroMediaStrategy,
+  type NavCtaPattern,
+  type NavPosition,
+  type NavShadowBehavior,
+  type NavSurfaceTreatment,
   type PagePurpose,
   type RadiusTendency,
   type SectionRole,
@@ -455,6 +460,119 @@ function deriveDesignPersonality(themeMode: ThemeMode, mediaStrategy: HeroMediaS
   return "unknown"
 }
 
+/**
+ * V2-5C.1: bounded region of text most likely to actually BE the header/
+ * nav markup -- same simple slicing technique as extractHeroRegion
+ * (first tag through a bounded window), never a full AST parse. Scoped
+ * to the first <nav>/<header> tag found so a shadow/CTA/icon class
+ * belonging to some LATER, unrelated section of the page is never
+ * misattributed to the header.
+ */
+function extractNavRegion(text: string): { region: string; shellClassName: string } {
+  const match = text.match(/<(nav|header)\b([^>]*)>/)
+  if (!match || match.index === undefined) return { region: text.slice(0, 2000), shellClassName: "" }
+  const tagName = match[1]
+  const shellClassMatch = match[2].match(/className=["']([^"']*)["']/)
+  const closeIndex = text.indexOf(`</${tagName}>`, match.index)
+  const end = closeIndex === -1 ? Math.min(text.length, match.index + 2500) : Math.min(closeIndex + tagName.length + 3, match.index + 2500)
+  return { region: text.slice(match.index, end), shellClassName: shellClassMatch ? shellClassMatch[1] : "" }
+}
+
+/**
+ * V2-5C.1 refinement: surface treatment is read ONLY from the header's
+ * OWN outer shell className (the <nav>/<header> tag's own attribute) --
+ * never the whole region body. A small accent-colored logo badge or
+ * icon button nested INSIDE the header (eg. a "bg-slate-950" cart icon)
+ * is not the header's surface and must never be misread as one; only
+ * the shell's own background/blur classes count.
+ */
+function detectNavSurfaceTreatment(shellClassName: string): NavSurfaceTreatment {
+  const hasBlur = /backdrop-blur/.test(shellClassName)
+  const hasWhite = /bg-white\b/.test(shellClassName)
+  const hasDark = /bg-(slate|gray|zinc|neutral)-950\b|bg-black\b|bg-\[#0[0-9a-fA-F]{2,6}\]/.test(shellClassName)
+  if (hasDark && hasBlur) return "dark-glass"
+  if (hasWhite && hasBlur) return "light-glass"
+  if (hasWhite && !hasBlur) return "solid"
+  if (hasBlur) return "light-glass"
+  return "unknown"
+}
+
+function detectNavPosition(shellClassName: string): NavPosition {
+  if (/\bfixed\b/.test(shellClassName)) return "fixed"
+  if (/\bsticky\b/.test(shellClassName)) return "sticky"
+  return "unknown"
+}
+
+function detectNavShadowBehavior(shellClassName: string, navRegion: string, signals: Set<ExtractionSignal>): NavShadowBehavior {
+  const hasShadow = /shadow-(sm|md|lg|xl|2xl)\b|shadow-black/.test(shellClassName)
+  if (!hasShadow) return "none"
+  const isScrollDriven = /useState/.test(navRegion) && /scroll/i.test(navRegion)
+  if (isScrollDriven) {
+    signals.add("nav-scroll-state-shadow")
+    return "scroll-triggered"
+  }
+  return "static"
+}
+
+function detectNavCtaPattern(navRegion: string, signals: Set<ExtractionSignal>): NavCtaPattern {
+  const hasIconActions = /ShoppingCart|ShoppingBag|<Search\b|<Heart\b|<Bell\b/.test(navRegion)
+  const buttonLikeCount = countMatches(navRegion, /rounded-(full|xl|lg)[^"]{0,80}\bbg-/g)
+  if (hasIconActions) signals.add("nav-icon-actions")
+  if (hasIconActions && buttonLikeCount === 0) return "icon-actions-only"
+  if (buttonLikeCount >= 2) return "dual-cta"
+  if (buttonLikeCount === 1) return "prominent-single"
+  if (hasIconActions) return "icon-actions-only"
+  return "unknown"
+}
+
+function detectNavHasTwoTierBar(navRegion: string, signals: Set<ExtractionSignal>): boolean {
+  const hasContactIcons = /\bPhone\b|\bClock\b|\bMapPin\b/.test(navRegion)
+  if (hasContactIcons) signals.add("nav-two-tier-bar")
+  return hasContactIcons
+}
+
+/**
+ * V2-5C.1: 17-18 of the 25 references import the SAME shared component
+ * (app/webs/_shared/components/EnhancedSiteNav.tsx) rather than defining
+ * their own header -- its actual structural classes (fixed positioning,
+ * dark glass surface, scroll-triggered shadow, single prominent CTA, no
+ * two-tier bar) live in that shared file, never in any individual
+ * reference's own page.tsx/layout.tsx text, so no regex over a per-
+ * reference file could ever see them. This fixed override is the
+ * "small, unavoidable, justified" extraction override the audit
+ * anticipated -- it is not a per-reference guess, it is a verified fact
+ * about literally-shared code (confirmed by reading EnhancedSiteNav.tsx
+ * directly), applied uniformly to every reference that imports it.
+ */
+const SHARED_NAV_GRAMMAR: DesignReferenceNavGrammar = {
+  surfaceTreatment: "dark-glass",
+  position: "fixed",
+  shadowBehavior: "scroll-triggered",
+  ctaPattern: "prominent-single",
+  hasTwoTierBar: false,
+}
+
+function extractNavGrammar(
+  sharedNavPresent: boolean,
+  homeText: string,
+  layoutText: string,
+  navbarComponentText: string,
+  signals: Set<ExtractionSignal>,
+): DesignReferenceNavGrammar {
+  if (sharedNavPresent) return SHARED_NAV_GRAMMAR
+
+  const navSourceText = navbarComponentText || `${homeText}\n${layoutText}`
+  const { region: navRegion, shellClassName } = extractNavRegion(navSourceText)
+
+  return {
+    surfaceTreatment: detectNavSurfaceTreatment(shellClassName),
+    position: detectNavPosition(shellClassName),
+    shadowBehavior: detectNavShadowBehavior(shellClassName, navRegion, signals),
+    ctaPattern: detectNavCtaPattern(navRegion, signals),
+    hasTwoTierBar: detectNavHasTwoTierBar(navRegion, signals),
+  }
+}
+
 function pageCountBucketOf(pageCount: number): DesignReference["pageGrammar"]["pageCountBucket"] {
   if (pageCount <= 1) return "single-page"
   if (pageCount <= 3) return "few-pages"
@@ -481,6 +599,18 @@ export function extractDesignReference(candidate: WebsCandidate, repoRoot: strin
   const signals = new Set<ExtractionSignal>()
   const sharedNavPresent = /_shared\/components\/EnhancedSiteNav/.test(fullText)
   if (sharedNavPresent) signals.add("shared-nav-import")
+
+  /*
+   * V2-5C.1: a minority of references (audit: 5/25) define their OWN
+   * header component at this exact conventional path instead of using
+   * the shared component or an inline header -- read it too, purely for
+   * STRUCTURAL nav grammar detection (Tailwind class patterns), same
+   * regex-heuristic method as everything else in this file. Absent for
+   * every other reference (readIfExists returns "" safely).
+   */
+  const navbarComponentText = readIfExists(join(dirPath, "_site", "components", "Navbar.tsx"))
+  if (navbarComponentText) signals.add("custom-navbar-component-file")
+  const navGrammar = extractNavGrammar(sharedNavPresent, homeText, layoutText, navbarComponentText, signals)
 
   const heroRegion = extractHeroRegion(fullText)
   const themeMode = detectThemeMode(fullText, signals)
@@ -574,6 +704,7 @@ export function extractDesignReference(candidate: WebsCandidate, repoRoot: strin
             : "unknown",
       contactPattern: detectContactPattern(fullText, pageFolders),
     },
+    navGrammar,
     distinctiveTraits: traits,
     extraction: {
       extractorVersion: 1,
