@@ -94,6 +94,13 @@ export function buildCreativeDirectorRequestV1(params: {
       ...(params.business.services?.length ? { services: boundOfferings(params.business.services) } : {}),
       ...(params.business.products?.length ? { products: boundOfferings(params.business.products) } : {}),
       ...(params.business.businessEvidenceSummary ? { businessEvidenceSummary: params.business.businessEvidenceSummary } : {}),
+      /*
+       * V2-5G: bounded boolean/count signal only, mirroring
+       * businessEvidenceSummary -- the real product names above already
+       * exist for offering-grounding (realFactsByPageSlug, unchanged
+       * since V2-S1), this adds no new raw commercial data.
+       */
+      ...(params.business.products?.length ? { hasProducts: true, productCount: params.business.products.length } : {}),
     },
     ...(params.designMemoryContext ? { designMemory: params.designMemoryContext } : {}),
     pages: params.architecture.pages.map((page) => {

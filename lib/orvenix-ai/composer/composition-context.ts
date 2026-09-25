@@ -245,4 +245,17 @@ export const PREMIUM_COMPOSITION_TREATMENTS: readonly PremiumCompositionTreatmen
 export type BookingPresentation = "standard" | "booking-card"
 export const BOOKING_PRESENTATIONS: readonly BookingPresentation[] = ["standard", "booking-card"]
 
+/**
+ * V2-5G: bounded pricing PRESENTATION only. "tier-highlight" never implies
+ * a real price, discount, billing cadence, feature entitlement, or a
+ * "most popular"/"recommended by customers"/performance claim -- it only
+ * varies safe geometry (background tint, border/surface emphasis, CTA
+ * variant, spacing/scale) on one tier. Eligible only when real structured
+ * pricing evidence would matter is irrelevant here (no such evidence
+ * exists in this phase); "standard" (or absent) reproduces the existing
+ * pre-V2-5G plain grid exactly.
+ */
+export type PricingTreatment = "standard" | "tier-highlight"
+export const PRICING_TREATMENTS: readonly PricingTreatment[] = ["standard", "tier-highlight"]
+
 export { resolveContentDensity, type ContentDensity } from "./variant-selector"

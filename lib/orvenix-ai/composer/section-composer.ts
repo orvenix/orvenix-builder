@@ -22,6 +22,7 @@ import {
   NAVIGATION_LINK_STYLES,
   NAVIGATION_SURFACE_STYLES,
   PREMIUM_COMPOSITION_TREATMENTS,
+  PRICING_TREATMENTS,
   PROCESS_VARIANTS,
   PROCESS_WEIGHTS,
   SECTION_TONE_POOLS,
@@ -1657,6 +1658,44 @@ function premiumFallbackTreatment(treatment: PremiumCompositionTreatment, itemCo
   return undefined
 }
 
+function pricingTreatmentFor(context: SectionCompositionContext): "standard" | "tier-highlight" | undefined {
+  return context.richComposition && context.aiPreferredPricingTreatment && (PRICING_TREATMENTS as readonly string[]).includes(context.aiPreferredPricingTreatment)
+    ? context.aiPreferredPricingTreatment
+    : undefined
+}
+
+/**
+ * PRICING tier-highlight -- V2-5G. Presentation-only geometry: the
+ * highlighted tier (the middle item for 3, the last for 2) gets a
+ * background tint, a heavier border, scale/spacing emphasis, and a
+ * primary-variant CTA; every other tier gets a plain surface and a
+ * secondary-variant CTA. No badge, no "mas popular"/"recomendado por
+ * clientes"/performance label, no price, no numeric claim -- the tier
+ * name/description are whatever composeCardGridSection already resolved
+ * (real offering or generic fallback copy), untouched here. The CTA label
+ * reuses the same safe, non-transactional wording already used elsewhere
+ * in this file ("Solicitar informacion") and points at the canonical
+ * "#contacto" anchor -- never a fake checkout/cart action.
+ */
+function pricingTierLayout(
+  nodes: Record<string, ComposedNode>,
+  items: Array<[string, string]>,
+  textColors: { heading: string; body: string },
+): string {
+  const highlightIndex = items.length >= 3 ? 1 : items.length - 1
+  const cards = items.map(([title, body], index) => {
+    const isHighlighted = index === highlightIndex
+    const cardTitle = headingNode(nodes, title, title, 3, { size: "xl", weight: "bold", color: isHighlighted ? "#0369a1" : textColors.heading })
+    const cardText = textNode(nodes, title + " texto", body, { color: textColors.body })
+    const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: title + " boton", props: { label: "Solicitar información", href: "#contacto", variant: isHighlighted ? "primary" : "secondary", size: "md" } }))
+    const cardClassName = isHighlighted
+      ? "flex flex-col gap-3 rounded-[1.5rem] border-2 border-sky-300 bg-sky-50 p-6 shadow-xl shadow-sky-900/10 md:-translate-y-2 md:scale-[1.03]"
+      : "flex flex-col gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm"
+    return wrapperNode(nodes, title, cardClassName, [cardTitle, cardText, cta], "article")
+  })
+  return wrapperNode(nodes, "Grid pricing", "grid gap-5 md:grid-cols-3 md:items-center", cards)
+}
+
 function bentoLayout(
   nodes: Record<string, ComposedNode>,
   role: SectionRole,
@@ -1775,8 +1814,12 @@ function composeCardGridSection(
   const requestedPremiumTreatment = premiumCompositionTreatment(context)
   const mediaAsset = context.resolvedMediaAsset?.src.trim() ? { src: context.resolvedMediaAsset.src.trim(), alt: context.resolvedMediaAsset.alt } : undefined
   const effectivePremiumTreatment = requestedPremiumTreatment ? premiumFallbackTreatment(requestedPremiumTreatment, finalItems.length, Boolean(mediaAsset)) : undefined
+  const requestedPricingTreatment = role === "pricing" ? pricingTreatmentFor(context) : undefined
 
-  if (effectivePremiumTreatment && role !== "pricing" && role !== "process") {
+  if (requestedPricingTreatment === "tier-highlight" && finalItems.length >= 2 && finalItems.length <= STRUCTURAL_TREATMENT_MAX_ITEMS) {
+    layoutVariant = "tier-highlight"
+    grid = pricingTierLayout(nodes, finalItems, textColors)
+  } else if (effectivePremiumTreatment && role !== "pricing" && role !== "process") {
     layoutVariant = effectivePremiumTreatment
     if (effectivePremiumTreatment === "featured-asymmetric") grid = asymmetricFeaturedLayout(nodes, role, finalItems, textColors)
     else if (effectivePremiumTreatment === "editorial-alternating") grid = alternatingRowsLayout(nodes, role, finalItems, textColors)

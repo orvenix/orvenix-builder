@@ -61,8 +61,15 @@ function startsWordIn(text: string, keyword: string): boolean {
   return new RegExp(`\\b${keyword}`).test(text)
 }
 
-function inferSiteType(context: OrvenixAIContext) {
-  const text = normalize(
+/**
+ * Shared, normalized classification text -- the same real, structured
+ * signals inferSiteType has always used (industry/description/request/
+ * real service+product names), extracted so a second classifier
+ * (hasPricingSignal, V2-5G) can reuse it without re-deriving or
+ * diverging from what inferSiteType itself sees.
+ */
+function classificationText(context: OrvenixAIContext): string {
+  return normalize(
     [
       context.business?.industry,
       context.business?.description,
@@ -80,6 +87,58 @@ function inferSiteType(context: OrvenixAIContext) {
       ...(context.business?.products ?? []).map((product) => product.name),
     ].join(" "),
   )
+}
+
+/**
+ * True when `word` appears as a COMPLETE word in `text` -- unlike
+ * startsWordIn (a deliberate PREFIX match used for stemming, eg. "dent"
+ * catching "dentista"), this requires both boundaries. Pricing-signal
+ * tokens need this stricter form: a prefix match on "precio" would also
+ * catch "precioso"/"preciosa" ("precious"), and on "plan" would catch
+ * "planta"/"planificacion"/"planear" -- ordinary words with nothing to do
+ * with a pricing plan. Whole-word matching on the more specific plural
+ * "planes" avoids that collision entirely.
+ */
+function hasWholeWord(text: string, word: string): boolean {
+  return new RegExp(`\\b${word}\\b`).test(text)
+}
+
+/**
+ * V2-5G: PRICING MUST REQUIRE A POSITIVE SEMANTIC SIGNAL. Being classified
+ * "agency" (or any other siteType) is never sufficient by itself -- an
+ * ordinary creative/marketing agency or consultancy with no pricing/plan/
+ * package/subscription mention must not receive a pricing section merely
+ * for existing. Bounded, deterministic, resolved BEFORE any composition
+ * step (never depends on Creative Director output). Deliberately excludes
+ * the bare stem "plan" (see hasWholeWord's doc comment) and any other
+ * single ambiguous word -- every token here is specific enough that its
+ * ordinary Spanish/English meaning IS a pricing/plan/package/subscription
+ * concept.
+ */
+function hasPricingSignal(context: OrvenixAIContext): boolean {
+  const text = classificationText(context)
+  const tokens = [
+    "precio",
+    "precios",
+    "planes",
+    "paquete",
+    "paquetes",
+    "suscripcion",
+    "suscripciones",
+    "subscription",
+    "subscriptions",
+    "membresia",
+    "membresias",
+    "membership",
+    "memberships",
+    "tarifa",
+    "tarifas",
+  ]
+  return tokens.some((token) => hasWholeWord(text, token))
+}
+
+function inferSiteType(context: OrvenixAIContext) {
+  const text = classificationText(context)
 
   const has = (keyword: string) => startsWordIn(text, keyword)
 
@@ -193,6 +252,7 @@ export function buildSiteArchitecture(
   context: OrvenixAIContext,
 ): OrvenixSiteArchitecture {
   const siteType = inferSiteType(context)
+  const pricingSignal = hasPricingSignal(context)
 
   if (siteType === "health") {
     return {
@@ -351,10 +411,21 @@ export function buildSiteArchitecture(
           "Explicar capacidades.",
           "catalog",
           [
+            /*
+             * V2-5G: PRICING MUST REQUIRE A POSITIVE SEMANTIC SIGNAL.
+             * Being an "agency" is never sufficient by itself -- an
+             * ordinary creative/marketing agency with no pricing/plan/
+             * package/subscription mention (hasPricingSignal, above)
+             * must not receive a pricing section just because the role
+             * exists on this recipe. Health/restaurant/ecommerce recipes
+             * are deliberately untouched regardless of any signal --
+             * pricing must not appear on a clinic or menu page.
+             */
             "navigation",
             "hero",
             "services",
             "process",
+            ...(pricingSignal ? (["pricing"] as const) : []),
             "faq",
             "cta",
             "footer",
@@ -452,10 +523,18 @@ export function buildSiteArchitecture(
         "Explicar la oferta.",
         "catalog",
         [
+          /*
+           * V2-5G: same positive-signal gate as the agency recipe above --
+           * covers a generic "business" classification (eg. a SaaS/
+           * subscription/package request that doesn't contain any
+           * agency/health/restaurant/ecommerce keyword) that has a real
+           * pricing/plan/package/subscription mention.
+           */
           "navigation",
           "hero",
           "services",
           "process",
+          ...(pricingSignal ? (["pricing"] as const) : []),
           "faq",
           "cta",
           "footer",

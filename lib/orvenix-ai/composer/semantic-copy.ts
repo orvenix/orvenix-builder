@@ -132,8 +132,17 @@ export function resolveCtaCopy(
   let { body, label } = fallback
 
   if (isProductCatalog) {
-    body = "Contáctanos para conocer más sobre lo que ofrecemos."
-    label = "Ver catálogo"
+    /*
+     * V2-5G: grounded in the already-resolved, real siteType
+     * classification (never invented here) -- a restaurant's product
+     * listing is a menu, not a generic catalog, so its CTA wording says
+     * so. Every other products+catalog business (ecommerce, or any
+     * other siteType with real products) keeps the existing "Ver
+     * catálogo" wording, unchanged.
+     */
+    const isRestaurantMenu = context.siteType === "restaurant"
+    body = isRestaurantMenu ? "Contáctanos para conocer más sobre nuestro menú." : "Contáctanos para conocer más sobre lo que ofrecemos."
+    label = isRestaurantMenu ? "Ver menú" : "Ver catálogo"
   }
 
   if (objective) {

@@ -109,6 +109,8 @@ export interface SectionCompositionContext {
   aiPreferredBookingPresentation?: "standard" | "booking-card"
   /** V2-5E: bounded premium composition intent. Presentation only; never CSS/copy/facts. */
   aiPremiumCompositionTreatment?: "standard-grid" | "featured-asymmetric" | "editorial-alternating" | "bento" | "media-led"
+  /** V2-5G: bounded pricing presentation intent only -- never a real price, discount, billing claim, or performance/popularity claim. */
+  aiPreferredPricingTreatment?: "standard" | "tier-highlight"
   /** Internal, already-resolved usable asset source. Empty/absent means media-dependent geometry must not render. */
   resolvedMediaAsset?: { src: string; alt?: string }
   resolvedGalleryAssets?: Array<{ src: string; alt?: string }>

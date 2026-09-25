@@ -44,7 +44,7 @@ export type DeterministicCreativeDirectorModeV1 =
 export type DeterministicRichCompositionOverridesV1 = Partial<
   Pick<CreativeDirectorPageDirectionV1, "heroTreatment" | "processTreatment" | "twoItemLayoutTreatment" | "sectionToneStrategy">
 > &
-  Partial<Pick<CreativeSiteDirectionV1, "navigationSurfaceStyle" | "navigationContainment" | "navigationLinkStyle" | "navigationCtaEmphasis" | "trustTreatment" | "testimonialTreatment" | "bookingPresentation" | "premiumCompositionTreatment">>
+  Partial<Pick<CreativeSiteDirectionV1, "navigationSurfaceStyle" | "navigationContainment" | "navigationLinkStyle" | "navigationCtaEmphasis" | "trustTreatment" | "testimonialTreatment" | "bookingPresentation" | "premiumCompositionTreatment" | "pricingTreatment">>
 
 function baseValidProposal(request: CreativeDirectorRequestV1): CreativeSiteDirectionV1 {
   const firstPage = request.pages[0]
@@ -85,7 +85,7 @@ export function createDeterministicCreativeDirectorProviderV1(
 
         case "rich_valid": {
           const proposal = baseValidProposal(request)
-          const { navigationSurfaceStyle, navigationContainment, navigationLinkStyle, navigationCtaEmphasis, trustTreatment, testimonialTreatment, bookingPresentation, premiumCompositionTreatment, ...pageLevelOverrides } = richOverrides ?? {}
+          const { navigationSurfaceStyle, navigationContainment, navigationLinkStyle, navigationCtaEmphasis, trustTreatment, testimonialTreatment, bookingPresentation, premiumCompositionTreatment, pricingTreatment, ...pageLevelOverrides } = richOverrides ?? {}
           Object.assign(proposal, {
             ...(navigationSurfaceStyle ? { navigationSurfaceStyle } : {}),
             ...(navigationContainment ? { navigationContainment } : {}),
@@ -95,6 +95,7 @@ export function createDeterministicCreativeDirectorProviderV1(
             ...(testimonialTreatment ? { testimonialTreatment } : {}),
             ...(bookingPresentation ? { bookingPresentation } : {}),
             ...(premiumCompositionTreatment ? { premiumCompositionTreatment } : {}),
+            ...(pricingTreatment ? { pricingTreatment } : {}),
           })
           for (const direction of proposal.pageDirections) {
             Object.assign(direction, pageLevelOverrides)
@@ -141,6 +142,19 @@ export function createDeterministicCreativeDirectorProviderV1(
           const editorialDominant = dominant((r) => r.sectionGrammar.backgroundRhythm === "alternating" || r.distinctiveTraits.includes("paired-layout-section"))
           const mediaLedDominant = dominant((r) => r.assetGrammar.placement === "card-thumbnails" || r.assetGrammar.placement === "hero-full-bleed" || r.heroGrammar.mediaStrategy === "photography")
           const featuredAsymmetricDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("paired-layout") || r.sectionGrammar.recurringTreatments.includes("credibility-stat-row"))
+          /*
+           * V2-5G: reasons over the EXISTING pricing-flavored design
+           * reference grammar (pricing-tiers/pricing-tier-highlight/
+           * pricing-driven) -- never a reference id -- into the bounded
+           * pricingTreatment decision. Presentation only: this never
+           * implies a real price/discount/performance claim.
+           */
+          const pricingTierDominant = dominant(
+            (r) =>
+              r.sectionGrammar.recurringTreatments.includes("pricing-tiers") ||
+              r.distinctiveTraits.includes("pricing-tier-highlight") ||
+              r.conversionGrammar.ctaStrategy === "pricing-driven",
+          )
 
           for (const direction of proposal.pageDirections) {
             direction.heroTreatment = abstractGlowDominant ? "abstract-glow" : "standard"
@@ -181,6 +195,7 @@ export function createDeterministicCreativeDirectorProviderV1(
                 : featuredAsymmetricDominant
                   ? "featured-asymmetric"
                   : "standard-grid"
+          proposal.pricingTreatment = pricingTierDominant ? "tier-highlight" : "standard"
 
           return proposal
         }

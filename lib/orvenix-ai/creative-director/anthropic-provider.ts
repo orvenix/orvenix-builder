@@ -39,7 +39,8 @@ Tu tarea: proponer una direccion creativa BASADA UNICAMENTE en los hechos reales
 Es posible que recibas "referenceContext": una lista de hasta 4 GRAMATICAS DE DISEÑO sanitizadas (sin copia literal, sin URLs, sin IDs de plantilla) extraidas de referencias reales, incluyendo "navGrammar" y tokens como rated-card-grid, logo-strip, credibility-stat-row, rated-person-card o booking-form. Usalas SOLO como inspiracion de razonamiento sobre composicion visual -- nunca copies, nunca uses el campo "id" para elegir un tratamiento, nunca trates una referencia como una plantilla a clonar. Elige tratamientos apropiados para la composicion GENERAL del sitio, combinando patrones de varias referencias, no copiando una sola. Los tratamientos de confianza/testimonios/reserva son SOLO presentacion: no inventes ratings, reseñas, autores, logos, credenciales, staff, disponibilidad ni calendarios.
 
 Es posible que "business" incluya "businessEvidenceSummary" (hasPeople, peopleCount, hasTestimonials, testimonialCount, hasWhatsapp, hasContactDetails) -- son solo CONTEOS/BOOLEANOS, nunca nombres, citas ni datos de contacto reales. Usalos UNICAMENTE para decidir si trustTreatment="person-cards" o testimonialTreatment="rating-led" tienen datos reales que mostrar; si hasPeople/hasTestimonials es false o el campo esta ausente, NO elijas esos tratamientos (el resultado quedaria vacio o generico). Nunca uses este resumen para escribir ningun texto, cifra o afirmacion nueva.
-premiumCompositionTreatment es SOLO intención de composición visual general: no CSS, no clases, no grillas libres, no copy, no datos, no URLs, no selección por id de referencia.
+premiumCompositionTreatment es SOLO intención de composición visual general: no CSS, no clases, no grillas libres, no copy, no datos, no URLs, no selección por id de referencia. Cuando "business" incluya "hasProducts"/"productCount" (conteo real de productos suministrados, sin nombres), y la pagina tenga una seccion "products", tratamientos como "featured-asymmetric", "bento" o "media-led" son buenas opciones para dar mayor jerarquia visual a esos productos reales -- nunca elijas "media-led" si no hay un activo visual real disponible (eso lo decide Orvenix, no tu).
+"pricingTreatment" ("standard" o "tier-highlight") es SOLO geometria de presentacion para la seccion "pricing": "tier-highlight" puede resaltar un tier con fondo, borde o escala, pero JAMAS implica un precio real, descuento, ciclo de facturacion, limite de caracteristicas, ni una etiqueta de "mas popular"/"recomendado por clientes"/rendimiento -- Orvenix nunca renderiza esa etiqueta aunque la elijas. Elige "pricing"/pricingTreatment solo cuando la seccion "pricing" ya este disponible en las paginas suministradas; nunca la inventes ni la agregues a paginas que no la tienen.
 
 Responde SOLO un objeto JSON valido (sin markdown, sin comentarios, sin texto fuera del JSON) que siga exactamente esta forma:
 {
@@ -58,6 +59,7 @@ Responde SOLO un objeto JSON valido (sin markdown, sin comentarios, sin texto fu
   "testimonialTreatment"?: "standard|rating-led",
   "bookingPresentation"?: "standard|booking-card",
   "premiumCompositionTreatment"?: "standard-grid|featured-asymmetric|editorial-alternating|bento|media-led",
+  "pricingTreatment"?: "standard|tier-highlight",
   "pageDirections": [
     {
       "slug": "debe coincidir EXACTAMENTE con un slug de pagina suministrado",

@@ -91,6 +91,8 @@ export const CREATIVE_DIRECTOR_TRUST_TREATMENTS_V1 = ["standard", "credibility-s
 export const CREATIVE_DIRECTOR_TESTIMONIAL_TREATMENTS_V1 = ["standard", "rating-led"] as const
 export const CREATIVE_DIRECTOR_BOOKING_PRESENTATIONS_V1 = ["standard", "booking-card"] as const
 export const CREATIVE_DIRECTOR_PREMIUM_COMPOSITION_TREATMENTS_V1 = ["standard-grid", "featured-asymmetric", "editorial-alternating", "bento", "media-led"] as const
+/** V2-5G: bounded pricing PRESENTATION only -- never a real price, discount, billing claim, or performance/popularity claim. See composer/composition-context.ts's PricingTreatment doc comment. */
+export const CREATIVE_DIRECTOR_PRICING_TREATMENTS_V1 = ["standard", "tier-highlight"] as const
 
 export type CreativeDirectorRoleKeyV1 = (typeof CREATIVE_DIRECTOR_ROLE_KEYS_V1)[number]
 export type CreativeDirectorStrategyKeyV1 = (typeof CREATIVE_DIRECTOR_STRATEGY_KEYS_V1)[number]
@@ -113,6 +115,7 @@ export type CreativeDirectorTrustTreatmentV1 = (typeof CREATIVE_DIRECTOR_TRUST_T
 export type CreativeDirectorTestimonialTreatmentV1 = (typeof CREATIVE_DIRECTOR_TESTIMONIAL_TREATMENTS_V1)[number]
 export type CreativeDirectorBookingPresentationV1 = (typeof CREATIVE_DIRECTOR_BOOKING_PRESENTATIONS_V1)[number]
 export type CreativeDirectorPremiumCompositionTreatmentV1 = (typeof CREATIVE_DIRECTOR_PREMIUM_COMPOSITION_TREATMENTS_V1)[number]
+export type CreativeDirectorPricingTreatmentV1 = (typeof CREATIVE_DIRECTOR_PRICING_TREATMENTS_V1)[number]
 
 export type CreativeDirectorOfferingV1 = { name: string; description?: string }
 
@@ -145,6 +148,17 @@ export type CreativeDirectorBusinessContextV1 = {
    * supplied -- behavior is identical to pre-V2-5F.
    */
   businessEvidenceSummary?: BusinessEvidenceSummaryV1
+  /**
+   * V2-5G: bounded boolean/count PRESENTATION-ELIGIBILITY signal only,
+   * mirroring businessEvidenceSummary's data-minimization pattern -- lets
+   * the Creative Director know whether stronger product hierarchy
+   * (premiumCompositionTreatment) or pricingTreatment="tier-highlight"
+   * would actually have real product/offering content to render. No
+   * pricing-specific summary exists because no real pricing evidence
+   * exists anywhere upstream in this phase.
+   */
+  hasProducts?: boolean
+  productCount?: number
 }
 
 export type CreativeDirectorDesignMemoryContextV1 = {
@@ -237,6 +251,13 @@ export type CreativeSiteDirectionV1 = {
   bookingPresentation?: CreativeDirectorBookingPresentationV1
   /** V2-5E: site-level, bounded layout intent. Orvenix resolves concrete wrappers/classes locally. */
   premiumCompositionTreatment?: CreativeDirectorPremiumCompositionTreatmentV1
+  /**
+   * V2-5G: bounded pricing PRESENTATION only. Never implies real prices,
+   * discounts, billing cadence, feature entitlements, or a "most
+   * popular"/performance claim -- the composer only ever varies safe
+   * geometry (background tint, border/surface emphasis, CTA variant).
+   */
+  pricingTreatment?: CreativeDirectorPricingTreatmentV1
   pageDirections: CreativeDirectorPageDirectionV1[]
 }
 
@@ -557,6 +578,7 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
       "testimonialTreatment",
       "bookingPresentation",
       "premiumCompositionTreatment",
+      "pricingTreatment",
       "pageDirections",
     ])
   ) {
@@ -580,6 +602,7 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
   const testimonialTreatment = optionalEnumValue(value.testimonialTreatment, CREATIVE_DIRECTOR_TESTIMONIAL_TREATMENTS_V1)
   const bookingPresentation = optionalEnumValue(value.bookingPresentation, CREATIVE_DIRECTOR_BOOKING_PRESENTATIONS_V1)
   const premiumCompositionTreatment = optionalEnumValue(value.premiumCompositionTreatment, CREATIVE_DIRECTOR_PREMIUM_COMPOSITION_TREATMENTS_V1)
+  const pricingTreatment = optionalEnumValue(value.pricingTreatment, CREATIVE_DIRECTOR_PRICING_TREATMENTS_V1)
 
   // HARD requirements: a role/strategy mismatch is a different contract
   // entirely (not a "bad field"), and a proposal with zero usable page
@@ -626,6 +649,7 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
       ...(testimonialTreatment ? { testimonialTreatment } : {}),
       ...(bookingPresentation ? { bookingPresentation } : {}),
       ...(premiumCompositionTreatment ? { premiumCompositionTreatment } : {}),
+      ...(pricingTreatment ? { pricingTreatment } : {}),
       pageDirections,
     },
   }
