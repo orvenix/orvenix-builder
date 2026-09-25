@@ -44,7 +44,7 @@ export type DeterministicCreativeDirectorModeV1 =
 export type DeterministicRichCompositionOverridesV1 = Partial<
   Pick<CreativeDirectorPageDirectionV1, "heroTreatment" | "processTreatment" | "twoItemLayoutTreatment" | "sectionToneStrategy">
 > &
-  Partial<Pick<CreativeSiteDirectionV1, "navigationSurfaceStyle" | "navigationContainment" | "navigationLinkStyle" | "navigationCtaEmphasis">>
+  Partial<Pick<CreativeSiteDirectionV1, "navigationSurfaceStyle" | "navigationContainment" | "navigationLinkStyle" | "navigationCtaEmphasis" | "trustTreatment" | "testimonialTreatment" | "bookingPresentation">>
 
 function baseValidProposal(request: CreativeDirectorRequestV1): CreativeSiteDirectionV1 {
   const firstPage = request.pages[0]
@@ -85,12 +85,15 @@ export function createDeterministicCreativeDirectorProviderV1(
 
         case "rich_valid": {
           const proposal = baseValidProposal(request)
-          const { navigationSurfaceStyle, navigationContainment, navigationLinkStyle, navigationCtaEmphasis, ...pageLevelOverrides } = richOverrides ?? {}
+          const { navigationSurfaceStyle, navigationContainment, navigationLinkStyle, navigationCtaEmphasis, trustTreatment, testimonialTreatment, bookingPresentation, ...pageLevelOverrides } = richOverrides ?? {}
           Object.assign(proposal, {
             ...(navigationSurfaceStyle ? { navigationSurfaceStyle } : {}),
             ...(navigationContainment ? { navigationContainment } : {}),
             ...(navigationLinkStyle ? { navigationLinkStyle } : {}),
             ...(navigationCtaEmphasis ? { navigationCtaEmphasis } : {}),
+            ...(trustTreatment ? { trustTreatment } : {}),
+            ...(testimonialTreatment ? { testimonialTreatment } : {}),
+            ...(bookingPresentation ? { bookingPresentation } : {}),
           })
           for (const direction of proposal.pageDirections) {
             Object.assign(direction, pageLevelOverrides)
@@ -128,6 +131,11 @@ export function createDeterministicCreativeDirectorProviderV1(
           const photographyDominant = dominant((r) => r.heroGrammar.mediaStrategy === "photography" && r.heroGrammar.backgroundTreatment === "full-bleed-photo")
           const numberedProcessDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("numbered-process"))
           const pairedLayoutDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("paired-layout"))
+          const credibilityStatsDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("credibility-stat-row") || r.distinctiveTraits.includes("credibility-stat-row"))
+          const logoStripDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("logo-strip") || r.distinctiveTraits.includes("logo-strip"))
+          const ratedCardDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("rated-card-grid"))
+          const personCardDominant = dominant((r) => r.distinctiveTraits.includes("rated-person-card"))
+          const bookingDominant = dominant((r) => r.conversionGrammar.contactPattern === "booking-form")
 
           for (const direction of proposal.pageDirections) {
             direction.heroTreatment = abstractGlowDominant ? "abstract-glow" : "standard"
@@ -156,6 +164,9 @@ export function createDeterministicCreativeDirectorProviderV1(
           const noNavCtaDominant = dominant((r) => r.navGrammar.ctaPattern === "icon-actions-only" || r.navGrammar.ctaPattern === "none")
           proposal.navigationSurfaceStyle = solidNavDominant ? "solid" : "glass"
           proposal.navigationCtaEmphasis = noNavCtaDominant ? "none" : "prominent"
+          proposal.trustTreatment = logoStripDominant ? "logo-strip" : personCardDominant ? "person-cards" : credibilityStatsDominant ? "credibility-strip" : "standard"
+          proposal.testimonialTreatment = ratedCardDominant || personCardDominant ? "rating-led" : "standard"
+          proposal.bookingPresentation = bookingDominant ? "booking-card" : "standard"
 
           return proposal
         }

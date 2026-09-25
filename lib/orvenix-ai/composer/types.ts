@@ -101,6 +101,11 @@ export interface SectionCompositionContext {
   aiPreferredNavigationLinkStyle?: "pill" | "minimal"
   aiPreferredNavigationCtaEmphasis?: "prominent" | "none"
 
+  /** V2-5D: bounded trust/conversion presentation hints. Enums only, never content or claims. */
+  aiPreferredTrustTreatment?: "standard" | "credibility-strip" | "person-cards" | "logo-strip"
+  aiPreferredTestimonialTreatment?: "standard" | "rating-led"
+  aiPreferredBookingPresentation?: "standard" | "booking-card"
+
   /**
    * V2-5B: real, structured, caller-supplied content ONLY -- consumed
    * exactly like `services`/`products` above (same shape, same
@@ -117,6 +122,21 @@ export interface SectionCompositionContext {
   credibilityStats?: Array<{
     value: string
     label: string
+  }>
+  /** V2-5D: real structured trust data only. The composer never fabricates these. */
+  trustPeople?: Array<{
+    name: string
+    role?: string
+    detail?: string
+  }>
+  trustOrganizations?: Array<{
+    name: string
+  }>
+  testimonials?: Array<{
+    quote: string
+    author?: string
+    role?: string
+    rating?: string
   }>
 
   /**

@@ -224,4 +224,22 @@ export const NAVIGATION_LINK_STYLES: readonly NavigationLinkStyle[] = ["pill", "
 export type NavigationCtaEmphasis = "prominent" | "none"
 export const NAVIGATION_CTA_EMPHASES: readonly NavigationCtaEmphasis[] = ["prominent", "none"]
 
+/**
+ * V2-5D: Reference Grammar Activation + Vertical Trust. These are
+ * bounded PRESENTATION preferences only. They never carry facts and
+ * never force the composer to invent people, logos, ratings, review
+ * counts, certifications, awards, availability, or business claims.
+ * Each rich treatment is eligible only when matching real structured
+ * content is supplied in SectionCompositionContext; otherwise the
+ * existing safe fallback composition renders.
+ */
+export type TrustTreatment = "standard" | "credibility-strip" | "person-cards" | "logo-strip"
+export const TRUST_TREATMENTS: readonly TrustTreatment[] = ["standard", "credibility-strip", "person-cards", "logo-strip"]
+
+export type TestimonialTreatment = "standard" | "rating-led"
+export const TESTIMONIAL_TREATMENTS: readonly TestimonialTreatment[] = ["standard", "rating-led"]
+
+export type BookingPresentation = "standard" | "booking-card"
+export const BOOKING_PRESENTATIONS: readonly BookingPresentation[] = ["standard", "booking-card"]
+
 export { resolveContentDensity, type ContentDensity } from "./variant-selector"

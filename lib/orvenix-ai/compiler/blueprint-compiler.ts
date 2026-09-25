@@ -237,7 +237,10 @@ function compilePage(
       options.creativeDirection?.navigationSurfaceStyle ||
       options.creativeDirection?.navigationContainment ||
       options.creativeDirection?.navigationLinkStyle ||
-      options.creativeDirection?.navigationCtaEmphasis,
+      options.creativeDirection?.navigationCtaEmphasis ||
+      options.creativeDirection?.trustTreatment ||
+      options.creativeDirection?.testimonialTreatment ||
+      options.creativeDirection?.bookingPresentation,
   )
 
   for (const [sectionIndex, section] of page.sections.entries()) {
@@ -282,6 +285,9 @@ function compilePage(
         ...(options.creativeDirection?.navigationContainment ? { aiPreferredNavigationContainment: options.creativeDirection.navigationContainment } : {}),
         ...(options.creativeDirection?.navigationLinkStyle ? { aiPreferredNavigationLinkStyle: options.creativeDirection.navigationLinkStyle } : {}),
         ...(options.creativeDirection?.navigationCtaEmphasis ? { aiPreferredNavigationCtaEmphasis: options.creativeDirection.navigationCtaEmphasis } : {}),
+        ...(options.creativeDirection?.trustTreatment ? { aiPreferredTrustTreatment: options.creativeDirection.trustTreatment } : {}),
+        ...(options.creativeDirection?.testimonialTreatment ? { aiPreferredTestimonialTreatment: options.creativeDirection.testimonialTreatment } : {}),
+        ...(options.creativeDirection?.bookingPresentation ? { aiPreferredBookingPresentation: options.creativeDirection.bookingPresentation } : {}),
         ...(richComposition ? { richComposition: true } : {}),
         ...(options.accentColor ? { accentColor: options.accentColor } : {}),
       },

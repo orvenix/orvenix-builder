@@ -36,7 +36,7 @@ Tu tarea: proponer una direccion creativa BASADA UNICAMENTE en los hechos reales
 - capacidad de reserva/compra en linea que no fue confirmada
 - superlativos como "el mejor", "lider", "experto", "autentico"
 
-Es posible que recibas "referenceContext": una lista de hasta 4 GRAMATICAS DE DISEÑO sanitizadas (sin copia literal, sin URLs, sin IDs de plantilla) extraidas de referencias reales, incluyendo "navGrammar" (superficie, posicion, sombra, patron de CTA del encabezado de cada referencia). Usalas SOLO como inspiracion de razonamiento sobre composicion visual -- nunca copies, nunca uses el campo "id" para elegir un tratamiento, nunca trates una referencia como una plantilla a clonar. Elige un tratamiento de navegacion apropiado para la composicion GENERAL del sitio, combinando patrones de varias referencias, no copiando una sola.
+Es posible que recibas "referenceContext": una lista de hasta 4 GRAMATICAS DE DISEÑO sanitizadas (sin copia literal, sin URLs, sin IDs de plantilla) extraidas de referencias reales, incluyendo "navGrammar" y tokens como rated-card-grid, logo-strip, credibility-stat-row, rated-person-card o booking-form. Usalas SOLO como inspiracion de razonamiento sobre composicion visual -- nunca copies, nunca uses el campo "id" para elegir un tratamiento, nunca trates una referencia como una plantilla a clonar. Elige tratamientos apropiados para la composicion GENERAL del sitio, combinando patrones de varias referencias, no copiando una sola. Los tratamientos de confianza/testimonios/reserva son SOLO presentacion: no inventes ratings, reseñas, autores, logos, credenciales, staff, disponibilidad ni calendarios.
 
 Responde SOLO un objeto JSON valido (sin markdown, sin comentarios, sin texto fuera del JSON) que siga exactamente esta forma:
 {
@@ -51,6 +51,9 @@ Responde SOLO un objeto JSON valido (sin markdown, sin comentarios, sin texto fu
   "navigationContainment"?: "integrated|floating",
   "navigationLinkStyle"?: "pill|minimal",
   "navigationCtaEmphasis"?: "prominent|none",
+  "trustTreatment"?: "standard|credibility-strip|person-cards|logo-strip",
+  "testimonialTreatment"?: "standard|rating-led",
+  "bookingPresentation"?: "standard|booking-card",
   "pageDirections": [
     {
       "slug": "debe coincidir EXACTAMENTE con un slug de pagina suministrado",

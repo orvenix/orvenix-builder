@@ -25,6 +25,9 @@ import {
   PROCESS_WEIGHTS,
   SECTION_TONE_POOLS,
   SECTION_TONE_STRATEGIES,
+  BOOKING_PRESENTATIONS,
+  TESTIMONIAL_TREATMENTS,
+  TRUST_TREATMENTS,
   SERVICES_VARIANTS,
   SERVICES_WEIGHTS,
   TRUST_VARIANTS,
@@ -466,10 +469,73 @@ function composeCredibilityStats(context: SectionCompositionContext, nodes: Reco
   return { role: "trust", rootId: root, nodes, purpose: "Generar confianza con cifras reales, sin inventar estadisticas." }
 }
 
+function usableTrustPeople(context: SectionCompositionContext) {
+  return (context.trustPeople ?? [])
+    .map((person) => ({ name: person.name?.trim(), role: person.role?.trim(), detail: person.detail?.trim() }))
+    .filter((person) => Boolean(person.name)) as Array<{ name: string; role?: string; detail?: string }>
+}
+
+function usableTrustOrganizations(context: SectionCompositionContext) {
+  return (context.trustOrganizations ?? [])
+    .map((organization) => ({ name: organization.name?.trim() }))
+    .filter((organization): organization is { name: string } => Boolean(organization.name))
+}
+
+function usableTestimonials(context: SectionCompositionContext) {
+  return (context.testimonials ?? [])
+    .map((testimonial) => ({
+      quote: testimonial.quote?.trim(),
+      author: testimonial.author?.trim(),
+      role: testimonial.role?.trim(),
+      rating: testimonial.rating?.trim(),
+    }))
+    .filter((testimonial) => Boolean(testimonial.quote)) as Array<{ quote: string; author?: string; role?: string; rating?: string }>
+}
+
+function composePersonTrust(context: SectionCompositionContext, nodes: Record<string, ComposedNode>): ComposedSection | null {
+  const people = usableTrustPeople(context)
+  if (people.length === 0) return null
+
+  const textColors = readableTextColorsFor(TRUST_SECTION_BACKGROUND)
+  const heading = headingNode(nodes, "Título equipo", "Personas que te acompañan", 2, { align: "center", color: textColors.heading })
+  const cards = people.slice(0, 3).map((person) => {
+    const name = headingNode(nodes, person.name, person.name, 3, { size: "lg" })
+    const role = person.role ? textNode(nodes, `${person.name} rol`, person.role, { size: "sm", weight: "bold", color: "#0369a1" }) : null
+    const detail = person.detail ? textNode(nodes, `${person.name} detalle`, person.detail) : null
+    return wrapperNode(nodes, `Persona ${person.name}`, "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm", [name, ...(role ? [role] : []), ...(detail ? [detail] : [])], "article")
+  })
+  const grid = wrapperNode(nodes, "Grid personas confianza", "grid gap-4 md:grid-cols-3", cards)
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Confianza (personas)", props: { maxWidth: "xl", paddingY: "lg", paddingX: "lg", background: TRUST_SECTION_BACKGROUND }, children: [heading, grid] }))
+  return { role: "trust", rootId: root, nodes, purpose: "Generar confianza con personas reales suministradas por el negocio." }
+}
+
+function composeOrganizationTrust(context: SectionCompositionContext, nodes: Record<string, ComposedNode>): ComposedSection | null {
+  const organizations = usableTrustOrganizations(context)
+  if (organizations.length === 0) return null
+
+  const textColors = readableTextColorsFor(TRUST_SECTION_BACKGROUND)
+  const heading = headingNode(nodes, "Título organizaciones", "Organizaciones relacionadas", 2, { align: "center", color: textColors.heading })
+  const chips = organizations.slice(0, 6).map((organization) =>
+    wrapperNode(nodes, `Organización ${organization.name}`, "flex min-h-20 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-4 text-center text-sm font-semibold text-slate-700 shadow-sm", [textNode(nodes, organization.name, organization.name, { align: "center", weight: "bold" })]),
+  )
+  const strip = wrapperNode(nodes, "Strip organizaciones", "grid gap-3 sm:grid-cols-3 lg:grid-cols-6", chips)
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Confianza (organizaciones)", props: { maxWidth: "xl", paddingY: "lg", paddingX: "lg", background: TRUST_SECTION_BACKGROUND }, children: [heading, strip] }))
+  return { role: "trust", rootId: root, nodes, purpose: "Mostrar organizaciones reales suministradas sin inventar logos ni afiliaciones." }
+}
+
 function composeTrust(context: SectionCompositionContext = {}): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
 
   if (context.richComposition) {
+    const trustTreatment = context.aiPreferredTrustTreatment && (TRUST_TREATMENTS as readonly string[]).includes(context.aiPreferredTrustTreatment) ? context.aiPreferredTrustTreatment : undefined
+    if (trustTreatment === "logo-strip") {
+      const organizations = composeOrganizationTrust(context, nodes)
+      if (organizations) return organizations
+    }
+    if (trustTreatment === "person-cards") {
+      const people = composePersonTrust(context, nodes)
+      if (people) return people
+    }
     const stats = composeCredibilityStats(context, nodes)
     if (stats) return stats
   }
@@ -573,7 +639,7 @@ function composeTrust(context: SectionCompositionContext = {}): ComposedSection 
 /** V2-3.1: same fix as trust -- this role never set an explicit section background either (see TRUST_SECTION_BACKGROUND's comment). */
 const TESTIMONIALS_SECTION_BACKGROUND = "#ffffff"
 
-function composeTestimonials(): ComposedSection {
+function composeTestimonials(context: SectionCompositionContext = {}): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const textColors = readableTextColorsFor(TESTIMONIALS_SECTION_BACKGROUND)
 
@@ -607,6 +673,19 @@ function composeTestimonials(): ComposedSection {
   )
 
   const cards: string[] = []
+  const realTestimonials = usableTestimonials(context)
+  const testimonialTreatment = context.aiPreferredTestimonialTreatment && (TESTIMONIAL_TREATMENTS as readonly string[]).includes(context.aiPreferredTestimonialTreatment) ? context.aiPreferredTestimonialTreatment : undefined
+
+  if (context.richComposition && realTestimonials.length > 0) {
+    for (const [index, testimonial] of realTestimonials.slice(0, 3).entries()) {
+      const rating = testimonialTreatment === "rating-led" && testimonial.rating ? textNode(nodes, `Rating testimonio ${index + 1}`, testimonial.rating, { size: "sm", weight: "bold", color: "#0369a1" }) : null
+      const quote = textNode(nodes, `Testimonio ${index + 1}`, testimonial.quote)
+      const author = testimonial.author ? headingNode(nodes, `Autor testimonio ${index + 1}`, testimonial.author, 3, { size: "sm" }) : null
+      const role = testimonial.role ? textNode(nodes, `Rol testimonio ${index + 1}`, testimonial.role, { size: "sm" }) : null
+      const card = wrapperNode(nodes, `Tarjeta testimonio ${index + 1}`, "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm", [ ...(rating ? [rating] : []), quote, ...(author ? [author] : []), ...(role ? [role] : []) ], "article")
+      cards.push(card)
+    }
+  } else {
 
   for (let index = 1; index <= 3; index++) {
     const quote = add(
@@ -652,6 +731,7 @@ function composeTestimonials(): ComposedSection {
     )
 
     cards.push(card)
+  }
   }
 
   const grid = add(
@@ -1729,11 +1809,12 @@ function composeContact(
     descriptionText = heroCopy.description
   }
 
-  const heading = headingNode(nodes, "Titulo contacto", titleText, isConversionPage ? 1 : 2, { align: "left" })
-  const copy = textNode(nodes, "Texto contacto", descriptionText, { size: "lg" })
+  const bookingPresentation = context.aiPreferredBookingPresentation && (BOOKING_PRESENTATIONS as readonly string[]).includes(context.aiPreferredBookingPresentation) ? context.aiPreferredBookingPresentation : undefined
+  const heading = headingNode(nodes, "Titulo contacto", bookingPresentation === "booking-card" ? "Agenda el siguiente paso" : titleText, isConversionPage ? 1 : 2, { align: "left" })
+  const copy = textNode(nodes, "Texto contacto", bookingPresentation === "booking-card" ? "Solicita una cita o conversación y confirma los detalles directamente con el negocio." : descriptionText, { size: "lg" })
   const phone = textNode(nodes, "Telefono", "WhatsApp: +52 000 000 0000")
   const email = textNode(nodes, "Correo", "Correo: contacto@tumarca.com")
-  const primaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto", props: { label: "Enviar mensaje", href: "#", variant: "primary", size: "lg" } }))
+  const primaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto", props: { label: bookingPresentation === "booking-card" ? "Solicitar cita" : "Enviar mensaje", href: "#", variant: "primary", size: "lg" } }))
 
   const contentChildren = [heading, copy, phone, email]
 
@@ -1745,7 +1826,13 @@ function composeContact(
     contentChildren.push(primaryCta)
   }
 
-  const card = wrapperNode(nodes, "Tarjeta contacto", "rounded-[1.75rem] border border-sky-100 bg-white p-8 shadow-xl shadow-sky-900/10", contentChildren, "article")
+  const bookingNote = bookingPresentation === "booking-card" ? textNode(nodes, "Nota reserva", "Los detalles se confirman directamente al contactar.", { size: "sm", color: "#64748b" }) : null
+  if (bookingNote) contentChildren.push(bookingNote)
+
+  const cardClassName = bookingPresentation === "booking-card"
+    ? "rounded-[2rem] border border-sky-200 bg-white p-8 shadow-2xl shadow-sky-900/10"
+    : "rounded-[1.75rem] border border-sky-100 bg-white p-8 shadow-xl shadow-sky-900/10"
+  const card = wrapperNode(nodes, "Tarjeta contacto", cardClassName, contentChildren, "article")
   const root = add(nodes, createComposedNode({ type: "section", displayName: "Contacto", props: { maxWidth: "lg", paddingY: "xl", paddingX: "lg", background: "#eef8ff" }, children: [card] }))
   return { role: "contact", rootId: root, nodes, purpose: "Facilitar contacto y siguiente paso." }
 }
@@ -1888,7 +1975,7 @@ export function composeSection(
       return composeTrust(context)
 
     case "testimonials":
-      return composeTestimonials()
+      return composeTestimonials(context)
 
     default:
       return null
