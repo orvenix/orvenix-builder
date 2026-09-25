@@ -89,6 +89,7 @@ export const CREATIVE_DIRECTOR_NAVIGATION_CTA_EMPHASES_V1 = ["prominent", "none"
 export const CREATIVE_DIRECTOR_TRUST_TREATMENTS_V1 = ["standard", "credibility-strip", "person-cards", "logo-strip"] as const
 export const CREATIVE_DIRECTOR_TESTIMONIAL_TREATMENTS_V1 = ["standard", "rating-led"] as const
 export const CREATIVE_DIRECTOR_BOOKING_PRESENTATIONS_V1 = ["standard", "booking-card"] as const
+export const CREATIVE_DIRECTOR_PREMIUM_COMPOSITION_TREATMENTS_V1 = ["standard-grid", "featured-asymmetric", "editorial-alternating", "bento", "media-led"] as const
 
 export type CreativeDirectorRoleKeyV1 = (typeof CREATIVE_DIRECTOR_ROLE_KEYS_V1)[number]
 export type CreativeDirectorStrategyKeyV1 = (typeof CREATIVE_DIRECTOR_STRATEGY_KEYS_V1)[number]
@@ -110,6 +111,7 @@ export type CreativeDirectorNavigationCtaEmphasisV1 = (typeof CREATIVE_DIRECTOR_
 export type CreativeDirectorTrustTreatmentV1 = (typeof CREATIVE_DIRECTOR_TRUST_TREATMENTS_V1)[number]
 export type CreativeDirectorTestimonialTreatmentV1 = (typeof CREATIVE_DIRECTOR_TESTIMONIAL_TREATMENTS_V1)[number]
 export type CreativeDirectorBookingPresentationV1 = (typeof CREATIVE_DIRECTOR_BOOKING_PRESENTATIONS_V1)[number]
+export type CreativeDirectorPremiumCompositionTreatmentV1 = (typeof CREATIVE_DIRECTOR_PREMIUM_COMPOSITION_TREATMENTS_V1)[number]
 
 export type CreativeDirectorOfferingV1 = { name: string; description?: string }
 
@@ -223,6 +225,8 @@ export type CreativeSiteDirectionV1 = {
   trustTreatment?: CreativeDirectorTrustTreatmentV1
   testimonialTreatment?: CreativeDirectorTestimonialTreatmentV1
   bookingPresentation?: CreativeDirectorBookingPresentationV1
+  /** V2-5E: site-level, bounded layout intent. Orvenix resolves concrete wrappers/classes locally. */
+  premiumCompositionTreatment?: CreativeDirectorPremiumCompositionTreatmentV1
   pageDirections: CreativeDirectorPageDirectionV1[]
 }
 
@@ -542,6 +546,7 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
       "trustTreatment",
       "testimonialTreatment",
       "bookingPresentation",
+      "premiumCompositionTreatment",
       "pageDirections",
     ])
   ) {
@@ -564,6 +569,7 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
   const trustTreatment = optionalEnumValue(value.trustTreatment, CREATIVE_DIRECTOR_TRUST_TREATMENTS_V1)
   const testimonialTreatment = optionalEnumValue(value.testimonialTreatment, CREATIVE_DIRECTOR_TESTIMONIAL_TREATMENTS_V1)
   const bookingPresentation = optionalEnumValue(value.bookingPresentation, CREATIVE_DIRECTOR_BOOKING_PRESENTATIONS_V1)
+  const premiumCompositionTreatment = optionalEnumValue(value.premiumCompositionTreatment, CREATIVE_DIRECTOR_PREMIUM_COMPOSITION_TREATMENTS_V1)
 
   // HARD requirements: a role/strategy mismatch is a different contract
   // entirely (not a "bad field"), and a proposal with zero usable page
@@ -609,6 +615,7 @@ export function validateCreativeSiteDirectionV1(value: unknown): CreativeDirecto
       ...(trustTreatment ? { trustTreatment } : {}),
       ...(testimonialTreatment ? { testimonialTreatment } : {}),
       ...(bookingPresentation ? { bookingPresentation } : {}),
+      ...(premiumCompositionTreatment ? { premiumCompositionTreatment } : {}),
       pageDirections,
     },
   }

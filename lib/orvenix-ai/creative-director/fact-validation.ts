@@ -160,6 +160,7 @@ export function sanitizeCreativeSiteDirectionV1(
 ): CreativeSiteDirectionV1 {
   return {
     ...proposal,
+    ...(proposal.premiumCompositionTreatment ? { premiumCompositionTreatment: proposal.premiumCompositionTreatment } : {}),
     pageDirections: proposal.pageDirections.map((direction) =>
       sanitizeCreativeDirectorPageDirectionV1(direction, factsByPageSlug.get(direction.slug) ?? { offeringNames: [] }),
     ),

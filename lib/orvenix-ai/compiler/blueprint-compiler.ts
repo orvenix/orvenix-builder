@@ -240,7 +240,8 @@ function compilePage(
       options.creativeDirection?.navigationCtaEmphasis ||
       options.creativeDirection?.trustTreatment ||
       options.creativeDirection?.testimonialTreatment ||
-      options.creativeDirection?.bookingPresentation,
+      options.creativeDirection?.bookingPresentation ||
+      options.creativeDirection?.premiumCompositionTreatment,
   )
 
   for (const [sectionIndex, section] of page.sections.entries()) {
@@ -288,6 +289,7 @@ function compilePage(
         ...(options.creativeDirection?.trustTreatment ? { aiPreferredTrustTreatment: options.creativeDirection.trustTreatment } : {}),
         ...(options.creativeDirection?.testimonialTreatment ? { aiPreferredTestimonialTreatment: options.creativeDirection.testimonialTreatment } : {}),
         ...(options.creativeDirection?.bookingPresentation ? { aiPreferredBookingPresentation: options.creativeDirection.bookingPresentation } : {}),
+        ...(options.creativeDirection?.premiumCompositionTreatment ? { aiPremiumCompositionTreatment: options.creativeDirection.premiumCompositionTreatment } : {}),
         ...(richComposition ? { richComposition: true } : {}),
         ...(options.accentColor ? { accentColor: options.accentColor } : {}),
       },

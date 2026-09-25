@@ -44,7 +44,7 @@ export type DeterministicCreativeDirectorModeV1 =
 export type DeterministicRichCompositionOverridesV1 = Partial<
   Pick<CreativeDirectorPageDirectionV1, "heroTreatment" | "processTreatment" | "twoItemLayoutTreatment" | "sectionToneStrategy">
 > &
-  Partial<Pick<CreativeSiteDirectionV1, "navigationSurfaceStyle" | "navigationContainment" | "navigationLinkStyle" | "navigationCtaEmphasis" | "trustTreatment" | "testimonialTreatment" | "bookingPresentation">>
+  Partial<Pick<CreativeSiteDirectionV1, "navigationSurfaceStyle" | "navigationContainment" | "navigationLinkStyle" | "navigationCtaEmphasis" | "trustTreatment" | "testimonialTreatment" | "bookingPresentation" | "premiumCompositionTreatment">>
 
 function baseValidProposal(request: CreativeDirectorRequestV1): CreativeSiteDirectionV1 {
   const firstPage = request.pages[0]
@@ -85,7 +85,7 @@ export function createDeterministicCreativeDirectorProviderV1(
 
         case "rich_valid": {
           const proposal = baseValidProposal(request)
-          const { navigationSurfaceStyle, navigationContainment, navigationLinkStyle, navigationCtaEmphasis, trustTreatment, testimonialTreatment, bookingPresentation, ...pageLevelOverrides } = richOverrides ?? {}
+          const { navigationSurfaceStyle, navigationContainment, navigationLinkStyle, navigationCtaEmphasis, trustTreatment, testimonialTreatment, bookingPresentation, premiumCompositionTreatment, ...pageLevelOverrides } = richOverrides ?? {}
           Object.assign(proposal, {
             ...(navigationSurfaceStyle ? { navigationSurfaceStyle } : {}),
             ...(navigationContainment ? { navigationContainment } : {}),
@@ -94,6 +94,7 @@ export function createDeterministicCreativeDirectorProviderV1(
             ...(trustTreatment ? { trustTreatment } : {}),
             ...(testimonialTreatment ? { testimonialTreatment } : {}),
             ...(bookingPresentation ? { bookingPresentation } : {}),
+            ...(premiumCompositionTreatment ? { premiumCompositionTreatment } : {}),
           })
           for (const direction of proposal.pageDirections) {
             Object.assign(direction, pageLevelOverrides)
@@ -136,6 +137,10 @@ export function createDeterministicCreativeDirectorProviderV1(
           const ratedCardDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("rated-card-grid"))
           const personCardDominant = dominant((r) => r.distinctiveTraits.includes("rated-person-card"))
           const bookingDominant = dominant((r) => r.conversionGrammar.contactPattern === "booking-form")
+          const bentoDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("rated-card-grid") || r.distinctiveTraits.includes("catalog-browsing"))
+          const editorialDominant = dominant((r) => r.sectionGrammar.backgroundRhythm === "alternating" || r.distinctiveTraits.includes("paired-layout-section"))
+          const mediaLedDominant = dominant((r) => r.assetGrammar.placement === "card-thumbnails" || r.assetGrammar.placement === "hero-full-bleed" || r.heroGrammar.mediaStrategy === "photography")
+          const featuredAsymmetricDominant = dominant((r) => r.sectionGrammar.recurringTreatments.includes("paired-layout") || r.sectionGrammar.recurringTreatments.includes("credibility-stat-row"))
 
           for (const direction of proposal.pageDirections) {
             direction.heroTreatment = abstractGlowDominant ? "abstract-glow" : "standard"
@@ -167,6 +172,15 @@ export function createDeterministicCreativeDirectorProviderV1(
           proposal.trustTreatment = logoStripDominant ? "logo-strip" : personCardDominant ? "person-cards" : credibilityStatsDominant ? "credibility-strip" : "standard"
           proposal.testimonialTreatment = ratedCardDominant || personCardDominant ? "rating-led" : "standard"
           proposal.bookingPresentation = bookingDominant ? "booking-card" : "standard"
+          proposal.premiumCompositionTreatment = bentoDominant
+            ? "bento"
+            : mediaLedDominant
+              ? "media-led"
+              : editorialDominant
+                ? "editorial-alternating"
+                : featuredAsymmetricDominant
+                  ? "featured-asymmetric"
+                  : "standard-grid"
 
           return proposal
         }

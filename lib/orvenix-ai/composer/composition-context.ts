@@ -239,6 +239,9 @@ export const TRUST_TREATMENTS: readonly TrustTreatment[] = ["standard", "credibi
 export type TestimonialTreatment = "standard" | "rating-led"
 export const TESTIMONIAL_TREATMENTS: readonly TestimonialTreatment[] = ["standard", "rating-led"]
 
+export type PremiumCompositionTreatment = "standard-grid" | "featured-asymmetric" | "editorial-alternating" | "bento" | "media-led"
+export const PREMIUM_COMPOSITION_TREATMENTS: readonly PremiumCompositionTreatment[] = ["standard-grid", "featured-asymmetric", "editorial-alternating", "bento", "media-led"]
+
 export type BookingPresentation = "standard" | "booking-card"
 export const BOOKING_PRESENTATIONS: readonly BookingPresentation[] = ["standard", "booking-card"]
 

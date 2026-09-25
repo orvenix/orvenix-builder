@@ -21,6 +21,7 @@ import {
   NAVIGATION_CTA_EMPHASES,
   NAVIGATION_LINK_STYLES,
   NAVIGATION_SURFACE_STYLES,
+  PREMIUM_COMPOSITION_TREATMENTS,
   PROCESS_VARIANTS,
   PROCESS_WEIGHTS,
   SECTION_TONE_POOLS,
@@ -34,6 +35,7 @@ import {
   TRUST_WEIGHTS,
   TWO_ITEM_LAYOUT_VARIANTS,
   TWO_ITEM_LAYOUT_WEIGHTS,
+  type PremiumCompositionTreatment,
   type SectionTone,
 } from "./composition-context"
 import {
@@ -319,7 +321,7 @@ function composeFAQ(
 /** V2-3.1: same fix as trust -- this role never set an explicit section background either (see TRUST_SECTION_BACKGROUND's comment). */
 const GALLERY_SECTION_BACKGROUND = "#ffffff"
 
-function composeGallery(): ComposedSection {
+function composeGallery(context: SectionCompositionContext = {}): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const textColors = readableTextColorsFor(GALLERY_SECTION_BACKGROUND)
 
@@ -353,15 +355,18 @@ function composeGallery(): ComposedSection {
 
   const images: string[] = []
 
+  const usableGalleryAssets = (context.resolvedGalleryAssets ?? []).filter((asset) => asset.src.trim())
+
   for (let index = 1; index <= 6; index++) {
+    const asset = usableGalleryAssets[index - 1]
     const image = add(
       nodes,
       createComposedNode({
         type: "image",
         displayName: `Imagen galería ${index}`,
         props: {
-          src: "",
-          alt: `Imagen del negocio ${index}`,
+          src: asset?.src ?? "",
+          alt: asset?.alt ?? `Imagen del negocio ${index}`,
           objectFit: "cover",
           /*
            * V2-S1.1: real Pexels sources arrive with mixed intrinsic
@@ -383,20 +388,27 @@ function composeGallery(): ComposedSection {
         },
       }),
     )
+    const span = index === 1 ? "md:col-span-4 md:row-span-2" : index === 2 || index === 3 ? "md:col-span-2" : "md:col-span-2"
     images.push(
-      wrapperNode(nodes, `Celda galería ${index}`, "relative aspect-square overflow-hidden rounded-xl bg-slate-100", [image]),
+      wrapperNode(nodes, `Celda galería ${index}`, `relative aspect-square overflow-hidden rounded-xl bg-slate-100 ${span}`, [image]),
     )
   }
+
+  const treatment = usableGalleryAssets.length > 0 ? premiumCompositionTreatment(context) : undefined
+  const gridClassName = treatment === "bento" || treatment === "featured-asymmetric"
+    ? "grid auto-rows-fr gap-4 md:grid-cols-6"
+    : treatment === "media-led"
+      ? "grid gap-4 md:grid-cols-[1.4fr_0.6fr]"
+      : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
 
   const grid = add(
     nodes,
     createComposedNode({
       type: "genericWrapper",
-      displayName: "Grid galería",
+      displayName: treatment === "bento" || treatment === "featured-asymmetric" ? "Bento galería" : treatment === "media-led" ? "Media-led galería" : "Grid galería",
       props: {
         tag: "div",
-        className:
-          "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+        className: gridClassName,
       },
       children: images,
     }),
@@ -1629,6 +1641,73 @@ function pairedLayout(
   return wrapperNode(nodes, "Pareja " + role, "grid gap-6 md:grid-cols-2", panels)
 }
 
+function premiumCompositionTreatment(context: SectionCompositionContext): PremiumCompositionTreatment | undefined {
+  return context.richComposition && context.aiPremiumCompositionTreatment && (PREMIUM_COMPOSITION_TREATMENTS as readonly string[]).includes(context.aiPremiumCompositionTreatment)
+    ? context.aiPremiumCompositionTreatment
+    : undefined
+}
+
+function premiumFallbackTreatment(treatment: PremiumCompositionTreatment, itemCount: number, hasUsableMediaAsset: boolean): PremiumCompositionTreatment | undefined {
+  if (treatment === "standard-grid") return "standard-grid"
+  if (treatment === "featured-asymmetric" && itemCount >= 3 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
+  if (treatment === "editorial-alternating" && itemCount >= 2 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
+  if (treatment === "bento" && itemCount >= 3 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
+  if (treatment === "media-led" && hasUsableMediaAsset && itemCount >= 2 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
+  if (itemCount >= 2 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return "editorial-alternating"
+  return undefined
+}
+
+function bentoLayout(
+  nodes: Record<string, ComposedNode>,
+  role: SectionRole,
+  items: Array<[string, string]>,
+  textColors: { heading: string; body: string },
+): string {
+  const cards = items.map(([title, body], index) => {
+    const iconName = cardIconName(role, index)
+    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
+    const cardTitle = headingNode(nodes, title, title, 3, { size: index === 0 ? "2xl" : "lg", weight: "bold", color: textColors.heading })
+    const cardText = textNode(nodes, title + " texto", body, { size: index === 0 ? "lg" : "sm", color: textColors.body })
+    const children = icon ? [icon, cardTitle, cardText] : [cardTitle, cardText]
+    const spanClass = index === 0
+      ? "md:col-span-4 md:row-span-2"
+      : index === 1
+        ? "md:col-span-2"
+        : index === 2
+          ? "md:col-span-2"
+          : "md:col-span-3"
+    return wrapperNode(nodes, `${title} bento`, `flex min-h-44 flex-col justify-between gap-4 rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm ${spanClass}`, children, "article")
+  })
+  return wrapperNode(nodes, "Bento " + role, "grid auto-rows-fr gap-4 md:grid-cols-6", cards)
+}
+
+function mediaLedLayout(
+  nodes: Record<string, ComposedNode>,
+  role: SectionRole,
+  items: Array<[string, string]>,
+  textColors: { heading: string; body: string },
+  mediaAsset: { src: string; alt?: string },
+): string {
+  const [[leadTitle, leadBody], ...rest] = items
+  const image = add(nodes, createComposedNode({ type: "image", displayName: `${leadTitle} imagen`, props: { src: mediaAsset.src, alt: mediaAsset.alt ?? leadTitle, objectFit: "cover", positionMode: "free" } }))
+  const media = wrapperNode(nodes, `${leadTitle} media`, "relative min-h-72 overflow-hidden rounded-[2rem] bg-slate-100", [image])
+  const leadHeading = headingNode(nodes, leadTitle, leadTitle, 3, { size: "2xl", weight: "extrabold", color: textColors.heading })
+  const leadText = textNode(nodes, leadTitle + " texto", leadBody, { size: "lg", color: textColors.body })
+  const leadContent = wrapperNode(nodes, `${leadTitle} contenido`, "flex flex-col justify-center gap-4", [leadHeading, leadText])
+  const lead = wrapperNode(nodes, `${leadTitle} layout media`, "grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch", [media, leadContent], "article")
+
+  const supporting = rest.map(([title, body], index) => {
+    const iconName = cardIconName(role, index + 1)
+    const icon = iconName ? iconNode(nodes, title + " ícono", iconName) : null
+    const titleNode = headingNode(nodes, title, title, 3, { size: "lg", weight: "bold", color: textColors.heading })
+    const bodyNode = textNode(nodes, title + " texto", body, { size: "sm", color: textColors.body })
+    const textStack = wrapperNode(nodes, `${title} stack`, "flex flex-col gap-1.5", [titleNode, bodyNode])
+    return wrapperNode(nodes, `${title} item`, "grid gap-3 rounded-2xl border border-slate-100 bg-white/80 p-4 sm:grid-cols-[auto_1fr] sm:items-start", icon ? [icon, textStack] : [textStack], "article")
+  })
+  const supportWrap = wrapperNode(nodes, "Media-led soporte " + role, "grid gap-3 md:grid-cols-2", supporting)
+  return wrapperNode(nodes, "Media-led " + role, "flex flex-col gap-5", [lead, supportWrap])
+}
+
 function composeCardGridSection(
   role: SectionRole,
   titleText: string,
@@ -1693,7 +1772,18 @@ function composeCardGridSection(
   let grid: string
   let layoutVariant = "cards"
 
-  if (context.richComposition && finalItems.length === 2) {
+  const requestedPremiumTreatment = premiumCompositionTreatment(context)
+  const mediaAsset = context.resolvedMediaAsset?.src.trim() ? { src: context.resolvedMediaAsset.src.trim(), alt: context.resolvedMediaAsset.alt } : undefined
+  const effectivePremiumTreatment = requestedPremiumTreatment ? premiumFallbackTreatment(requestedPremiumTreatment, finalItems.length, Boolean(mediaAsset)) : undefined
+
+  if (effectivePremiumTreatment && role !== "pricing" && role !== "process") {
+    layoutVariant = effectivePremiumTreatment
+    if (effectivePremiumTreatment === "featured-asymmetric") grid = asymmetricFeaturedLayout(nodes, role, finalItems, textColors)
+    else if (effectivePremiumTreatment === "editorial-alternating") grid = alternatingRowsLayout(nodes, role, finalItems, textColors)
+    else if (effectivePremiumTreatment === "bento") grid = bentoLayout(nodes, role, finalItems, textColors)
+    else if (effectivePremiumTreatment === "media-led" && mediaAsset) grid = mediaLedLayout(nodes, role, finalItems, textColors, mediaAsset)
+    else grid = cardsLayout(nodes, role, finalItems, defaultGridClassName)
+  } else if (context.richComposition && finalItems.length === 2) {
     /*
      * V2-5B C3 refinement: exactly two real items makes paired-layout
      * ELIGIBLE, not mandatory -- resolved through the same deterministic
@@ -1969,7 +2059,7 @@ export function composeSection(
       return composeFAQ(context)
 
     case "gallery":
-      return composeGallery()
+      return composeGallery(context)
 
     case "trust":
       return composeTrust(context)

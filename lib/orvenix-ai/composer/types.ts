@@ -105,6 +105,11 @@ export interface SectionCompositionContext {
   aiPreferredTrustTreatment?: "standard" | "credibility-strip" | "person-cards" | "logo-strip"
   aiPreferredTestimonialTreatment?: "standard" | "rating-led"
   aiPreferredBookingPresentation?: "standard" | "booking-card"
+  /** V2-5E: bounded premium composition intent. Presentation only; never CSS/copy/facts. */
+  aiPremiumCompositionTreatment?: "standard-grid" | "featured-asymmetric" | "editorial-alternating" | "bento" | "media-led"
+  /** Internal, already-resolved usable asset source. Empty/absent means media-dependent geometry must not render. */
+  resolvedMediaAsset?: { src: string; alt?: string }
+  resolvedGalleryAssets?: Array<{ src: string; alt?: string }>
 
   /**
    * V2-5B: real, structured, caller-supplied content ONLY -- consumed
