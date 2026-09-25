@@ -1902,11 +1902,28 @@ function composeContact(
   const bookingPresentation = context.aiPreferredBookingPresentation && (BOOKING_PRESENTATIONS as readonly string[]).includes(context.aiPreferredBookingPresentation) ? context.aiPreferredBookingPresentation : undefined
   const heading = headingNode(nodes, "Titulo contacto", bookingPresentation === "booking-card" ? "Agenda el siguiente paso" : titleText, isConversionPage ? 1 : 2, { align: "left" })
   const copy = textNode(nodes, "Texto contacto", bookingPresentation === "booking-card" ? "Solicita una cita o conversación y confirma los detalles directamente con el negocio." : descriptionText, { size: "lg" })
-  const phone = textNode(nodes, "Telefono", "WhatsApp: +52 000 000 0000")
-  const email = textNode(nodes, "Correo", "Correo: contacto@tumarca.com")
-  const primaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto", props: { label: bookingPresentation === "booking-card" ? "Solicitar cita" : "Enviar mensaje", href: "#", variant: "primary", size: "lg" } }))
 
-  const contentChildren = [heading, copy, phone, email]
+  // V2-5F: real, caller-supplied contact only. When any real contact value
+  // exists, never pad it out with the placeholder phone/email below --
+  // that would falsely imply invented details belong to this business.
+  const realContact = context.businessEvidence?.contact
+  const hasRealContact = Boolean(realContact?.whatsapp || realContact?.phone || realContact?.email)
+
+  const contactLineIds = hasRealContact
+    ? [
+        realContact?.whatsapp ? textNode(nodes, "WhatsApp", `WhatsApp: ${realContact.whatsapp}`) : null,
+        realContact?.phone ? textNode(nodes, "Telefono", `Telefono: ${realContact.phone}`) : null,
+        realContact?.email ? textNode(nodes, "Correo", `Correo: ${realContact.email}`) : null,
+      ].filter((id): id is string => Boolean(id))
+    : [
+        textNode(nodes, "Telefono", "WhatsApp: +52 000 000 0000"),
+        textNode(nodes, "Correo", "Correo: contacto@tumarca.com"),
+      ]
+
+  const primaryHref = realContact?.whatsapp ? `https://wa.me/${realContact.whatsapp}` : "#"
+  const primaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto", props: { label: bookingPresentation === "booking-card" ? "Solicitar cita" : "Enviar mensaje", href: primaryHref, variant: "primary", size: "lg" } }))
+
+  const contentChildren = [heading, copy, ...contactLineIds]
 
   if (isConversionPage) {
     const secondaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto secundario", props: { label: "Ver servicios", href: "#servicios", variant: "secondary", size: "lg" } }))

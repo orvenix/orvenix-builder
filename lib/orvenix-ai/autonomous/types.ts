@@ -2,6 +2,7 @@ import type { EditorTree } from "@/types/editor"
 import type { DesignPlannerPriorV1 } from "@/lib/orvenix-ai/design-memory/planner-prior"
 import type { SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2"
 import type { SiteCreationExternalThemeAdvisoryV1 } from "@/lib/orvenix-ai/site-creation/assistance"
+import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
 import type {
   OrvenixSiteArchitecture,
@@ -48,7 +49,10 @@ export interface AutonomousBusinessInput {
   testimonials?: Array<{
     quote: string
     author: string
+    role?: string
   }>
+
+  businessEvidence?: NormalizedSiteCreationBusinessEvidenceV1
 }
 
 export interface AutonomousSiteBuilderInput {

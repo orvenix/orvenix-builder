@@ -626,10 +626,11 @@ function businessContextForPage(params: {
     location: input.business.location,
     audience: input.business.audience,
     objective: input.business.objective,
-    phone: input.business.phone,
-    whatsapp: input.business.whatsapp,
-    email: input.business.email,
+    phone: input.business.businessEvidence?.contact?.phone ?? input.business.phone,
+    whatsapp: input.business.businessEvidence?.contact?.whatsapp ?? input.business.whatsapp,
+    email: input.business.businessEvidence?.contact?.email ?? input.business.email,
     address: input.business.address,
+    businessEvidence: input.business.businessEvidence,
     page: {
       name: page.name,
       slug: page.slug,
@@ -835,6 +836,7 @@ export async function runAutonomousMultiPageSiteBuilder(
       visualFamily: compositionVisualFamily,
       creativeDirection: input.creativeDirection,
       accentColor: themeColors(theme).accent,
+      businessEvidence: input.business.businessEvidence,
     },
   )
 

@@ -11,6 +11,7 @@ import type {
   OrvenixAIMutationPlan,
   OrvenixAISnapshot,
 } from "@/lib/orvenix-ai/mutation"
+import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
 
 export type OrvenixAgentMode =
   | "analyze"
@@ -77,6 +78,11 @@ export interface OrvenixAgentBusinessContext {
     description?: string
   }>
 
+  products?: Array<{
+    name: string
+    description?: string
+  }>
+
   pricing?: Array<{
     name: string
     price: string
@@ -86,7 +92,10 @@ export interface OrvenixAgentBusinessContext {
   testimonials?: Array<{
     quote: string
     author: string
+    role?: string
   }>
+
+  businessEvidence?: NormalizedSiteCreationBusinessEvidenceV1
 }
 
 export interface OrvenixAgentRequest {

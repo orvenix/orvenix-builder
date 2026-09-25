@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import * as Dialog from "@radix-ui/react-dialog"
-import { Bot, Eye, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react"
+import { Bot, ChevronDown, Eye, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react"
 
 import {
   runOrvenixSiteCreationAction,
@@ -18,6 +18,25 @@ type ServiceField = {
   name: string
   description: string
 }
+
+// V2-5F: real, caller-supplied business evidence only -- optional,
+// collapsed by default (see the "Informacion adicional" disclosure below).
+// Never pre-filled or inferred; empty rows are simply omitted on submit.
+type PersonField = {
+  id: string
+  name: string
+  role: string
+}
+
+type TestimonialField = {
+  id: string
+  quote: string
+  author: string
+  role: string
+}
+
+const MAX_EVIDENCE_PEOPLE = 3
+const MAX_EVIDENCE_TESTIMONIALS = 3
 
 type PreviewState = {
   previewId: string
@@ -35,6 +54,14 @@ function createServiceField(): ServiceField {
     name: "",
     description: "",
   }
+}
+
+function createPersonField(): PersonField {
+  return { id: Math.random().toString(36).slice(2), name: "", role: "" }
+}
+
+function createTestimonialField(): TestimonialField {
+  return { id: Math.random().toString(36).slice(2), quote: "", author: "", role: "" }
 }
 
 function createClientAttemptKey() {
@@ -84,6 +111,9 @@ export function CreateSiteWithAI() {
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [services, setServices] = useState<ServiceField[]>([createServiceField(), createServiceField(), createServiceField()])
+  const [showEvidence, setShowEvidence] = useState(false)
+  const [people, setPeople] = useState<PersonField[]>([])
+  const [testimonials, setTestimonials] = useState<TestimonialField[]>([])
   const [isGenerating, startGenerating] = useTransition()
   const [isCreating, startCreating] = useTransition()
 
@@ -96,6 +126,30 @@ export function CreateSiteWithAI() {
 
   function removeService(id: string) {
     setServices((current) => current.length <= 1 ? current : current.filter((service) => service.id !== id))
+  }
+
+  function addPerson() {
+    setPeople((current) => current.length >= MAX_EVIDENCE_PEOPLE ? current : [...current, createPersonField()])
+  }
+
+  function updatePerson(id: string, patch: Partial<PersonField>) {
+    setPeople((current) => current.map((person) => person.id === id ? { ...person, ...patch } : person))
+  }
+
+  function removePerson(id: string) {
+    setPeople((current) => current.filter((person) => person.id !== id))
+  }
+
+  function addTestimonial() {
+    setTestimonials((current) => current.length >= MAX_EVIDENCE_TESTIMONIALS ? current : [...current, createTestimonialField()])
+  }
+
+  function updateTestimonial(id: string, patch: Partial<TestimonialField>) {
+    setTestimonials((current) => current.map((testimonial) => testimonial.id === id ? { ...testimonial, ...patch } : testimonial))
+  }
+
+  function removeTestimonial(id: string) {
+    setTestimonials((current) => current.filter((testimonial) => testimonial.id !== id))
   }
 
   function resetPreview() {
@@ -122,6 +176,35 @@ export function CreateSiteWithAI() {
       }))
       .filter((service) => service.name)
 
+    // V2-5F: real, caller-supplied evidence only. Cleaned client-side the
+    // same way services are; the server-side evidence-normalization module
+    // re-validates/bounds everything regardless, so this is a UX nicety,
+    // not the trust boundary.
+    const whatsapp = String(formData.get("whatsapp") ?? "").trim()
+    const phone = String(formData.get("phone") ?? "").trim()
+    const email = String(formData.get("email") ?? "").trim()
+    const hasContact = Boolean(whatsapp || phone || email)
+
+    const cleanPeople = people
+      .map((person) => ({ name: person.name.trim(), role: person.role.trim() }))
+      .filter((person) => person.name)
+      .slice(0, MAX_EVIDENCE_PEOPLE)
+      .map((person) => person.role ? person : { name: person.name })
+
+    const cleanTestimonials = testimonials
+      .map((testimonial) => ({ quote: testimonial.quote.trim(), author: testimonial.author.trim(), role: testimonial.role.trim() }))
+      .filter((testimonial) => testimonial.quote && testimonial.author)
+      .slice(0, MAX_EVIDENCE_TESTIMONIALS)
+      .map((testimonial) => testimonial.role ? testimonial : { quote: testimonial.quote, author: testimonial.author })
+
+    const businessEvidence = hasContact || cleanPeople.length > 0 || cleanTestimonials.length > 0
+      ? {
+          ...(hasContact ? { contact: { ...(whatsapp ? { whatsapp } : {}), ...(phone ? { phone } : {}), ...(email ? { email } : {}) } } : {}),
+          ...(cleanPeople.length ? { people: cleanPeople } : {}),
+          ...(cleanTestimonials.length ? { testimonials: cleanTestimonials } : {}),
+        }
+      : undefined
+
     const clientAttemptKey = createClientAttemptKey()
 
     const message = [
@@ -147,6 +230,7 @@ export function CreateSiteWithAI() {
           description,
           preferredStyle,
           services: cleanServices,
+          ...(businessEvidence ? { businessEvidence } : {}),
         },
       })
 
@@ -284,6 +368,83 @@ export function CreateSiteWithAI() {
                   <option value="Comercial dinamico con CTAs vivos">Comercial dinamico</option>
                   <option value="Local profesional, cercano y confiable">Local profesional</option>
                 </select>
+              </div>
+
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+                <button
+                  type="button"
+                  onClick={() => setShowEvidence((current) => !current)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                  aria-expanded={showEvidence}
+                >
+                  <div>
+                    <p className="text-sm font-bold text-[color:var(--text)]">Información adicional</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">Agrega información real para personalizar mejor tu sitio (opcional).</p>
+                  </div>
+                  <ChevronDown size={16} className={`shrink-0 text-[color:var(--text-muted)] transition-transform ${showEvidence ? "rotate-180" : ""}`} />
+                </button>
+
+                {showEvidence && (
+                  <div className="space-y-5 border-t border-white/[0.06] px-4 pb-4 pt-4">
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Contacto</label>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <input name="whatsapp" placeholder="WhatsApp, ej. +52 81 1234 5678" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-[color:var(--text)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(27,179,250,0.45)]" />
+                        <input name="phone" placeholder="Teléfono" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-[color:var(--text)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(27,179,250,0.45)]" />
+                        <input name="email" type="email" placeholder="Correo electrónico" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-[color:var(--text)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(27,179,250,0.45)]" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <label className="block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Equipo (máx. {MAX_EVIDENCE_PEOPLE})</label>
+                        <button type="button" onClick={addPerson} disabled={people.length >= MAX_EVIDENCE_PEOPLE} className="flex h-8 items-center gap-1.5 rounded-xl border border-white/[0.08] px-3 text-xs font-semibold text-[color:var(--accent)] transition-all hover:bg-[rgba(27,179,250,0.08)] disabled:cursor-not-allowed disabled:opacity-40">
+                          <Plus size={13} /> Agregar
+                        </button>
+                      </div>
+                      {people.length > 0 && (
+                        <div className="space-y-2">
+                          {people.map((person, index) => (
+                            <div key={person.id} className="grid gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3 sm:grid-cols-[1fr_1fr_auto]">
+                              <input value={person.name} onChange={(event) => updatePerson(person.id, { name: event.target.value })} placeholder={`Nombre ${index + 1}`} className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-[color:var(--text)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(27,179,250,0.45)]" />
+                              <input value={person.role} onChange={(event) => updatePerson(person.id, { role: event.target.value })} placeholder="Cargo (opcional)" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-[color:var(--text)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(27,179,250,0.45)]" />
+                              <button type="button" onClick={() => removePerson(person.id)} className="grid h-9 w-9 place-items-center rounded-xl text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-300" aria-label="Eliminar persona">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <label className="block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Testimonios (máx. {MAX_EVIDENCE_TESTIMONIALS})</label>
+                        <button type="button" onClick={addTestimonial} disabled={testimonials.length >= MAX_EVIDENCE_TESTIMONIALS} className="flex h-8 items-center gap-1.5 rounded-xl border border-white/[0.08] px-3 text-xs font-semibold text-[color:var(--accent)] transition-all hover:bg-[rgba(27,179,250,0.08)] disabled:cursor-not-allowed disabled:opacity-40">
+                          <Plus size={13} /> Agregar
+                        </button>
+                      </div>
+                      {testimonials.length > 0 && (
+                        <div className="space-y-2">
+                          {testimonials.map((testimonial, index) => (
+                            <div key={testimonial.id} className="space-y-2 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3">
+                              <div className="flex items-start gap-2">
+                                <textarea value={testimonial.quote} onChange={(event) => updateTestimonial(testimonial.id, { quote: event.target.value })} rows={2} placeholder={`Testimonio ${index + 1}`} className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-[color:var(--text)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(27,179,250,0.45)]" />
+                                <button type="button" onClick={() => removeTestimonial(testimonial.id)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[color:var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-300" aria-label="Eliminar testimonio">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                <input value={testimonial.author} onChange={(event) => updateTestimonial(testimonial.id, { author: event.target.value })} placeholder="Autor" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-[color:var(--text)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(27,179,250,0.45)]" />
+                                <input value={testimonial.role} onChange={(event) => updateTestimonial(testimonial.id, { role: event.target.value })} placeholder="Cargo o relación (opcional)" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-[color:var(--text)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(27,179,250,0.45)]" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {error && <p className="rounded-2xl border border-red-500/20 bg-red-500/[0.08] px-4 py-3 text-xs text-red-300">{error}</p>}

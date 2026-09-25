@@ -1,5 +1,6 @@
 import type { NodeProps } from "@/types/editor"
 import type { PageArchetype, SectionRole } from "@/lib/orvenix-ai/architect"
+import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
 
 export interface ComposedNode {
   tempId: string
@@ -34,6 +35,7 @@ export interface SectionCompositionContext {
     description?: string
   }>
   location?: string
+  businessEvidence?: NormalizedSiteCreationBusinessEvidenceV1
   /** The real, caller-supplied business objective -- see the identically
    * named field on OrvenixSiteArchitecture for why this is kept separate
    * from `objective` above. */

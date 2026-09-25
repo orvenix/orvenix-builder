@@ -42,6 +42,7 @@ import {
 } from "@/lib/orvenix-ai/site-creation/preview-store";
 import { hasSiteCreationPlanV2Discriminator, type SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2";
 import { normalizeSiteCreationBusiness } from "@/lib/orvenix-ai/site-creation/business-normalization";
+import { summarizeBusinessEvidence, type SiteCreationBusinessEvidenceInputV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization";
 import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/site-builder";
 import { assessSiteGenerationQualityV1 } from "@/lib/orvenix-ai/evaluation";
 import {
@@ -796,6 +797,13 @@ export interface OrvenixSiteCreationActionInput {
     description?: string;
     preferredStyle?: string;
     services?: Array<{ name: string; description?: string }>;
+    /**
+     * V2-5F: real, caller-supplied business evidence only -- optional
+     * contact/people/testimonials that unlock V2-5D's dormant trust
+     * capabilities. Never populated by the Creative Director or any AI
+     * inference; must come through this intake boundary only.
+     */
+    businessEvidence?: SiteCreationBusinessEvidenceInputV1;
   };
 }
 
@@ -1166,6 +1174,7 @@ export async function runOrvenixSiteCreationAction(
         preferredStyle,
         services: business.services,
         products: business.products,
+        businessEvidenceSummary: summarizeBusinessEvidence(business.businessEvidence),
       },
       architecture: buildSiteArchitecture({
         request: siteCreationRequest,
@@ -1196,6 +1205,7 @@ export async function runOrvenixSiteCreationAction(
           objective: business.objective,
           services: business.services,
           products: business.products,
+          businessEvidence: business.businessEvidence,
         },
         preferredStyle,
         designMemoryPrior: designMemoryDecision.designMemoryPrior,

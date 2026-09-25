@@ -1,4 +1,9 @@
 import { inferServicesFromText } from "./service-inference"
+import {
+  normalizeSiteCreationBusinessEvidence,
+  type NormalizedSiteCreationBusinessEvidenceV1,
+  type SiteCreationBusinessEvidenceInputV1,
+} from "./evidence-normalization"
 
 /**
  * The ONE authoritative boundary where a Site Creation request's raw
@@ -22,6 +27,7 @@ export type SiteCreationBusinessInputV1 = {
   services?: SiteCreationOfferingInputV1[]
   /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. Same shape, same precedence rules. */
   products?: SiteCreationOfferingInputV1[]
+  businessEvidence?: SiteCreationBusinessEvidenceInputV1
 }
 
 export type NormalizedSiteCreationBusinessV1 = {
@@ -32,6 +38,7 @@ export type NormalizedSiteCreationBusinessV1 = {
   description: string
   services: Array<{ name: string; description: string }> | undefined
   products: Array<{ name: string; description: string }> | undefined
+  businessEvidence: NormalizedSiteCreationBusinessEvidenceV1 | undefined
 }
 
 function normalizeExplicitOfferings(
@@ -102,5 +109,6 @@ export function normalizeSiteCreationBusiness(
     description,
     services: normalizedServices?.length ? normalizedServices : undefined,
     products: normalizedProducts?.length ? normalizedProducts : undefined,
+    businessEvidence: normalizeSiteCreationBusinessEvidence(input?.businessEvidence),
   }
 }

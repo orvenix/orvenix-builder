@@ -28,6 +28,7 @@ import type {
 } from "./types"
 
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
+import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
 
 function nodeId(prefix: string) {
   return `ai-${prefix}-${randomUUID()}`
@@ -151,6 +152,7 @@ interface CompileBlueprintOptions {
    * richComposition).
    */
   accentColor?: string
+  businessEvidence?: NormalizedSiteCreationBusinessEvidenceV1
 }
 
 function createBlockSection(
@@ -258,6 +260,7 @@ function compilePage(
         services: architecture.services,
         products: architecture.products,
         location: architecture.location,
+        businessEvidence: options.businessEvidence,
         businessObjective: architecture.businessObjective,
         sitePages: architecture.pages.map((pagePlan) => ({
           name: pagePlan.name,
@@ -286,6 +289,8 @@ function compilePage(
         ...(options.creativeDirection?.navigationContainment ? { aiPreferredNavigationContainment: options.creativeDirection.navigationContainment } : {}),
         ...(options.creativeDirection?.navigationLinkStyle ? { aiPreferredNavigationLinkStyle: options.creativeDirection.navigationLinkStyle } : {}),
         ...(options.creativeDirection?.navigationCtaEmphasis ? { aiPreferredNavigationCtaEmphasis: options.creativeDirection.navigationCtaEmphasis } : {}),
+        ...(options.businessEvidence?.people?.length ? { trustPeople: options.businessEvidence.people } : {}),
+        ...(options.businessEvidence?.testimonials?.length ? { testimonials: options.businessEvidence.testimonials } : {}),
         ...(options.creativeDirection?.trustTreatment ? { aiPreferredTrustTreatment: options.creativeDirection.trustTreatment } : {}),
         ...(options.creativeDirection?.testimonialTreatment ? { aiPreferredTestimonialTreatment: options.creativeDirection.testimonialTreatment } : {}),
         ...(options.creativeDirection?.bookingPresentation ? { aiPreferredBookingPresentation: options.creativeDirection.bookingPresentation } : {}),

@@ -5,6 +5,7 @@ import {
 } from "@/lib/orvenix-ai/assistance/contract"
 import type { CtaIntent } from "@/lib/orvenix-ai/content/copy-helpers"
 import type { CreativeDesignReferenceV1 } from "./reference-context"
+import type { BusinessEvidenceSummaryV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
 
 /**
  * V2-4: bounded, provider-neutral contract for the AI Creative Director.
@@ -135,6 +136,15 @@ export type CreativeDirectorBusinessContextV1 = {
   preferredStyle?: string
   services?: CreativeDirectorOfferingV1[]
   products?: CreativeDirectorOfferingV1[]
+  /**
+   * V2-5F: bounded boolean/count PRESENTATION-ELIGIBILITY signal only --
+   * never names, quotes, phone numbers, emails, or addresses. Lets the
+   * Creative Director know whether trustTreatment="person-cards" /
+   * testimonialTreatment would actually have real data to render, without
+   * ever seeing that data itself. Absent when no real evidence was
+   * supplied -- behavior is identical to pre-V2-5F.
+   */
+  businessEvidenceSummary?: BusinessEvidenceSummaryV1
 }
 
 export type CreativeDirectorDesignMemoryContextV1 = {

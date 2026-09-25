@@ -11,6 +11,7 @@ import { buildCreativeDirectorReferenceContextV1 } from "@/lib/orvenix-ai/creati
 import { retrieveDesignReferences } from "@/lib/orvenix-ai/design-reference/retrieve"
 import type { DesignAssistanceLifecycleClientV1 } from "@/lib/orvenix-ai/assistance/lifecycle"
 import type { SiteCreationDesignMemoryDecisionV1 } from "./assistance"
+import type { BusinessEvidenceSummaryV1 } from "./evidence-normalization"
 
 /**
  * V2-4: mirrors site-creation/assistance.ts's Design-Memory-eligibility ->
@@ -64,6 +65,8 @@ export type CreativeDirectorBusinessInputV1 = {
   preferredStyle?: string
   services?: Array<{ name: string; description?: string }>
   products?: Array<{ name: string; description?: string }>
+  /** V2-5F: boolean/count evidence-eligibility signal only -- see contract.ts's CreativeDirectorBusinessContextV1. */
+  businessEvidenceSummary?: BusinessEvidenceSummaryV1
 }
 
 /**
@@ -90,6 +93,7 @@ export function buildCreativeDirectorRequestV1(params: {
       ...(params.business.preferredStyle ? { preferredStyle: params.business.preferredStyle.slice(0, 120) } : {}),
       ...(params.business.services?.length ? { services: boundOfferings(params.business.services) } : {}),
       ...(params.business.products?.length ? { products: boundOfferings(params.business.products) } : {}),
+      ...(params.business.businessEvidenceSummary ? { businessEvidenceSummary: params.business.businessEvidenceSummary } : {}),
     },
     ...(params.designMemoryContext ? { designMemory: params.designMemoryContext } : {}),
     pages: params.architecture.pages.map((page) => {
