@@ -358,6 +358,55 @@ test("V2-5G (N): no cart/checkout CTA is ever fabricated, in commerce CTAs or pr
 })
 
 // ---------------------------------------------------------------------------
+// V (integration): (L)/(M) prove resolveCtaCopy's own wording in isolation,
+// but the 1300-test suite passing while the ecommerce Productos page's
+// architecture recipe omitted "cta" entirely proved that isolation was not
+// enough -- the catalog CTA was never reachable in a real ecommerce site.
+// This proves reachability through the real buildSiteArchitecture ->
+// compileSiteBlueprint path, exactly as production executes it, for both
+// ecommerce (the fix) and restaurant (regression guard: must still route
+// "cta" and reach "Ver menú" the same way).
+// ---------------------------------------------------------------------------
+
+function allPageText(page: { tree: { nodes: Record<string, { displayName?: string; props?: Record<string, unknown> }> } }): string {
+  return Object.values(page.tree.nodes)
+    .flatMap((node) => [node.displayName, node.props?.text, node.props?.content, node.props?.label, node.props?.href])
+    .filter((value): value is string => typeof value === "string")
+    .join("\n")
+}
+
+test("V2-5G (V): ecommerce Productos architecture routes role \"cta\" and the real compiled pipeline reaches 'Ver catálogo'; restaurant Menú keeps reaching 'Ver menú' the same way", () => {
+  const ecommerceArchitecture = buildSiteArchitecture({
+    request: "x",
+    business: { industry: "tienda de decoracion", name: "Linea Norte", products: [{ name: "Lampara Nube" }] },
+  })
+  assert.equal(ecommerceArchitecture.siteType, "ecommerce")
+  const productos = ecommerceArchitecture.pages.find((page) => page.slug === "productos")
+  assert.ok(productos, "ecommerce architecture must include a productos page")
+  assert.ok(productos!.sections.some((section) => section.role === "cta"), "productos page must route a cta section")
+
+  const restaurantArchitecture = buildSiteArchitecture({
+    request: "x",
+    business: { industry: "restaurante", name: "Casa Brasa", products: [{ name: "Tacos al pastor" }] },
+  })
+  const menu = restaurantArchitecture.pages.find((page) => page.slug === "menu")
+  assert.ok(menu, "restaurant architecture must include a menu page")
+  assert.ok(menu!.sections.some((section) => section.role === "cta"), "menu page must route a cta section")
+
+  const ecommerceProductosText = allPageText(compileSiteBlueprint(ecommerceArchitecture, { preferPrimitiveComposition: true }).pages.find((page) => page.slug === "productos")!)
+  assert.match(ecommerceProductosText, /Ver cat[aá]logo/)
+
+  const restaurantMenuText = allPageText(compileSiteBlueprint(restaurantArchitecture, { preferPrimitiveComposition: true }).pages.find((page) => page.slug === "menu")!)
+  assert.match(restaurantMenuText, /Ver men[uú]/)
+
+  const combinedText = `${ecommerceProductosText}\n${restaurantMenuText}`.toLowerCase()
+  for (const forbidden of FORBIDDEN_CART_CHECKOUT_CTA) {
+    assert.ok(!combinedText.includes(forbidden), `must not fabricate cart/checkout CTA: ${forbidden}`)
+  }
+  assert.ok(!NUMERIC_PRICE_PATTERN.test(combinedText))
+})
+
+// ---------------------------------------------------------------------------
 // O/P: Creative Director receives only the bounded hasProducts/productCount
 // summary; V2-5G adds no NEW raw commercial field beyond the pre-existing,
 // unchanged-since-V2-S1 product name/description offering-grounding array.

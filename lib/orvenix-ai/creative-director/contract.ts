@@ -5,7 +5,6 @@ import {
 } from "@/lib/orvenix-ai/assistance/contract"
 import type { CtaIntent } from "@/lib/orvenix-ai/content/copy-helpers"
 import type { CreativeDesignReferenceV1 } from "./reference-context"
-import type { BusinessEvidenceSummaryV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
 
 /**
  * V2-4: bounded, provider-neutral contract for the AI Creative Director.
@@ -130,6 +129,15 @@ export type CreativeDirectorPageContextV1 = {
   defaultOrder: string[]
 }
 
+export type CreativeDirectorBusinessEvidenceSummaryV1 = {
+  hasPeople: boolean
+  peopleCount: number
+  hasTestimonials: boolean
+  testimonialCount: number
+  hasWhatsapp: boolean
+  hasContactDetails: boolean
+}
+
 export type CreativeDirectorBusinessContextV1 = {
   name?: string
   industry?: string
@@ -147,7 +155,7 @@ export type CreativeDirectorBusinessContextV1 = {
    * ever seeing that data itself. Absent when no real evidence was
    * supplied -- behavior is identical to pre-V2-5F.
    */
-  businessEvidenceSummary?: BusinessEvidenceSummaryV1
+  businessEvidenceSummary?: CreativeDirectorBusinessEvidenceSummaryV1
   /**
    * V2-5G: bounded boolean/count PRESENTATION-ELIGIBILITY signal only,
    * mirroring businessEvidenceSummary's data-minimization pattern -- lets

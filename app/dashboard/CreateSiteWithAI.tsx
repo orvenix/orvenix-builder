@@ -111,9 +111,9 @@ export function CreateSiteWithAI() {
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [services, setServices] = useState<ServiceField[]>([createServiceField(), createServiceField(), createServiceField()])
-  const [showEvidence, setShowEvidence] = useState(false)
   const [people, setPeople] = useState<PersonField[]>([])
   const [testimonials, setTestimonials] = useState<TestimonialField[]>([])
+  const [showEvidence, setShowEvidence] = useState(false)
   const [isGenerating, startGenerating] = useTransition()
   const [isCreating, startCreating] = useTransition()
 
@@ -175,7 +175,6 @@ export function CreateSiteWithAI() {
         description: service.description.trim(),
       }))
       .filter((service) => service.name)
-
     // V2-5F: real, caller-supplied evidence only. Cleaned client-side the
     // same way services are; the server-side evidence-normalization module
     // re-validates/bounds everything regardless, so this is a UX nicety,

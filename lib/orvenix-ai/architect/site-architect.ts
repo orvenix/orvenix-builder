@@ -482,6 +482,7 @@ export function buildSiteArchitecture(
             "navigation",
             "products",
             "trust",
+            "cta",
             "footer",
           ],
         ),

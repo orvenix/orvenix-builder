@@ -8,10 +8,10 @@ import { validateCreativeSiteDirectionV1, type CreativeDirectorProviderV1, type 
 import { sanitizeCreativeSiteDirectionV1, type RealFactsV1 } from "@/lib/orvenix-ai/creative-director/fact-validation"
 import { buildDesignReferenceRetrievalQueryV1 } from "@/lib/orvenix-ai/creative-director/retrieval-query"
 import { buildCreativeDirectorReferenceContextV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
+import type { BusinessEvidenceSummaryV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
 import { retrieveDesignReferences } from "@/lib/orvenix-ai/design-reference/retrieve"
 import type { DesignAssistanceLifecycleClientV1 } from "@/lib/orvenix-ai/assistance/lifecycle"
 import type { SiteCreationDesignMemoryDecisionV1 } from "./assistance"
-import type { BusinessEvidenceSummaryV1 } from "./evidence-normalization"
 
 /**
  * V2-4: mirrors site-creation/assistance.ts's Design-Memory-eligibility ->

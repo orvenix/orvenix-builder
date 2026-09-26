@@ -364,6 +364,7 @@ export async function runAutonomousSiteBuilder(
       architecture,
       {
         preferPrimitiveComposition: input.forceFreshComposition,
+        businessEvidence: input.business.businessEvidence,
       },
     )
 
