@@ -258,4 +258,51 @@ export const BOOKING_PRESENTATIONS: readonly BookingPresentation[] = ["standard"
 export type PricingTreatment = "standard" | "tier-highlight"
 export const PRICING_TREATMENTS: readonly PricingTreatment[] = ["standard", "tier-highlight"]
 
+/**
+ * V2-6.1: bounded per-INSTANCE composition directives for the Composition
+ * Plan layer (see architect/composition-plan.ts). These are genuinely new
+ * -- audited against every enum above first: nothing here already
+ * expresses "how large/condensed should THIS instance's outer section
+ * read" (scale) or "which side should a single curated item's asymmetric
+ * passage lean toward across sibling instances of the same role"
+ * (alignment) or "does this instance carry supporting/lead media"
+ * (mediaStrategy). Still bounded string unions, never a raw class/CSS
+ * value, and only ever set by the deterministic compiler translating a
+ * SectionInstancePlan -- never a direct AI/user-facing choice.
+ */
+export type SectionInstanceScale = "standard" | "large" | "condensed"
+export const SECTION_INSTANCE_SCALES: readonly SectionInstanceScale[] = ["standard", "large", "condensed"]
+
+export type SectionInstanceAlignment = "left" | "right"
+export const SECTION_INSTANCE_ALIGNMENTS: readonly SectionInstanceAlignment[] = ["left", "right"]
+
+export type SectionInstanceMediaStrategy = "none" | "supporting" | "led"
+export const SECTION_INSTANCE_MEDIA_STRATEGIES: readonly SectionInstanceMediaStrategy[] = ["none", "supporting", "led"]
+
+/**
+ * V2-6.2: four high-contrast VISUAL COMPOSITION PRIMITIVES. Each describes
+ * HOW a section instance's grounded content occupies visual space -- never
+ * a new SectionRole, never arbitrary CSS/className/HTML/JSX/component
+ * name from an AI/plan. "standard" (or absent) is the exact pre-V2-6.2
+ * per-role rendering, byte-identical -- every existing caller keeps that
+ * default forever. An unrecognized value is never executed: both the
+ * CompositionPlan validator (architect/composition-plan.ts) and the
+ * compiler's own translation (compiler/section-instance-context.ts)
+ * independently drop it, defaulting back to "standard".
+ */
+export type SectionInstanceVisualPrimitive =
+  | "standard"
+  | "editorial-split"
+  | "oversized-typography"
+  | "full-bleed-media"
+  | "dramatic-closing"
+
+export const SECTION_INSTANCE_VISUAL_PRIMITIVES: readonly SectionInstanceVisualPrimitive[] = [
+  "standard",
+  "editorial-split",
+  "oversized-typography",
+  "full-bleed-media",
+  "dramatic-closing",
+]
+
 export { resolveContentDensity, type ContentDensity } from "./variant-selector"

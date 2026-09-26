@@ -42,6 +42,7 @@ export interface SiteNavProps {
    * compatibility with nodes persisted before this prop existed.
    */
   accent?: string;
+  navLayout?: "classic" | "centered-editorial" | "split" | "overlay";
   pages?: InlineNavLink[];
 }
 
@@ -90,6 +91,7 @@ export function SiteNav({
   chrome = "floating",
   surfaceStyle = "glass",
   accent,
+  navLayout = "classic",
   pages,
 }: BlockComponentProps<SiteNavProps>) {
   const availablePages = useEditorStore((state) => state.availablePages);
@@ -178,18 +180,26 @@ export function SiteNav({
 
   const isIntegratedChrome = chrome === "integrated" || (!usesInlinePages && navPages.length > 1);
   const isSolidSurface = surfaceStyle === "solid";
+  const isCenteredEditorialNav = navLayout === "centered-editorial";
+  const isSplitNav = navLayout === "split";
+  const isOverlayNav = navLayout === "overlay";
 
   const shellStyle: React.CSSProperties = {
-    display: "flex",
+    display: isCenteredEditorialNav ? "grid" : "flex",
+    gridTemplateColumns: isCenteredEditorialNav ? "1fr" : undefined,
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: "1rem",
+    justifyContent: isCenteredEditorialNav ? "center" : "space-between",
+    gap: isCenteredEditorialNav ? "0.72rem" : isSplitNav ? "clamp(1rem, 4vw, 4rem)" : "1rem",
     width: "100%",
-    minHeight: isIntegratedChrome ? "88px" : "76px",
-    padding: isIntegratedChrome ? "0 clamp(1.25rem, 4vw, 4.5rem)" : "0.58rem 0.62rem",
+    minHeight: isOverlayNav ? "72px" : isCenteredEditorialNav ? "112px" : isIntegratedChrome ? "88px" : "76px",
+    padding: isOverlayNav ? "0 clamp(1rem, 3.2vw, 3.5rem)" : isCenteredEditorialNav ? "1rem clamp(1.25rem, 4vw, 4.5rem)" : isIntegratedChrome ? "0 clamp(1.25rem, 4vw, 4.5rem)" : "0.58rem 0.62rem",
     borderRadius: isIntegratedChrome ? "0" : "999px",
     border: isIntegratedChrome ? "0" : surface === "dark" ? "1px solid rgba(154, 229, 255, 0.14)" : "1px solid rgba(255,255,255,0.74)",
-    background: isSolidSurface
+    background: isOverlayNav
+      ? surface === "dark"
+        ? "linear-gradient(135deg, rgba(7,14,24,0.62), rgba(8,31,49,0.38))"
+        : "linear-gradient(135deg, rgba(255,255,255,0.74), rgba(239,250,255,0.48))"
+      : isSolidSurface
       ? surface === "dark"
         ? "#070E18"
         : "#ffffff"
@@ -224,6 +234,7 @@ export function SiteNav({
     overflow: "hidden",
     textOverflow: "ellipsis",
     maxWidth: "min(52vw, 320px)",
+    textAlign: isCenteredEditorialNav ? "center" : undefined,
   };
 
   const titleAccentStyle: React.CSSProperties = {
@@ -310,8 +321,8 @@ export function SiteNav({
 
   return (
     <>
-      <nav aria-label={title} className={`orvenix-premium-site-nav ${isIntegratedChrome ? "orvenix-premium-site-nav--integrated" : ""} w-full`} style={shellStyle}>
-        <div className="orvenix-site-brand relative flex min-w-0 items-center gap-3">
+      <nav aria-label={title} className={`orvenix-premium-site-nav orvenix-premium-site-nav--${navLayout} ${isIntegratedChrome ? "orvenix-premium-site-nav--integrated" : ""} w-full`} style={shellStyle}>
+        <div className={`orvenix-site-brand relative flex min-w-0 items-center gap-3 ${isCenteredEditorialNav ? "mx-auto flex-col text-center" : ""}`}>
           <span
             aria-hidden="true"
             className="orvenix-site-brand-mark relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-[18px] text-[13px] font-black shadow-[0_20px_42px_-24px_rgba(27,179,250,0.95)]"
@@ -337,14 +348,14 @@ export function SiteNav({
         <ul
           className={[
             "orvenix-site-nav-links hidden md:flex list-none flex-wrap items-center gap-1.5 p-1.5 m-0 border",
-            layout === "column" ? "flex-col items-start" : JUSTIFY_CLASS[justify],
+            isCenteredEditorialNav ? "mx-auto justify-center" : isSplitNav ? "ml-auto justify-end" : layout === "column" ? "flex-col items-start" : JUSTIFY_CLASS[justify],
           ].join(" ")}
           style={{
-            justifyContent: "flex-end",
+            justifyContent: isCenteredEditorialNav ? "center" : isSplitNav ? "flex-end" : "flex-end",
             borderRadius: isIntegratedChrome ? "0" : "999px",
             borderColor: isIntegratedChrome ? "transparent" : surface === "dark" ? "rgba(255,255,255,0.075)" : "rgba(27,179,250,0.08)",
-            background: isIntegratedChrome ? "transparent" : surface === "dark" ? "rgba(255,255,255,0.035)" : "rgba(255,255,255,0.38)",
-            boxShadow: isIntegratedChrome ? "none" : surface === "dark" ? "inset 0 1px 0 rgba(255,255,255,0.045)" : "inset 0 1px 0 rgba(255,255,255,0.62)",
+            background: isCenteredEditorialNav || isSplitNav || isOverlayNav || isIntegratedChrome ? "transparent" : surface === "dark" ? "rgba(255,255,255,0.035)" : "rgba(255,255,255,0.38)",
+            boxShadow: isCenteredEditorialNav || isSplitNav || isOverlayNav || isIntegratedChrome ? "none" : surface === "dark" ? "inset 0 1px 0 rgba(255,255,255,0.045)" : "inset 0 1px 0 rgba(255,255,255,0.62)",
           }}
         >
           {linkDescriptors.map(({ key, label, href, isActive, onClick }) => {

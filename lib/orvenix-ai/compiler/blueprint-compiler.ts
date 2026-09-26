@@ -29,6 +29,7 @@ import type {
 
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
 import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
+import { applySectionInstanceToContext } from "./section-instance-context"
 
 function nodeId(prefix: string) {
   return `ai-${prefix}-${randomUUID()}`
@@ -153,6 +154,18 @@ interface CompileBlueprintOptions {
    */
   accentColor?: string
   businessEvidence?: NormalizedSiteCreationBusinessEvidenceV1
+  /**
+   * V2-6.2: real, already-resolved gallery/media assets, threaded into
+   * every section's SectionCompositionContext uniformly (same pattern as
+   * businessEvidence/accentColor above). Confirmed dormant in every real
+   * production code path today (no asset-resolution stage populates it
+   * yet) -- this option exists so a real asset CAN reach the composer
+   * (eg. the FULL-BLEED MEDIA primitive) once one is available, without
+   * ever fabricating a placeholder here. Absent -> byte-identical to
+   * every pre-V2-6.2 caller.
+   */
+  resolvedGalleryAssets?: SectionCompositionContext["resolvedGalleryAssets"]
+  resolvedMediaAsset?: SectionCompositionContext["resolvedMediaAsset"]
 }
 
 function createBlockSection(
@@ -248,11 +261,7 @@ function compilePage(
   )
 
   for (const [sectionIndex, section] of page.sections.entries()) {
-    const childId = createBlockSection(
-      section,
-      nodes,
-      options,
-      {
+    const baseContext: SectionCompositionContext = {
         visualFamily: options.visualFamily,
         siteType: architecture.siteType,
         industry: architecture.industry,
@@ -299,8 +308,23 @@ function compilePage(
         ...(options.creativeDirection?.pricingTreatment ? { aiPreferredPricingTreatment: options.creativeDirection.pricingTreatment } : {}),
         ...(richComposition ? { richComposition: true } : {}),
         ...(options.accentColor ? { accentColor: options.accentColor } : {}),
-      },
-    )
+        ...(options.resolvedGalleryAssets?.length ? { resolvedGalleryAssets: options.resolvedGalleryAssets } : {}),
+        ...(options.resolvedMediaAsset ? { resolvedMediaAsset: options.resolvedMediaAsset } : {}),
+    }
+
+    /*
+     * V2-6.1: a section's optional `instance` (SectionInstancePlan) gets
+     * an isolated, per-instance view derived from baseContext -- never a
+     * mutation of it -- so a sibling instance of the same role (eg. a
+     * second "services" instance right after this one) starts from the
+     * exact same unsliced baseContext again. Absent -> byte-identical
+     * pre-V2-6.1 behavior (context === baseContext).
+     */
+    const context = section.instance
+      ? applySectionInstanceToContext(baseContext, section.instance)
+      : baseContext
+
+    const childId = createBlockSection(section, nodes, options, context)
 
     if (!childId) continue
 

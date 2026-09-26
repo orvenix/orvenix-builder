@@ -14,6 +14,7 @@ import {
   type DensityTendency,
   type DesignPersonality,
   type DesignReference,
+  type DesignReferenceArchitectureGrammar,
   type DesignReferenceExtractionMetadata,
   type DesignReferenceNavGrammar,
   type DistinctiveTrait,
@@ -48,18 +49,64 @@ import { assertSanitizedDesignReference } from "./sanitize"
 
 const NON_CANDIDATE_SUBDIRS = new Set(["data", "_site", "_shared"])
 
-function findRepoRoot(startDir: string): string {
+const REPO_ROOT_WALK_MAX_DEPTH = 15
+
+function walkUpFor(startDir: string, isRoot: (dir: string) => boolean, maxDepth: number = REPO_ROOT_WALK_MAX_DEPTH): string | null {
   let dir = startDir
-  while (!existsSync(join(dir, "package.json"))) {
+  for (let hop = 0; hop < maxDepth; hop += 1) {
+    if (isRoot(dir)) return dir
     const parent = dirname(dir)
-    if (parent === dir) return startDir
+    if (parent === dir) return null
     dir = parent
   }
-  return dir
+  return null
+}
+
+function hasPackageJson(dir: string): boolean {
+  return existsSync(join(dir, "package.json"))
+}
+
+function hasAppWebs(dir: string): boolean {
+  return existsSync(join(dir, "app", "webs"))
+}
+
+function findRepoRoot(startDir: string): string {
+  return walkUpFor(startDir, hasPackageJson) ?? startDir
+}
+
+/**
+ * Resolves the repository root that actually contains app/webs (the source
+ * of the 25 real design references). A plain __dirname-based walk-up is
+ * unreliable here: inside a live Next.js runtime (dev or prod) this
+ * module's __dirname resolves under a bundled path like .next/server/...,
+ * where the nearest package.json is unrelated to the real repo and
+ * app/webs does not exist relative to it -- so a naive walk silently
+ * yields 0 references instead of erroring.
+ *
+ * Resolution order, each bounded to REPO_ROOT_WALK_MAX_DEPTH parent hops
+ * (never scans indefinitely, never touches the network, no hardcoded
+ * machine path):
+ *   1. Walk up from process.cwd() for a dir with BOTH package.json and
+ *      app/webs -- correct under `next dev`/`next start`/`next build`,
+ *      where cwd is the project root.
+ *   2. Walk up from startDir (caller's __dirname) for the same combined
+ *      marker -- correct when startDir is real source (e.g. tests).
+ *   3. Fall back to the legacy package.json-only walk from startDir, to
+ *      preserve prior behavior when app/webs cannot be confirmed anywhere.
+ *   4. Give up and return startDir unchanged (callers degrade safely --
+ *      discoverWebsCandidates() returns [] for a nonexistent websRoot).
+ */
+export function resolveDesignReferenceRepoRoot(startDir: string = __dirname): string {
+  const isRepoRootWithWebs = (dir: string) => hasPackageJson(dir) && hasAppWebs(dir)
+  return (
+    walkUpFor(process.cwd(), isRepoRootWithWebs) ??
+    walkUpFor(startDir, isRepoRootWithWebs) ??
+    findRepoRoot(startDir)
+  )
 }
 
 export function defaultWebsRoot(): string {
-  return join(findRepoRoot(__dirname), "app", "webs")
+  return join(resolveDesignReferenceRepoRoot(), "app", "webs")
 }
 
 function readIfExists(path: string): string {
@@ -461,6 +508,67 @@ function deriveDesignPersonality(themeMode: ThemeMode, mediaStrategy: HeroMediaS
 }
 
 /**
+ * V2-6: derives the bounded Adaptive Architecture grammar (see
+ * architect/architecture-grammar.ts) this reference exhibits, entirely
+ * from signals this file already computes -- roleSequence (the single
+ * most informative signal: it literally names which SectionRoles the
+ * reference's Home page uses, and in what order), the hero
+ * background/media treatment, and the resolved contact pattern. No new
+ * text scanning. app/webs references are Orvenix's own already-generated
+ * Next.js output, not the legacy jQuery-carousel corpus that motivated
+ * "carousel"/"editorial"/"minimal" -- so those three rarely or never
+ * appear here, which is the honest, correct result, not a bug.
+ */
+function deriveArchitectureGrammar(
+  roleSequence: SectionRole[],
+  backgroundTreatment: HeroBackgroundTreatment,
+  mediaStrategy: HeroMediaStrategy,
+  contactPattern: ContactPattern,
+): DesignReferenceArchitectureGrammar {
+  const opening =
+    mediaStrategy === "photography" && backgroundTreatment === "full-bleed-photo"
+      ? "immersive"
+      : backgroundTreatment === "abstract-glow"
+        ? "split"
+        : "standard"
+
+  const hasProducts = roleSequence.includes("products")
+  const hasGallery = roleSequence.includes("gallery")
+  const hasServices = roleSequence.includes("services")
+  const hasFeatures = roleSequence.includes("features")
+
+  const narrative = hasProducts
+    ? "product-led"
+    : hasGallery && !hasServices
+      ? "portfolio-led"
+      : hasServices
+        ? "service-led"
+        : "authority-led"
+
+  const bodyTopology = hasProducts ? "catalog" : hasGallery ? "showcase" : hasServices && hasFeatures ? "alternating" : "linear"
+
+  const closing = roleSequence.includes("pricing")
+    ? "pricing"
+    : contactPattern === "booking-form"
+      ? "booking"
+      : hasProducts && contactPattern === "catalog-cta"
+        ? "catalog"
+        : "contact"
+
+  const trustIndex = roleSequence.indexOf("trust")
+  const trustPlacement =
+    trustIndex === -1
+      ? "omitted"
+      : trustIndex <= 2
+        ? "early"
+        : trustIndex >= roleSequence.length - 3
+          ? "late"
+          : "embedded"
+
+  return { opening, narrative, bodyTopology, closing, trustPlacement }
+}
+
+/**
  * V2-5C.1: bounded region of text most likely to actually BE the header/
  * nav markup -- same simple slicing technique as extractHeroRegion
  * (first tag through a bounded window), never a full AST parse. Scoped
@@ -586,7 +694,7 @@ function deriveConfidence(signals: Set<ExtractionSignal>): DesignReferenceExtrac
   return "low"
 }
 
-export function extractDesignReference(candidate: WebsCandidate, repoRoot: string = findRepoRoot(__dirname)): DesignReference {
+export function extractDesignReference(candidate: WebsCandidate, repoRoot: string = resolveDesignReferenceRepoRoot()): DesignReference {
   const { slug, dirPath } = candidate
   const homeText = readIfExists(join(dirPath, "page.tsx"))
   const layoutText = readIfExists(join(dirPath, "layout.tsx"))
@@ -619,6 +727,7 @@ export function extractDesignReference(candidate: WebsCandidate, repoRoot: strin
   const ctaArrangement = detectCtaArrangement(heroRegion)
 
   const roleSequence = detectRoleSequence(homeText, layoutText, sharedNavPresent, signals)
+  const contactPattern = detectContactPattern(fullText, pageFolders)
   const traits = detectDistinctiveTraits(fullText, pageFolders, homeText)
   if (traits.includes("cart-flow")) signals.add("cart-route-present")
   if (traits.includes("catalog-browsing")) signals.add("catalog-route-present")
@@ -702,9 +811,10 @@ export function extractDesignReference(candidate: WebsCandidate, repoRoot: strin
           : ctaArrangement === "single-cta"
             ? "single-action"
             : "unknown",
-      contactPattern: detectContactPattern(fullText, pageFolders),
+      contactPattern,
     },
     navGrammar,
+    architectureGrammar: deriveArchitectureGrammar(roleSequence, backgroundTreatment, mediaStrategy, contactPattern),
     distinctiveTraits: traits,
     extraction: {
       extractorVersion: 1,
@@ -718,7 +828,7 @@ export function extractDesignReference(candidate: WebsCandidate, repoRoot: strin
 }
 
 export function discoverDesignReferences(websRoot: string = defaultWebsRoot()): DesignReference[] {
-  const repoRoot = findRepoRoot(__dirname)
+  const repoRoot = resolveDesignReferenceRepoRoot()
   return discoverWebsCandidates(websRoot)
     .map((candidate) => extractDesignReference(candidate, repoRoot))
     .sort((a, b) => a.id.localeCompare(b.id))

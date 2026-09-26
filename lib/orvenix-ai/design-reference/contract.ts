@@ -18,6 +18,14 @@
  * does not consume either of them.
  */
 
+import type {
+  OpeningStrategy,
+  NarrativeStrategy,
+  BodyTopology,
+  ClosingStrategy,
+  TrustPlacement,
+} from "../architect/architecture-grammar"
+
 export const DESIGN_REFERENCE_SOURCE = "webs" as const
 export type DesignReferenceSource = typeof DESIGN_REFERENCE_SOURCE
 
@@ -310,6 +318,25 @@ export interface DesignReferenceExtractionMetadata {
   signals: ExtractionSignal[]
 }
 
+/**
+ * V2-6: bounded Adaptive Architecture grammar this reference exhibits,
+ * reusing the SAME closed vocabulary architect/architecture-grammar.ts
+ * defines (never redefined here) -- this is what lets a retrieved
+ * DesignReference contribute a bounded per-dimension signal to
+ * architecture-selector.ts's resolveArchitectureStrategy (see that
+ * module's ArchitectureReferenceSignal), instead of the reference ever
+ * being cloned as a whole template. Every field is derived deterministically
+ * in extract.ts from signals this file already computes (roleSequence,
+ * heroGrammar, conversionGrammar) -- no new scanning, no free text.
+ */
+export interface DesignReferenceArchitectureGrammar {
+  opening: OpeningStrategy
+  narrative: NarrativeStrategy
+  bodyTopology: BodyTopology
+  closing: ClosingStrategy
+  trustPlacement: TrustPlacement
+}
+
 export interface DesignReference {
   id: DesignReferenceId
   version: 1
@@ -323,6 +350,7 @@ export interface DesignReference {
   compositionGrammar: DesignReferenceCompositionGrammar
   conversionGrammar: DesignReferenceConversionGrammar
   navGrammar: DesignReferenceNavGrammar
+  architectureGrammar: DesignReferenceArchitectureGrammar
   distinctiveTraits: DistinctiveTrait[]
   extraction: DesignReferenceExtractionMetadata
 }

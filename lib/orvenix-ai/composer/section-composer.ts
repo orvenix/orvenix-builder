@@ -37,8 +37,10 @@ import {
   TWO_ITEM_LAYOUT_VARIANTS,
   TWO_ITEM_LAYOUT_WEIGHTS,
   type PremiumCompositionTreatment,
+  type SectionInstanceAlignment,
   type SectionTone,
 } from "./composition-context"
+import { visualLayoutToSiteNavLayout } from "./visual-layout-plan"
 import {
   resolveCtaCopy,
   resolveFeatureItems,
@@ -325,6 +327,27 @@ const GALLERY_SECTION_BACKGROUND = "#ffffff"
 function composeGallery(context: SectionCompositionContext = {}): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const textColors = readableTextColorsFor(GALLERY_SECTION_BACKGROUND)
+
+  /*
+   * V2-6.2: FULL-BLEED MEDIA -- only reachable when a real, usable asset
+   * exists (resolvedGalleryAssets, never fabricated). No usable asset ->
+   * falls through to the existing grid gallery below exactly as before
+   * ("Safe fallback when no media: fall back to another valid
+   * composition, not fabricated imagery" -- the pre-existing, already-
+   * proven grid IS that other valid composition, not a new empty
+   * full-bleed block).
+   */
+  const fullBleedAssets = (context.resolvedGalleryAssets ?? []).filter((asset) => asset.src.trim())
+  if (context.instanceVisualPrimitive === "full-bleed-media" && fullBleedAssets.length > 0) {
+    const frame = fullBleedMediaBlock(nodes, {
+      title: "Portafolio",
+      caption: "Conoce nuestro trabajo",
+      asset: fullBleedAssets[0],
+      textColors,
+    })
+    const root = add(nodes, createComposedNode({ type: "section", displayName: "Galeria (full-bleed-media)", props: { maxWidth: "full", paddingY: "none", paddingX: "none", background: GALLERY_SECTION_BACKGROUND }, children: [frame] }))
+    return { role: "gallery", rootId: root, nodes, purpose: "Mostrar trabajo real a pantalla completa." }
+  }
 
   const heading = add(
     nodes,
@@ -656,6 +679,30 @@ function composeTestimonials(context: SectionCompositionContext = {}): ComposedS
   const nodes: Record<string, ComposedNode> = {}
   const textColors = readableTextColorsFor(TESTIMONIALS_SECTION_BACKGROUND)
 
+  /*
+   * V2-6.2: OVERSIZED TYPOGRAPHY testimonial -- one real, grounded quote
+   * rendered as a bare typographic statement (no card grid, no stars/
+   * ratings ever fabricated here regardless of primitive). Only the
+   * FIRST usable real testimonial is used, exactly like a pull-quote;
+   * falls through to the existing 3-card grid when no usable testimonial
+   * exists (never invents one to fill the primitive).
+   */
+  const realTestimonialsForPrimitive = usableTestimonials(context)
+  if (context.instanceVisualPrimitive === "oversized-typography" && realTestimonialsForPrimitive.length > 0) {
+    const [testimonial] = realTestimonialsForPrimitive
+    const attribution = [testimonial.author, testimonial.role].filter(Boolean).join(", ") || undefined
+    const passage = oversizedTypographyPassage(nodes, {
+      keyBase: "testimonio-tipografico",
+      title: `"${testimonial.quote}"`,
+      body: attribution,
+      align: "center",
+      headingSize: "6xl",
+      textColors,
+    })
+    const root = add(nodes, createComposedNode({ type: "section", displayName: "Testimonios (oversized-typography)", props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background: TESTIMONIALS_SECTION_BACKGROUND }, children: [passage] }))
+    return { role: "testimonials", rootId: root, nodes, purpose: "Presentar un testimonio real como declaracion tipografica." }
+  }
+
   const heading = add(
     nodes,
     createComposedNode({
@@ -905,7 +952,9 @@ function composeNavigation(
       ? context.aiPreferredNavigationCtaEmphasis
       : "prominent"
 
-  const resolvedSurface = navigationRichnessRequested ? resolveNavigationSurface(context) : undefined
+  const navLayout = visualLayoutToSiteNavLayout(context.instanceVisualLayout)
+  const layoutRequestsOverlay = navLayout === "overlay"
+  const resolvedSurface = navigationRichnessRequested || layoutRequestsOverlay ? resolveNavigationSurface(context) : undefined
 
   /*
    * V2-5C.1 refinement: real brand identity + real theme accent are
@@ -938,10 +987,11 @@ function composeNavigation(
       ctaLabel: "Contactar",
       ctaHref: "#contacto",
       layout: "row",
-      justify: "center",
-      variant: navigationLinkStyle,
-      ...(navigationContainment ? { chrome: navigationContainment } : {}),
-      ...(navigationSurfaceStyle ? { surfaceStyle: navigationSurfaceStyle } : {}),
+      justify: navLayout === "centered-editorial" ? "center" : navLayout === "split" ? "end" : "center",
+      variant: navLayout === "centered-editorial" ? "minimal" : navigationLinkStyle,
+      ...(navLayout ? { navLayout } : {}),
+      ...(navLayout === "overlay" ? { chrome: "integrated" as const, surfaceStyle: "glass" as const } : navLayout && navLayout !== "classic" ? { chrome: "integrated" as const } : navigationContainment ? { chrome: navigationContainment } : {}),
+      ...(navLayout === "overlay" ? {} : navigationSurfaceStyle ? { surfaceStyle: navigationSurfaceStyle } : {}),
       ...(resolvedSurface ? { surface: resolvedSurface } : {}),
       ...(context.accentColor ? { accent: context.accentColor } : {}),
     },
@@ -951,6 +1001,14 @@ function composeNavigation(
 
 /** Shared by composeHero's abstract-glow treatment: single CTA when there's nothing real for a secondary button to link to, dual otherwise. New code path only -- the 4 pre-existing HeroVariants keep their exact original always-dual behavior, unchanged. */
 function resolveHeroCtaButtons(nodes: Record<string, ComposedNode>, context: SectionCompositionContext): string[] {
+  /*
+   * V2-6.1: a "typographic opening" CompositionPlan instance (emphasis
+   * "opening") explicitly asks for no call-to-action -- oversized
+   * typographic hierarchy and negative space only. Every existing caller
+   * leaves instanceOmitCta unset, so this stays dead code for them.
+   */
+  if (context.instanceOmitCta) return []
+
   const primary = add(
     nodes,
     createComposedNode({ type: "ctaButton", displayName: "CTA principal", props: { label: "Solicitar informacion", href: "#contacto", variant: "primary", size: "lg" } }),
@@ -996,6 +1054,31 @@ function composeHero(
     ...deterministicHeroCopy,
     title: context.aiHeroTitleSuggestion ?? deterministicHeroCopy.title,
     description: context.aiHeroDescriptionSuggestion ?? deterministicHeroCopy.description,
+  }
+
+  /*
+   * V2-6.2: the "typographic opening" primitive -- deliberately NOT the
+   * standard hero with its image slot emptied. No image node at all, no
+   * split-column grid, no default 2-button CTA row unless explicitly
+   * requested: one oversized ("7xl") heading, generous negative space,
+   * a bare typographic block exactly like oversizedTypographyPassage
+   * renders elsewhere, reused rather than re-implemented for hero.
+   */
+  if (context.instanceVisualPrimitive === "oversized-typography") {
+    const passage = oversizedTypographyPassage(nodes, {
+      keyBase: "hero-opening",
+      eyebrow: heroCopy.eyebrow,
+      title: heroCopy.title,
+      body: heroCopy.description,
+      align: "center",
+      headingSize: "7xl",
+      textColors: DARK_ON_LIGHT_TEXT,
+    })
+    const ctaButtons = context.instanceOmitCta ? [] : resolveHeroCtaButtons(nodes, context)
+    const actions = ctaButtons.length ? wrapperNode(nodes, "Acciones hero", "mt-4 flex flex-col justify-center gap-3 sm:flex-row", ctaButtons) : null
+    const content = wrapperNode(nodes, "Contenido apertura tipografica", "mx-auto flex max-w-4xl flex-col items-center gap-2 text-center", actions ? [passage, actions] : [passage])
+    const root = add(nodes, createComposedNode({ type: "section", displayName: "Hero autonomo variante oversized-typography", props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background: "#ffffff" }, children: [content] }))
+    return { role: "hero", rootId: root, nodes, purpose: "Apertura tipografica sin imagen dominante." }
   }
 
   /*
@@ -1295,11 +1378,13 @@ function composeAbstractGlowHero(
   const title = headingNode(nodes, "Titulo hero", heroCopy.title, 1, { align: "center", color: textColors.heading })
   const description = textNode(nodes, "Descripcion hero", heroCopy.description, { size: "lg", align: "center", color: textColors.body })
   const ctaButtons = resolveHeroCtaButtons(nodes, context)
-  const actions = wrapperNode(nodes, "Acciones hero", "flex flex-col justify-center gap-3 sm:flex-row", ctaButtons)
+  const actions = ctaButtons.length
+    ? wrapperNode(nodes, "Acciones hero", "flex flex-col justify-center gap-3 sm:flex-row", ctaButtons)
+    : null
 
   const statRow = credibilityStatRow(nodes, context.credibilityStats, textColors)
 
-  const contentChildren = statRow ? [eyebrow, title, description, actions, statRow] : [eyebrow, title, description, actions]
+  const contentChildren = [eyebrow, title, description, actions, statRow].filter((id): id is string => Boolean(id))
   const content = wrapperNode(
     nodes,
     "Contenido hero",
@@ -1553,12 +1638,13 @@ function editorialListLayout(
   return wrapperNode(nodes, "Lista " + role, "flex flex-col", rows)
 }
 
-/** SERVICES: first item featured large, remaining items stacked smaller beside it. Falls back to a plain grid when there's only one item (nothing to be "supporting"). */
+/** SERVICES: first item featured large, remaining items stacked smaller beside it. Falls back to a large asymmetric single passage when there's only one item (nothing to be "supporting"). */
 function asymmetricFeaturedLayout(
   nodes: Record<string, ComposedNode>,
   role: SectionRole,
   items: Array<[string, string]>,
   textColors: { heading: string; body: string } = DARK_ON_LIGHT_TEXT,
+  align: SectionInstanceAlignment = "left",
 ): string {
   const [[featuredTitle, featuredBody], ...rest] = items
 
@@ -1567,9 +1653,28 @@ function asymmetricFeaturedLayout(
   const featuredHeading = headingNode(nodes, featuredTitle, featuredTitle, 3, { size: "2xl", weight: "extrabold" })
   const featuredText = textNode(nodes, featuredTitle + " texto", featuredBody, { size: "lg" })
   const featuredChildren = featuredIcon ? [featuredIcon, featuredHeading, featuredText] : [featuredHeading, featuredText]
-  const featured = wrapperNode(nodes, featuredTitle + " destacado", "flex flex-col justify-center gap-4 rounded-[2rem] bg-gradient-to-br from-sky-50 to-white border border-sky-100 p-8", featuredChildren, "article")
 
-  if (rest.length === 0) return featured
+  if (rest.length === 0) {
+    /*
+     * V2-6.1: a single curated CompositionPlan instance (one real item)
+     * still reads as a large, asymmetric editorial passage rather than a
+     * centered generic card -- generous negative space plus a directional
+     * accent rule that can mirror left/right across sibling instances of
+     * the same role, instead of always looking identical regardless of
+     * its position in the page.
+     */
+    const isRight = align === "right"
+    const rule = wrapperNode(nodes, featuredTitle + " regla", `h-1 w-16 rounded-full bg-sky-300 ${isRight ? "self-end" : "self-start"}`, [])
+    const passage = wrapperNode(
+      nodes,
+      featuredTitle + " pasaje",
+      `flex max-w-2xl flex-col gap-5 ${isRight ? "items-end text-right self-end" : "items-start text-left self-start"}`,
+      [rule, ...featuredChildren],
+    )
+    return wrapperNode(nodes, featuredTitle + " destacado", "flex w-full flex-col py-2", [passage])
+  }
+
+  const featured = wrapperNode(nodes, featuredTitle + " destacado", "flex flex-col justify-center gap-4 rounded-[2rem] bg-gradient-to-br from-sky-50 to-white border border-sky-100 p-8", featuredChildren, "article")
 
   const supportingItems = rest.map(([title, body], index) => {
     const iconName = cardIconName(role, index + 1)
@@ -1648,13 +1753,30 @@ function premiumCompositionTreatment(context: SectionCompositionContext): Premiu
     : undefined
 }
 
-function premiumFallbackTreatment(treatment: PremiumCompositionTreatment, itemCount: number, hasUsableMediaAsset: boolean): PremiumCompositionTreatment | undefined {
+/**
+ * V2-6.1: `allowSingleItem` loosens the item-count floor to 1 ONLY for a
+ * deliberately curated single-item CompositionPlan instance (see
+ * SectionCompositionContext.singleItemInstance) -- never for a naturally
+ * short real-business collection, which still falls through to the
+ * existing safe plain grid exactly as before. asymmetricFeaturedLayout/
+ * alternatingRowsLayout/mediaLedLayout already render a single item
+ * gracefully (see their own single-item branches); this only changes
+ * whether the fallback OFFERS them one.
+ */
+function premiumFallbackTreatment(
+  treatment: PremiumCompositionTreatment,
+  itemCount: number,
+  hasUsableMediaAsset: boolean,
+  allowSingleItem: boolean = false,
+): PremiumCompositionTreatment | undefined {
+  const minItems = allowSingleItem ? 1 : 2
+  const minFeatured = allowSingleItem ? 1 : 3
   if (treatment === "standard-grid") return "standard-grid"
-  if (treatment === "featured-asymmetric" && itemCount >= 3 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
-  if (treatment === "editorial-alternating" && itemCount >= 2 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
-  if (treatment === "bento" && itemCount >= 3 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
-  if (treatment === "media-led" && hasUsableMediaAsset && itemCount >= 2 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
-  if (itemCount >= 2 && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return "editorial-alternating"
+  if (treatment === "featured-asymmetric" && itemCount >= minFeatured && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
+  if (treatment === "editorial-alternating" && itemCount >= minItems && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
+  if (treatment === "bento" && itemCount >= minFeatured && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
+  if (treatment === "media-led" && hasUsableMediaAsset && itemCount >= minItems && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return treatment
+  if (itemCount >= minItems && itemCount <= STRUCTURAL_TREATMENT_MAX_ITEMS) return "editorial-alternating"
   return undefined
 }
 
@@ -1747,6 +1869,128 @@ function mediaLedLayout(
   return wrapperNode(nodes, "Media-led " + role, "flex flex-col gap-5", [lead, supportWrap])
 }
 
+/*
+ * =============================================================
+ * V2-6.2: four high-contrast VISUAL COMPOSITION PRIMITIVES.
+ *
+ * Each function below is generic (structured props only, no
+ * business/industry copy or logic baked in) and reusable across
+ * whichever roles list it in ROLE_VISUAL_PRIMITIVE_VOCABULARY
+ * (architect/composition-plan.ts). None emits arbitrary HTML/CSS: every
+ * className is a fixed literal this file already owns, exactly like
+ * every other layout function above.
+ * =============================================================
+ */
+
+/**
+ * OVERSIZED TYPOGRAPHY: a bare typographic interruption -- no card, no
+ * grid, no border/shadow/rounded classes anywhere. Deliberately the
+ * OPPOSITE shape of every card-grid layout above: one constrained-width
+ * text column with a genuinely bigger heading token ("7xl", added in
+ * Heading.tsx specifically because "5xl" was already the standard hero's
+ * own ceiling -- see V2-6.2's audit). Works with or without a body/
+ * eyebrow; never fabricates either.
+ */
+function oversizedTypographyPassage(
+  nodes: Record<string, ComposedNode>,
+  params: {
+    keyBase: string
+    eyebrow?: string
+    title: string
+    body?: string
+    align?: "left" | "center"
+    headingSize?: "5xl" | "6xl" | "7xl"
+    textColors: { heading: string; body: string }
+  },
+): string {
+  const { keyBase, eyebrow, title, body, align = "left", headingSize = "7xl", textColors } = params
+  const eyebrowNode = eyebrow
+    ? textNode(nodes, `${keyBase} eyebrow`, eyebrow, { size: "sm", align })
+    : null
+  const titleNode = headingNode(nodes, `${keyBase} titulo`, title, 2, { size: headingSize, weight: "extrabold", align, color: textColors.heading })
+  const bodyNode = body
+    ? textNode(nodes, `${keyBase} texto`, body, { size: "lg", align, color: textColors.body, maxWidth: align === "center" ? "lg" : "none" })
+    : null
+  const children = [eyebrowNode, titleNode, bodyNode].filter((id): id is string => Boolean(id))
+  const alignmentClassName = align === "center" ? "mx-auto items-center text-center" : "items-start text-left"
+  return wrapperNode(nodes, `${keyBase} bloque tipografico`, `flex max-w-4xl flex-col gap-6 ${alignmentClassName}`, children)
+}
+
+/**
+ * EDITORIAL SPLIT: a genuine two-column asymmetric passage -- roughly
+ * 45/55, real DOM order (not a CSS-only trick), mirrorable by literally
+ * swapping which side comes first so `align: "right"` produces a
+ * MATERIALLY different child order/geometry, not just text-align. When
+ * no real media asset exists for this item, the "other side" becomes an
+ * intentional oversized-numeral graphic field (composed from the exact
+ * same heading/wrapper primitives every other layout uses) instead of a
+ * broken image placeholder.
+ */
+function editorialSplitPassage(
+  nodes: Record<string, ComposedNode>,
+  params: {
+    index: number
+    title: string
+    body: string
+    align: SectionInstanceAlignment
+    textColors: { heading: string; body: string }
+    mediaAsset?: { src: string; alt?: string }
+  },
+): string {
+  const { index, title, body, align, textColors, mediaAsset } = params
+  const ordinal = String(index + 1).padStart(2, "0")
+
+  const eyebrow = textNode(nodes, `${title} indice`, ordinal, { size: "sm", color: textColors.body })
+  const heading = headingNode(nodes, title, title, 3, { size: "5xl", weight: "extrabold", color: textColors.heading })
+  const text = textNode(nodes, `${title} texto`, body, { size: "lg", color: textColors.body })
+  const textBlock = wrapperNode(nodes, `${title} bloque texto`, "flex flex-col justify-center gap-5 lg:min-h-[24rem]", [eyebrow, heading, text])
+
+  let mediaBlock: string
+  if (mediaAsset?.src.trim()) {
+    const image = add(nodes, createComposedNode({ type: "image", displayName: `${title} imagen`, props: { src: mediaAsset.src, alt: mediaAsset.alt ?? title, objectFit: "cover", positionMode: "free" } }))
+    mediaBlock = wrapperNode(nodes, `${title} media`, "relative min-h-[22rem] overflow-hidden rounded-[1.5rem] lg:min-h-[28rem]", [image])
+  } else {
+    const graphicNumeral = headingNode(nodes, `${title} numeral grafico`, ordinal, 2, { size: "7xl", weight: "extrabold", align: "center", color: textColors.body })
+    mediaBlock = wrapperNode(
+      nodes,
+      `${title} campo grafico`,
+      "flex min-h-[22rem] items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-sky-50 to-white border border-sky-100 lg:min-h-[28rem]",
+      [graphicNumeral],
+    )
+  }
+
+  const orderedChildren = align === "right" ? [mediaBlock, textBlock] : [textBlock, mediaBlock]
+  return wrapperNode(nodes, `${title} split`, "grid gap-10 lg:grid-cols-2 lg:items-stretch", orderedChildren)
+}
+
+/**
+ * FULL-BLEED MEDIA: edge-to-edge presentation -- the section itself must
+ * be built with maxWidth "full" + paddingX "none" (see composeGallery's
+ * call site) for this to actually reach the viewport edge; this function
+ * only builds the media layer + adjacent caption, reusing the exact
+ * "absolute inset-0 h-full w-full" mechanism composeHero's immersive
+ * variant already uses for full-bleed photography. Never invents an
+ * asset: callers only reach this with a real, usable one.
+ */
+function fullBleedMediaBlock(
+  nodes: Record<string, ComposedNode>,
+  params: { title: string; caption?: string; asset: { src: string; alt?: string }; textColors: { heading: string; body: string } },
+): string {
+  const { title, caption, asset, textColors } = params
+  const image = add(nodes, createComposedNode({ type: "image", displayName: `${title} imagen full-bleed`, props: { src: asset.src, alt: asset.alt ?? title, objectFit: "cover", positionMode: "free" } }))
+  const mediaLayer = wrapperNode(nodes, `${title} capa media`, "absolute inset-0 h-full w-full bg-slate-900", [image])
+  const captionNode = caption
+    ? wrapperNode(
+        nodes,
+        `${title} leyenda`,
+        "absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 to-transparent px-6 py-6",
+        [textNode(nodes, `${title} leyenda texto`, caption, { size: "lg", color: textColors.heading === "#ffffff" ? "#ffffff" : "#f8fafc" })],
+      )
+    : null
+  const frame = wrapperNode(nodes, `${title} marco full-bleed`, "relative min-h-[60vh] w-full overflow-hidden md:min-h-[70vh]", captionNode ? [mediaLayer, captionNode] : [mediaLayer])
+  return frame
+}
+
 function composeCardGridSection(
   role: SectionRole,
   titleText: string,
@@ -1794,8 +2038,59 @@ function composeCardGridSection(
   const background = resolveToneBackground(tone, context)
   const textColors = readableTextColorsFor(background)
 
-  const heading = headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center", color: textColors.heading })
-  const intro = textNode(nodes, "Intro " + role, personalizedIntro, { align: "center", size: "lg", color: textColors.body })
+  /*
+   * V2-6.2: a role-appropriate visualPrimitive short-circuits the entire
+   * card-grid/treatment machinery below -- these two primitives are
+   * DELIBERATELY not another grid/card variant, they are the opposite
+   * shape. Only reachable when composition-plan.ts's
+   * ROLE_VISUAL_PRIMITIVE_VOCABULARY already allowed this exact
+   * (role, primitive) pair upstream, so no role/primitive mismatch can
+   * reach here; absent/"standard"/unrecognized falls through unchanged
+   * to every pre-V2-6.2 caller's exact existing behavior below.
+   */
+  if (context.instanceVisualPrimitive === "editorial-split" && finalItems.length >= 1) {
+    const [title, body] = finalItems[0]
+    const mediaAsset = context.resolvedMediaAsset?.src.trim() ? { src: context.resolvedMediaAsset.src.trim(), alt: context.resolvedMediaAsset.alt } : undefined
+    const passage = editorialSplitPassage(nodes, {
+      index: context.sectionIndex ?? 0,
+      title,
+      body,
+      align: context.instanceAlignment ?? "left",
+      textColors,
+      mediaAsset,
+    })
+    const paddingY = context.instanceScale === "condensed" ? "lg" : "xl"
+    const root = add(nodes, createComposedNode({ type: "section", displayName: `${title} (editorial-split)`, props: { maxWidth: "xl", paddingY, paddingX: "lg", background }, children: [passage] }))
+    return { role, rootId: root, nodes, purpose: body }
+  }
+
+  if (context.instanceVisualPrimitive === "oversized-typography" && finalItems.length >= 1) {
+    const [title, body] = finalItems[0]
+    const passage = oversizedTypographyPassage(nodes, {
+      keyBase: title,
+      title,
+      body,
+      align: "left",
+      headingSize: context.instanceScale === "condensed" ? "6xl" : "7xl",
+      textColors,
+    })
+    const paddingY = context.instanceScale === "condensed" ? "lg" : "xl"
+    const root = add(nodes, createComposedNode({ type: "section", displayName: `${title} (oversized-typography)`, props: { maxWidth: "xl", paddingY, paddingX: "lg", background }, children: [passage] }))
+    return { role, rootId: root, nodes, purpose: body }
+  }
+
+  /*
+   * V2-6.1: a curated single-item CompositionPlan instance skips the
+   * generic role-level "Servicios"/"Productos" wrapper title -- the
+   * passage below already carries the one real item's own name as its
+   * heading. Rendering both would just reproduce the "looks the same,
+   * only the minimum changes" generic feel the Composition Plan layer
+   * exists to fix. Every existing (non-instance) caller still gets both
+   * nodes exactly as before.
+   */
+  const suppressWrapperHeading = Boolean(context.singleItemInstance)
+  const heading = suppressWrapperHeading ? null : headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center", color: textColors.heading })
+  const intro = suppressWrapperHeading ? null : textNode(nodes, "Intro " + role, personalizedIntro, { align: "center", size: "lg", color: textColors.body })
 
   /*
    * "services" is the flagship role shared between overview and catalog
@@ -1813,7 +2108,9 @@ function composeCardGridSection(
 
   const requestedPremiumTreatment = premiumCompositionTreatment(context)
   const mediaAsset = context.resolvedMediaAsset?.src.trim() ? { src: context.resolvedMediaAsset.src.trim(), alt: context.resolvedMediaAsset.alt } : undefined
-  const effectivePremiumTreatment = requestedPremiumTreatment ? premiumFallbackTreatment(requestedPremiumTreatment, finalItems.length, Boolean(mediaAsset)) : undefined
+  const effectivePremiumTreatment = requestedPremiumTreatment
+    ? premiumFallbackTreatment(requestedPremiumTreatment, finalItems.length, Boolean(mediaAsset), Boolean(context.singleItemInstance))
+    : undefined
   const requestedPricingTreatment = role === "pricing" ? pricingTreatmentFor(context) : undefined
 
   if (requestedPricingTreatment === "tier-highlight" && finalItems.length >= 2 && finalItems.length <= STRUCTURAL_TREATMENT_MAX_ITEMS) {
@@ -1821,7 +2118,7 @@ function composeCardGridSection(
     grid = pricingTierLayout(nodes, finalItems, textColors)
   } else if (effectivePremiumTreatment && role !== "pricing" && role !== "process") {
     layoutVariant = effectivePremiumTreatment
-    if (effectivePremiumTreatment === "featured-asymmetric") grid = asymmetricFeaturedLayout(nodes, role, finalItems, textColors)
+    if (effectivePremiumTreatment === "featured-asymmetric") grid = asymmetricFeaturedLayout(nodes, role, finalItems, textColors, context.instanceAlignment)
     else if (effectivePremiumTreatment === "editorial-alternating") grid = alternatingRowsLayout(nodes, role, finalItems, textColors)
     else if (effectivePremiumTreatment === "bento") grid = bentoLayout(nodes, role, finalItems, textColors)
     else if (effectivePremiumTreatment === "media-led" && mediaAsset) grid = mediaLedLayout(nodes, role, finalItems, textColors, mediaAsset)
@@ -1891,9 +2188,17 @@ function composeCardGridSection(
    * existing "xl" default (already the largest token this file uses);
    * only "compact" changes the render, and only for card-grid roles.
    */
-  const paddingY = context.aiDensity === "compact" ? "lg" : "xl"
+  const paddingY = context.instanceScale === "condensed" ? "lg" : context.aiDensity === "compact" ? "lg" : "xl"
+  /*
+   * V2-6.1: instanceScale only ever touches this outer section's own
+   * spacing/width -- never the treatment/heading sizes inside `grid`,
+   * which stay exactly what the chosen layout function already renders.
+   * Absent -> byte-identical "xl" pre-V2-6.1 width.
+   */
+  const maxWidth = context.instanceScale === "condensed" ? "lg" : context.instanceScale === "large" ? "full" : "xl"
+  const sectionChildren = [heading, intro, grid].filter((id): id is string => Boolean(id))
 
-  const root = add(nodes, createComposedNode({ type: "section", displayName: `${copy.titleText} (${layoutVariant})`, props: { maxWidth: "xl", paddingY, paddingX: "lg", background }, children: [heading, intro, grid] }))
+  const root = add(nodes, createComposedNode({ type: "section", displayName: `${copy.titleText} (${layoutVariant})`, props: { maxWidth, paddingY, paddingX: "lg", background }, children: sectionChildren }))
   return { role, rootId: root, nodes, purpose: copy.introText }
 }
 
@@ -1921,6 +2226,23 @@ function composeContact(
 ): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const isConversionPage = context.archetype === "conversion"
+  /*
+   * V2-6.1: a CompositionPlan contact instance whose backgroundStrategy
+   * directive is "contrast-led" matches the CTA section's dark surface
+   * (see composeCTA) so the two visually read as one composed closing
+   * moment, without inventing a merged contact+CTA node type. Every
+   * existing caller leaves this unset -> byte-identical light card.
+   */
+  /*
+   * V2-6.2: DRAMATIC CLOSING implies the same dark, CTA-matching surface
+   * as the V2-6.1 backgroundStrategy:"contrast-led" mechanism -- a plan
+   * author requesting the primitive does not also have to separately
+   * request the background strategy for the two to actually match.
+   */
+  const isDramaticClosing = context.instanceVisualPrimitive === "dramatic-closing"
+  const useContrastBackground = context.instanceContrastBackground === true || isDramaticClosing
+  const closingBackground = "#0A3E57"
+  const closingTextColors = readableTextColorsFor(closingBackground)
 
   let titleText = "Hablemos de tu proyecto"
   let descriptionText =
@@ -1943,24 +2265,28 @@ function composeContact(
   }
 
   const bookingPresentation = context.aiPreferredBookingPresentation && (BOOKING_PRESENTATIONS as readonly string[]).includes(context.aiPreferredBookingPresentation) ? context.aiPreferredBookingPresentation : undefined
-  const heading = headingNode(nodes, "Titulo contacto", bookingPresentation === "booking-card" ? "Agenda el siguiente paso" : titleText, isConversionPage ? 1 : 2, { align: "left" })
-  const copy = textNode(nodes, "Texto contacto", bookingPresentation === "booking-card" ? "Solicita una cita o conversación y confirma los detalles directamente con el negocio." : descriptionText, { size: "lg" })
+  const headingText = bookingPresentation === "booking-card" ? "Agenda el siguiente paso" : titleText
+  const heading = isDramaticClosing
+    ? headingNode(nodes, "Titulo contacto", headingText, isConversionPage ? 1 : 2, { align: "left", size: "6xl", weight: "extrabold", color: closingTextColors.heading })
+    : headingNode(nodes, "Titulo contacto", headingText, isConversionPage ? 1 : 2, { align: "left", ...(useContrastBackground ? { color: closingTextColors.heading } : {}) })
+  const copy = textNode(nodes, "Texto contacto", bookingPresentation === "booking-card" ? "Solicita una cita o conversación y confirma los detalles directamente con el negocio." : descriptionText, { size: "lg", ...(useContrastBackground ? { color: closingTextColors.body } : {}) })
 
   // V2-5F: real, caller-supplied contact only. When any real contact value
   // exists, never pad it out with the placeholder phone/email below --
   // that would falsely imply invented details belong to this business.
   const realContact = context.businessEvidence?.contact
   const hasRealContact = Boolean(realContact?.whatsapp || realContact?.phone || realContact?.email)
+  const contactLineProps = useContrastBackground ? { color: closingTextColors.body } : {}
 
   const contactLineIds = hasRealContact
     ? [
-        realContact?.whatsapp ? textNode(nodes, "WhatsApp", `WhatsApp: ${realContact.whatsapp}`) : null,
-        realContact?.phone ? textNode(nodes, "Telefono", `Telefono: ${realContact.phone}`) : null,
-        realContact?.email ? textNode(nodes, "Correo", `Correo: ${realContact.email}`) : null,
+        realContact?.whatsapp ? textNode(nodes, "WhatsApp", `WhatsApp: ${realContact.whatsapp}`, contactLineProps) : null,
+        realContact?.phone ? textNode(nodes, "Telefono", `Telefono: ${realContact.phone}`, contactLineProps) : null,
+        realContact?.email ? textNode(nodes, "Correo", `Correo: ${realContact.email}`, contactLineProps) : null,
       ].filter((id): id is string => Boolean(id))
     : [
-        textNode(nodes, "Telefono", "WhatsApp: +52 000 000 0000"),
-        textNode(nodes, "Correo", "Correo: contacto@tumarca.com"),
+        textNode(nodes, "Telefono", "WhatsApp: +52 000 000 0000", contactLineProps),
+        textNode(nodes, "Correo", "Correo: contacto@tumarca.com", contactLineProps),
       ]
 
   const primaryHref = realContact?.whatsapp ? `https://wa.me/${realContact.whatsapp}` : "#"
@@ -1979,11 +2305,39 @@ function composeContact(
   const bookingNote = bookingPresentation === "booking-card" ? textNode(nodes, "Nota reserva", "Los detalles se confirman directamente al contactar.", { size: "sm", color: "#64748b" }) : null
   if (bookingNote) contentChildren.push(bookingNote)
 
-  const cardClassName = bookingPresentation === "booking-card"
-    ? "rounded-[2rem] border border-sky-200 bg-white p-8 shadow-2xl shadow-sky-900/10"
-    : "rounded-[1.75rem] border border-sky-100 bg-white p-8 shadow-xl shadow-sky-900/10"
-  const card = wrapperNode(nodes, "Tarjeta contacto", cardClassName, contentChildren, "article")
-  const root = add(nodes, createComposedNode({ type: "section", displayName: "Contacto", props: { maxWidth: "lg", paddingY: "xl", paddingX: "lg", background: "#eef8ff" }, children: [card] }))
+  /*
+   * V2-6.2: DRAMATIC CLOSING drops the bordered/translucent card entirely
+   * -- content sits directly on the shared dark surface, exactly like
+   * composeCTA's banner variant already does, so the two sections that
+   * follow each other read as ONE continuous closing surface instead of
+   * two adjacent boxes. Every other path (including the pre-existing
+   * V2-6.1 contrast-led-without-primitive case) keeps its card exactly
+   * as before.
+   */
+  const card = isDramaticClosing
+    ? wrapperNode(nodes, "Contenido cierre dramatico", "mx-auto flex w-full max-w-4xl flex-col gap-6", contentChildren, "article")
+    : wrapperNode(
+        nodes,
+        "Tarjeta contacto",
+        useContrastBackground
+          ? "rounded-[1.75rem] border border-white/10 bg-white/5 p-8"
+          : bookingPresentation === "booking-card"
+            ? "rounded-[2rem] border border-sky-200 bg-white p-8 shadow-2xl shadow-sky-900/10"
+            : "rounded-[1.75rem] border border-sky-100 bg-white p-8 shadow-xl shadow-sky-900/10",
+        contentChildren,
+        "article",
+      )
+  const root = add(nodes, createComposedNode({
+    type: "section",
+    displayName: isDramaticClosing ? "Contacto (dramatic-closing)" : "Contacto",
+    props: {
+      maxWidth: isDramaticClosing ? "full" : "lg",
+      paddingY: "xl",
+      paddingX: "lg",
+      background: useContrastBackground ? closingBackground : "#eef8ff",
+    },
+    children: [card],
+  }))
   return { role: "contact", rootId: root, nodes, purpose: "Facilitar contacto y siguiente paso." }
 }
 
@@ -2024,7 +2378,15 @@ function composeCTA(
    * `copy` is `ctaCopy(context.archetype)` unchanged.
    */
   const copy = resolveCtaCopy(context, ctaCopy(context.archetype))
-  const variant = selectVariant(context, "cta", CTA_VARIANTS, CTA_WEIGHTS)
+  /*
+   * V2-6.2: DRAMATIC CLOSING deterministically uses the banner shape
+   * (already full-width/dark/xl-padding, IDENTICAL outer shell to the
+   * companion contact section above it) instead of the probabilistically-
+   * selected variant -- the closing's visual continuity must not depend
+   * on which variant selectVariant happens to land on.
+   */
+  const isDramaticClosing = context.instanceVisualPrimitive === "dramatic-closing"
+  const variant = isDramaticClosing ? "banner" : selectVariant(context, "cta", CTA_VARIANTS, CTA_WEIGHTS)
 
   if (variant === "split-panel") {
     const heading = headingNode(nodes, "Titulo CTA", copy.title, 2, { align: "left", color: "#ffffff" })
@@ -2037,11 +2399,11 @@ function composeCTA(
     return { role: "cta", rootId: root, nodes, purpose: "Cerrar con llamada a la accion." }
   }
 
-  const heading = headingNode(nodes, "Titulo CTA", copy.title, 2, { align: "center", color: "#ffffff" })
+  const heading = headingNode(nodes, "Titulo CTA", copy.title, 2, { align: "center", color: "#ffffff", ...(isDramaticClosing ? { size: "6xl" as const } : {}) })
   const body = textNode(nodes, "Texto CTA", copy.body, { align: "center", color: "#dbeafe", size: "lg" })
   const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "CTA final", props: { label: copy.label, href: copy.href, variant: "primary", size: "lg" } }))
-  const stack = wrapperNode(nodes, "Contenido CTA", "mx-auto flex max-w-3xl flex-col items-center gap-6 text-center", [heading, body, cta])
-  const root = add(nodes, createComposedNode({ type: "section", displayName: "CTA final (banner)", props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background: "#0A3E57" }, children: [stack] }))
+  const stack = wrapperNode(nodes, "Contenido CTA", `mx-auto flex ${isDramaticClosing ? "max-w-4xl" : "max-w-3xl"} flex-col items-center gap-6 text-center`, [heading, body, cta])
+  const root = add(nodes, createComposedNode({ type: "section", displayName: isDramaticClosing ? "CTA final (dramatic-closing)" : "CTA final (banner)", props: { maxWidth: "full", paddingY: "xl", paddingX: "lg", background: "#0A3E57" }, children: [stack] }))
   return { role: "cta", rootId: root, nodes, purpose: "Cerrar con llamada a la accion." }
 }
 

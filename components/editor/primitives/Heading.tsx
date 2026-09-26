@@ -9,7 +9,7 @@ import { resolveFontCssValue } from "@/components/editor/theme/font-registry"
 export interface HeadingProps {
   text?: string
   level?: 1 | 2 | 3 | 4 | 5 | 6
-  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl"
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "7xl"
   weight?: "normal" | "medium" | "semibold" | "bold" | "extrabold"
   color?: string
   align?: "left" | "center" | "right"
@@ -25,6 +25,16 @@ const SIZE = {
   "3xl": "text-3xl",
   "4xl": "text-4xl",
   "5xl": "text-5xl",
+  /*
+   * V2-6.2: genuinely OVERSIZED tokens, above the pre-existing "5xl"
+   * ceiling every standard hero/heading already used -- without a bigger
+   * token, no primitive can read as visually larger than an ordinary
+   * hero title. Responsive (never a single fixed viewport-breaking
+   * size): scales down on narrow viewports, same pattern Tailwind's own
+   * default type scale uses elsewhere in this codebase.
+   */
+  "6xl": "text-4xl sm:text-6xl",
+  "7xl": "text-5xl sm:text-7xl",
 } as const
 
 const WEIGHT = {

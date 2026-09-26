@@ -1,6 +1,13 @@
 import type { NodeProps } from "@/types/editor"
 import type { PageArchetype, SectionRole } from "@/lib/orvenix-ai/architect"
 import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
+import type { SectionVisualLayoutPlan } from "./visual-layout-plan"
+import type {
+  SectionInstanceAlignment,
+  SectionInstanceMediaStrategy,
+  SectionInstanceScale,
+  SectionInstanceVisualPrimitive,
+} from "./composition-context"
 
 export interface ComposedNode {
   tempId: string
@@ -168,4 +175,41 @@ export interface SectionCompositionContext {
    * "accent-soft" background.
    */
   accentColor?: string
+
+  /**
+   * V2-6.1: bounded, purely additive Composition Plan instance directives
+   * -- set ONLY by the deterministic compiler translation of a
+   * SectionInstancePlan (see architect/composition-plan.ts and
+   * compiler/section-instance-context.ts), never directly by an AI/user
+   * choice. Absent on every existing caller -> byte-identical pre-V2-6.1
+   * behavior; this is the same "absent means unchanged" contract every
+   * other aiPreferred-style / richComposition field above already follows.
+   */
+  instanceScale?: SectionInstanceScale
+  instanceAlignment?: SectionInstanceAlignment
+  instanceMediaStrategy?: SectionInstanceMediaStrategy
+  /**
+   * True only for a deliberately curated single-item CompositionPlan
+   * instance (eg. one of several separately-composed "services"
+   * instances, each bound to exactly one real item). Lets featured/
+   * media-led treatments apply to a single real item instead of the
+   * ordinary "needs >=2/3 items" guardrail meant for accidental short
+   * real-business lists -- never set for a naturally-short collection.
+   */
+  singleItemInstance?: boolean
+  /** True only when this instance's composition directive says "opening" emphasis for a hero-role instance -- suppresses the CTA row so a typographic opening can have no call-to-action. */
+  instanceOmitCta?: boolean
+  /** True only when a contact-role instance's backgroundStrategy directive is "contrast-led" -- lets a contact section match the CTA section's dark surface so the two visually read as one composed closing, without inventing a merged node type. */
+  instanceContrastBackground?: boolean
+
+  /**
+   * V2-6.2: the bounded visual composition primitive this instance
+   * requested (see composition-context.ts). Absent/"standard" -> every
+   * composer function's exact pre-V2-6.2 rendering, unchanged. Only ever
+   * set by the compiler's validated translation of a SectionInstancePlan
+   * -- never a direct AI/user choice, never free text.
+   */
+  instanceVisualPrimitive?: SectionInstanceVisualPrimitive
+  /** VisualLayoutPlan V1: canonical bounded executable visual grammar for this section instance. */
+  instanceVisualLayout?: SectionVisualLayoutPlan
 }

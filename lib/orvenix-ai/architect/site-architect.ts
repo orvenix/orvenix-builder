@@ -1,14 +1,38 @@
 import type { OrvenixAIContext } from "../types"
+import { inferVisualFamily } from "../theme/visual-direction"
 import {
   selectBlocksForRoles,
   type SectionRole,
 } from "./block-selector"
 import type { PageArchetype } from "./page-archetype"
+import {
+  buildRoleConstraints,
+  resolveArchitectureStrategy,
+  validateRoleSequence,
+  type ArchitectureSelectionContext,
+} from "./architecture-selector"
+import type {
+  ArchitectureEvidenceSignals,
+  ArchitectureGroundingSignals,
+  ArchitectureReferenceSignal,
+  ArchitectureStrategy,
+} from "./architecture-grammar"
+import type { SectionInstancePlan } from "./composition-plan"
 
 export interface OrvenixSiteSectionPlan {
   role: SectionRole
   blockType: string | null
   purpose: string
+  /**
+   * V2-6.1: optional Composition Plan instance directive for this exact
+   * section (see composition-plan.ts). Absent -> the section behaves
+   * exactly as every pre-V2-6.1 caller already gets (composeSection(role,
+   * context) against the full, unsliced business context). When present,
+   * `instance.role` MUST equal this section's own `role` -- the compiler
+   * does not currently reconcile a mismatch, it simply prefers `role`
+   * above and applies the instance's selection/composition on top of it.
+   */
+  instance?: SectionInstancePlan
 }
 
 export interface OrvenixSitePagePlan {
@@ -38,6 +62,32 @@ export interface OrvenixSiteArchitecture {
    * intent.
    */
   businessObjective?: string
+  /**
+   * V2-6: the resolved, explainable Adaptive Architecture decision behind
+   * this site's Home page composition (see architecture-grammar.ts /
+   * architecture-selector.ts). Optional and purely additive -- absence
+   * changes nothing for any existing consumer; `sections`/`pages` above
+   * remain the single ordered-role shape every downstream system already
+   * consumes.
+   */
+  architectureStrategy?: ArchitectureStrategy
+}
+
+/**
+ * V2-6: bounded, additive extras `buildSiteArchitecture` MAY receive on top
+ * of the OrvenixAIContext it already takes. Every existing call site keeps
+ * compiling and behaving byte-identically without ever passing this --
+ * absence means "not evaluated" (preserve pre-V2-6 behavior), never "known
+ * to be false". Deliberately excludes raw evidence/raw testimonials/PII:
+ * `businessEvidenceSummary` is the same bounded count/boolean shape as
+ * site-creation/evidence-normalization.ts's BusinessEvidenceSummaryV1
+ * (decoupled locally, same pattern already used by
+ * creative-director/contract.ts's CreativeDirectorBusinessEvidenceSummaryV1).
+ */
+export interface ArchitectureSelectionExtras {
+  businessEvidenceSummary?: ArchitectureEvidenceSignals
+  /** Bounded, per-dimension reference contributions -- see architecture-grammar.ts. */
+  designReferences?: ArchitectureReferenceSignal[]
 }
 
 function normalize(value?: string) {
@@ -248,11 +298,135 @@ function makePage(
   }
 }
 
+/**
+ * V2-6 Adaptive Architecture MVP: resolves ArchitectureStrategy once per
+ * site (never per page -- the strategy describes the SITE's Home
+ * composition; secondary pages keep their own existing, page-purpose-
+ * specific recipes untouched, see buildSiteArchitecture below) from the
+ * same normalized business facts inferSiteType/hasPricingSignal already
+ * use, plus VisualFamily (theme/visual-direction.ts's OWN industry-text
+ * inference -- reused here as an ADDITIONAL architecture signal; that
+ * module's role as the sole THEME authority is unchanged) and the caller's
+ * optional evidence/reference extras. Deliberately never reads
+ * context.business?.name -- see ArchitectureSelectionContext's own
+ * "business name and slug must remain non-influential" invariant.
+ */
+function resolveHomeArchitecture(
+  context: OrvenixAIContext,
+  siteType: string,
+  pricingSignal: boolean,
+  extras: ArchitectureSelectionExtras | undefined,
+) {
+  const business = context.business
+  const visualFamily = inferVisualFamily({
+    industry: business?.industry,
+    description: business?.description,
+    services: business?.services,
+    siteTypeHint: siteType,
+  })
+
+  const selectionContext: ArchitectureSelectionContext = {
+    siteType,
+    industry: business?.industry,
+    description: business?.description,
+    objective: business?.objective,
+    audience: business?.audience,
+    visualFamily,
+    services: business?.services,
+    products: business?.products,
+    pricingSignal,
+    evidence: extras?.businessEvidenceSummary,
+    pagePurpose: "home",
+    references: extras?.designReferences,
+  }
+
+  const strategy = resolveArchitectureStrategy(selectionContext)
+
+  const grounding: ArchitectureGroundingSignals = {
+    siteType,
+    hasServices: Boolean(business?.services?.length),
+    hasProducts: Boolean(business?.products?.length),
+    pricingSignal,
+    evidence: extras?.businessEvidenceSummary,
+  }
+
+  const constraints = buildRoleConstraints(strategy, grounding)
+
+  return { strategy, constraints, grounding }
+}
+
+/**
+ * Assembles the Home page's ordered SectionRole[] from a resolved
+ * ArchitectureStrategy + its grounding-aware constraints. Every role added
+ * here is gated on NOT being in `constraints.forbiddenRoles` -- the
+ * constraint model is consulted, not decorative. Falls back to
+ * `legacyRoles` (this siteType's pre-V2-6 literal recipe) whenever the
+ * assembled sequence fails `validateRoleSequence`, so an unexpected
+ * strategy combination degrades to a known-safe baseline instead of ever
+ * producing a broken page.
+ */
+function assembleHomeRoles(
+  strategy: ArchitectureStrategy,
+  constraints: ReturnType<typeof buildRoleConstraints>,
+  grounding: ArchitectureGroundingSignals,
+  legacyRoles: SectionRole[],
+): SectionRole[] {
+  const forbidden = new Set(constraints.forbiddenRoles)
+  const allowed = (role: SectionRole) => !forbidden.has(role)
+
+  const roles: SectionRole[] = ["navigation"]
+
+  if (allowed("hero")) roles.push("hero")
+
+  if (strategy.trustPlacement === "early" && allowed("trust")) roles.push("trust")
+
+  const coreRole = constraints.requiredRoles.find((role): role is SectionRole =>
+    (["services", "products", "gallery", "content"] as SectionRole[]).includes(role),
+  )
+  if (coreRole && !roles.includes(coreRole)) roles.push(coreRole)
+
+  if (strategy.trustPlacement === "embedded" && allowed("trust")) roles.push("trust")
+
+  if (strategy.bodyTopology === "alternating" && allowed("features") && !roles.includes("features")) roles.push("features")
+  if (strategy.bodyTopology === "showcase" && allowed("gallery") && !roles.includes("gallery")) roles.push("gallery")
+  if (strategy.bodyTopology === "clustered" && allowed("features") && !roles.includes("features")) roles.push("features")
+  if (strategy.bodyTopology === "catalog" && grounding.hasProducts && allowed("products") && !roles.includes("products")) {
+    roles.push("products")
+  }
+
+  if (
+    (strategy.narrative === "authority-led" || strategy.narrative === "service-led" || strategy.narrative === "event-led") &&
+    allowed("process")
+  ) {
+    roles.push("process")
+  }
+
+  if (constraints.optionalRoles.includes("testimonials") && allowed("testimonials")) roles.push("testimonials")
+
+  if (strategy.trustPlacement === "late" && allowed("trust") && !roles.includes("trust")) roles.push("trust")
+
+  if ((strategy.narrative === "authority-led" || strategy.narrative === "service-led") && allowed("faq")) roles.push("faq")
+
+  if (strategy.closing === "pricing" && grounding.pricingSignal && allowed("pricing")) roles.push("pricing")
+
+  if ((strategy.closing === "contact" || strategy.closing === "booking" || strategy.closing === "donation") && allowed("contact")) {
+    roles.push("contact")
+  }
+
+  roles.push("cta")
+  roles.push("footer")
+
+  return validateRoleSequence(roles, constraints) ? roles : legacyRoles
+}
+
 export function buildSiteArchitecture(
   context: OrvenixAIContext,
+  extras?: ArchitectureSelectionExtras,
 ): OrvenixSiteArchitecture {
   const siteType = inferSiteType(context)
   const pricingSignal = hasPricingSignal(context)
+  const { strategy, constraints, grounding } = resolveHomeArchitecture(context, siteType, pricingSignal, extras)
+  const homeRoles = (legacyRoles: SectionRole[]) => assembleHomeRoles(strategy, constraints, grounding, legacyRoles)
 
   if (siteType === "health") {
     return {
@@ -264,13 +438,14 @@ export function buildSiteArchitecture(
       products: context.business?.products,
       location: context.business?.location,
       businessObjective: context.business?.objective,
+      architectureStrategy: strategy,
       pages: [
         makePage(siteType,
           "Inicio",
           "home",
           "Presentar la clínica y conseguir citas.",
           "overview",
-          [
+          homeRoles([
             "navigation",
             "hero",
             "trust",
@@ -281,7 +456,7 @@ export function buildSiteArchitecture(
             "contact",
             "cta",
             "footer",
-          ],
+          ]),
         ),
         makePage(siteType,
           "Servicios",
@@ -322,13 +497,14 @@ export function buildSiteArchitecture(
       products: context.business?.products,
       location: context.business?.location,
       businessObjective: context.business?.objective,
+      architectureStrategy: strategy,
       pages: [
         makePage(siteType,
           "Inicio",
           "home",
           "Presentar el restaurante.",
           "overview",
-          [
+          homeRoles([
             "navigation",
             "hero",
             "trust",
@@ -338,7 +514,7 @@ export function buildSiteArchitecture(
             "contact",
             "cta",
             "footer",
-          ],
+          ]),
         ),
         makePage(siteType,
           "Menú",
@@ -387,13 +563,14 @@ export function buildSiteArchitecture(
       products: context.business?.products,
       location: context.business?.location,
       businessObjective: context.business?.objective,
+      architectureStrategy: strategy,
       pages: [
         makePage(siteType,
           "Inicio",
           "home",
           "Presentar posicionamiento y servicios.",
           "overview",
-          [
+          homeRoles([
             "navigation",
             "hero",
             "trust",
@@ -403,7 +580,7 @@ export function buildSiteArchitecture(
             "testimonials",
             "cta",
             "footer",
-          ],
+          ]),
         ),
         makePage(siteType,
           "Servicios",
@@ -456,13 +633,14 @@ export function buildSiteArchitecture(
       products: context.business?.products,
       location: context.business?.location,
       businessObjective: context.business?.objective,
+      architectureStrategy: strategy,
       pages: [
         makePage(siteType,
           "Inicio",
           "home",
           "Presentar la marca y llevar al catálogo.",
           "overview",
-          [
+          homeRoles([
             "navigation",
             "hero",
             "trust",
@@ -471,7 +649,7 @@ export function buildSiteArchitecture(
             "testimonials",
             "cta",
             "footer",
-          ],
+          ]),
         ),
         makePage(siteType,
           "Productos",
@@ -499,13 +677,14 @@ export function buildSiteArchitecture(
     products: context.business?.products,
     location: context.business?.location,
     businessObjective: context.business?.objective,
+    architectureStrategy: strategy,
     pages: [
       makePage(siteType,
         "Inicio",
         "home",
         "Presentar el negocio.",
         "overview",
-        [
+        homeRoles([
           "navigation",
           "hero",
           "trust",
@@ -516,7 +695,7 @@ export function buildSiteArchitecture(
           "contact",
           "cta",
           "footer",
-        ],
+        ]),
       ),
       makePage(siteType,
         "Servicios",
