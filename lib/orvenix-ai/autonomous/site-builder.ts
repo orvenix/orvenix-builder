@@ -842,7 +842,10 @@ export async function runAutonomousMultiPageSiteBuilder(
    * (both the default) -> resolveAssistedSiteGenerationV1 returns
    * `orderedArchitecture` completely unchanged and never invokes any
    * provider; every existing caller of this function is therefore
-   * byte-identical. Mode "deterministic" runs ONLY the ASSISTED-2A
+   * byte-identical. Mode "anthropic" (explicit trusted callers only, see
+   * types.ts) builds a bounded request context and feeds the provider's
+   * untrusted output through the SAME validate + grounding path below.
+   * Mode "deterministic" runs ONLY the ASSISTED-2A
    * deterministic testing provider (never Anthropic/Gemini/any network
    * call) through validate + closed-world grounding; any failure at any
    * stage (provider error, malformed proposal, grounding rejection)
@@ -853,6 +856,13 @@ export async function runAutonomousMultiPageSiteBuilder(
     mode: input.assistedGeneration?.mode,
     architecture: orderedArchitecture,
     proposal: input.assistedGeneration?.proposal,
+    // ASSISTED-3B (anthropic mode only; ignored otherwise): Creative
+    // Director has ALREADY run upstream -- its validated direction is
+    // consumed here as sanitized context, never replaced.
+    creativeDirection: input.creativeDirection,
+    designReferences: input.assistedGeneration?.designReferences,
+    provider: input.assistedGeneration?.provider,
+    timeoutMs: input.assistedGeneration?.timeoutMs,
   })
   const assistedArchitecture = assistedGenerationResult.architecture
 

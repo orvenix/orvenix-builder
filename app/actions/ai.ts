@@ -1218,6 +1218,7 @@ export async function runOrvenixSiteCreationAction(
         forceFreshComposition: true,
         minimumQuality: 55,
         // ASSISTED-2B: bounded, env-gated ("ORVENIX_ASSISTED_GENERATION_MODE=deterministic"), default OFF. See architecture-bridge.ts for the full safety contract.
+        // ASSISTED-3B: deliberately the GLOBAL resolver only ("off" | "deterministic"). This customer-reachable action never selects "anthropic".
         assistedGeneration: { mode: resolveAssistedGenerationModeV1() },
       });
     } catch (error) {

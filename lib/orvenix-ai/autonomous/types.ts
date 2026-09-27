@@ -8,9 +8,11 @@ import type {
   OrvenixSiteArchitecture,
 } from "@/lib/orvenix-ai/architect"
 import type {
+  AssistedGenerationExplicitModeV1,
   AssistedGenerationLifecycleRecordV1,
-  AssistedGenerationModeV1,
 } from "@/lib/orvenix-ai/assisted-generation/architecture-bridge"
+import type { AssistedSiteGenerationProviderV1 } from "@/lib/orvenix-ai/assisted-generation/contract"
+import type { CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
 
 import type {
   RankedTemplate,
@@ -89,11 +91,24 @@ export interface AutonomousSiteBuilderInput {
    * network call) through validate + closed-world grounding, and any
    * failure at any stage falls back automatically to the unmodified
    * architecture -- see lib/orvenix-ai/assisted-generation/architecture-bridge.ts.
+   *
+   * ASSISTED-3B: "anthropic" is an EXPLICIT, per-generation choice for
+   * trusted server-side callers only (this builder is plain server code,
+   * not a server action -- it is unreachable from a browser payload).
+   * Authorization is the caller's responsibility: app/actions/ai.ts only
+   * ever forwards resolveAssistedGenerationModeV1() ("off" |
+   * "deterministic"), so no customer request can reach Anthropic here.
    */
   assistedGeneration?: {
-    mode?: AssistedGenerationModeV1
+    mode?: AssistedGenerationExplicitModeV1
     /** Untrusted/dynamic input for the deterministic provider. Absent -> a safe, structurally-neutral default proposal. */
     proposal?: unknown
+    /** Anthropic mode only: already-sanitized Design Reference context for the bounded request context. */
+    designReferences?: CreativeDesignReferenceV1[]
+    /** Anthropic mode only: provider injection seam (tests / trusted harness). Absent -> the real ASSISTED-3A provider. */
+    provider?: AssistedSiteGenerationProviderV1
+    /** Anthropic mode only: bridge-level hard timeout override. */
+    timeoutMs?: number
   }
 }
 

@@ -20,11 +20,10 @@ import type { AssistedSiteGenerationProviderV1 } from "./contract"
  * consumes it -- this module never casts its parsed result to a trusted
  * type, and never compiles/renders/persists anything itself.
  *
- * Not wired into any mode/env flag yet (see this package's
- * architecture-bridge.ts, unmodified by this phase): ASSISTED-3A's scope
- * is "implement + validate with zero real provider calls", not
- * activation. See this repo's ASSISTED-3A final report for the exact
- * ASSISTED-3B wiring plan.
+ * Wired (ASSISTED-3B) ONLY through architecture-bridge.ts's explicit
+ * "anthropic" mode, which trusted server-side callers must request per
+ * generation -- never reachable via the ORVENIX_ASSISTED_GENERATION_MODE
+ * env resolver.
  *
  * Never logs: the API key, the raw request payload, the raw response
  * text, or raw generated content on error -- only generic, non-content
