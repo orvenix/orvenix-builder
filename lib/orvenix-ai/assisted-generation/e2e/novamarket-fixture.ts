@@ -6,13 +6,17 @@
  * or superlative claims; no network images (asset intent is a local
  * description only, never a URL).
  *
- * The fixture deliberately carries RICHER commerce facts (category,
- * price, compare-at price, availability, variants) than the current
- * site-creation pipeline can represent: AutonomousBusinessInput.products
- * is `{ name, description? }` only. toSupportedBuilderProducts() below
- * maps to that supported subset, and droppedCommerceFields() names
- * exactly what is lost -- that loss is itself an ASSISTED-4A gap-report
- * output, never papered over.
+ * COMMERCE-1: two modes.
+ *   - PRESENTATION (default, what the dev harness route uses):
+ *     toSupportedBuilderProductsV1() maps each product to a
+ *     CommerceProductFactV1 WITHOUT any store binding (category, variants,
+ *     price, compare price, availability) -- static presentation only.
+ *   - MOCK EXECUTABLE (unit tests only): buildNovaMarketMockStoreRecordsV1()
+ *     returns deterministic, obviously-fake "nm-mock-" Product/ProductVariant
+ *     rows for the builder's trusted `commerceStore` input. These ids do NOT
+ *     exist in any database; they only prove the generated tree carries the
+ *     bound ids through to the existing store blocks.
+ * Synthetic product `id`/`assetIntent` are never forwarded as store ids.
  */
 
 export const NOVAMARKET_FIXTURE_NAME_V1 = "NovaMarket"
@@ -95,18 +99,76 @@ export const NOVAMARKET_BUSINESS_V1 = {
 
 export const NOVAMARKET_REQUEST_V1 = "Crea una tienda en linea para NovaMarket con catalogo de productos por categoria"
 
-/** The ONLY product shape the current site-creation pipeline accepts (AutonomousBusinessInput.products). */
-export function toSupportedBuilderProductsV1(products: readonly NovaMarketProductV1[] = NOVAMARKET_PRODUCTS_V1) {
-  return products.map((product) => ({ name: product.name, description: product.shortDescription }))
+const CATEGORY_LABEL_BY_SLUG = new Map<string, string>(NOVAMARKET_CATEGORIES_V1.map((category) => [category.slug, category.name]))
+
+function categoryLabel(slug: NovaMarketCategorySlugV1): string {
+  return CATEGORY_LABEL_BY_SLUG.get(slug) ?? slug
 }
 
-/** Fixture facts the current pipeline has NO field for -- reported as gaps, never smuggled into copy. */
+function presentationVariants(product: NovaMarketProductV1) {
+  if (!product.variants?.length) {
+    return [{
+      label: "Unica",
+      priceMxn: product.priceMxn,
+      ...(product.compareAtPriceMxn ? { comparePriceMxn: product.compareAtPriceMxn } : {}),
+      availability: product.availability,
+    }]
+  }
+  return product.variants.map((variant) => ({
+    label: variant.label,
+    priceMxn: variant.priceMxn,
+    ...(product.compareAtPriceMxn && variant.priceMxn === product.priceMxn ? { comparePriceMxn: product.compareAtPriceMxn } : {}),
+    availability: product.availability,
+    sku: variant.sku,
+  }))
+}
+
+/** PRESENTATION commerce facts (CommerceProductFactV1 without storeBinding) -- never executable. */
+export function toSupportedBuilderProductsV1(products: readonly NovaMarketProductV1[] = NOVAMARKET_PRODUCTS_V1) {
+  return products.map((product) => ({
+    name: product.name,
+    description: product.shortDescription,
+    category: categoryLabel(product.category),
+    variants: presentationVariants(product),
+  }))
+}
+
+/** Fixture facts the pipeline still does not carry -- reported as gaps, never smuggled into copy or ids. */
 export const NOVAMARKET_DROPPED_COMMERCE_FIELDS_V1 = [
   "id",
-  "category",
-  "priceMxn",
-  "compareAtPriceMxn",
-  "availability",
-  "variants",
   "assetIntent",
 ] as const
+
+export const NOVAMARKET_MOCK_SITE_ID_V1 = "nm-mock-site"
+
+const MOCK_STOCK_BY_AVAILABILITY: Record<NovaMarketAvailabilityV1, number> = {
+  in_stock: 25,
+  low_stock: 3,
+  out_of_stock: 0,
+  // The store runtime has no preorder concept: a mocked bound preorder product is simply unavailable.
+  preorder: 0,
+}
+
+/**
+ * TEST ONLY: deterministic, obviously-fake store rows shaped like the
+ * Prisma Product/ProductVariant records a trusted caller would read.
+ * They do NOT exist in any DB and must never be sent to checkout.
+ */
+export function buildNovaMarketMockStoreRecordsV1(siteId: string = NOVAMARKET_MOCK_SITE_ID_V1) {
+  return NOVAMARKET_PRODUCTS_V1.map((product) => ({
+    id: `nm-mock-prod-${product.id.slice(3)}`,
+    siteId,
+    name: product.name,
+    description: product.shortDescription,
+    status: "active",
+    metadata: { category: categoryLabel(product.category) },
+    variants: (product.variants?.length ? product.variants : [{ sku: `NM-${product.id.slice(3)}-U`, label: "Unica", priceMxn: product.priceMxn }]).map((variant, index) => ({
+      id: `nm-mock-var-${product.id.slice(3)}-${index + 1}`,
+      sku: variant.sku,
+      name: variant.label,
+      priceMxn: variant.priceMxn,
+      comparePriceMxn: product.compareAtPriceMxn && variant.priceMxn === product.priceMxn ? product.compareAtPriceMxn : null,
+      stock: MOCK_STOCK_BY_AVAILABILITY[product.availability],
+    })),
+  }))
+}

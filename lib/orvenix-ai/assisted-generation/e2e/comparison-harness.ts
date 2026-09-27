@@ -6,7 +6,9 @@ import {
   NOVAMARKET_BUSINESS_V1,
   NOVAMARKET_DROPPED_COMMERCE_FIELDS_V1,
   NOVAMARKET_FIXTURE_NAME_V1,
+  NOVAMARKET_MOCK_SITE_ID_V1,
   NOVAMARKET_PRODUCTS_V1,
+  buildNovaMarketMockStoreRecordsV1,
   NOVAMARKET_REQUEST_V1,
   toSupportedBuilderProductsV1,
 } from "./novamarket-fixture"
@@ -57,6 +59,18 @@ export function buildNovaMarketBuilderInputBaseV1() {
     forceFreshComposition: true,
     minimumQuality: 55,
     assetProvider: DISABLED_ASSET_PROVIDER_V1,
+  }
+}
+
+/**
+ * COMMERCE-1, TEST ONLY: same fixture plus the builder's trusted
+ * `commerceStore` input fed with obviously-fake "nm-mock-" rows. Not used
+ * by the dev route (which stays presentation-only) and never persisted.
+ */
+export function buildNovaMarketMockExecutableBuilderInputV1() {
+  return {
+    ...buildNovaMarketBuilderInputBaseV1(),
+    commerceStore: { siteId: NOVAMARKET_MOCK_SITE_ID_V1, records: buildNovaMarketMockStoreRecordsV1() },
   }
 }
 

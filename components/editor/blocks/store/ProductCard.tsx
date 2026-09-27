@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCartStore } from "@/store/useCartStore";
 import { ShoppingCart, Tag } from "lucide-react";
+import { buildCartItemFromProductCardV1, isProductCardBoundV1 } from "./product-card-binding";
 
 interface Props {
   id?: string;
@@ -24,8 +25,8 @@ function formatMxn(cents: number) {
 }
 
 export function ProductCard({
-  productId     = "demo",
-  variantId     = "demo-v1",
+  productId,
+  variantId,
   productName   = "Producto de ejemplo",
   variantName   = "Talla única",
   priceMxn      = 29900,
@@ -41,9 +42,13 @@ export function ProductCard({
   const isOutOfStock = stock !== -1 && stock <= 0;
   const isLowStock   = stock !== -1 && stock > 0 && stock <= lowStockThreshold;
 
+  // COMMERCE-1: no demo/default ids -- an unbound card is presentation-only.
+  const isBound = isProductCardBoundV1({ productId, variantId });
+
   const handleAdd = () => {
-    if (isOutOfStock) return;
-    addItem({ variantId, productId, productName, variantName, priceMxn, imageUrl, quantity: 1 });
+    const item = buildCartItemFromProductCardV1({ productId, variantId, productName, variantName, priceMxn, imageUrl, stock });
+    if (!item) return;
+    addItem(item);
   };
 
   const discount = comparePriceMxn && comparePriceMxn > priceMxn
@@ -99,16 +104,23 @@ export function ProductCard({
             )}
           </div>
 
+          {!isBound ? (
+            <p className="w-full rounded-xl border border-white/10 px-3 py-2 text-center text-xs font-semibold text-slate-400" data-store-card-state="unbound">
+              Producto sin vincular a la tienda
+            </p>
+          ) : (
           <button
             type="button"
             onClick={handleAdd}
             disabled={isOutOfStock}
+            data-store-card-state={isOutOfStock ? "out-of-stock" : "bound"}
             className="w-full flex items-center justify-center gap-2 h-9 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
             style={{ background: isOutOfStock ? "#374151" : `linear-gradient(135deg, ${accentColor}, ${accentColor}bb)` }}
           >
             <ShoppingCart size={14} />
             {isOutOfStock ? "Sin stock" : "Añadir al carrito"}
           </button>
+          )}
         </div>
       </div>
     </div>

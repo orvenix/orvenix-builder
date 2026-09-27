@@ -1,3 +1,4 @@
+import type { CommerceProductFactV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type {
   EditorTree,
   GlobalTheme,
@@ -77,7 +78,7 @@ export interface OrvenixAIContext {
     objective?: string;
     services?: Array<{ name: string; description?: string }>;
     /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
-    products?: Array<{ name: string; description?: string }>;
+    products?: CommerceProductFactV1[];
   };
 }
 

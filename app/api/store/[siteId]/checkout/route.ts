@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { z } from "zod"
 import { editorPrisma } from "@/lib/editor-db"
 import { getUserPlanAccess } from "@/lib/plan-guard"
 import { createStoreMpPreference, isMpConfigured } from "@/lib/mercadopago"
@@ -15,24 +14,13 @@ import {
 import { getPublicFunnelOfferQuery } from "@/lib/commerce/funnel-offer-public"
 import { triggerAutomations } from "@/lib/automation/runtime"
 import { serverError } from "@/lib/server-log"
+import { buildStoreCheckoutBaseItemsV1, StoreCheckoutSchemaV1 } from "@/lib/commerce/checkout-pricing"
 import type { Prisma } from "@/generated/editor-prisma"
 
 type Ctx = { params: Promise<{ siteId: string }> }
 
-const CheckoutSchema = z.object({
-  customerEmail: z.string().email().max(191),
-  customerName: z.string().max(191).optional(),
-  funnelId: z.string().min(1).max(191).optional(),
-  funnelStep: z.enum(["landing", "checkout", "upsell", "downsell", "thankyou"]).optional(),
-  funnelStepId: z.string().min(1).max(191).optional(),
-  offerAccepted: z.boolean().optional(),
-  experimentId: z.string().min(1).max(191).optional(),
-  experimentVariant: z.enum(["A", "B"]).optional(),
-  items: z.array(z.object({
-    variantId: z.string().min(1),
-    quantity: z.number().int().min(1).max(99),
-  })).min(1).max(50),
-})
+// COMMERCE-1: schema + server-authoritative line-item pricing live in lib/commerce/checkout-pricing.ts (unchanged semantics).
+const CheckoutSchema = StoreCheckoutSchemaV1
 
 function buildOrderNotes(
   funnelId?: string,
@@ -151,7 +139,6 @@ if (access.entitlements.features.ecommerce === "none") {
   }
 
   const requestedItems = parsed.data.items
-  const requestedByVariant = new Map(requestedItems.map((item) => [item.variantId, item.quantity]))
   const variants = await editorPrisma.productVariant.findMany({
     where: {
       id: { in: requestedItems.map((item) => item.variantId) },
@@ -160,8 +147,12 @@ if (access.entitlements.features.ecommerce === "none") {
     include: { product: true },
   })
 
-  if (variants.length !== requestedItems.length) {
-    return NextResponse.json({ error: "INVALID_ITEMS", message: "Uno o mas productos ya no estan disponibles." }, { status: 400 })
+  // COMMERCE-1: validation + stock + server-authoritative pricing, BEFORE any Order / Mercado Pago preference.
+  const pricing = buildStoreCheckoutBaseItemsV1({ siteId, requestedItems, variants })
+  if ("error" in pricing) {
+    return pricing.error === "INSUFFICIENT_STOCK"
+      ? NextResponse.json({ error: "INSUFFICIENT_STOCK", message: "Uno o mas productos no tienen existencias suficientes." }, { status: 409 })
+      : NextResponse.json({ error: "INVALID_ITEMS", message: "Uno o mas productos ya no estan disponibles." }, { status: 400 })
   }
 
 const MAX_CHECKOUT_BODY = 256 * 1024;
@@ -182,19 +173,7 @@ if (
     );
 }
 
-  const baseItems = variants.map((variant) => {
-    const quantity = requestedByVariant.get(variant.id) ?? 1
-    return {
-      variantId: variant.id,
-      productId: variant.productId,
-      productName: variant.product.name,
-      variantName: variant.name,
-      sku: variant.sku,
-      quantity,
-      priceMxn: variant.priceMxn,
-      subtotalMxn: variant.priceMxn * quantity,
-    }
-  })
+  const baseItems = pricing.items
   const baseTotalMxn = baseItems.reduce((sum, item) => sum + item.subtotalMxn, 0)
 
   const offerResolution = resolveCheckoutFunnelOffer({

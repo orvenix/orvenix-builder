@@ -29,6 +29,7 @@ export const ASSISTED_SITE_GENERATION_LIMITS_V1 = {
   maxSubsetIndexes: 12,
   maxSiteNarrativeLength: 600,
   maxSlugLength: 96,
+  maxCategoryKeyLength: 60,
 } as const
 
 const DANGEROUS_KEYS = new Set([
@@ -50,11 +51,12 @@ const DANGEROUS_KEYS = new Set([
 const TOP_LEVEL_KEYS = ["version", "roleKey", "strategyKey", "siteNarrative", "pages"] as const
 const PAGE_KEYS = ["slug", "sectionOrder", "instances"] as const
 const INSTANCE_KEYS = ["role", "selection", "composition"] as const
-const SELECTION_KEYS = ["mode", "itemIndex", "indexes"] as const
+const SELECTION_KEYS = ["mode", "itemIndex", "indexes", "category"] as const
 const COMPOSITION_KEYS = ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "layout"] as const
 
 const SECTION_ROLES = new Set<string>(ASSISTED_SITE_GENERATION_SECTION_ROLES_V1)
-const SELECTION_MODES = new Set(["all", "single-item", "subset"])
+const SELECTION_MODES = new Set(["all", "single-item", "subset", "category"])
+const CATEGORY_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const ALIGNMENTS = new Set<string>(SECTION_INSTANCE_ALIGNMENTS)
 const SCALES = new Set<string>(SECTION_INSTANCE_SCALES)
 const MEDIA_STRATEGIES = new Set<string>(SECTION_INSTANCE_MEDIA_STRATEGIES)
@@ -122,6 +124,19 @@ function validateSelection(value: unknown, errors: string[], path: string): Assi
       }
       selection.indexes = indexes
     }
+  }
+
+  if (value.category !== undefined) {
+    if (typeof value.category !== "string" || value.category.length > ASSISTED_SITE_GENERATION_LIMITS_V1.maxCategoryKeyLength || !CATEGORY_KEY_PATTERN.test(value.category)) {
+      errors.push(`${path}.category no es una clave de categoria valida.`)
+    } else if (selection.mode !== "category") {
+      errors.push(`${path}.category solo es valido con mode "category".`)
+    } else {
+      selection.category = value.category
+    }
+  }
+  if (selection.mode === "category" && typeof selection.category !== "string") {
+    errors.push(`${path}.category es requerido para mode "category".`)
   }
 
   if (selection.mode === "single-item" && typeof selection.itemIndex !== "number") {

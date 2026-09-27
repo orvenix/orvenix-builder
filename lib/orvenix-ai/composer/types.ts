@@ -1,3 +1,4 @@
+import type { CommerceProductFactV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type { NodeProps } from "@/types/editor"
 import type { PageArchetype, SectionRole } from "@/lib/orvenix-ai/architect"
 import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
@@ -36,11 +37,8 @@ export interface SectionCompositionContext {
     name: string
     description?: string
   }>
-  /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
-  products?: Array<{
-    name: string
-    description?: string
-  }>
+  /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. COMMERCE-1: optional grounded commerce facts (see commerce/product-facts.ts). */
+  products?: CommerceProductFactV1[]
   location?: string
   businessEvidence?: NormalizedSiteCreationBusinessEvidenceV1
   /** The real, caller-supplied business objective -- see the identically

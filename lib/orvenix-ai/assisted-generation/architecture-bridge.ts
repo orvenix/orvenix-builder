@@ -20,6 +20,7 @@ import {
   createAnthropicAssistedSiteGenerationProviderV1,
 } from "./anthropic-provider"
 import { buildAssistedSiteGenerationRequestContextV1 } from "./request-context"
+import { commerceCategoryKeyV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
 import type { CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
 
@@ -239,6 +240,9 @@ function groundAndApplyAssistedResponse(params: {
     })),
     servicesCount: params.architecture.services?.length ?? 0,
     productsCount: params.architecture.products?.length ?? 0,
+    productCategoryKeys: (params.architecture.products ?? []).map((product) =>
+      product.category ? commerceCategoryKeyV1(product.category) || undefined : undefined,
+    ),
   }
 
   const grounded = groundAssistedSiteGenerationProposalV1({ proposal: params.rawResponse, context: groundingContext })

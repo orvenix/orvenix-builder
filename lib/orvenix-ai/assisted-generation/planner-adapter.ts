@@ -24,6 +24,8 @@ export type AssistedGenerationGroundingContextV1 = {
   pages: AssistedGenerationPageGroundingV1[]
   servicesCount?: number
   productsCount?: number
+  /** COMMERCE-1: grounded category key per product index (undefined = uncategorized). */
+  productCategoryKeys?: Array<string | undefined>
 }
 
 export type GroundAssistedGenerationResultV1 =
@@ -50,6 +52,29 @@ function collectionLimitForRole(role: SectionRole, context: AssistedGenerationGr
   return null
 }
 
+function categoryIndexes(context: AssistedGenerationGroundingContextV1, category: string | undefined): number[] {
+  if (!category) return []
+  const indexes: number[] = []
+  for (const [index, key] of (context.productCategoryKeys ?? []).entries()) {
+    if (key === category && index < (context.productsCount ?? 0)) indexes.push(index)
+  }
+  return indexes
+}
+
+/** Closed-world translation of an (already grounded) Assisted selection into the executable CompositionPlan selection. */
+function toPlanSelection(
+  selection: AssistedSiteGenerationInstanceV1["selection"],
+  context: AssistedGenerationGroundingContextV1,
+): SectionInstancePlan["selection"] {
+  if (!selection) return defaultSelection()
+  if (selection.mode === "category") return { mode: "subset", indexes: categoryIndexes(context, selection.category) }
+  return {
+    mode: selection.mode,
+    ...(selection.itemIndex !== undefined ? { itemIndex: selection.itemIndex } : {}),
+    ...(selection.indexes ? { indexes: [...selection.indexes] } : {}),
+  }
+}
+
 function selectionIsGrounded(
   instance: AssistedSiteGenerationInstanceV1,
   context: AssistedGenerationGroundingContextV1,
@@ -60,6 +85,18 @@ function selectionIsGrounded(
   const limit = collectionLimitForRole(instance.role, context)
 
   if (selection.mode === "all") return true
+
+  if (selection.mode === "category") {
+    if (instance.role !== "products") {
+      reasons.push(`${path}: la seleccion por categoria solo aplica al rol products.`)
+      return false
+    }
+    if (!categoryIndexes(context, selection.category).length) {
+      reasons.push(`${path}: la categoria ${String(selection.category)} no existe en los productos reales.`)
+      return false
+    }
+    return true
+  }
 
   if (limit === null) {
     reasons.push(`${path}: el rol ${instance.role} no tiene coleccion seleccionable.`)
@@ -88,11 +125,12 @@ function buildInstance(
   pageSlug: string,
   instance: AssistedSiteGenerationInstanceV1,
   index: number,
+  context: AssistedGenerationGroundingContextV1,
 ): SectionInstancePlan {
   return {
     id: `${pageSlug}:${instance.role}:assisted:${index}`,
     role: instance.role,
-    selection: instance.selection ?? defaultSelection(),
+    selection: toPlanSelection(instance.selection, context),
     ...(instance.composition ? { composition: { ...instance.composition } } : {}),
     provenance: "creative-director",
   }
@@ -172,7 +210,7 @@ export function groundAssistedSiteGenerationProposalV1(params: {
         break
       }
 
-      instances.push(buildInstance(page.slug, instance, instanceIndex))
+      instances.push(buildInstance(page.slug, instance, instanceIndex, params.context))
     }
 
     if (pageRejected) continue

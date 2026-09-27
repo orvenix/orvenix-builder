@@ -14,6 +14,12 @@ import {
 import { ASSISTED_SITE_GENERATION_LIMITS_V1 } from "./validator"
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
 import type { CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
+import {
+  commerceCategoryKeyV1,
+  isExecutableCommerceProductV1,
+  type CommerceAvailabilityV1,
+  type CommerceProductFactV1,
+} from "@/lib/orvenix-ai/commerce/product-facts"
 
 /**
  * ASSISTED-3A: the bounded, sanitized, provider-neutral REQUEST shape sent
@@ -52,6 +58,59 @@ export const ASSISTED_SITE_GENERATION_SELECTION_MODES_V1 = [
 
 export type AssistedSiteGenerationOfferingContextV1 = { name: string; description?: string }
 
+/**
+ * COMMERCE-1: bounded, READ-ONLY, id-free view of one product fact.
+ * Never includes Product.id / ProductVariant.id / SKU / stock counts /
+ * store metadata -- only what Claude needs to reason about grouping and
+ * emphasis. Prices are display facts (integer MXN cents) Claude may not
+ * change; `purchasable` says whether this product renders a real
+ * add-to-cart (bound to the store) or presentation-only content.
+ */
+export type AssistedSiteGenerationProductContextV1 = {
+  name: string
+  description?: string
+  category?: string
+  priceMxn?: number
+  comparePriceMxn?: number
+  availability?: CommerceAvailabilityV1
+  variantCount?: number
+  variantLabels?: string[]
+  purchasable: boolean
+}
+
+export type AssistedSiteGenerationCategoryContextV1 = { key: string; label: string; productIndexes: number[] }
+
+const MAX_VARIANT_LABELS_IN_CONTEXT = 4
+
+function toProductContext(product: CommerceProductFactV1): AssistedSiteGenerationProductContextV1 {
+  const variants = product.variants ?? []
+  const cheapest = variants.length ? variants.reduce((low, variant) => (variant.priceMxn < low.priceMxn ? variant : low)) : undefined
+  const availabilities = new Set(variants.map((variant) => variant.availability))
+  const categoryKey = product.category ? commerceCategoryKeyV1(product.category) : ""
+  return {
+    name: product.name,
+    ...(product.description ? { description: product.description } : {}),
+    ...(categoryKey ? { category: categoryKey } : {}),
+    ...(cheapest ? { priceMxn: cheapest.priceMxn } : {}),
+    ...(cheapest?.comparePriceMxn !== undefined ? { comparePriceMxn: cheapest.comparePriceMxn } : {}),
+    ...(availabilities.size === 1 ? { availability: [...availabilities][0] } : availabilities.size > 1 ? { availability: availabilities.has("in_stock") ? "in_stock" : [...availabilities][0] } : {}),
+    ...(variants.length > 1 ? { variantCount: variants.length, variantLabels: variants.slice(0, MAX_VARIANT_LABELS_IN_CONTEXT).map((variant) => variant.label) } : {}),
+    purchasable: isExecutableCommerceProductV1(product),
+  }
+}
+
+function buildCategories(products: readonly CommerceProductFactV1[]): AssistedSiteGenerationCategoryContextV1[] {
+  const byKey = new Map<string, AssistedSiteGenerationCategoryContextV1>()
+  for (const [index, product] of products.entries()) {
+    const key = product.category ? commerceCategoryKeyV1(product.category) : ""
+    if (!key || !product.category) continue
+    const entry = byKey.get(key) ?? { key, label: product.category, productIndexes: [] }
+    entry.productIndexes.push(index)
+    byKey.set(key, entry)
+  }
+  return [...byKey.values()]
+}
+
 export type AssistedSiteGenerationBusinessContextV1 = {
   industry?: string
   objective?: string
@@ -66,7 +125,8 @@ export type AssistedSiteGenerationPageContextV1 = {
 }
 
 export type AssistedSiteGenerationCapabilitiesV1 = {
-  selectionModes: readonly SectionInstanceSelectionMode[]
+  /** COMMERCE-1: includes "category" only when the real products carry grounded categories. */
+  selectionModes: readonly string[]
   /** Only roles actually present in the supplied architecture. */
   roleTreatments: Partial<Record<SectionRole, readonly string[]>>
   roleLayouts: Partial<Record<SectionRole, readonly VisualLayoutKind[]>>
@@ -97,8 +157,10 @@ export type AssistedSiteGenerationRequestContextV1 = {
   pages: AssistedSiteGenerationPageContextV1[]
   offerings: {
     services?: AssistedSiteGenerationOfferingContextV1[]
-    products?: AssistedSiteGenerationOfferingContextV1[]
+    products?: AssistedSiteGenerationProductContextV1[]
   }
+  /** COMMERCE-1: grounded categories only (closed world) -- absent when no product has one. */
+  categories?: AssistedSiteGenerationCategoryContextV1[]
   creativeDirection?: AssistedSiteGenerationCreativeDirectionContextV1
   designReferences?: CreativeDesignReferenceV1[]
   capabilities: AssistedSiteGenerationCapabilitiesV1
@@ -119,7 +181,7 @@ function narrowCreativeDirectionContext(
   return Object.keys(narrowed).length > 0 ? narrowed : undefined
 }
 
-function buildCapabilities(usedRoles: ReadonlySet<SectionRole>): AssistedSiteGenerationCapabilitiesV1 {
+function buildCapabilities(usedRoles: ReadonlySet<SectionRole>, hasCategories: boolean): AssistedSiteGenerationCapabilitiesV1 {
   const roleTreatments: Partial<Record<SectionRole, readonly string[]>> = {}
   const roleLayouts: Partial<Record<SectionRole, readonly VisualLayoutKind[]>> = {}
 
@@ -132,7 +194,7 @@ function buildCapabilities(usedRoles: ReadonlySet<SectionRole>): AssistedSiteGen
   }
 
   return {
-    selectionModes: ASSISTED_SITE_GENERATION_SELECTION_MODES_V1,
+    selectionModes: hasCategories ? [...ASSISTED_SITE_GENERATION_SELECTION_MODES_V1, "category"] : ASSISTED_SITE_GENERATION_SELECTION_MODES_V1,
     roleTreatments,
     roleLayouts,
     alignments: SECTION_INSTANCE_ALIGNMENTS,
@@ -162,6 +224,7 @@ export function buildAssistedSiteGenerationRequestContextV1(params: {
   const location = architecture.location?.trim() || undefined
 
   const narrowedDirection = narrowCreativeDirectionContext(params.creativeDirection)
+  const categories = buildCategories(architecture.products ?? [])
   const designReferences = params.designReferences?.length ? params.designReferences : undefined
 
   return {
@@ -172,11 +235,15 @@ export function buildAssistedSiteGenerationRequestContextV1(params: {
     },
     pages,
     offerings: {
-      ...(architecture.services?.length ? { services: architecture.services } : {}),
-      ...(architecture.products?.length ? { products: architecture.products } : {}),
+      // Explicit field mapping (never the raw objects): no store ids/bindings can leak into the prompt.
+      ...(architecture.services?.length
+        ? { services: architecture.services.map((service) => ({ name: service.name, ...(service.description ? { description: service.description } : {}) })) }
+        : {}),
+      ...(architecture.products?.length ? { products: architecture.products.map(toProductContext) } : {}),
     },
+    ...(categories.length ? { categories } : {}),
     ...(narrowedDirection ? { creativeDirection: narrowedDirection } : {}),
     ...(designReferences ? { designReferences } : {}),
-    capabilities: buildCapabilities(usedRoles),
+    capabilities: buildCapabilities(usedRoles, categories.length > 0),
   }
 }

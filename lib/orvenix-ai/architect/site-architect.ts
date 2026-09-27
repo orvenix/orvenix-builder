@@ -1,3 +1,4 @@
+import type { CommerceProductFactV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type { OrvenixAIContext } from "../types"
 import { inferVisualFamily } from "../theme/visual-direction"
 import {
@@ -51,7 +52,7 @@ export interface OrvenixSiteArchitecture {
   businessName?: string
   services?: Array<{ name: string; description?: string }>
   /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
-  products?: Array<{ name: string; description?: string }>
+  products?: CommerceProductFactV1[]
   location?: string
   /**
    * The real, caller-supplied business objective (eg. "Conseguir citas de

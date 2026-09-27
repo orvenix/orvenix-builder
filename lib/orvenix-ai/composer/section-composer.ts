@@ -42,6 +42,12 @@ import {
 } from "./composition-context"
 import { visualLayoutToSiteNavLayout } from "./visual-layout-plan"
 import {
+  executableVariantForProductV1,
+  isExecutableCommerceProductV1,
+  presentationPriceLineV1,
+  type CommerceProductFactV1,
+} from "@/lib/orvenix-ai/commerce/product-facts"
+import {
   resolveCtaCopy,
   resolveFeatureItems,
   resolveProcessIntro,
@@ -2216,7 +2222,82 @@ function composeServices(context: SectionCompositionContext = {}): ComposedSecti
 /** V2-S2.1 section B: same "Presenta pruebas..." live leak, same fix, in the legacy (non-overview/catalog) default -- see the CARD_GRID_ARCHETYPE_COPY.features.overview comment above. */
 function composeFeatures(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("features", "Beneficios que se entienden al instante", "Transforma caracteristicas en razones claras para elegir tu negocio.", [["Mas confianza", "Encuentra la información que necesitas para decidir con confianza."], ["Menos friccion", "Haz facil pedir informacion, reservar, comprar o cotizar."], ["Mejor experiencia", "Cuida cada punto de contacto para que el sitio se sienta profesional."]], context) }
 function composeProcess(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("process", "Un proceso simple para empezar", "Ayuda al cliente a saber que pasara despues de dar clic.", [["1. Cuentanos tu objetivo", "Recibe la informacion clave sin formularios largos."], ["2. Revisamos la mejor ruta", "Muestra una propuesta clara y adaptada al caso."], ["3. Activamos el siguiente paso", "Cierra con una accion concreta y facil de completar."]], context) }
-function composeProducts(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("products", "Productos destacados", "Muestra opciones faciles de comparar y listas para llevar al usuario a comprar.", [["Producto estrella", "Describe el beneficio principal, precio o diferencial."], ["Opcion recomendada", "Resalta el producto ideal para la mayoria de clientes."], ["Paquete premium", "Presenta la alternativa con mayor valor percibido."]], context) }
+/**
+ * COMMERCE-1: grounded display suffix for PRESENTATION product cards --
+ * price/availability come only from caller-supplied facts (never
+ * synthesized), and a product without variants is returned untouched, so
+ * legacy `{ name, description }` products render byte-identically.
+ */
+function withPresentationCommerceFacts(product: CommerceProductFactV1): CommerceProductFactV1 {
+  const priceLine = presentationPriceLineV1(product)
+  if (!priceLine) return product
+  const availabilities = new Set((product.variants ?? []).map((variant) => variant.availability))
+  const availabilityNote = availabilities.size === 1 && availabilities.has("out_of_stock")
+    ? "Agotado"
+    : availabilities.size === 1 && availabilities.has("preorder")
+      ? "Preventa"
+      : undefined
+  return { ...product, description: [product.description, priceLine, availabilityNote].filter(Boolean).join(" — ") }
+}
+
+const STORE_PRODUCTS_SECTION_BACKGROUND = "#0f172a"
+
+/**
+ * COMMERCE-1: the ONLY path that emits functional commerce nodes. Reached
+ * exclusively when EVERY product in this (possibly instance-sliced)
+ * context is a BOUND executable product (real Product.id + a real
+ * ProductVariant.id, see commerce/product-facts.ts). Emits the EXISTING
+ * registered `store-product-card` block -- its own add-to-cart feeds the
+ * existing cart store / CartDrawer / checkout route. Dark section
+ * background because the existing card is styled for dark surfaces.
+ */
+function composeStoreProductsSection(context: SectionCompositionContext, products: CommerceProductFactV1[]): ComposedSection {
+  const nodes: Record<string, ComposedNode> = {}
+  const selected = context.archetype === "overview" ? products.slice(0, OVERVIEW_SERVICE_TEASER_COUNT) : products
+  const textColors = readableTextColorsFor(STORE_PRODUCTS_SECTION_BACKGROUND)
+
+  const cards: string[] = []
+  for (const [index, product] of selected.entries()) {
+    const variant = executableVariantForProductV1(product)
+    if (!variant || !product.storeBinding) continue
+    cards.push(add(nodes, createComposedNode({
+      type: "store-product-card",
+      displayName: `Producto ${index + 1}: ${product.name}`,
+      props: {
+        productId: product.storeBinding.productId,
+        variantId: variant.variantId,
+        productName: product.name,
+        variantName: variant.label,
+        priceMxn: variant.priceMxn,
+        ...(variant.comparePriceMxn !== undefined ? { comparePriceMxn: variant.comparePriceMxn } : {}),
+        stock: variant.stock ?? 0,
+        ...(context.accentColor ? { accentColor: context.accentColor } : {}),
+      },
+    })))
+  }
+
+  const titleText = context.archetype === "overview" ? "Productos destacados" : "Catalogo"
+  const heading = context.singleItemInstance ? null : headingNode(nodes, "Titulo products", titleText, 2, { align: "center", color: textColors.heading })
+  const intro = context.singleItemInstance ? null : textNode(nodes, "Intro products", "Agrega productos al carrito para iniciar tu compra.", { align: "center", size: "lg", color: textColors.body })
+  const grid = wrapperNode(nodes, "Grid productos tienda", "grid gap-5 sm:grid-cols-2 lg:grid-cols-3", cards)
+  const root = add(nodes, createComposedNode({
+    type: "section",
+    displayName: `${titleText} (store-product-cards)`,
+    props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: STORE_PRODUCTS_SECTION_BACKGROUND },
+    children: [heading, intro, grid].filter((id): id is string => Boolean(id)),
+  }))
+  return { role: "products", rootId: root, nodes, purpose: "Catalogo de productos de la tienda con carrito." }
+}
+
+function composeProducts(context: SectionCompositionContext = {}): ComposedSection {
+  const products = context.products ?? []
+  if (products.length > 0 && products.every(isExecutableCommerceProductV1)) {
+    return composeStoreProductsSection(context, products)
+  }
+  return composeLegacyProducts(products.length ? { ...context, products: products.map(withPresentationCommerceFacts) } : context)
+}
+
+function composeLegacyProducts(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("products", "Productos destacados", "Muestra opciones faciles de comparar y listas para llevar al usuario a comprar.", [["Producto estrella", "Describe el beneficio principal, precio o diferencial."], ["Opcion recomendada", "Resalta el producto ideal para la mayoria de clientes."], ["Paquete premium", "Presenta la alternativa con mayor valor percibido."]], context) }
 function composePricing(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("pricing", "Elige la opcion ideal", "Presenta precios, paquetes u ofertas sin confundir al comprador.", [["Inicial", "Para comenzar con lo esencial y validar interes."], ["Recomendado", "La opcion con mejor balance entre alcance, soporte y crecimiento."], ["Premium", "Para clientes que quieren una experiencia mas completa."]], context) }
 
 /**

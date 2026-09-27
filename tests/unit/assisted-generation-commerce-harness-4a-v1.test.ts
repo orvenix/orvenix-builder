@@ -131,10 +131,14 @@ test("fixture: 24 deterministic synthetic products across 6 categories, bounded 
   }
 })
 
-test("fixture: builder only receives the supported {name, description} product subset", () => {
+test("fixture: builder receives PRESENTATION commerce facts only (COMMERCE-1) -- never a store binding or variant id", () => {
   const supported = toSupportedBuilderProductsV1()
   assert.equal(supported.length, 24)
-  for (const product of supported) assert.deepEqual(Object.keys(product).sort(), ["description", "name"])
+  for (const product of supported) {
+    assert.deepEqual(Object.keys(product).sort(), ["category", "description", "name", "variants"])
+    assert.ok(product.variants.length >= 1)
+    for (const variant of product.variants) assert.equal("variantId" in variant, false)
+  }
 })
 
 // --- guard ---
@@ -216,7 +220,8 @@ test("comparison: OFF zero provider calls, mocked ANTHROPIC exactly one, same fa
   assert.equal(result.off.architecture.siteType, "ecommerce")
   assert.equal(result.assisted.architecture.siteType, "ecommerce")
   assert.deepEqual(result.assisted.architecture.products, result.off.architecture.products)
-  assert.deepEqual(result.off.architecture.products, toSupportedBuilderProductsV1())
+  assert.deepEqual(result.off.architecture.products?.map((product) => product.name), toSupportedBuilderProductsV1().map((product) => product.name))
+  assert.equal(result.off.architecture.products?.some((product) => product.storeBinding), false)
   assert.deepEqual(result.assisted.plan.pages.map((p) => p.slug), result.off.plan.pages.map((p) => p.slug))
 
   assertValidPlan(result.off)

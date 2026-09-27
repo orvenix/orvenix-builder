@@ -1,3 +1,4 @@
+import type { CommerceProductFactV1, StoreProductRecordV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type { EditorTree } from "@/types/editor"
 import type { DesignPlannerPriorV1 } from "@/lib/orvenix-ai/design-memory/planner-prior"
 import type { SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2"
@@ -41,11 +42,13 @@ export interface AutonomousBusinessInput {
     description?: string
   }>
 
-  /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
-  products?: Array<{
-    name: string
-    description?: string
-  }>
+  /**
+   * V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products.
+   * COMMERCE-1: may carry grounded PRESENTATION commerce facts (category/variants/price);
+   * the builder re-normalizes this list and strips any store binding, so it can never
+   * yield an executable product -- see `commerceStoreBinding` below for that.
+   */
+  products?: CommerceProductFactV1[]
 
   pricing?: Array<{
     name: string
@@ -120,6 +123,22 @@ export interface AutonomousSiteBuilderInput {
    * src:"" placeholder behavior with zero asset network calls.
    */
   assetProvider?: AssetProvider
+
+  /**
+   * COMMERCE-1: TRUSTED server-side store binding. Already-fetched
+   * Product/ProductVariant rows for the site being generated (this
+   * builder never queries the DB). The builder turns them into BOUND
+   * executable product facts ONLY via bindStoreProductRecordsV1 (active
+   * products of `siteId` only, real ids copied verbatim), which compile to
+   * the existing `store-product-card` + cart shell. Absent (the default,
+   * and what app/actions/ai.ts does) -> products stay presentation-only.
+   * Never reachable from a browser payload: the customer-facing action has
+   * no such field.
+   */
+  commerceStore?: {
+    siteId: string
+    records: StoreProductRecordV1[]
+  }
 }
 
 export interface AutonomousSiteBuilderResult {

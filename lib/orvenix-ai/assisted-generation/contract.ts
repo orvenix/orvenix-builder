@@ -6,7 +6,7 @@ import type {
   SectionToneStrategy,
 } from "@/lib/orvenix-ai/composer/composition-context"
 import type { SectionVisualLayoutPlan } from "@/lib/orvenix-ai/composer/visual-layout-plan"
-import type { SectionInstanceSelection, SectionInstanceTreatment } from "@/lib/orvenix-ai/architect/composition-plan"
+import type { SectionInstanceSelectionMode, SectionInstanceTreatment } from "@/lib/orvenix-ai/architect/composition-plan"
 
 export const ASSISTED_SITE_GENERATION_CONTRACT_V1_VERSION = 1
 export const ASSISTED_SITE_GENERATION_ROLE_KEY_V1 = "assisted_site_generation_v1"
@@ -30,7 +30,21 @@ export const ASSISTED_SITE_GENERATION_SECTION_ROLES_V1 = [
   "content",
 ] as const satisfies readonly SectionRole[]
 
-export type AssistedSiteGenerationSelectionV1 = SectionInstanceSelection
+/**
+ * COMMERCE-1: "category" is the one commerce extension -- select every
+ * EXISTING product whose grounded category key equals `category`. It is
+ * resolved by closed-world grounding (planner-adapter.ts) into a plain
+ * "subset" SectionInstanceSelection, so CompositionPlan and the compiler
+ * are unchanged; an unknown category is rejected, never invented.
+ */
+export type AssistedSiteGenerationSelectionModeV1 = SectionInstanceSelectionMode | "category"
+
+export type AssistedSiteGenerationSelectionV1 = {
+  mode: AssistedSiteGenerationSelectionModeV1
+  itemIndex?: number
+  indexes?: number[]
+  category?: string
+}
 
 export type AssistedSiteGenerationCompositionV1 = {
   treatment?: SectionInstanceTreatment

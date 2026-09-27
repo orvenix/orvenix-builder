@@ -48,6 +48,11 @@ import {
 } from "@/lib/orvenix-ai/assets/pexels-provider"
 
 import {
+  bindStoreProductRecordsV1,
+  normalizeCommercePresentationProductsV1,
+} from "@/lib/orvenix-ai/commerce/product-facts"
+
+import {
   buildSiteGenerationGuideContext,
   ORVENIX_SITE_CREATION_CHECKLIST,
   ORVENIX_SITE_GENERATION_GUIDE_VERSION,
@@ -782,6 +787,21 @@ export async function runAutonomousMultiPageSiteBuilder(
     "Generando arquitectura multipagina en memoria",
   )
 
+  /*
+   * COMMERCE-1: the ONLY two ways product facts enter the architecture.
+   * A trusted `commerceStore` binding (real store rows) yields BOUND
+   * executable facts; otherwise the caller's products are re-normalized
+   * as PRESENTATION facts, which strips any id/binding-looking field so a
+   * presentation product can never become executable. Legacy
+   * `{ name, description }` products pass through unchanged in content.
+   */
+  const boundProducts = input.commerceStore
+    ? bindStoreProductRecordsV1(input.commerceStore.siteId, input.commerceStore.records)
+    : []
+  const commerceProducts = boundProducts.length
+    ? boundProducts
+    : normalizeCommercePresentationProductsV1(input.business.products)
+
   const architecture = buildSiteArchitecture({
     request: input.request,
     business: {
@@ -792,7 +812,7 @@ export async function runAutonomousMultiPageSiteBuilder(
       audience: input.business.audience,
       objective: input.business.objective,
       services: input.business.services,
-      products: input.business.products,
+      products: commerceProducts,
     },
   })
 
