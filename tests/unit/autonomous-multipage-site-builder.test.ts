@@ -1679,7 +1679,9 @@ test("J9-J L) No se fabrican datos de negocio: telefono/correo siguen siendo el 
   assert.ok(contactoTexts.includes("Correo: contacto@tumarca.com"), "el placeholder de correo no debe cambiar")
 
   const homeTexts = allVisibleTexts(home)
-  assert.ok(homeTexts.includes("Testimonio pendiente de contenido real."), "los testimonios siguen siendo el placeholder no-fabricado")
+  // ASSISTED-4A finalization: sin evidencia real de testimonios, la seccion se omite (ni inventada ni placeholder).
+  assert.equal(homeTexts.includes("Testimonio pendiente de contenido real."), false, "sin evidencia real no debe haber placeholder de testimonios")
+  assert.equal(result.architecture.pages.some((page) => page.sections.some((section) => section.role === "testimonials")), false)
   assert.equal(homeTexts.some((text) => /\d{1,3}%|clientes satisfechos|premiad[oa]|certificad[oa]/i.test(text)), false, "no debe aparecer ninguna estadistica/certificacion inventada")
 })
 

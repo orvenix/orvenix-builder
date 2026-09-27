@@ -1,5 +1,6 @@
 import {
   buildSiteArchitecture,
+  type OrvenixSiteArchitecture,
 } from "@/lib/orvenix-ai/architect"
 
 import {
@@ -734,6 +735,34 @@ function createMultiPagePlan(params: {
   })
 }
 
+/**
+ * ASSISTED-4A finalization: a generated customer site must never show a
+ * testimonials section it cannot fill with REAL, caller-supplied evidence.
+ * The composer's only testimonial source is
+ * `businessEvidence.testimonials` (threaded by compileSiteBlueprint), so
+ * the same source decides presence here: no usable quote -> the
+ * "testimonials" section is omitted from every page instead of rendering
+ * placeholder customer-facing content. Never adds or invents anything;
+ * pages without a testimonials section are returned by reference.
+ */
+function omitUngroundedTestimonialSectionsV1(
+  architecture: OrvenixSiteArchitecture,
+  businessEvidence: AutonomousSiteBuilderInput["business"]["businessEvidence"],
+): OrvenixSiteArchitecture {
+  const hasGroundedTestimonial = Boolean(businessEvidence?.testimonials?.some((testimonial) => testimonial.quote?.trim()))
+  if (hasGroundedTestimonial) return architecture
+  if (!architecture.pages.some((page) => page.sections.some((section) => section.role === "testimonials"))) return architecture
+
+  return {
+    ...architecture,
+    pages: architecture.pages.map((page) =>
+      page.sections.some((section) => section.role === "testimonials")
+        ? { ...page, sections: page.sections.filter((section) => section.role !== "testimonials") }
+        : page,
+    ),
+  }
+}
+
 export async function runAutonomousMultiPageSiteBuilder(
   input: AutonomousSiteBuilderInput,
 ): Promise<AutonomousMultiPageSiteBuilderResult> {
@@ -782,19 +811,33 @@ export async function runAutonomousMultiPageSiteBuilder(
    * creativeDirection, or an invalid/missing order for a given page,
    * `architecture` is unchanged for that page.
    */
+  /*
+   * ASSISTED-4A finalization: grounded-testimonials-only. Runs FIRST --
+   * before the Creative Director's section-order authority, Assisted
+   * Generation and compileSiteBlueprint -- so no downstream stage ever
+   * sees a testimonials role it cannot fill with real evidence.
+   */
+  const groundedArchitecture = omitUngroundedTestimonialSectionsV1(architecture, input.business.businessEvidence)
+
   const orderedArchitecture = input.creativeDirection?.pageDirections?.length
     ? {
-        ...architecture,
-        pages: architecture.pages.map((page) => {
+        ...groundedArchitecture,
+        pages: groundedArchitecture.pages.map((page) => {
           const direction = input.creativeDirection?.pageDirections.find((entry) => entry.slug === page.slug)
           const defaultOrder = page.sections.map((section) => section.role)
-          const finalOrder = resolveCreativeDirectorSectionOrderV1(defaultOrder, direction?.preferredSectionOrder)
+          // A CD order may legitimately list "testimonials" (it was planned against the
+          // pre-grounding recipe); drop ONLY that grounding-omitted role before the
+          // unchanged permutation check -- any other unknown role still invalidates it.
+          const preferredOrder = defaultOrder.includes("testimonials")
+            ? direction?.preferredSectionOrder
+            : direction?.preferredSectionOrder?.filter((role) => role !== "testimonials")
+          const finalOrder = resolveCreativeDirectorSectionOrderV1(defaultOrder, preferredOrder)
           if (finalOrder.join("|") === defaultOrder.join("|")) return page
           const sectionByRole = new Map(page.sections.map((section) => [section.role as string, section]))
           return { ...page, sections: finalOrder.map((role) => sectionByRole.get(role)!) }
         }),
       }
-    : architecture
+    : groundedArchitecture
 
   /*
    * V2-3: resolved once, early, so structural composition (which
@@ -937,7 +980,7 @@ export async function runAutonomousMultiPageSiteBuilder(
     ?? input.creativeDirection?.pageDirections?.[0]?.assetIntent
 
   const pages = await resolveTreeImageAssets(rawPages, {
-    provider: createPexelsProvider(),
+    provider: input.assetProvider ?? createPexelsProvider(),
     visualFamily: assetVisualFamily,
     industry: input.business.industry,
     services: input.business.services,

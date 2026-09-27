@@ -13,6 +13,7 @@ import type {
 } from "@/lib/orvenix-ai/assisted-generation/architecture-bridge"
 import type { AssistedSiteGenerationProviderV1 } from "@/lib/orvenix-ai/assisted-generation/contract"
 import type { CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
+import type { AssetProvider } from "@/lib/orvenix-ai/assets/types"
 
 import type {
   RankedTemplate,
@@ -110,6 +111,15 @@ export interface AutonomousSiteBuilderInput {
     /** Anthropic mode only: bridge-level hard timeout override. */
     timeoutMs?: number
   }
+
+  /**
+   * ASSISTED-4A: optional stock-photo provider override for trusted
+   * server-side callers (dev comparison harness / tests). Absent (the
+   * default, and what app/actions/ai.ts does) -> createPexelsProvider(),
+   * unchanged. A provider whose isAvailable() is false keeps today's
+   * src:"" placeholder behavior with zero asset network calls.
+   */
+  assetProvider?: AssetProvider
 }
 
 export interface AutonomousSiteBuilderResult {

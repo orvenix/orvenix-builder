@@ -736,7 +736,17 @@ function composeTestimonials(context: SectionCompositionContext = {}): ComposedS
   const realTestimonials = usableTestimonials(context)
   const testimonialTreatment = context.aiPreferredTestimonialTreatment && (TESTIMONIAL_TREATMENTS as readonly string[]).includes(context.aiPreferredTestimonialTreatment) ? context.aiPreferredTestimonialTreatment : undefined
 
-  if (context.richComposition && realTestimonials.length > 0) {
+  /*
+   * ASSISTED-4A finalization: real, caller-supplied testimonials are FACTS,
+   * not a rich-composition styling choice -- they render whenever they
+   * exist (previously only when a Creative Director rich field was set,
+   * which showed placeholder cards INSTEAD of real evidence otherwise).
+   * Rating display stays gated on the CD "rating-led" treatment. The
+   * placeholder branch below remains only for direct/legacy composeSection
+   * callers: the multi-page builder omits the role entirely when no real
+   * testimonial exists (see omitUngroundedTestimonialSectionsV1).
+   */
+  if (realTestimonials.length > 0) {
     for (const [index, testimonial] of realTestimonials.slice(0, 3).entries()) {
       const rating = testimonialTreatment === "rating-led" && testimonial.rating ? textNode(nodes, `Rating testimonio ${index + 1}`, testimonial.rating, { size: "sm", weight: "bold", color: "#0369a1" }) : null
       const quote = textNode(nodes, `Testimonio ${index + 1}`, testimonial.quote)

@@ -20,7 +20,15 @@ const nextConfig: NextConfig = {
 
   devIndicators: false,
 
-  pageExtensions: ["tsx", "ts", "jsx", "js"],
+  /*
+   * ASSISTED-4A: `*.dev.tsx` / `*.dev.ts` route files (eg.
+   * app/dev-assisted-generation-e2e/) are routable ONLY outside
+   * production. `next build` runs with NODE_ENV=production, so they are
+   * never resolved as page/route files and never enter the production
+   * route manifest -- the production list below is byte-identical to the
+   * previous one. Their runtime guards remain as a second layer.
+   */
+  pageExtensions: isProd ? ["tsx", "ts", "jsx", "js"] : ["tsx", "ts", "jsx", "js", "dev.tsx", "dev.ts"],
 
   // Prisma client runtime needed in server bundles
   serverExternalPackages: ["@prisma/client", "@prisma/adapter-mariadb"],
