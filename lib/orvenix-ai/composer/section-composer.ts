@@ -47,6 +47,7 @@ import {
   presentationPriceLineV1,
   type CommerceProductFactV1,
 } from "@/lib/orvenix-ai/commerce/product-facts"
+import { formatProvisioningRefV1 } from "@/lib/orvenix-ai/commerce/provisioning-plan"
 import {
   resolveCtaCopy,
   resolveFeatureItems,
@@ -2251,6 +2252,43 @@ const STORE_PRODUCTS_SECTION_BACKGROUND = "#0f172a"
  * existing cart store / CartDrawer / checkout route. Dark section
  * background because the existing card is styled for dark surfaces.
  */
+function storeCardProps(product: CommerceProductFactV1, context: SectionCompositionContext): Record<string, unknown> | null {
+  const accent = context.accentColor ? { accentColor: context.accentColor } : {}
+  const variant = executableVariantForProductV1(product)
+  if (variant && product.storeBinding) {
+    return {
+      productId: product.storeBinding.productId,
+      variantId: variant.variantId,
+      productName: product.name,
+      variantName: variant.label,
+      priceMxn: variant.priceMxn,
+      ...(variant.comparePriceMxn !== undefined ? { comparePriceMxn: variant.comparePriceMxn } : {}),
+      stock: variant.stock ?? 0,
+      ...accent,
+    }
+  }
+
+  /*
+   * COMMERCE-2A: PENDING card -- a provisioning reference only, NO
+   * productId/variantId, so the existing card renders it non-executable
+   * (no add-to-cart) until the confirm step binds it to real rows.
+   */
+  const pending = product.pendingProvisioning
+  const pendingVariant = pending ? product.variants?.[pending.variantIndex] : undefined
+  if (pending && pendingVariant) {
+    return {
+      provisioningRef: formatProvisioningRefV1(pending.sourceIndex, pending.variantIndex),
+      productName: product.name,
+      variantName: pendingVariant.label,
+      priceMxn: pendingVariant.priceMxn,
+      ...(pendingVariant.comparePriceMxn !== undefined ? { comparePriceMxn: pendingVariant.comparePriceMxn } : {}),
+      stock: pendingVariant.initialStock ?? 0,
+      ...accent,
+    }
+  }
+  return null
+}
+
 function composeStoreProductsSection(context: SectionCompositionContext, products: CommerceProductFactV1[]): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const selected = context.archetype === "overview" ? products.slice(0, OVERVIEW_SERVICE_TEASER_COUNT) : products
@@ -2258,21 +2296,12 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
 
   const cards: string[] = []
   for (const [index, product] of selected.entries()) {
-    const variant = executableVariantForProductV1(product)
-    if (!variant || !product.storeBinding) continue
+    const props = storeCardProps(product, context)
+    if (!props) continue
     cards.push(add(nodes, createComposedNode({
       type: "store-product-card",
       displayName: `Producto ${index + 1}: ${product.name}`,
-      props: {
-        productId: product.storeBinding.productId,
-        variantId: variant.variantId,
-        productName: product.name,
-        variantName: variant.label,
-        priceMxn: variant.priceMxn,
-        ...(variant.comparePriceMxn !== undefined ? { comparePriceMxn: variant.comparePriceMxn } : {}),
-        stock: variant.stock ?? 0,
-        ...(context.accentColor ? { accentColor: context.accentColor } : {}),
-      },
+      props,
     })))
   }
 
@@ -2291,7 +2320,7 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
 
 function composeProducts(context: SectionCompositionContext = {}): ComposedSection {
   const products = context.products ?? []
-  if (products.length > 0 && products.every(isExecutableCommerceProductV1)) {
+  if (products.length > 0 && (products.every(isExecutableCommerceProductV1) || products.every((product) => Boolean(product.pendingProvisioning)))) {
     return composeStoreProductsSection(context, products)
   }
   return composeLegacyProducts(products.length ? { ...context, products: products.map(withPresentationCommerceFacts) } : context)

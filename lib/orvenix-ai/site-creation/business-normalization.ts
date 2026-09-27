@@ -1,3 +1,4 @@
+import { normalizeCommercePresentationProductsV1, type CommerceProductFactV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import { inferServicesFromText } from "./service-inference"
 import {
   normalizeSiteCreationBusinessEvidence,
@@ -17,6 +18,23 @@ import {
 
 export type SiteCreationOfferingInputV1 = { name?: string; description?: string }
 
+/**
+ * COMMERCE-2A: bounded, customer-suppliable product facts. Price/stock are
+ * integer MXN cents / units used only to DISPLAY and to seed a new store
+ * after confirmation. There is deliberately no id/binding/provisioning
+ * field: normalizeCommercePresentationProductsV1 drops anything else.
+ */
+export type SiteCreationProductInputV1 = SiteCreationOfferingInputV1 & {
+  category?: string
+  variants?: Array<{
+    label?: string
+    priceMxn?: number
+    comparePriceMxn?: number
+    initialStock?: number
+    sku?: string
+  }>
+}
+
 export type SiteCreationBusinessInputV1 = {
   name?: string
   industry?: string
@@ -25,8 +43,8 @@ export type SiteCreationBusinessInputV1 = {
   description?: string
   preferredStyle?: string
   services?: SiteCreationOfferingInputV1[]
-  /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. Same shape, same precedence rules. */
-  products?: SiteCreationOfferingInputV1[]
+  /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. Same precedence rules. COMMERCE-2A: may carry bounded commerce facts. */
+  products?: SiteCreationProductInputV1[]
   businessEvidence?: SiteCreationBusinessEvidenceInputV1
 }
 
@@ -37,7 +55,7 @@ export type NormalizedSiteCreationBusinessV1 = {
   objective: string
   description: string
   services: Array<{ name: string; description: string }> | undefined
-  products: Array<{ name: string; description: string }> | undefined
+  products: Array<{ name: string; description: string } & Pick<CommerceProductFactV1, "category" | "variants">> | undefined
   businessEvidence: NormalizedSiteCreationBusinessEvidenceV1 | undefined
 }
 
@@ -64,7 +82,16 @@ export function normalizeSiteCreationBusiness(
   message: string,
 ): NormalizedSiteCreationBusinessV1 {
   const explicitServices = normalizeExplicitOfferings(input?.services)
-  const explicitProducts = normalizeExplicitOfferings(input?.products)
+  const explicitProducts = normalizeExplicitOfferings(input?.products)?.map((product, index) => {
+    // COMMERCE-2A: attach ONLY bounded presentation commerce facts (never ids) to explicit products.
+    const raw = input?.products?.filter((candidate) => String(candidate?.name ?? "").trim())[index]
+    const [facts] = normalizeCommercePresentationProductsV1(raw ? [{ ...raw, name: product.name }] : []) ?? []
+    return {
+      ...product,
+      ...(facts?.category ? { category: facts.category } : {}),
+      ...(facts?.variants?.length ? { variants: facts.variants } : {}),
+    }
+  })
 
   const location = input?.location?.trim().slice(0, 120)
   const description = input?.description?.trim().slice(0, 600) || message

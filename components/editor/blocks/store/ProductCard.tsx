@@ -18,6 +18,8 @@ interface Props {
   accentColor?: string;
   stock?: number;           // -1 = unlimited
   lowStockThreshold?: number;
+  /** COMMERCE-2A: Site Creation preview reference to a product that will be provisioned on confirm (never executable). */
+  provisioningRef?: string;
 }
 
 function formatMxn(cents: number) {
@@ -36,6 +38,7 @@ export function ProductCard({
   accentColor   = "#00b5f6",
   stock         = -1,
   lowStockThreshold = 5,
+  provisioningRef,
 }: Props) {
   const addItem = useCartStore((s) => s.addItem);
 
@@ -104,7 +107,11 @@ export function ProductCard({
             )}
           </div>
 
-          {!isBound ? (
+          {!isBound && provisioningRef ? (
+            <p className="w-full rounded-xl border border-white/10 px-3 py-2 text-center text-xs font-semibold text-slate-400" data-store-card-state="pending">
+              Se activara al crear tu tienda
+            </p>
+          ) : !isBound ? (
             <p className="w-full rounded-xl border border-white/10 px-3 py-2 text-center text-xs font-semibold text-slate-400" data-store-card-state="unbound">
               Producto sin vincular a la tienda
             </p>

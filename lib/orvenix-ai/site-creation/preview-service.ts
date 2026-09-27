@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from "crypto"
 
 import type { Prisma } from "@/generated/editor-prisma"
 import { editorPrisma } from "@/lib/editor-db"
-import { canCreateWebsite, canUseAI } from "@/lib/billing/plan-entitlements"
+import { canCreateWebsite, canUseAI, canUseEcommerce } from "@/lib/billing/plan-entitlements"
 import { getFeatureLimitMessage, getWebsiteLimitMessage } from "@/lib/plan-guard-messages"
 import type { PlanAccess } from "@/lib/plan-guard"
 import { createSiteFromTree } from "@/lib/auth"
@@ -21,6 +21,9 @@ import type { OrvenixAgentBusinessContext, OrvenixSiteCreationResult } from "@/l
 import { serverError, serverWarn } from "@/lib/server-log"
 import type { EditorTree } from "@/types/editor"
 import { validateTree } from "@/types/validateTree"
+import { executeCommerceProvisioningV1 } from "@/lib/orvenix-ai/commerce/provisioning-executor"
+import { bindProvisionedCommerceIntoPlanV1 } from "@/lib/orvenix-ai/commerce/provisioning-binding"
+import { createPrismaCommerceProvisioningRepositoryV1 } from "@/lib/commerce/prisma-commerce-provisioning-repository"
 
 export const SITE_CREATION_PREVIEW_JOB_TYPE = "ai_site_creation_preview"
 export const SITE_CREATION_PREVIEW_EXPIRES_MS = 24 * 60 * 60 * 1000
@@ -799,6 +802,16 @@ export async function createDraftSiteFromPersistedPreview(params: {
         throw new SiteCreationPreviewForbiddenError()
       }
 
+      /*
+       * COMMERCE-2A: the approved (hash-verified above) new-store intent.
+       * The ecommerce entitlement is re-checked here, inside the same
+       * locked transaction, exactly like the AI/website-limit checks.
+       */
+      const commerceProvisioning = v2Plan?.commerce?.provisioning ?? null
+      if (commerceProvisioning && !canUseEcommerce(access.plan?.id)) {
+        throw new SiteCreationPreviewPublicError(getFeatureLimitMessage("ecommerce"))
+      }
+
       if (!existing) {
         await createSiteFromTree({
           id: preview.reservedSiteId,
@@ -812,50 +825,78 @@ export async function createDraftSiteFromPersistedPreview(params: {
           syncTheme: true,
           seedProfessionalPages: false,
         })
+      }
 
-        if (v2Plan) {
-          const homePage = v2Plan.pages.find((page) => page.isHome)
+      /*
+       * COMMERCE-2A: provision the store rows INSIDE this transaction (the
+       * site row now exists for the Product.siteId FK), then bind the
+       * approved preview plan to the authoritative ids. Idempotent per
+       * (siteId, previewId, sourceIndex) -- see provisioning-executor.ts --
+       * and atomic with everything else here: any failure rolls back the
+       * site, pages, theme, products and variants together. No recompile,
+       * no AI call: only pending cards gain ids and the cart shell is added.
+       */
+      let finalPlan = v2Plan
+      if (v2Plan && commerceProvisioning) {
+        const provisioned = await executeCommerceProvisioningV1({
+          repository: createPrismaCommerceProvisioningRepositoryV1(tx),
+          siteId: preview.reservedSiteId,
+          previewId: params.previewId,
+          plan: commerceProvisioning,
+        })
+        finalPlan = bindProvisionedCommerceIntoPlanV1(v2Plan, provisioned.products)
+      }
 
-          if (!homePage) {
-            throw new SiteCreationPreviewPublicError("El plan multipagina no contiene una pagina home valida.")
-          }
+      if (!existing && finalPlan) {
+        const homePage = finalPlan.pages.find((page) => page.isHome)
 
-          await tx.sitePage.update({
-            where: {
-              siteId_slug: {
-                siteId: preview.reservedSiteId,
-                slug: HOME_PAGE_SLUG,
-              },
+        if (!homePage) {
+          throw new SiteCreationPreviewPublicError("El plan multipagina no contiene una pagina home valida.")
+        }
+
+        await tx.sitePage.update({
+          where: {
+            siteId_slug: {
+              siteId: preview.reservedSiteId,
+              slug: HOME_PAGE_SLUG,
             },
+          },
+          data: {
+            name: homePage.name,
+            tree: toJsonValue(homePage.tree),
+            seo: toJsonValue(homePage.seo),
+            isHome: true,
+            published: false,
+          },
+        })
+
+        if (commerceProvisioning) {
+          // Keep the site-level tree consistent with the bound home page.
+          await tx.editorWebsite.update({
+            where: { id: preview.reservedSiteId },
+            data: { tree: toJsonValue(homePage.tree) },
+          })
+        }
+
+        for (const page of finalPlan.pages) {
+          if (page.isHome) continue
+
+          await tx.sitePage.create({
             data: {
-              name: homePage.name,
-              tree: toJsonValue(homePage.tree),
-              seo: toJsonValue(homePage.seo),
-              isHome: true,
+              siteId: preview.reservedSiteId,
+              name: page.name,
+              slug: page.slug,
+              tree: toJsonValue(page.tree),
+              seo: toJsonValue(page.seo),
+              isHome: false,
               published: false,
             },
           })
-
-          for (const page of v2Plan.pages) {
-            if (page.isHome) continue
-
-            await tx.sitePage.create({
-              data: {
-                siteId: preview.reservedSiteId,
-                name: page.name,
-                slug: page.slug,
-                tree: toJsonValue(page.tree),
-                seo: toJsonValue(page.seo),
-                isHome: false,
-                published: false,
-              },
-            })
-          }
         }
       }
 
-      const verified = v2Plan
-        ? await verifyCreatedDraftSiteV2(tx, preview.reservedSiteId, v2Plan)
+      const verified = finalPlan
+        ? await verifyCreatedDraftSiteV2(tx, preview.reservedSiteId, finalPlan)
         : await verifyCreatedDraftSite(tx, preview.reservedSiteId, tree)
 
       if (!verified) {

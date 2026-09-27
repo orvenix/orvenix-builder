@@ -139,6 +139,15 @@ export interface AutonomousSiteBuilderInput {
     siteId: string
     records: StoreProductRecordV1[]
   }
+
+  /**
+   * COMMERCE-2A: TRUSTED server-side new-store intent (set by
+   * app/actions/ai.ts only after its own ecommerce-entitlement check; the
+   * customer payload has no such field). Produces a hash-covered
+   * CommerceProvisioningPlanV1 in the preview plan + PENDING cards; the
+   * builder itself never writes anything.
+   */
+  commerceProvisioning?: { mode: "new_store" }
 }
 
 export interface AutonomousSiteBuilderResult {

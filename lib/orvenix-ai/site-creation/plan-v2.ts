@@ -1,4 +1,5 @@
 import { createHash } from "crypto"
+import { validateSiteCreationPlanV2CommerceV1, type SiteCreationPlanV2CommerceV1 } from "@/lib/orvenix-ai/commerce/provisioning-plan"
 
 import { INTERNAL_PAGE_LINK_PREFIX } from "@/lib/builder-core/tree/pageLinks"
 import type { EditorTree, GlobalTheme } from "@/types/editor"
@@ -44,6 +45,13 @@ export interface SiteCreationPlanV2 {
   navigation: SiteCreationPlanV2NavigationItem[]
   pages: SiteCreationPlanV2Page[]
   quality: SiteCreationPlanV2Quality
+  /**
+   * COMMERCE-2A: optional new-store provisioning intent. Part of the
+   * canonical plan, so it is covered by planHash (== previewHash): the
+   * user confirms exactly this intent. Absent for every non-commerce plan
+   * (byte-identical to pre-COMMERCE-2A plans).
+   */
+  commerce?: SiteCreationPlanV2CommerceV1
 }
 
 export interface SiteCreationPlanV2ValidationLimits {
@@ -521,6 +529,10 @@ export function validateSiteCreationPlanV2(
     errors.push("Las advertencias de calidad deben ser texto.")
   }
 
+  if ((value as { commerce?: unknown }).commerce !== undefined) {
+    errors.push(...validateSiteCreationPlanV2CommerceV1((value as { commerce?: unknown }).commerce))
+  }
+
   const canonicalJson = stableStringifyStrict(value)
   const canonicalByteLength = byteLengthFromCanonicalJson(canonicalJson)
 
@@ -628,6 +640,7 @@ export function normalizeSiteCreationPlanV2(plan: SiteCreationPlanV2): SiteCreat
         : [],
       summary: normalizeRequiredText(plan.quality.summary, 360),
     },
+    ...(plan.commerce ? { commerce: cloneStrictJson(plan.commerce) } : {}),
   } satisfies SiteCreationPlanV2
 
   const result = validateSiteCreationPlanV2(normalized, SITE_CREATION_PLAN_V2_DEFAULT_LIMITS)

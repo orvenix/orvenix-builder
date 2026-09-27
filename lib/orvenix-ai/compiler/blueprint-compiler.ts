@@ -30,6 +30,7 @@ import type {
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
 import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
 import { applySectionInstanceToContext } from "./section-instance-context"
+import { injectStoreCartShellNodesV1 } from "@/lib/orvenix-ai/commerce/store-shell"
 
 function nodeId(prefix: string) {
   return `ai-${prefix}-${randomUUID()}`
@@ -64,48 +65,6 @@ function createNode(params: {
       ? { parentId: params.parentId }
       : {}),
   }
-}
-
-/**
- * COMMERCE-1: one cart shell per page -- the EXISTING `store-cart-button`
- * (opens the shared cart store) and `store-cart-drawer` (line items,
- * quantity, checkout entry -> /api/store/[siteId]/checkout with the
- * rendering site's own websiteId). Injected ONLY when the page already
- * contains at least one bound `store-product-card` (which the composer
- * emits exclusively for executable products), right after the navigation
- * section. Presentation-only pages are returned untouched.
- */
-function injectStoreCartShell(
-  nodes: Record<string, EditorNode>,
-  root: EditorNode,
-  children: string[],
-  startsWithNavigation: boolean,
-  accentColor: string | undefined,
-): string[] {
-  const hasBoundProductCard = Object.values(nodes).some(
-    (node) => node.type === "store-product-card" && typeof node.props.productId === "string" && typeof node.props.variantId === "string",
-  )
-  if (!hasBoundProductCard) return children
-
-  const accent = accentColor ? { accentColor } : {}
-  const button = createNode({ type: "store-cart-button", displayName: "Carrito (boton)", props: { label: "Carrito", ...accent } })
-  const drawer = createNode({ type: "store-cart-drawer", displayName: "Carrito (panel)", props: { checkoutLabel: "Ir a pagar", ...accent } })
-  const bar = createNode({ type: "genericWrapper", displayName: "Barra carrito", props: { tag: "div", className: "flex justify-end" }, children: [button.id] })
-  const shell = createNode({
-    type: "section",
-    displayName: "Carrito de la tienda",
-    props: { maxWidth: "xl", paddingY: "lg", paddingX: "lg", background: "#0f172a" },
-    children: [bar.id, drawer.id],
-  })
-
-  button.parentId = bar.id
-  bar.parentId = shell.id
-  drawer.parentId = shell.id
-  shell.parentId = root.id
-  for (const node of [button, drawer, bar, shell]) nodes[node.id] = node
-
-  const insertAt = startsWithNavigation && children.length > 0 ? 1 : 0
-  return [...children.slice(0, insertAt), shell.id, ...children.slice(insertAt)]
 }
 
 function copyComposedSection(
@@ -377,7 +336,8 @@ function compilePage(
     }
   }
 
-  root.children = injectStoreCartShell(nodes, root, children, page.sections[0]?.role === "navigation", options.accentColor)
+  // COMMERCE-1: one existing cart shell per page with bound product cards (shared with the COMMERCE-2A binder).
+  root.children = injectStoreCartShellNodesV1(nodes, root.id, children, options.accentColor)
 
   return {
     name: page.name,

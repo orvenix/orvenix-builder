@@ -53,6 +53,12 @@ import {
 } from "@/lib/orvenix-ai/commerce/product-facts"
 
 import {
+  buildCommerceProvisioningPlanV1,
+  markProductsPendingProvisioningV1,
+  type CommerceProvisioningPlanV1,
+} from "@/lib/orvenix-ai/commerce/provisioning-plan"
+
+import {
   buildSiteGenerationGuideContext,
   ORVENIX_SITE_CREATION_CHECKLIST,
   ORVENIX_SITE_GENERATION_GUIDE_VERSION,
@@ -695,6 +701,7 @@ function createMultiPagePlan(params: {
   pages: Array<{ name: string; slug: string; tree: EditorTree }>
   pageQuality: Array<{ slug: string; score: number }>
   warnings: string[]
+  commerceProvisioning?: CommerceProvisioningPlanV1 | null
 }): SiteCreationPlanV2 {
   const {
     input,
@@ -702,6 +709,7 @@ function createMultiPagePlan(params: {
     pages,
     pageQuality,
     warnings,
+    commerceProvisioning,
   } = params
 
   return normalizeSiteCreationPlanV2({
@@ -737,6 +745,8 @@ function createMultiPagePlan(params: {
       warnings,
       summary: `Plan multipagina generado en memoria para ${input.business.name?.trim() || "el negocio"}.`,
     },
+    // COMMERCE-2A: hash-covered new-store provisioning intent (absent -> byte-identical plan).
+    ...(commerceProvisioning ? { commerce: { version: 1 as const, provisioning: commerceProvisioning } } : {}),
   })
 }
 
@@ -802,7 +812,7 @@ export async function runAutonomousMultiPageSiteBuilder(
     ? boundProducts
     : normalizeCommercePresentationProductsV1(input.business.products)
 
-  const architecture = buildSiteArchitecture({
+  const builtArchitecture = buildSiteArchitecture({
     request: input.request,
     business: {
       name: input.business.name,
@@ -815,6 +825,23 @@ export async function runAutonomousMultiPageSiteBuilder(
       products: commerceProducts,
     },
   })
+
+  /*
+   * COMMERCE-2A: trusted new-store provisioning intent. Only when a server
+   * caller asked for it, no real store binding was supplied, the site is
+   * ecommerce and EVERY product has a grounded price (all-or-nothing, see
+   * provisioning-plan.ts). The approved plan rides inside
+   * SiteCreationPlanV2.commerce (hash-covered); the products become
+   * PENDING (non-executable) cards the confirm step binds to real rows.
+   * Pure: no DB access here -- preview stays side-effect free.
+   */
+  const commerceProvisioningPlan =
+    input.commerceProvisioning?.mode === "new_store" && !boundProducts.length && builtArchitecture.siteType === "ecommerce"
+      ? buildCommerceProvisioningPlanV1(builtArchitecture.products)
+      : null
+  const architecture = commerceProvisioningPlan && builtArchitecture.products
+    ? { ...builtArchitecture, products: markProductsPendingProvisioningV1(builtArchitecture.products, commerceProvisioningPlan) }
+    : builtArchitecture
 
   trace.push(
     `Tipo de sitio detectado: ${architecture.siteType}`,
@@ -1029,6 +1056,7 @@ export async function runAutonomousMultiPageSiteBuilder(
     pages,
     pageQuality,
     warnings,
+    commerceProvisioning: commerceProvisioningPlan,
   })
   const validation = validateSiteCreationPlanV2(plan, {
     maxPages: Math.max(architecture.pages.length, 1),

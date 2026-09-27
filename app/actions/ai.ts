@@ -5,7 +5,9 @@ import type { EditorTree } from "@/types/editor";
 import { validateTree } from "@/types/validateTree";
 import { revalidatePath } from "next/cache";
 import { getAuthSession } from "@/lib/auth-session";
-import { requireAIPlan, requireCanCreateWebsite } from "@/lib/plan-guard";
+import { getUserPlanAccess, requireAIPlan, requireCanCreateWebsite } from "@/lib/plan-guard";
+import { canUseEcommerce } from "@/lib/billing/plan-entitlements";
+import type { SiteCreationProductInputV1 } from "@/lib/orvenix-ai/site-creation/business-normalization";
 import {
   extractFirstJsonObject,
   normalizeGeneratedTreeCandidate,
@@ -802,6 +804,14 @@ export interface OrvenixSiteCreationActionInput {
     preferredStyle?: string;
     services?: Array<{ name: string; description?: string }>;
     /**
+     * COMMERCE-2A: bounded product FACTS only (name/description/category/
+     * variant label, integer-cent price, initial stock, sku). There is no
+     * store id / binding / provisioning / provider field: this public input
+     * can describe products, never execute or bind them. Only trusted
+     * server code (preview-service.ts at confirm) creates store rows.
+     */
+    products?: SiteCreationProductInputV1[];
+    /**
      * V2-5F: real, caller-supplied business evidence only -- optional
      * contact/people/testimonials that unlock V2-5D's dormant trust
      * capabilities. Never populated by the Creative Director or any AI
@@ -1177,7 +1187,7 @@ export async function runOrvenixSiteCreationAction(
         objective: business.objective,
         preferredStyle,
         services: business.services,
-        products: business.products,
+        products: business.products?.map(({ name, description }) => ({ name, description })),
         businessEvidenceSummary: summarizeBusinessEvidence(business.businessEvidence),
       },
       architecture: buildSiteArchitecture({
@@ -1189,12 +1199,20 @@ export async function runOrvenixSiteCreationAction(
           location: business.location,
           objective: business.objective,
           services: business.services,
-          products: business.products,
+          products: business.products?.map(({ name, description }) => ({ name, description })),
         },
       }),
       provider: createAnthropicCreativeDirectorProviderV1(),
     });
     const creativeDirection = creativeDirectionResult.status === "applied" ? creativeDirectionResult.direction : null;
+
+    let commerceProvisioningAllowed = false;
+    try {
+      const access = await getUserPlanAccess(session.user.id);
+      commerceProvisioningAllowed = Boolean(access?.isActive && canUseEcommerce(access.plan?.id));
+    } catch {
+      commerceProvisioningAllowed = false; // fail closed: presentation-only products
+    }
 
     let generated: Awaited<ReturnType<typeof runAutonomousMultiPageSiteBuilder>>;
 
@@ -1220,6 +1238,9 @@ export async function runOrvenixSiteCreationAction(
         // ASSISTED-2B: bounded, env-gated ("ORVENIX_ASSISTED_GENERATION_MODE=deterministic"), default OFF. See architecture-bridge.ts for the full safety contract.
         // ASSISTED-3B: deliberately the GLOBAL resolver only ("off" | "deterministic"). This customer-reachable action never selects "anthropic".
         assistedGeneration: { mode: resolveAssistedGenerationModeV1() },
+        // COMMERCE-2A: server-decided (never from the payload). Only a plan with ecommerce gets a hash-covered
+        // new-store provisioning plan; the builder stays side-effect free and rows are created only at confirm.
+        ...(commerceProvisioningAllowed ? { commerceProvisioning: { mode: "new_store" as const } } : {}),
       });
     } catch (error) {
       await failSiteCreationPreviewAttempt({

@@ -105,13 +105,18 @@ function categoryLabel(slug: NovaMarketCategorySlugV1): string {
   return CATEGORY_LABEL_BY_SLUG.get(slug) ?? slug
 }
 
+/** COMMERCE-2A: deterministic initial-stock seeds (presentation facts; the DB owns stock once provisioned). */
+const INITIAL_STOCK_BY_AVAILABILITY: Record<NovaMarketAvailabilityV1, number> = { in_stock: 25, low_stock: 3, out_of_stock: 0, preorder: 0 }
+
 function presentationVariants(product: NovaMarketProductV1) {
+  const initialStock = INITIAL_STOCK_BY_AVAILABILITY[product.availability]
   if (!product.variants?.length) {
     return [{
       label: "Unica",
       priceMxn: product.priceMxn,
       ...(product.compareAtPriceMxn ? { comparePriceMxn: product.compareAtPriceMxn } : {}),
       availability: product.availability,
+      initialStock,
     }]
   }
   return product.variants.map((variant) => ({
@@ -120,6 +125,7 @@ function presentationVariants(product: NovaMarketProductV1) {
     ...(product.compareAtPriceMxn && variant.priceMxn === product.priceMxn ? { comparePriceMxn: product.compareAtPriceMxn } : {}),
     availability: product.availability,
     sku: variant.sku,
+    initialStock,
   }))
 }
 
@@ -141,13 +147,8 @@ export const NOVAMARKET_DROPPED_COMMERCE_FIELDS_V1 = [
 
 export const NOVAMARKET_MOCK_SITE_ID_V1 = "nm-mock-site"
 
-const MOCK_STOCK_BY_AVAILABILITY: Record<NovaMarketAvailabilityV1, number> = {
-  in_stock: 25,
-  low_stock: 3,
-  out_of_stock: 0,
-  // The store runtime has no preorder concept: a mocked bound preorder product is simply unavailable.
-  preorder: 0,
-}
+// The store runtime has no preorder concept: a mocked bound preorder product is simply unavailable.
+const MOCK_STOCK_BY_AVAILABILITY: Record<NovaMarketAvailabilityV1, number> = INITIAL_STOCK_BY_AVAILABILITY
 
 /**
  * TEST ONLY: deterministic, obviously-fake store rows shaped like the

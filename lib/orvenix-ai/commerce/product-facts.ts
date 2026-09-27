@@ -37,6 +37,7 @@ export const COMMERCE_FACT_LIMITS_V1 = {
   maxIdLength: 191,
   /** Integer MXN cents -- same unit as ProductVariant.priceMxn. */
   maxPriceMxn: 1_000_000_000,
+  maxInitialStock: 1_000_000,
   /** Mirrors ProductCard's default lowStockThreshold. */
   lowStockThreshold: 5,
 } as const
@@ -57,6 +58,12 @@ export type CommerceVariantFactV1 = {
   variantId?: string
   /** BOUND products only: real ProductVariant.stock (>= 0). */
   stock?: number
+  /**
+   * COMMERCE-2A: PRESENTATION-only seed for a future ProductVariant.stock
+   * when a new store is provisioned after confirmation. Never makes a
+   * product executable; ignored for bound products (DB stock wins).
+   */
+  initialStock?: number
 }
 
 export type CommerceStoreBindingV1 = {
@@ -78,6 +85,15 @@ export type CommerceProductFactV1 = {
   variants?: CommerceVariantFactV1[]
   /** Present ONLY on BOUND executable products (bindStoreProductRecordsV1). */
   storeBinding?: CommerceStoreBindingV1
+  /**
+   * COMMERCE-2A: set ONLY by the builder when a trusted caller requested
+   * new-store provisioning and this product is in the approved
+   * CommerceProvisioningPlanV1. Compiles to a NON-executable pending
+   * `store-product-card` (a provisioning reference, no ids) that the
+   * confirm step binds to the real rows it creates. Never accepted from
+   * input: normalizeCommercePresentationProductsV1 never copies it.
+   */
+  pendingProvisioning?: { sourceIndex: number; variantIndex: number }
 }
 
 function cleanString(value: unknown, maxLength: number): string {
@@ -120,6 +136,9 @@ function normalizePresentationVariant(value: unknown): CommerceVariantFactV1 | n
     ? (record.availability as CommerceAvailabilityV1)
     : "in_stock"
   const sku = cleanString(record.sku, COMMERCE_FACT_LIMITS_V1.maxSkuLength)
+  const initialStock = typeof record.initialStock === "number" && Number.isInteger(record.initialStock) && record.initialStock >= 0 && record.initialStock <= COMMERCE_FACT_LIMITS_V1.maxInitialStock
+    ? record.initialStock
+    : undefined
 
   // Deliberately NO variantId/stock: a presentation variant can never become executable.
   return {
@@ -128,6 +147,7 @@ function normalizePresentationVariant(value: unknown): CommerceVariantFactV1 | n
     ...(comparePriceMxn !== undefined && comparePriceMxn > priceMxn ? { comparePriceMxn } : {}),
     availability,
     ...(sku ? { sku } : {}),
+    ...(initialStock !== undefined ? { initialStock } : {}),
   }
 }
 

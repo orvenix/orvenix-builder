@@ -63,6 +63,18 @@ export function buildNovaMarketBuilderInputBaseV1() {
 }
 
 /**
+ * COMMERCE-2A, TEST/DEV: the NEW-STORE preview input -- same fixture plus
+ * the trusted `commerceProvisioning` intent. The builder produces a
+ * hash-covered provisioning plan and PENDING cards; no ids, no writes.
+ */
+export function buildNovaMarketNewStorePreviewInputV1() {
+  return {
+    ...buildNovaMarketBuilderInputBaseV1(),
+    commerceProvisioning: { mode: "new_store" as const },
+  }
+}
+
+/**
  * COMMERCE-1, TEST ONLY: same fixture plus the builder's trusted
  * `commerceStore` input fed with obviously-fake "nm-mock-" rows. Not used
  * by the dev route (which stays presentation-only) and never persisted.
