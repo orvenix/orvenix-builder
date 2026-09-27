@@ -1,3 +1,4 @@
+export * from "./architecture-bridge"
 export * from "./contract"
 export * from "./fingerprint"
 export * from "./planner-adapter"

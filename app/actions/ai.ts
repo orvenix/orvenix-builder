@@ -47,6 +47,7 @@ import {
   type SiteCreationBusinessEvidenceInputV1,
 } from "@/lib/orvenix-ai/site-creation/evidence-normalization";
 import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/site-builder";
+import { resolveAssistedGenerationModeV1 } from "@/lib/orvenix-ai/assisted-generation/architecture-bridge";
 import { assessSiteGenerationQualityV1 } from "@/lib/orvenix-ai/evaluation";
 import {
   acceptDesignGeneration,
@@ -1216,6 +1217,8 @@ export async function runOrvenixSiteCreationAction(
         creativeDirection,
         forceFreshComposition: true,
         minimumQuality: 55,
+        // ASSISTED-2B: bounded, env-gated ("ORVENIX_ASSISTED_GENERATION_MODE=deterministic"), default OFF. See architecture-bridge.ts for the full safety contract.
+        assistedGeneration: { mode: resolveAssistedGenerationModeV1() },
       });
     } catch (error) {
       await failSiteCreationPreviewAttempt({

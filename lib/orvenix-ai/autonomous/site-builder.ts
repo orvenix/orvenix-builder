@@ -39,6 +39,10 @@ import {
 } from "@/lib/orvenix-ai/creative-director/section-order"
 
 import {
+  resolveAssistedSiteGenerationV1,
+} from "@/lib/orvenix-ai/assisted-generation/architecture-bridge"
+
+import {
   createPexelsProvider,
 } from "@/lib/orvenix-ai/assets/pexels-provider"
 
@@ -830,8 +834,30 @@ export async function runAutonomousMultiPageSiteBuilder(
    */
   const theme = applySiteCreationThemeAdvisories(getStarterTheme(), input, architecture.siteType)
 
+  /*
+   * ASSISTED-2B: the ONLY insertion point for Assisted Generation V1 into
+   * the REAL pipeline -- right before compileSiteBlueprint runs, after
+   * `orderedArchitecture` (Creative Director's section-order authority)
+   * is already final. Absent `input.assistedGeneration` or mode "off"
+   * (both the default) -> resolveAssistedSiteGenerationV1 returns
+   * `orderedArchitecture` completely unchanged and never invokes any
+   * provider; every existing caller of this function is therefore
+   * byte-identical. Mode "deterministic" runs ONLY the ASSISTED-2A
+   * deterministic testing provider (never Anthropic/Gemini/any network
+   * call) through validate + closed-world grounding; any failure at any
+   * stage (provider error, malformed proposal, grounding rejection)
+   * automatically falls back to `orderedArchitecture` unmodified -- see
+   * architecture-bridge.ts's own safety contract, this call never throws.
+   */
+  const assistedGenerationResult = await resolveAssistedSiteGenerationV1({
+    mode: input.assistedGeneration?.mode,
+    architecture: orderedArchitecture,
+    proposal: input.assistedGeneration?.proposal,
+  })
+  const assistedArchitecture = assistedGenerationResult.architecture
+
   const blueprint = compileSiteBlueprint(
-    orderedArchitecture,
+    assistedArchitecture,
     {
       preferPrimitiveComposition: input.forceFreshComposition,
       visualFamily: compositionVisualFamily,
@@ -953,11 +979,12 @@ export async function runAutonomousMultiPageSiteBuilder(
 
   return {
     ok: true,
-    architecture: orderedArchitecture,
+    architecture: assistedArchitecture,
     selectedTemplate: null,
     plan: validation.plan,
     planHash: validation.planHash,
     byteLength: validation.byteLength,
+    assistedGeneration: assistedGenerationResult.lifecycle,
     pageQuality,
     repaired,
     warnings: [...new Set([...warnings, ...validation.warnings])],

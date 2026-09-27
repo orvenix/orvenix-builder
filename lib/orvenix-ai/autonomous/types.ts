@@ -7,6 +7,10 @@ import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director
 import type {
   OrvenixSiteArchitecture,
 } from "@/lib/orvenix-ai/architect"
+import type {
+  AssistedGenerationLifecycleRecordV1,
+  AssistedGenerationModeV1,
+} from "@/lib/orvenix-ai/assisted-generation/architecture-bridge"
 
 import type {
   RankedTemplate,
@@ -76,6 +80,21 @@ export interface AutonomousSiteBuilderInput {
    * additive and falls back when this is absent.
    */
   creativeDirection?: CreativeSiteDirectionV1 | null
+
+  /**
+   * ASSISTED-2B: optional, bounded Assisted Generation V1 gate. Absent or
+   * "off" (the default) -> behavior is completely unchanged, the
+   * assisted-generation provider is never invoked. "deterministic" runs
+   * ONLY the ASSISTED-2A deterministic testing provider (never a real
+   * network call) through validate + closed-world grounding, and any
+   * failure at any stage falls back automatically to the unmodified
+   * architecture -- see lib/orvenix-ai/assisted-generation/architecture-bridge.ts.
+   */
+  assistedGeneration?: {
+    mode?: AssistedGenerationModeV1
+    /** Untrusted/dynamic input for the deterministic provider. Absent -> a safe, structurally-neutral default proposal. */
+    proposal?: unknown
+  }
 }
 
 export interface AutonomousSiteBuilderResult {
@@ -108,6 +127,17 @@ export interface AutonomousMultiPageSiteBuilderResult {
   planHash: string
 
   byteLength: number
+
+  /**
+   * ASSISTED-2B: bounded, in-memory lifecycle record for this run's
+   * Assisted Generation step (see assisted-generation/architecture-bridge.ts).
+   * Never affects `plan`'s shape (SiteCreationPlanV2 is unchanged) -- this
+   * is a sibling diagnostic field, exactly like `qualityGate` rides
+   * alongside (not inside) the plan at the app/actions/ai.ts layer.
+   * Always present: `{status: "disabled"}` whenever assistedGeneration
+   * was absent/"off".
+   */
+  assistedGeneration: AssistedGenerationLifecycleRecordV1
 
   pageQuality: Array<{
     slug: string
