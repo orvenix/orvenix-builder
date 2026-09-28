@@ -107,7 +107,7 @@ LIMITES ESTRICTOS:
 VOCABULARIO (valores exactos):
 - page.purpose: ${list(m.pagePurposes)}; debe existir "home" y "catalog"; "category" requiere target {"kind":"category","key"}; "product_detail" requiere target {"kind":"product","index"}
 - section.intent con su role obligatorio: ${sectionIntents}
-- section.layout {"kind", "mirror"?: boolean, "rhythm"?: "compact"|"standard"|"spacious"} con kind permitido por role: ${layouts}
+- section.layout {"kind", "mirror"?: boolean, "rhythm"?: "compact"|"standard"|"spacious"} con kind EXACTAMENTE permitido por role: ${layouts}. No inventes identificadores de layout; si una composicion deseada no existe en la lista, expresala con narrative, mediaIntent, emphasis, relationToPrevious, density o rhythm.
 - section.refs: [{"kind":"product","index"} | {"kind":"category","key"}]
 - section.narrative y page.narrativeGoal: preferir uno de ${list(m.narrativeTokens)}
 - section.mediaIntent: preferir uno de ${list(m.mediaTokens)}

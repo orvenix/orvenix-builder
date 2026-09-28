@@ -41,6 +41,7 @@ import {
   retrieveFullSiteCommerceDesignReferencesV1,
 } from "../../lib/orvenix-ai/full-site-generation/request-context"
 import { buildFullSiteCommerceCapabilityManifestV1 } from "../../lib/orvenix-ai/full-site-generation/capability-manifest"
+import { isValidSectionVisualLayoutPlan } from "../../lib/orvenix-ai/composer/visual-layout-plan"
 import { FULL_SITE_CTA_INTENTS_V1, FULL_SITE_NAVIGATION_CONCEPTS_V1 } from "../../lib/orvenix-ai/full-site-generation/contract"
 import { buildNovaMarketNewStorePreviewInputV1, runNovaMarketFullSiteDryRunV1 } from "../../lib/orvenix-ai/assisted-generation/e2e/comparison-harness"
 import { NOVAMARKET_PRODUCTS_V1 } from "../../lib/orvenix-ai/assisted-generation/e2e/novamarket-fixture"
@@ -89,6 +90,53 @@ async function withMockedSdk<T>(respond: (params: FakeParams) => unknown | Promi
 const text = (value: string, stopReason = "end_turn") => ({ stop_reason: stopReason, content: [{ type: "text", text: value }] })
 const json = (value: unknown, stopReason = "end_turn") => text(JSON.stringify(value), stopReason)
 
+function productRef(index: number) {
+  return { kind: "product" as const, index }
+}
+
+function categoryRef(key: string) {
+  return { kind: "category" as const, key }
+}
+
+function createNovaMarketTwelvePageBlueprintV1(layoutOverride?: { pageIndex: number; sectionIndex: number; kind: string }) {
+  const blueprint = createCommerceTestingBlueprintV1("catalog-heavy-commerce") as { pages: Array<Record<string, unknown> & { sections: Array<Record<string, unknown> & { layout?: { kind: string; rhythm?: string; mirror?: boolean } }> }> } & Record<string, unknown>
+  blueprint.pages = [
+    { purpose: "home", density: "balanced", sections: [
+      { intent: "opening", role: "hero", layout: { kind: "oversized-typography" } },
+      { intent: "navigation_discovery", role: "content", refs: [categoryRef("tecnologia"), categoryRef("hogar"), categoryRef("audio")], layout: { kind: "card-grid" } },
+      { intent: "featured_collection", role: "products", refs: [productRef(0), productRef(4), productRef(8), productRef(12)], layout: { kind: "card-grid" } },
+      { intent: "spotlight", role: "products", refs: [productRef(17)], layout: { kind: "editorial-split", rhythm: "spacious" } },
+      { intent: "benefits", role: "features", layout: { kind: "editorial-passage" } },
+      { intent: "trust", role: "trust" },
+      { intent: "catalog_surface", role: "products", refs: [categoryRef("tecnologia")], layout: { kind: "card-grid", rhythm: "compact" } },
+      { intent: "closing", role: "cta", layout: { kind: "dramatic-closing" } },
+    ] },
+    { purpose: "catalog", density: "compact", sections: [
+      { intent: "opening", role: "hero", layout: { kind: "editorial-passage" } },
+      { intent: "navigation_discovery", role: "content", refs: [categoryRef("tecnologia"), categoryRef("hogar"), categoryRef("oficina"), categoryRef("accesorios"), categoryRef("audio"), categoryRef("gaming")], layout: { kind: "card-grid" } },
+      { intent: "catalog_surface", role: "products", layout: { kind: "card-grid", rhythm: "compact" } },
+      { intent: "closing", role: "cta", layout: { kind: "dramatic-closing" } },
+    ] },
+    ...["tecnologia", "hogar", "oficina", "accesorios", "audio", "gaming"].map((key) => ({ purpose: "category", target: categoryRef(key), density: "balanced", sections: [
+      { intent: "opening", role: "hero", layout: { kind: "standard" } },
+      { intent: "collection", role: "products", refs: [categoryRef(key)], layout: { kind: "card-grid" } },
+      { intent: "trust", role: "trust" },
+      { intent: "closing", role: "cta", layout: { kind: "dramatic-closing" } },
+    ] })),
+    ...[0, 8, 17, 21].map((index) => ({ purpose: "product_detail", target: productRef(index), density: "immersive", sections: [
+      { intent: "opening", role: "hero", layout: { kind: "editorial-passage" } },
+      { intent: "detail_surface", role: "products", refs: [productRef(index)], layout: { kind: "editorial-split", rhythm: "spacious" } },
+      { intent: "related_items", role: "products", refs: [categoryRef(index === 21 ? "gaming" : index === 17 ? "audio" : "tecnologia")], layout: { kind: "card-grid" } },
+      { intent: "closing", role: "cta", layout: { kind: "dramatic-closing" } },
+    ] })),
+  ]
+  if (layoutOverride) {
+    const section = blueprint.pages[layoutOverride.pageIndex]?.sections[layoutOverride.sectionIndex]
+    if (section) section.layout = { kind: layoutOverride.kind }
+  }
+  return blueprint
+}
+
 async function buildWith(provider: unknown): Promise<AutonomousMultiPageSiteBuilderResult> {
   return runAutonomousMultiPageSiteBuilder({ ...buildNovaMarketNewStorePreviewInputV1(), commerceArchitecture: { provider: provider as never } })
 }
@@ -96,7 +144,8 @@ async function buildWith(provider: unknown): Promise<AutonomousMultiPageSiteBuil
 const deterministicSlugs = async () => (await runAutonomousMultiPageSiteBuilder(buildNovaMarketNewStorePreviewInputV1())).plan.pages.map((page) => page.slug)
 
 function assertValidPlan(run: AutonomousMultiPageSiteBuilderResult) {
-  assert.equal(validateSiteCreationPlanV2(run.plan, { maxPages: 12, maxBytes: 1_000_000 }).ok, true)
+  const validation = validateSiteCreationPlanV2(run.plan, { maxPages: 12, maxBytes: 1_000_000 })
+  assert.equal(validation.ok, true, JSON.stringify(validation))
 }
 
 // ---------------------------------------------------------------- 1-3) valid responses through the REAL downstream pipeline
@@ -361,6 +410,49 @@ test("provider errors carry safe diagnostics without raw response content", asyn
   })
 })
 
+// ---------------------------------------------------------------- creative vocabulary compatibility
+
+test("layout vocabulary: prompt manifest and validator stay in parity and fail closed", async () => {
+  const manifest = buildFullSiteCommerceCapabilityManifestV1()
+  for (const [role, layouts] of Object.entries(manifest.layoutsByRole)) {
+    for (const kind of layouts as readonly string[]) {
+      assert.equal(isValidSectionVisualLayoutPlan({ kind }, role as never), true, `${role}:${kind} must validate`)
+      assert.equal(isValidSectionVisualLayoutPlan({ kind, rhythm: "compact" }, role as never), true, `${role}:${kind} accepts rhythm`)
+    }
+  }
+  assert.equal(isValidSectionVisualLayoutPlan({ kind: "navigation-overlay" }, "cta" as never), false, "wrong-role layouts are rejected")
+  assert.equal(isValidSectionVisualLayoutPlan({ kind: "magazine-spread" }, "products" as never), false, "meaningful but unsupported creative vocabulary is rejected")
+  assert.equal(isValidSectionVisualLayoutPlan({ kind: "</script><script>alert(1)</script>" }, "products" as never), false, "hostile layout strings are rejected")
+
+  await withMockedSdk(() => json(createCommerceTestingBlueprintV1("editorial-commerce")), async (mod) => {
+    const system = mod.buildFullSiteCreativeSystemPromptV1()
+    assert.ok(system.includes("con kind EXACTAMENTE permitido por role"))
+    assert.ok(system.includes("No inventes identificadores de layout"))
+    assert.ok(system.includes("expresala con narrative, mediaIntent, emphasis, relationToPrevious, density o rhythm"))
+    for (const [role, layouts] of Object.entries(manifest.layoutsByRole)) {
+      assert.ok(system.includes(`${role}: ${(layouts as readonly string[]).join(" | ")}`), `${role} layouts exposed to prompt`)
+    }
+  })
+})
+
+test("NovaMarket 4D-shaped blueprint: canonical layouts pass; unsupported layouts fail closed", async () => {
+  await withMockedSdk(() => json(createNovaMarketTwelvePageBlueprintV1()), async (mod) => {
+    const run = await buildWith(mod.createAnthropicFullSiteCreativeProviderV1({ model: TEST_MODEL, apiKey: TEST_KEY }))
+    assert.equal(run.fullSiteCreative.lifecycle.status, "applied")
+    assert.equal(run.fullSiteCreative.commerceFallbackApplied, false)
+    assert.equal(run.plan.pages.length, 12)
+    assert.deepEqual(run.plan.pages.slice(0, 2).map((page) => page.slug), ["home", "productos"])
+    assertValidPlan(run)
+  })
+
+  await withMockedSdk(() => json(createNovaMarketTwelvePageBlueprintV1({ pageIndex: 0, sectionIndex: 7, kind: "magazine-spread" })), async (mod) => {
+    const run = await buildWith(mod.createAnthropicFullSiteCreativeProviderV1({ model: TEST_MODEL, apiKey: TEST_KEY }))
+    assert.equal(run.fullSiteCreative.lifecycle.status, "rejected")
+    assert.equal("reasonCode" in run.fullSiteCreative.lifecycle && run.fullSiteCreative.lifecycle.reasonCode, "schema_invalid")
+    assert.deepEqual(run.plan.pages.map((page) => page.slug), await deterministicSlugs())
+    assertValidPlan(run)
+  })
+})
 // ---------------------------------------------------------------- privacy / bounds / manifest
 
 test("privacy: sensitive-looking internal data never reaches the serialized provider request", () => {
