@@ -373,7 +373,9 @@ test("NovaMarket PREVIEW: 24 presentation/pending products, 0 executable cards, 
   const serialized = JSON.stringify(run.plan)
   assert.equal(/"productId"|"variantId"|demo-v1|nm-mock-/.test(serialized), false, "no fake/demo/mock ids in the preview")
   for (const page of run.plan.pages) assert.equal(orderedNodes(page.tree).some((node) => node.type === "store-cart-drawer"), false, "no cart shell in preview")
-  assert.equal(countPendingProvisioningCardsV1(run.plan), cards.length + cardsOf(run.plan.pages.find((page) => page.isHome)!.tree).length)
+  const pendingCardCount = countPendingProvisioningCardsV1(run.plan)
+  assert.ok(pendingCardCount >= cards.length + cardsOf(run.plan.pages.find((page) => page.isHome)!.tree).length)
+  assert.equal(run.plan.pages.flatMap((page) => cardsOf(page.tree)).length, pendingCardCount, "all pending commerce cards remain hash-covered in the approved plan")
 
   const { previewHash, approvedPlan } = await persistPreview(harness, run)
   assert.equal(harness.products.size, 0, "preview persistence wrote no Product")

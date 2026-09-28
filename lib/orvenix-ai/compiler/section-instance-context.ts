@@ -86,6 +86,17 @@ export function applySectionInstanceToContext(
     if (composition.scale) context = { ...context, instanceScale: composition.scale }
     if (composition.alignment) context = { ...context, instanceAlignment: composition.alignment }
     if (composition.mediaStrategy) context = { ...context, instanceMediaStrategy: composition.mediaStrategy }
+    if (composition.navigationSlugs?.length) {
+      const wanted = new Set(composition.navigationSlugs)
+      const bySlug = new Map((baseContext.sitePages ?? []).map((page) => [page.slug, page]))
+      const ordered = composition.navigationSlugs.map((slug) => bySlug.get(slug)).filter((page): page is NonNullable<SectionCompositionContext["sitePages"]>[number] => Boolean(page))
+      const home = bySlug.get("home")
+      context = { ...context, sitePages: home && !wanted.has("home") ? [home, ...ordered] : ordered }
+    }
+    if (composition.ctaAction) context = { ...context, commerceCtaAction: composition.ctaAction }
+    if (composition.omitCta) context = { ...context, instanceOmitCta: true }
+    if (composition.narrativeIntent) context = { ...context, instanceNarrativeIntent: composition.narrativeIntent }
+    if (composition.categoryLinks?.length) context = { ...context, commerceCategoryLinks: composition.categoryLinks }
     if (composition.emphasis === "opening" && instance.role === "hero") context = { ...context, instanceOmitCta: true }
 
     /*
@@ -120,6 +131,8 @@ export function applySectionInstanceToContext(
   }
 
   if (instance.selection.mode === "single-item") context = { ...context, singleItemInstance: true }
+  // COMMERCE-3C: an explicit curated selection must not be re-truncated by archetype teaser rules downstream.
+  if (instance.selection.mode !== "all") context = { ...context, instanceSelectionApplied: true }
 
   return context
 }

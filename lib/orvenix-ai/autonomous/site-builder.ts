@@ -53,6 +53,10 @@ import {
 } from "@/lib/orvenix-ai/commerce/product-facts"
 
 import {
+  resolveCommerceArchitectureV1,
+} from "@/lib/orvenix-ai/commerce/architecture"
+
+import {
   buildCommerceProvisioningPlanV1,
   markProductsPendingProvisioningV1,
   type CommerceProvisioningPlanV1,
@@ -839,9 +843,27 @@ export async function runAutonomousMultiPageSiteBuilder(
     input.commerceProvisioning?.mode === "new_store" && !boundProducts.length && builtArchitecture.siteType === "ecommerce"
       ? buildCommerceProvisioningPlanV1(builtArchitecture.products)
       : null
-  const architecture = commerceProvisioningPlan && builtArchitecture.products
+  const provisioningArchitecture = commerceProvisioningPlan && builtArchitecture.products
     ? { ...builtArchitecture, products: markProductsPendingProvisioningV1(builtArchitecture.products, commerceProvisioningPlan) }
     : builtArchitecture
+
+  const commerceArchitectureResult = resolveCommerceArchitectureV1({
+    architecture: provisioningArchitecture,
+    facts: {
+      products: provisioningArchitecture.products ?? [],
+      mode: input.commerceArchitecture?.mode,
+      proposal: input.commerceArchitecture?.proposal,
+    },
+  })
+  const architecture = commerceArchitectureResult.architecture
+  warnings.push(...commerceArchitectureResult.warnings.map((warning) => `commerce-architecture: ${warning}`))
+
+  if (commerceArchitectureResult.plan) {
+    trace.push(`Commerce Architect aplicado: ${commerceArchitectureResult.plan.storeStrategy} / ${commerceArchitectureResult.plan.pages.length} paginas`)
+  }
+  if (commerceArchitectureResult.fallbackApplied) {
+    trace.push("Commerce Architect AI rechazado; fallback deterministico aplicado")
+  }
 
   trace.push(
     `Tipo de sitio detectado: ${architecture.siteType}`,

@@ -40,7 +40,7 @@ import {
   type SectionInstanceAlignment,
   type SectionTone,
 } from "./composition-context"
-import { visualLayoutToSiteNavLayout } from "./visual-layout-plan"
+import { visualLayoutMirrorsContent, visualLayoutToSiteNavLayout } from "./visual-layout-plan"
 import {
   executableVariantForProductV1,
   isExecutableCommerceProductV1,
@@ -48,6 +48,7 @@ import {
   type CommerceProductFactV1,
 } from "@/lib/orvenix-ai/commerce/product-facts"
 import { formatProvisioningRefV1 } from "@/lib/orvenix-ai/commerce/provisioning-plan"
+import type { SectionInstanceCtaLabel } from "@/lib/orvenix-ai/architect/composition-plan"
 import {
   resolveCtaCopy,
   resolveFeatureItems,
@@ -2015,7 +2016,12 @@ function composeCardGridSection(
   items: Array<[string, string]>,
   context: SectionCompositionContext = {},
 ): ComposedSection {
-  const copy = cardGridCopy(role, context.archetype, { titleText, introText, items })
+  const baseCopy = cardGridCopy(role, context.archetype, { titleText, introText, items })
+  // COMMERCE-3C: a closed narrative intent reframes a PRESENTATION products grid with the same Orvenix-owned copy table.
+  const narrativeCopy = role === "products" && context.instanceNarrativeIntent && context.products?.length
+    ? commerceProductsCopy(context.instanceNarrativeIntent, context.products, { title: baseCopy.titleText, intro: baseCopy.introText })
+    : undefined
+  const copy = narrativeCopy ? { ...baseCopy, titleText: narrativeCopy.title, introText: narrativeCopy.intro ?? "" } : baseCopy
   const realItems =
     role === "services"
       ? realOfferingItems(context.services, context.archetype, (name) => `Conoce mas sobre ${name.toLowerCase()} y como puede ayudarte.`)
@@ -2067,7 +2073,8 @@ function composeCardGridSection(
    */
   if (context.instanceVisualPrimitive === "editorial-split" && finalItems.length >= 1) {
     const [title, body] = finalItems[0]
-    const mediaAsset = context.resolvedMediaAsset?.src.trim() ? { src: context.resolvedMediaAsset.src.trim(), alt: context.resolvedMediaAsset.alt } : undefined
+    // COMMERCE-3C: media intent "none"/"minimal" (mediaStrategy "none") keeps this passage copy-led even when an asset exists.
+    const mediaAsset = context.instanceMediaStrategy !== "none" && context.resolvedMediaAsset?.src.trim() ? { src: context.resolvedMediaAsset.src.trim(), alt: context.resolvedMediaAsset.alt } : undefined
     const passage = editorialSplitPassage(nodes, {
       index: context.sectionIndex ?? 0,
       title,
@@ -2289,10 +2296,69 @@ function storeCardProps(product: CommerceProductFactV1, context: SectionComposit
   return null
 }
 
+/**
+ * COMMERCE-3C: Orvenix-owned STRUCTURAL copy for a commerce products
+ * section, selected by a closed narrative intent. Only grounded facts are
+ * interpolated (product name/description, category label, item count);
+ * every other string is generic framing that makes no claim about quality,
+ * shipping, returns, popularity, discounts or availability. Absent intent
+ * -> the exact pre-COMMERCE-3C copy.
+ */
+function commerceProductsCopy(
+  narrative: SectionCompositionContext["instanceNarrativeIntent"],
+  products: readonly CommerceProductFactV1[],
+  fallback: { title: string; intro?: string },
+): { title: string; intro?: string } {
+  if (!narrative) return fallback
+  const single = products.length === 1 ? products[0] : undefined
+  const categories = new Set(products.map((product) => product.category?.trim()).filter(Boolean))
+  const category = categories.size === 1 ? [...categories][0] : undefined
+  const description = single?.description?.trim() || undefined
+  const count = products.length
+  switch (narrative) {
+    case "product-led":
+      return single ? { title: single.name, intro: description } : { title: "Productos destacados", intro: "Una selección de productos de la tienda." }
+    case "category-discovery":
+      return category ? { title: category, intro: `Productos de ${category}.` } : { title: "Explora por categoría", intro: "Recorre los productos por categoría." }
+    case "editorial-story":
+      return single ? { title: single.name, intro: description } : { title: category ?? "Selección de la tienda" }
+    case "benefit-led":
+      return { title: "Lo que encuentras en la tienda", intro: "Cada producto muestra su precio antes de comprar." }
+    case "trust-led":
+      return { title: "Compra con información clara", intro: "Consulta el precio y la disponibilidad de cada producto antes de agregarlo al carrito." }
+    case "conversion-led":
+      return { title: single ? single.name : "Elige tu producto", intro: "Agrega productos al carrito para iniciar tu compra." }
+    case "minimal-introduction":
+      return { title: single ? single.name : category ?? "Productos" }
+    case "catalog-orientation":
+      return { title: "Catálogo", intro: `${count} ${count === 1 ? "producto" : "productos"} en el catálogo.` }
+  }
+}
+
+const STORE_SECTION_BACKGROUND_BY_TONE: Record<string, string> = {
+  "contrast-led": "#020617",
+  "soft-rhythm": "#111827",
+}
+
+function storeCardsGridClass(context: SectionCompositionContext, inSplit: boolean): string {
+  const mediaLed = context.instanceMediaStrategy === "led"
+  const compact = context.instanceScale === "condensed" || context.instanceMediaStrategy === "none"
+  if (inSplit) return mediaLed || context.instanceScale === "large" ? "grid gap-6" : "grid gap-4 sm:grid-cols-2"
+  if (mediaLed) return "grid gap-8 sm:grid-cols-2"
+  if (compact) return "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+  if (context.instanceScale === "large") return "grid gap-8 md:grid-cols-2"
+  return "grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+}
+
 function composeStoreProductsSection(context: SectionCompositionContext, products: CommerceProductFactV1[]): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
-  const selected = context.archetype === "overview" ? products.slice(0, OVERVIEW_SERVICE_TEASER_COUNT) : products
-  const textColors = readableTextColorsFor(STORE_PRODUCTS_SECTION_BACKGROUND)
+  // An explicit curated selection (COMMERCE-3C) is authoritative; the teaser cut only applies to un-curated overview grids.
+  const selected = context.archetype === "overview" && !context.instanceSelectionApplied ? products.slice(0, OVERVIEW_SERVICE_TEASER_COUNT) : products
+  const background = (context.aiSectionToneStrategy && STORE_SECTION_BACKGROUND_BY_TONE[context.aiSectionToneStrategy]) || STORE_PRODUCTS_SECTION_BACKGROUND
+  const textColors = readableTextColorsFor(background)
+  const layoutKind = context.instanceVisualLayout?.kind
+  const isSplit = layoutKind === "editorial-split" || layoutKind === "mirror-split"
+  const mirrored = visualLayoutMirrorsContent(context.instanceVisualLayout)
 
   const cards: string[] = []
   for (const [index, product] of selected.entries()) {
@@ -2305,15 +2371,44 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
     })))
   }
 
-  const titleText = context.archetype === "overview" ? "Productos destacados" : "Catalogo"
-  const heading = context.singleItemInstance ? null : headingNode(nodes, "Titulo products", titleText, 2, { align: "center", color: textColors.heading })
-  const intro = context.singleItemInstance ? null : textNode(nodes, "Intro products", "Agrega productos al carrito para iniciar tu compra.", { align: "center", size: "lg", color: textColors.body })
-  const grid = wrapperNode(nodes, "Grid productos tienda", "grid gap-5 sm:grid-cols-2 lg:grid-cols-3", cards)
+  const fallbackTitle = context.archetype === "overview" ? "Productos destacados" : "Catalogo"
+  const copy = commerceProductsCopy(context.instanceNarrativeIntent, selected, { title: fallbackTitle, intro: "Agrega productos al carrito para iniciar tu compra." })
+  const showHeader = !context.singleItemInstance || Boolean(context.instanceNarrativeIntent)
+  const align = isSplit ? "left" : "center"
+  const headingSize = layoutKind === "oversized-typography" ? "7xl" : layoutKind === "editorial-passage" || context.instanceScale === "large" ? "5xl" : undefined
+  const heading = showHeader ? headingNode(nodes, "Titulo products", copy.title, 2, { align, color: textColors.heading, ...(headingSize ? { size: headingSize } : {}) }) : null
+  const intro = showHeader && copy.intro ? textNode(nodes, "Intro products", copy.intro, { align, size: "lg", color: textColors.body }) : null
+
+  const action = context.commerceCtaAction && !context.instanceOmitCta
+    ? add(nodes, createComposedNode({ type: "ctaButton", displayName: "Accion products", props: { label: context.commerceCtaAction.label, href: context.commerceCtaAction.href, variant: "secondary", size: "md" } }))
+    : null
+
+  let children: string[]
+  let layoutVariant = "store-product-cards"
+  if (isSplit) {
+    layoutVariant = mirrored ? "store-mirror-split" : "store-editorial-split"
+    const textColumn = wrapperNode(nodes, "Texto products", "flex flex-col justify-center gap-5", [heading, intro, action].filter((id): id is string => Boolean(id)))
+    const cardsColumn = wrapperNode(nodes, "Grid productos tienda", storeCardsGridClass(context, true), cards)
+    const columns = mirrored ? [cardsColumn, textColumn] : [textColumn, cardsColumn]
+    children = [wrapperNode(nodes, "Split products", "grid items-center gap-10 lg:grid-cols-2", columns)]
+  } else if (layoutKind === "editorial-passage") {
+    layoutVariant = "store-editorial-passage"
+    const header = wrapperNode(nodes, "Encabezado products", "mx-auto flex max-w-3xl flex-col gap-4", [heading, intro].filter((id): id is string => Boolean(id)))
+    const stack = wrapperNode(nodes, "Grid productos tienda", "mx-auto grid max-w-3xl gap-6", cards)
+    children = [header, stack, ...(action ? [wrapperNode(nodes, "Acciones products", "mt-8 flex justify-center", [action])] : [])]
+  } else {
+    if (layoutKind === "oversized-typography") layoutVariant = "store-oversized-typography"
+    const grid = wrapperNode(nodes, "Grid productos tienda", storeCardsGridClass(context, false), cards)
+    children = [heading, intro, grid, ...(action ? [wrapperNode(nodes, "Acciones products", "mt-8 flex justify-center", [action])] : [])].filter((id): id is string => Boolean(id))
+  }
+
+  const paddingY = context.instanceScale === "condensed" || context.aiSectionToneStrategy === "soft-rhythm" ? "lg" : "xl"
+  const maxWidth = context.instanceScale === "condensed" ? "lg" : "xl"
   const root = add(nodes, createComposedNode({
     type: "section",
-    displayName: `${titleText} (store-product-cards)`,
-    props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: STORE_PRODUCTS_SECTION_BACKGROUND },
-    children: [heading, intro, grid].filter((id): id is string => Boolean(id)),
+    displayName: `${copy.title} (${layoutVariant})`,
+    props: { maxWidth, paddingY, paddingX: "lg", background },
+    children,
   }))
   return { role: "products", rootId: root, nodes, purpose: "Catalogo de productos de la tienda con carrito." }
 }
@@ -2557,9 +2652,86 @@ function composeFooter(
   return { role: "footer", rootId: root, nodes, purpose: "Cerrar navegacion, marca y datos basicos." }
 }
 
-function composeContent(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("content", "Contenido principal", "Informacion clara y organizada sobre lo que ofrecemos.", [["Detalle importante", "Explica aqui un punto clave que ayude a decidir."], ["Diferencial", "Cuenta que hace especial esta oferta frente a otras opciones."], ["Siguiente paso", "Guia al visitante hacia la accion mas importante."]], context) }
+/**
+ * COMMERCE-3C: a commerce discovery row. Labels are the REAL product
+ * categories; every href is an Orvenix-resolved `page:<generated category
+ * page>` (validated in composition-plan.ts). Replaces the generic
+ * placeholder content grid whenever real category destinations exist.
+ */
+function composeCategoryLinks(context: SectionCompositionContext, links: NonNullable<SectionCompositionContext["commerceCategoryLinks"]>): ComposedSection {
+  const nodes: Record<string, ComposedNode> = {}
+  const minimal = context.instanceNarrativeIntent === "minimal-introduction"
+  const heading = headingNode(nodes, "Titulo categorias", minimal ? "Categorías" : "Explora por categoría", 2, { align: "center" })
+  const intro = minimal ? null : textNode(nodes, "Intro categorias", "Elige una categoría para ver sus productos.", { align: "center", size: "lg" })
+  const buttons = links.map((link, index) => add(nodes, createComposedNode({ type: "ctaButton", displayName: `Categoria ${index + 1}`, props: { label: link.label, href: link.href, variant: "secondary", size: context.instanceScale === "large" ? "lg" : "md" } })))
+  const row = wrapperNode(nodes, "Enlaces categorias", context.instanceScale === "condensed" ? "flex flex-wrap justify-center gap-2" : "flex flex-wrap justify-center gap-3", buttons)
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Categorias (category-links)", props: { maxWidth: "xl", paddingY: context.instanceScale === "condensed" ? "lg" : "xl", paddingX: "lg", background: "#ffffff" }, children: [heading, intro, row].filter((id): id is string => Boolean(id)) }))
+  return { role: "content", rootId: root, nodes, purpose: "Descubrir categorias reales de la tienda." }
+}
+
+function composeContent(context: SectionCompositionContext = {}): ComposedSection {
+  if (context.commerceCategoryLinks?.length) return composeCategoryLinks(context, context.commerceCategoryLinks)
+  return composeGenericContent(context)
+}
+
+function composeGenericContent(context: SectionCompositionContext = {}): ComposedSection { return composeCardGridSection("content", "Contenido principal", "Informacion clara y organizada sobre lo que ofrecemos.", [["Detalle importante", "Explica aqui un punto clave que ayude a decidir."], ["Diferencial", "Cuenta que hace especial esta oferta frente a otras opciones."], ["Siguiente paso", "Guia al visitante hacia la accion mas importante."]], context) }
+
+function removeComposedNodes(section: ComposedSection, predicate: (node: ComposedNode) => boolean): void {
+  const removed = new Set(Object.values(section.nodes).filter(predicate).map((node) => node.tempId))
+  if (!removed.size) return
+  for (const id of removed) delete section.nodes[id]
+  for (const node of Object.values(section.nodes)) node.children = node.children.filter((child) => !removed.has(child))
+}
+
+const COMMERCE_CLOSING_COPY: Record<SectionInstanceCtaLabel, { title: string; body: string }> = {
+  "Ver catálogo": { title: "Descubre todo el catálogo", body: "Encuentra más productos en la tienda." },
+  "Ver categoría": { title: "Explora otra categoría", body: "Recorre más productos de la tienda." },
+  "Ver producto": { title: "Conoce el producto", body: "Revisa el detalle, el precio y la disponibilidad." },
+  "Seguir explorando": { title: "Sigue explorando la tienda", body: "Encuentra más productos en la tienda." },
+  "Ver ayuda": { title: "¿Tienes dudas?", body: "Revisa la página de ayuda de la tienda." },
+}
+
+/**
+ * COMMERCE-3C: post-composition, bounded consumers for commerce creative
+ * intent on hero/closing sections -- applied to the composer's own output,
+ * whatever variant it chose. Only Orvenix-owned labels/copy and
+ * `page:<generated slug>` hrefs are written; with no commerce intent in
+ * the context this is a strict no-op.
+ */
+function applyCommerceIntentToSection(role: SectionRole, section: ComposedSection, context: SectionCompositionContext): ComposedSection {
+  if (role !== "hero" && role !== "cta") return section
+  if (context.instanceOmitCta) {
+    removeComposedNodes(section, (node) => node.type === "ctaButton")
+  } else if (context.commerceCtaAction) {
+    const buttons = Object.values(section.nodes).filter((node) => node.type === "ctaButton")
+    if (buttons[0]) buttons[0].props = { ...buttons[0].props, label: context.commerceCtaAction.label, href: context.commerceCtaAction.href }
+    const extra = new Set(buttons.slice(1).map((node) => node.tempId))
+    removeComposedNodes(section, (node) => extra.has(node.tempId))
+    if (role === "cta") {
+      const copy = COMMERCE_CLOSING_COPY[context.commerceCtaAction.label]
+      for (const node of Object.values(section.nodes)) {
+        if (node.displayName === "Titulo CTA") node.props = { ...node.props, text: copy.title }
+        if (node.displayName === "Texto CTA") node.props = { ...node.props, content: copy.body }
+      }
+    }
+  }
+  if (role === "hero" && context.instanceNarrativeIntent === "minimal-introduction") {
+    removeComposedNodes(section, (node) => node.displayName === "Descripcion hero" || node.displayName === "Etiqueta hero")
+  }
+  return section
+}
 
 export function composeSection(
+  role: SectionRole,
+  context: SectionCompositionContext = {},
+): ComposedSection | null {
+  const section = composeSectionForRole(role, context)
+  return section && (context.commerceCtaAction || context.instanceOmitCta || context.instanceNarrativeIntent)
+    ? applyCommerceIntentToSection(role, section, context)
+    : section
+}
+
+function composeSectionForRole(
   role: SectionRole,
   context: SectionCompositionContext = {},
 ): ComposedSection | null {

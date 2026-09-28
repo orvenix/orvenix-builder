@@ -1,3 +1,4 @@
+import type { SectionInstanceCtaLabel, SectionInstanceNarrativeIntent } from "@/lib/orvenix-ai/architect/composition-plan"
 import type { CommerceProductFactV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type { NodeProps } from "@/types/editor"
 import type { PageArchetype, SectionRole } from "@/lib/orvenix-ai/architect"
@@ -210,4 +211,12 @@ export interface SectionCompositionContext {
   instanceVisualPrimitive?: SectionInstanceVisualPrimitive
   /** VisualLayoutPlan V1: canonical bounded executable visual grammar for this section instance. */
   instanceVisualLayout?: SectionVisualLayoutPlan
+  /** COMMERCE-3C: safe CTA action resolved by Orvenix (closed label, `page:<generated-slug>`), never a provider href. */
+  commerceCtaAction?: { label: SectionInstanceCtaLabel; href: string }
+  /** COMMERCE-3C: closed narrative intent selecting Orvenix-owned structural copy. */
+  instanceNarrativeIntent?: SectionInstanceNarrativeIntent
+  /** COMMERCE-3C: grounded category labels linked to real generated category pages. */
+  commerceCategoryLinks?: Array<{ label: string; href: string }>
+  /** COMMERCE-3C: this context's collection was explicitly curated by a SectionInstancePlan selection. */
+  instanceSelectionApplied?: boolean
 }

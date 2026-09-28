@@ -140,7 +140,35 @@ export interface SectionInstanceComposition {
   visualPrimitive?: SectionInstanceVisualPrimitive
   /** VisualLayoutPlan V1: preferred bounded layout grammar. visualPrimitive remains legacy-compatible input. */
   layout?: SectionVisualLayoutPlan
+  /** Orvenix-resolved generated page slugs for a navigation instance. Never provider-supplied hrefs or URLs. */
+  navigationSlugs?: string[]
+  /** COMMERCE-3C: Orvenix-resolved safe CTA action -- closed label vocabulary, `page:<generated-slug>` only. */
+  ctaAction?: { label: SectionInstanceCtaLabel; href: string }
+  /** COMMERCE-3C: this instance explicitly asks for no call-to-action (AI ctaIntent "none" / unresolvable). */
+  omitCta?: boolean
+  /** COMMERCE-3C: closed narrative intent; selects Orvenix-owned structural copy, never provider prose. */
+  narrativeIntent?: SectionInstanceNarrativeIntent
+  /** COMMERCE-3C: grounded category labels linked to REAL generated category pages. */
+  categoryLinks?: Array<{ label: string; href: string }>
 }
+
+export const SECTION_INSTANCE_CTA_LABELS = ["Ver catálogo", "Ver categoría", "Ver producto", "Seguir explorando", "Ver ayuda"] as const
+export type SectionInstanceCtaLabel = (typeof SECTION_INSTANCE_CTA_LABELS)[number]
+
+export const SECTION_INSTANCE_NARRATIVE_INTENTS = [
+  "product-led",
+  "category-discovery",
+  "editorial-story",
+  "benefit-led",
+  "trust-led",
+  "conversion-led",
+  "minimal-introduction",
+  "catalog-orientation",
+] as const
+export type SectionInstanceNarrativeIntent = (typeof SECTION_INSTANCE_NARRATIVE_INTENTS)[number]
+
+/** Internal generated-page link only: `page:<normalized slug>` (no "/", no scheme, no fragment). */
+export const SECTION_INSTANCE_PAGE_HREF_PATTERN = /^page:[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export type SectionInstanceProvenance = "deterministic" | "design-reference" | "creative-director" | "fallback"
 
@@ -264,7 +292,7 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
   if (plan.composition !== undefined) {
     if (!isPlainObject(plan.composition)) return false
     const composition = plan.composition
-    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout"])) return false
+    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks"])) return false
     if (composition.treatment !== undefined && !ALL_TREATMENT_VALUES.has(composition.treatment as string)) return false
     if (composition.alignment !== undefined && !VALID_ALIGNMENTS.has(composition.alignment as string)) return false
     if (composition.scale !== undefined && !VALID_SCALES.has(composition.scale as string)) return false
@@ -273,6 +301,26 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
     if (composition.emphasis !== undefined && !VALID_EMPHASIS.has(composition.emphasis as string)) return false
     if (composition.visualPrimitive !== undefined && !VALID_VISUAL_PRIMITIVES.has(composition.visualPrimitive as string)) return false
     if (composition.layout !== undefined && !isValidSectionVisualLayoutPlan(composition.layout, plan.role as SectionRole)) return false
+    if (composition.navigationSlugs !== undefined) {
+      if (!Array.isArray(composition.navigationSlugs)) return false
+      if (!composition.navigationSlugs.every((slug) => typeof slug === "string" && SECTION_INSTANCE_PAGE_HREF_PATTERN.test(`page:${slug}`))) return false
+    }
+    if (composition.ctaAction !== undefined) {
+      if (!isPlainObject(composition.ctaAction)) return false
+      if (!hasOnlyKeys(composition.ctaAction, ["label", "href"])) return false
+      if (!(SECTION_INSTANCE_CTA_LABELS as readonly string[]).includes(composition.ctaAction.label as string)) return false
+      if (typeof composition.ctaAction.href !== "string" || !SECTION_INSTANCE_PAGE_HREF_PATTERN.test(composition.ctaAction.href)) return false
+    }
+    if (composition.omitCta !== undefined && composition.omitCta !== true) return false
+    if (composition.narrativeIntent !== undefined && !(SECTION_INSTANCE_NARRATIVE_INTENTS as readonly string[]).includes(composition.narrativeIntent as string)) return false
+    if (composition.categoryLinks !== undefined) {
+      if (!Array.isArray(composition.categoryLinks) || composition.categoryLinks.length > 8) return false
+      for (const link of composition.categoryLinks) {
+        if (!isPlainObject(link) || !hasOnlyKeys(link, ["label", "href"])) return false
+        if (typeof link.label !== "string" || !link.label.trim() || link.label.length > 60 || /[<>{}]/.test(link.label)) return false
+        if (typeof link.href !== "string" || !SECTION_INSTANCE_PAGE_HREF_PATTERN.test(link.href)) return false
+      }
+    }
   }
 
   if (plan.relationship !== undefined) {

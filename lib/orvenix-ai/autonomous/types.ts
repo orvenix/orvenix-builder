@@ -15,6 +15,7 @@ import type {
 import type { AssistedSiteGenerationProviderV1 } from "@/lib/orvenix-ai/assisted-generation/contract"
 import type { CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
 import type { AssetProvider } from "@/lib/orvenix-ai/assets/types"
+import type { CommerceArchitectureResolveModeV1 } from "@/lib/orvenix-ai/commerce/architecture"
 
 import type {
   RankedTemplate,
@@ -148,6 +149,18 @@ export interface AutonomousSiteBuilderInput {
    * builder itself never writes anything.
    */
   commerceProvisioning?: { mode: "new_store" }
+
+  /**
+   * COMMERCE-3: optional, trusted/test-only commerce architecture seam.
+   * Absent -> deterministic bounded commerce architect. "mock-ai" accepts
+   * an untrusted proposal only through the same local grounding validator;
+   * invalid proposals fall back deterministically and never block site
+   * generation. No browser payload can set this today.
+   */
+  commerceArchitecture?: {
+    mode?: CommerceArchitectureResolveModeV1
+    proposal?: unknown
+  }
 }
 
 export interface AutonomousSiteBuilderResult {
