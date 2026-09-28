@@ -2,6 +2,8 @@ import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/s
 import type { AutonomousMultiPageSiteBuilderResult } from "@/lib/orvenix-ai/autonomous/types"
 import type { AssetProvider } from "@/lib/orvenix-ai/assets/types"
 import type { AssistedSiteGenerationProviderV1 } from "../contract"
+import type { FullSiteCreativeBlueprintProviderV1 } from "@/lib/orvenix-ai/full-site-generation/contract"
+import { createDeterministicFullSiteCreativeTestingProviderV1 } from "@/lib/orvenix-ai/full-site-generation/testing-provider"
 import {
   NOVAMARKET_BUSINESS_V1,
   NOVAMARKET_DROPPED_COMMERCE_FIELDS_V1,
@@ -151,3 +153,41 @@ export function toAssistedComparisonArtifactV1(result: AssistedComparisonResultV
 }
 
 export type AssistedComparisonArtifactV1 = ReturnType<typeof toAssistedComparisonArtifactV1>
+
+/**
+ * FULL-SITE-4A: NovaMarket Full-Site dry-run instrument. Every mode runs
+ * the SAME 24-product / 6-category facts through the SAME downstream path
+ * (builder provider seam -> orchestrator -> validator -> commerce adapter
+ * -> compiler -> EditorTree). "real" is REFUSED unless the dev E2E guard
+ * is enabled, the caller passes an explicit authorization flag AND
+ * supplies the (server-constructed) provider -- this module never
+ * constructs or imports the real provider itself.
+ */
+export type NovaMarketFullSiteDryRunModeV1 = "deterministic" | "mock-editorial" | "mock-catalog" | "real"
+
+export type NovaMarketFullSiteDryRunResultV1 =
+  | { status: "skipped"; reason: "real_provider_not_authorized" }
+  | { status: "completed"; mode: NovaMarketFullSiteDryRunModeV1; run: AutonomousMultiPageSiteBuilderResult }
+
+export async function runNovaMarketFullSiteDryRunV1(params: {
+  mode: NovaMarketFullSiteDryRunModeV1
+  env?: AssistedE2EHarnessEnvV1
+  authorizeRealProviderCall?: boolean
+  realProvider?: FullSiteCreativeBlueprintProviderV1
+}): Promise<NovaMarketFullSiteDryRunResultV1> {
+  let provider: FullSiteCreativeBlueprintProviderV1 | undefined
+  if (params.mode === "real") {
+    const authorized = params.authorizeRealProviderCall === true && Boolean(params.realProvider) && isAssistedE2EHarnessEnabledV1(params.env ?? {})
+    if (!authorized) return { status: "skipped", reason: "real_provider_not_authorized" }
+    provider = params.realProvider
+  } else if (params.mode === "mock-editorial") {
+    provider = createDeterministicFullSiteCreativeTestingProviderV1("editorial-commerce")
+  } else if (params.mode === "mock-catalog") {
+    provider = createDeterministicFullSiteCreativeTestingProviderV1("catalog-heavy-commerce")
+  }
+  const run = await runAutonomousMultiPageSiteBuilder({
+    ...buildNovaMarketNewStorePreviewInputV1(),
+    ...(provider ? { commerceArchitecture: { provider } } : {}),
+  })
+  return { status: "completed", mode: params.mode, run }
+}

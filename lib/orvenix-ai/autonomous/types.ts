@@ -16,6 +16,7 @@ import type { AssistedSiteGenerationProviderV1 } from "@/lib/orvenix-ai/assisted
 import type { CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
 import type { AssetProvider } from "@/lib/orvenix-ai/assets/types"
 import type { CommerceArchitectureResolveModeV1 } from "@/lib/orvenix-ai/commerce/architecture"
+import type { FullSiteCreativeBlueprintProviderV1, FullSiteCreativeLifecycleV1 } from "@/lib/orvenix-ai/full-site-generation/contract"
 
 import type {
   RankedTemplate,
@@ -160,6 +161,15 @@ export interface AutonomousSiteBuilderInput {
   commerceArchitecture?: {
     mode?: CommerceArchitectureResolveModeV1
     proposal?: unknown
+    /**
+     * FULL-SITE-4A: TRUSTED server-side Full-Site Creative provider (mock
+     * or real). When present the builder asks it for ONE blueprint through
+     * generateFullSiteCreativeBlueprintV1 (validator authoritative), then
+     * through the commerce adapter's own grounding; any failure falls back
+     * to the deterministic commerce architect. Not reachable from the
+     * customer action (app/actions/ai.ts never sets it).
+     */
+    provider?: FullSiteCreativeBlueprintProviderV1
   }
 }
 
@@ -204,6 +214,14 @@ export interface AutonomousMultiPageSiteBuilderResult {
    * was absent/"off".
    */
   assistedGeneration: AssistedGenerationLifecycleRecordV1
+
+  /**
+   * FULL-SITE-4A: sibling diagnostic (never inside the plan). `disabled`
+   * whenever no trusted provider was supplied. `commerceFallbackApplied`
+   * is true when the provider's blueprint passed the generic validator but
+   * the commerce adapter still rejected it (deterministic plan used).
+   */
+  fullSiteCreative: { lifecycle: FullSiteCreativeLifecycleV1; commerceFallbackApplied: boolean }
 
   pageQuality: Array<{
     slug: string

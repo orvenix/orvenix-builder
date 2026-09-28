@@ -5,13 +5,23 @@ import {
   FULL_SITE_CREATIVE_BLUEPRINT_ROLE_KEY_V1,
   FULL_SITE_CREATIVE_BLUEPRINT_STRATEGY_KEY_V1,
   FULL_SITE_CREATIVE_BLUEPRINT_VERSION_V1,
+  FULL_SITE_CART_PROMINENCE_V1,
+  FULL_SITE_CTA_INTENTS_V1,
+  FULL_SITE_EMPHASES_V1,
   FULL_SITE_NAVIGATION_CONCEPTS_V1,
+  FULL_SITE_PAGE_DENSITIES_V1,
+  FULL_SITE_REF_KINDS_V1,
+  FULL_SITE_RELATIONS_V1,
+  FULL_SITE_RHYTHMS_V1,
+  FULL_SITE_SITE_DENSITIES_V1,
+  FULL_SITE_SITE_NARRATIVES_V1,
   FULL_SITE_PAGE_PURPOSES_V1,
   FULL_SITE_SECTION_INTENTS_V1,
   type FullSiteContentRefV1,
   type FullSiteCreativeBlueprintV1,
   type FullSiteCreativeSectionV1,
 } from "./contract"
+import { FULL_SITE_BLUEPRINT_LIMITS_V1 } from "./capability-manifest"
 
 export interface FullSiteCreativeGroundingContextV1 {
   productCount?: number
@@ -28,15 +38,15 @@ export type FullSiteCreativeValidationResultV1 =
 const PAGE_PURPOSES = new Set<string>(FULL_SITE_PAGE_PURPOSES_V1)
 const SECTION_INTENTS = new Set<string>(FULL_SITE_SECTION_INTENTS_V1)
 const NAV_CONCEPTS = new Set<string>(FULL_SITE_NAVIGATION_CONCEPTS_V1)
-const SITE_NARRATIVES = new Set(["editorial", "catalog", "product-led", "conversion-led", "professional"])
-const RHYTHMS = new Set(["calm", "varied", "dense", "immersive"])
-const SITE_DENSITIES = new Set(["minimal", "balanced", "rich"])
-const PAGE_DENSITIES = new Set(["compact", "balanced", "immersive"])
-const CTA_INTENTS = new Set(["browse", "buy", "contact", "learn", "none"])
-const EMPHASES = new Set(["standard", "heroic", "quiet", "conversion"])
-const RELATIONS = new Set(["standard", "continuous", "contrast"])
-const CART_PROMINENCE = new Set(["none", "subtle", "prominent"])
-const REF_KINDS = new Set(["product", "category", "service", "evidence"])
+const SITE_NARRATIVES = new Set<string>(FULL_SITE_SITE_NARRATIVES_V1)
+const RHYTHMS = new Set<string>(FULL_SITE_RHYTHMS_V1)
+const SITE_DENSITIES = new Set<string>(FULL_SITE_SITE_DENSITIES_V1)
+const PAGE_DENSITIES = new Set<string>(FULL_SITE_PAGE_DENSITIES_V1)
+const CTA_INTENTS = new Set<string>(FULL_SITE_CTA_INTENTS_V1)
+const EMPHASES = new Set<string>(FULL_SITE_EMPHASES_V1)
+const RELATIONS = new Set<string>(FULL_SITE_RELATIONS_V1)
+const CART_PROMINENCE = new Set<string>(FULL_SITE_CART_PROMINENCE_V1)
+const REF_KINDS = new Set<string>(FULL_SITE_REF_KINDS_V1)
 const ROLE_VALUES = new Set<SectionRole>([
   "navigation",
   "hero",
@@ -125,14 +135,14 @@ function validateSection(value: unknown, context: FullSiteCreativeGroundingConte
   if (typeof value.intent !== "string" || !SECTION_INTENTS.has(value.intent)) errors.push(`${path}.intent invalido.`)
   if (typeof value.role !== "string" || !ROLE_VALUES.has(value.role as SectionRole)) errors.push(`${path}.role invalido.`)
   const refs = Array.isArray(value.refs)
-    ? value.refs.slice(0, 12).map((ref, index) => validateRef(ref, context, `${path}.refs[${index}]`, errors)).filter((ref): ref is FullSiteContentRefV1 => Boolean(ref))
+    ? value.refs.slice(0, FULL_SITE_BLUEPRINT_LIMITS_V1.maxRefsPerSection).map((ref, index) => validateRef(ref, context, `${path}.refs[${index}]`, errors)).filter((ref): ref is FullSiteContentRefV1 => Boolean(ref))
     : undefined
   if (value.layout !== undefined && !isValidSectionVisualLayoutPlan(value.layout, value.role as SectionRole)) errors.push(`${path}.layout invalido.`)
   if (value.ctaIntent !== undefined && (typeof value.ctaIntent !== "string" || !CTA_INTENTS.has(value.ctaIntent))) errors.push(`${path}.ctaIntent invalido.`)
   if (value.emphasis !== undefined && (typeof value.emphasis !== "string" || !EMPHASES.has(value.emphasis))) errors.push(`${path}.emphasis invalido.`)
   if (value.relationToPrevious !== undefined && (typeof value.relationToPrevious !== "string" || !RELATIONS.has(value.relationToPrevious))) errors.push(`${path}.relationToPrevious invalido.`)
-  const narrative = cleanText(value.narrative, 220, `${path}.narrative`, errors)
-  const mediaIntent = cleanText(value.mediaIntent, 140, `${path}.mediaIntent`, errors)
+  const narrative = cleanText(value.narrative, FULL_SITE_BLUEPRINT_LIMITS_V1.maxNarrativeLength, `${path}.narrative`, errors)
+  const mediaIntent = cleanText(value.mediaIntent, FULL_SITE_BLUEPRINT_LIMITS_V1.maxMediaIntentLength, `${path}.mediaIntent`, errors)
   if (typeof value.intent !== "string" || typeof value.role !== "string" || !SECTION_INTENTS.has(value.intent) || !ROLE_VALUES.has(value.role as SectionRole)) return null
   return {
     intent: value.intent as FullSiteCreativeSectionV1["intent"],
@@ -176,7 +186,7 @@ export function validateFullSiteCreativeBlueprintV1(value: unknown, context: Ful
 
   const pages = []
   const semanticKeys = new Set<string>()
-  for (const [pageIndex, page] of (value.pages as unknown[]).slice(0, context.maxPages ?? 12).entries()) {
+  for (const [pageIndex, page] of (value.pages as unknown[]).slice(0, context.maxPages ?? FULL_SITE_BLUEPRINT_LIMITS_V1.maxPages).entries()) {
     if (!isRecord(page)) {
       warnings.push(`pages[${pageIndex}] no es objeto.`)
       continue
@@ -194,7 +204,7 @@ export function validateFullSiteCreativeBlueprintV1(value: unknown, context: Ful
     }
     semanticKeys.add(semanticKey)
     const sections = Array.isArray(page.sections)
-      ? page.sections.slice(0, 16).map((section, sectionIndex) => validateSection(section, context, `pages[${pageIndex}].sections[${sectionIndex}]`, errors)).filter((section): section is FullSiteCreativeSectionV1 => Boolean(section))
+      ? page.sections.slice(0, FULL_SITE_BLUEPRINT_LIMITS_V1.maxSectionsPerPage).map((section, sectionIndex) => validateSection(section, context, `pages[${pageIndex}].sections[${sectionIndex}]`, errors)).filter((section): section is FullSiteCreativeSectionV1 => Boolean(section))
       : []
     if (!sections.length) {
       warnings.push(`pages[${pageIndex}] sin secciones validas.`)

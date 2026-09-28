@@ -45,6 +45,17 @@ export const FULL_SITE_NAVIGATION_CONCEPTS_V1 = [
 
 export type FullSiteNavigationConceptV1 = (typeof FULL_SITE_NAVIGATION_CONCEPTS_V1)[number]
 
+/** FULL-SITE-4A: single source of truth for every closed blueprint vocabulary (validator, capability manifest and provider prompt all derive from these). */
+export const FULL_SITE_SITE_NARRATIVES_V1 = ["editorial", "catalog", "product-led", "conversion-led", "professional"] as const
+export const FULL_SITE_RHYTHMS_V1 = ["calm", "varied", "dense", "immersive"] as const
+export const FULL_SITE_SITE_DENSITIES_V1 = ["minimal", "balanced", "rich"] as const
+export const FULL_SITE_PAGE_DENSITIES_V1 = ["compact", "balanced", "immersive"] as const
+export const FULL_SITE_CTA_INTENTS_V1 = ["browse", "buy", "contact", "learn", "none"] as const
+export const FULL_SITE_EMPHASES_V1 = ["standard", "heroic", "quiet", "conversion"] as const
+export const FULL_SITE_RELATIONS_V1 = ["standard", "continuous", "contrast"] as const
+export const FULL_SITE_CART_PROMINENCE_V1 = ["none", "subtle", "prominent"] as const
+export const FULL_SITE_REF_KINDS_V1 = ["product", "category", "service", "evidence"] as const
+
 export type FullSiteContentRefV1 =
   | { kind: "product"; index: number }
   | { kind: "category"; key: string }
@@ -92,10 +103,28 @@ export interface FullSiteCreativeBlueprintV1 {
 
 export interface FullSiteCreativeBlueprintProviderV1 {
   generate(input: unknown): Promise<unknown>
+  /** FULL-SITE-4A: optional safe metadata for lifecycle observability (never secrets). */
+  readonly providerKey?: string
+  readonly modelKey?: string
+  /** The provider's own bounded request timeout; the orchestrator adds a small grace on top. */
+  readonly timeoutMs?: number
 }
 
+/** FULL-SITE-4A: normalized, content-free failure reasons (raw provider errors are never surfaced). */
+export type FullSiteCreativeFailureReasonV1 =
+  | "disabled"
+  | "missing_configuration"
+  | "timeout"
+  | "provider_error"
+  | "empty_response"
+  | "parse_error"
+  | "schema_invalid"
+  | "grounding_invalid"
+
+export type FullSiteCreativeLifecycleMetaV1 = { providerKey?: string; modelKey?: string; durationMs?: number }
+
 export type FullSiteCreativeLifecycleV1 =
-  | { status: "disabled" }
-  | { status: "applied"; inputFingerprint: string; outputFingerprint: string; warnings: string[] }
-  | { status: "rejected"; inputFingerprint: string; reasons: string[]; warnings: string[] }
-  | { status: "failed"; inputFingerprint?: string; reasons: string[] }
+  | { status: "disabled"; reasonCode?: "disabled" }
+  | ({ status: "applied"; inputFingerprint: string; outputFingerprint: string; warnings: string[] } & FullSiteCreativeLifecycleMetaV1)
+  | ({ status: "rejected"; inputFingerprint: string; reasons: string[]; warnings: string[]; reasonCode?: "schema_invalid" | "grounding_invalid" } & FullSiteCreativeLifecycleMetaV1)
+  | ({ status: "failed"; inputFingerprint?: string; reasons: string[]; reasonCode?: FullSiteCreativeFailureReasonV1 } & FullSiteCreativeLifecycleMetaV1)

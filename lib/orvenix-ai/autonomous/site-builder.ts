@@ -56,6 +56,10 @@ import {
   resolveCommerceArchitectureV1,
 } from "@/lib/orvenix-ai/commerce/architecture"
 
+import { generateFullSiteCreativeBlueprintV1 } from "@/lib/orvenix-ai/full-site-generation/orchestrator"
+import { buildFullSiteCreativeRequestV1, retrieveFullSiteCommerceDesignReferencesV1 } from "@/lib/orvenix-ai/full-site-generation/request-context"
+import type { FullSiteCreativeLifecycleV1 } from "@/lib/orvenix-ai/full-site-generation/contract"
+
 import {
   buildCommerceProvisioningPlanV1,
   markProductsPendingProvisioningV1,
@@ -847,12 +851,46 @@ export async function runAutonomousMultiPageSiteBuilder(
     ? { ...builtArchitecture, products: markProductsPendingProvisioningV1(builtArchitecture.products, commerceProvisioningPlan) }
     : builtArchitecture
 
+  /*
+   * FULL-SITE-4A: optional trusted Full-Site Creative provider. ONE call,
+   * sanitized bounded request, validator-authoritative; the accepted
+   * blueprint is then treated exactly like any other external proposal
+   * (commerce adapter grounding + deterministic fallback). No provider ->
+   * byte-identical to COMMERCE-3C.
+   */
+  let fullSiteLifecycle: FullSiteCreativeLifecycleV1 = { status: "disabled", reasonCode: "disabled" }
+  let commerceProposal = input.commerceArchitecture?.proposal
+  let commerceMode = input.commerceArchitecture?.mode
+  const fullSiteProvider = input.commerceArchitecture?.provider
+  const fullSiteProducts = provisioningArchitecture.products ?? []
+  if (fullSiteProvider && provisioningArchitecture.siteType === "ecommerce" && fullSiteProducts.some((product) => product.variants?.length)) {
+    try {
+      const request = buildFullSiteCreativeRequestV1({
+        industry: input.business.industry,
+        objective: input.business.objective,
+        location: input.business.location,
+        products: fullSiteProducts,
+        designReferences: retrieveFullSiteCommerceDesignReferencesV1(),
+        creativeDirection: input.creativeDirection,
+      })
+      const generation = await generateFullSiteCreativeBlueprintV1({ provider: fullSiteProvider, requestContext: request.context, grounding: request.grounding })
+      fullSiteLifecycle = generation.lifecycle
+      if (generation.ok) {
+        commerceProposal = generation.blueprint
+        commerceMode = "mock-ai"
+      }
+    } catch {
+      fullSiteLifecycle = { status: "failed", reasons: ["provider_error"], reasonCode: "provider_error" }
+    }
+    trace.push(`Full-Site Creative provider: ${fullSiteLifecycle.status}${"reasonCode" in fullSiteLifecycle && fullSiteLifecycle.reasonCode ? ` (${fullSiteLifecycle.reasonCode})` : ""}`)
+  }
+
   const commerceArchitectureResult = resolveCommerceArchitectureV1({
     architecture: provisioningArchitecture,
     facts: {
       products: provisioningArchitecture.products ?? [],
-      mode: input.commerceArchitecture?.mode,
-      proposal: input.commerceArchitecture?.proposal,
+      mode: commerceMode,
+      proposal: commerceProposal,
     },
   })
   const architecture = commerceArchitectureResult.architecture
@@ -1108,6 +1146,10 @@ export async function runAutonomousMultiPageSiteBuilder(
     planHash: validation.planHash,
     byteLength: validation.byteLength,
     assistedGeneration: assistedGenerationResult.lifecycle,
+    fullSiteCreative: {
+      lifecycle: fullSiteLifecycle,
+      commerceFallbackApplied: fullSiteLifecycle.status === "applied" && commerceArchitectureResult.fallbackApplied,
+    },
     pageQuality,
     repaired,
     warnings: [...new Set([...warnings, ...validation.warnings])],
