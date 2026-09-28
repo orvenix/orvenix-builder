@@ -109,7 +109,7 @@ export function ProductCard({
 
           {!isBound && provisioningRef ? (
             <p className="w-full rounded-xl border border-white/10 px-3 py-2 text-center text-xs font-semibold text-slate-400" data-store-card-state="pending">
-              Se activara al crear tu tienda
+              Se activará al crear tu tienda
             </p>
           ) : !isBound ? (
             <p className="w-full rounded-xl border border-white/10 px-3 py-2 text-center text-xs font-semibold text-slate-400" data-store-card-state="unbound">

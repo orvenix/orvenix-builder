@@ -54,7 +54,9 @@ export type SiteCreationPlanV2CommerceV1 = {
   provisioning: CommerceProvisioningPlanV1
 }
 
-const SKU_PATTERN = /^[A-Za-z0-9._-]{1,128}$/
+/** COMMERCE-2B: exported so the client commerce brief validates SKUs with the SAME server rule. */
+export const COMMERCE_SKU_PATTERN_V1 = /^[A-Za-z0-9._-]{1,128}$/
+const SKU_PATTERN = COMMERCE_SKU_PATTERN_V1
 
 function fallbackSku(sourceIndex: number, variantIndex: number): string {
   return `ORV-${String(sourceIndex + 1).padStart(3, "0")}-${variantIndex + 1}`

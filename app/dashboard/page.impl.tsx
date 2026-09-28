@@ -26,6 +26,7 @@ import { serverWarn } from "@/lib/server-log";
 import { getOfficialPlanName } from "@/lib/orvenix-official-2026";
 import { listSitePages, type SitePageListItem } from "@/lib/builder-core/tree/sitePages";
 import { getUserPlanAccess } from "@/lib/plan-guard";
+import { canUseEcommerce } from "@/lib/billing/plan-entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -223,7 +224,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <CreateSiteWithAI />
+              <CreateSiteWithAI commerceAvailable={Boolean(planAccess.isActive && canUseEcommerce(planAccess.plan?.id))} />
               <Link
                 href="/constructor?source=blank"
                 className="relative flex h-11 items-center gap-2 overflow-hidden rounded-2xl px-4 text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:scale-[0.98]"

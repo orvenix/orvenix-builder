@@ -1,3 +1,4 @@
+import { SITE_CREATION_OFFERING_LIMITS_V1 } from "./offering-limits"
 import { normalizeCommercePresentationProductsV1, type CommerceProductFactV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import { inferServicesFromText } from "./service-inference"
 import {
@@ -67,13 +68,13 @@ function normalizeExplicitOfferings(
         .map((offering) => ({
           name: String(offering?.name ?? "")
             .trim()
-            .slice(0, 90),
+            .slice(0, SITE_CREATION_OFFERING_LIMITS_V1.maxNameLength),
           description: String(offering?.description ?? "")
             .trim()
-            .slice(0, 180),
+            .slice(0, SITE_CREATION_OFFERING_LIMITS_V1.maxDescriptionLength),
         }))
         .filter((offering) => offering.name)
-        .slice(0, 8)
+        .slice(0, SITE_CREATION_OFFERING_LIMITS_V1.maxItems)
     : undefined
 }
 

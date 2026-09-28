@@ -12,6 +12,14 @@ import {
   type SiteCreationQualityGatePreviewV1,
 } from "@/app/actions/ai"
 import type { EditorTree } from "@/types/editor"
+import {
+  countPlannedStoreProductsInTreesV1,
+  createCommerceBriefDraftV1,
+  validateCommerceBriefV1,
+  type CommerceBriefDraftV1,
+  type CommerceBriefErrorsV1,
+} from "@/lib/orvenix-ai/commerce/commerce-brief"
+import { CommerceBriefEditor } from "./CommerceBriefEditor"
 
 type ServiceField = {
   id: string
@@ -46,6 +54,8 @@ type PreviewState = {
   selectedSlug: string
   message: string
   qualityGate?: SiteCreationQualityGatePreviewV1
+  /** COMMERCE-2B: how many structured products this preview was generated from (UX messaging only). */
+  submittedProductCount: number
 }
 
 function createServiceField(): ServiceField {
@@ -105,7 +115,13 @@ function getRootSections(tree: EditorTree) {
     .slice(0, 9)
 }
 
-export function CreateSiteWithAI() {
+/**
+ * COMMERCE-2B: `commerceAvailable` is display-only (computed server-side by
+ * the dashboard page from the user's own plan). It never authorizes
+ * anything: the Site Creation action re-checks the ecommerce entitlement at
+ * preview and the confirm transaction re-checks it again.
+ */
+export function CreateSiteWithAI({ commerceAvailable = false }: { commerceAvailable?: boolean } = {}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -114,6 +130,9 @@ export function CreateSiteWithAI() {
   const [people, setPeople] = useState<PersonField[]>([])
   const [testimonials, setTestimonials] = useState<TestimonialField[]>([])
   const [showEvidence, setShowEvidence] = useState(false)
+  const [commerceDraft, setCommerceDraft] = useState<CommerceBriefDraftV1>(createCommerceBriefDraftV1)
+  const [commerceErrors, setCommerceErrors] = useState<CommerceBriefErrorsV1>({})
+  const [commerceChangedSincePreview, setCommerceChangedSincePreview] = useState(false)
   const [isGenerating, startGenerating] = useTransition()
   const [isCreating, startCreating] = useTransition()
 
@@ -155,12 +174,37 @@ export function CreateSiteWithAI() {
   function resetPreview() {
     setPreview(null)
     setError(null)
+    setCommerceChangedSincePreview(false)
   }
+
+  function updateCommerceDraft(next: CommerceBriefDraftV1) {
+    setCommerceDraft(next)
+    setCommerceErrors({})
+    // An approved preview is never mutated client-side: product changes require a new Preview.
+    if (preview) setCommerceChangedSincePreview(true)
+  }
+
+  const plannedStoreProducts = useMemo(
+    () => preview ? countPlannedStoreProductsInTreesV1(preview.pages.map((page) => page.tree)) : 0,
+    [preview],
+  )
 
   function handlePreview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+
+    // COMMERCE-2B: UX validation before any request (the server re-validates everything).
+    const commerce = validateCommerceBriefV1(commerceDraft)
+    if ("errors" in commerce) {
+      setCommerceErrors(commerce.errors)
+      setError(`Revisa los productos: ${commerce.firstError}`)
+      return
+    }
+    setCommerceErrors({})
+    const commerceProducts = commerce.products
+
     setPreview(null)
+    setCommerceChangedSincePreview(false)
 
     const formData = new FormData(event.currentTarget)
     const name = String(formData.get("name") ?? "").trim()
@@ -214,6 +258,8 @@ export function CreateSiteWithAI() {
       description || null,
       preferredStyle ? `Estilo visual: ${preferredStyle}.` : null,
       cleanServices.length ? `Servicios: ${cleanServices.map((service) => service.name).join(", ")}.` : null,
+      // COMMERCE-2B: the customer's explicit "vender productos" choice, stated in the brief itself.
+      commerceProducts?.length ? `Tienda en linea con productos: ${commerceProducts.map((product) => product.name).join(", ")}.` : null,
     ].filter(Boolean).join(" ")
 
     startGenerating(async () => {
@@ -229,6 +275,7 @@ export function CreateSiteWithAI() {
           description,
           preferredStyle,
           services: cleanServices,
+          ...(commerceProducts?.length ? { products: commerceProducts } : {}),
           ...(businessEvidence ? { businessEvidence } : {}),
         },
       })
@@ -254,12 +301,13 @@ export function CreateSiteWithAI() {
         selectedSlug: getInitialPreviewSlug(pages),
         message: result.result.message,
         qualityGate: result.qualityGate,
+        submittedProductCount: commerceProducts?.length ?? 0,
       })
     })
   }
 
   function handleCreate() {
-    if (!preview || isCreating) return
+    if (!preview || isCreating || commerceChangedSincePreview) return
     setError(null)
 
     startCreating(async () => {
@@ -305,9 +353,17 @@ export function CreateSiteWithAI() {
 
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md editor-anim-fade-in" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid max-h-[90vh] w-[min(1080px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[28px] border border-white/[0.1] bg-[color:var(--bg)] shadow-2xl shadow-black/45 editor-anim-scale-in lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1fr)]">
-          <div className="overflow-y-auto p-6 md:p-7">
-            <div className="mb-6 flex items-start justify-between gap-4">
+        {/*
+          COMMERCE-2B layout: the dialog is a viewport-bounded flex container
+          (column on mobile, row on desktop). Inside the left column the <form>
+          is itself a bounded flex column -- ONE scrolling field region plus a
+          persistent footer that stays inside the form (submit semantics
+          unchanged) -- so the actions are always reachable however long the
+          commerce brief grows.
+        */}
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-24px)] w-[min(1080px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[28px] border border-white/[0.1] bg-[color:var(--bg)] shadow-2xl shadow-black/45 editor-anim-scale-in lg:max-h-[90dvh] lg:flex-row">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-[0.92]">
+            <div className="flex shrink-0 items-start justify-between gap-4 px-6 pb-4 pt-6 md:px-7 md:pt-7">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[rgba(27,179,250,0.22)] bg-[rgba(27,179,250,0.10)]">
                   <Sparkles size={16} className="text-[color:var(--accent)]" />
@@ -326,7 +382,8 @@ export function CreateSiteWithAI() {
               </Dialog.Close>
             </div>
 
-            <form onSubmit={handlePreview} className="space-y-4">
+            <form onSubmit={handlePreview} className="flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-6 pb-6 md:px-7">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Nombre" name="name" placeholder="Ej. Clínica Aurora" required />
                 <Field label="Industria" name="industry" placeholder="Salud, restaurante, inmobiliaria" required />
@@ -368,6 +425,8 @@ export function CreateSiteWithAI() {
                   <option value="Local profesional, cercano y confiable">Local profesional</option>
                 </select>
               </div>
+
+              <CommerceBriefEditor draft={commerceDraft} errors={commerceErrors} available={commerceAvailable} onChange={updateCommerceDraft} />
 
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02]">
                 <button
@@ -446,23 +505,32 @@ export function CreateSiteWithAI() {
                 )}
               </div>
 
-              {error && <p className="rounded-2xl border border-red-500/20 bg-red-500/[0.08] px-4 py-3 text-xs text-red-300">{error}</p>}
+              </div>
 
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="shrink-0 space-y-2 border-t border-white/[0.08] bg-[color:var(--bg)] px-6 py-3 md:px-7">
+              {error && <p role="alert" className="rounded-2xl border border-red-500/20 bg-red-500/[0.08] px-4 py-3 text-xs text-red-300">{error}</p>}
+              {preview && commerceChangedSincePreview && (
+                <p role="status" className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.08] px-4 py-3 text-xs text-amber-200">
+                  Cambiaste tus productos. Genera un nuevo Preview para revisarlos antes de crear el sitio.
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-3">
                 <button type="submit" disabled={isGenerating || isCreating} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-[color:var(--accent)] px-5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
                   {isGenerating ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
                   {isGenerating ? "Generando Preview" : preview ? "Generar otro Preview" : "Generar Preview"}
                 </button>
-                <button type="button" onClick={handleCreate} disabled={!preview || isGenerating || isCreating} className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-[rgba(27,179,250,0.24)] px-5 text-sm font-bold text-[color:var(--accent)] transition-all hover:-translate-y-0.5 hover:bg-[rgba(27,179,250,0.08)] disabled:cursor-not-allowed disabled:opacity-40">
+                <button type="button" onClick={handleCreate} disabled={!preview || isGenerating || isCreating || commerceChangedSincePreview} className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-[rgba(27,179,250,0.24)] px-5 text-sm font-bold text-[color:var(--accent)] transition-all hover:-translate-y-0.5 hover:bg-[rgba(27,179,250,0.08)] disabled:cursor-not-allowed disabled:opacity-40">
                   {isCreating && <Loader2 size={15} className="animate-spin" />}
                   {isCreating ? "Creando sitio" : "Confirmar y crear"}
                 </button>
                 {preview && <button type="button" onClick={resetPreview} className="h-11 rounded-2xl px-4 text-sm font-semibold text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text)]">Descartar Preview</button>}
               </div>
+              </div>
             </form>
           </div>
 
-          <aside className="min-h-[420px] overflow-y-auto border-t border-white/[0.08] bg-white/[0.025] p-6 lg:border-l lg:border-t-0 md:p-7">
+          <aside className="max-h-[38dvh] min-h-0 shrink-0 overflow-y-auto overflow-x-hidden border-t border-white/[0.08] bg-white/[0.025] p-6 md:p-7 lg:max-h-none lg:min-w-[360px] lg:flex-1 lg:shrink lg:border-l lg:border-t-0">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[color:var(--accent)]">Preview seguro</p>
@@ -472,7 +540,7 @@ export function CreateSiteWithAI() {
             </div>
 
             {!preview ? (
-              <div className="grid min-h-[300px] place-items-center rounded-[24px] border border-dashed border-white/[0.10] bg-white/[0.025] p-8 text-center">
+              <div className="grid min-h-[140px] place-items-center rounded-[24px] border border-dashed lg:min-h-[300px] border-white/[0.10] bg-white/[0.025] p-8 text-center">
                 <div>
                   <Bot className="mx-auto h-9 w-9 text-[color:var(--accent)]" />
                   <p className="mt-4 text-sm font-semibold text-[color:var(--text)]">Completa el formulario para ver la propuesta.</p>
@@ -482,6 +550,17 @@ export function CreateSiteWithAI() {
             ) : (
               <div className="space-y-3">
                 <p className="rounded-2xl border border-white/[0.06] bg-white/[0.035] px-4 py-3 text-xs leading-6 text-[color:var(--text-secondary)]">{preview.message}</p>
+                {plannedStoreProducts > 0 ? (
+                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-3 text-xs leading-6 text-[color:var(--text-secondary)]">
+                    <p className="font-bold text-emerald-300">Tienda planeada: {preview.submittedProductCount} producto{preview.submittedProductCount === 1 ? "" : "s"}</p>
+                    <p>Los precios e inventario que mostramos son los que ingresaste. Tus productos aún no se han creado: se crearán al confirmar, y el carrito se activará cuando tu sitio exista.</p>
+                  </div>
+                ) : preview.submittedProductCount > 0 ? (
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs leading-6 text-[color:var(--text-secondary)]">
+                    <p className="font-bold text-[color:var(--text)]">Productos como catálogo informativo</p>
+                    <p>En este sitio tus productos se mostrarán sin carrito de compra. La tienda con carrito requiere un plan con e-commerce y un sitio de tipo tienda.</p>
+                  </div>
+                ) : null}
                 {preview.qualityGate && (
                   <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-4 py-3 text-xs text-[color:var(--text-secondary)]">
                     <span className="font-bold text-[color:var(--text)]">Quality Gate</span>
