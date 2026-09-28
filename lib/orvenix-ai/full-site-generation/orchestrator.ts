@@ -54,7 +54,7 @@ function referencedCategoryKeys(value: unknown, keys = new Set<string>(), depth 
 function failureCode(error: unknown): FullSiteCreativeFailureReasonV1 {
   if (error instanceof Error && error.message === "full_site_provider_timeout") return "timeout"
   const code = (error as { code?: unknown } | null)?.code
-  if (code === "missing_configuration" || code === "timeout" || code === "provider_error" || code === "empty_response" || code === "parse_error") return code
+  if (code === "missing_configuration" || code === "timeout" || code === "provider_error" || code === "empty_response" || code === "output_truncated" || code === "parse_error") return code
   return "provider_error"
 }
 

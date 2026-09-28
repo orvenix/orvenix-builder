@@ -117,6 +117,7 @@ export type FullSiteCreativeFailureReasonV1 =
   | "timeout"
   | "provider_error"
   | "empty_response"
+  | "output_truncated"
   | "parse_error"
   | "schema_invalid"
   | "grounding_invalid"

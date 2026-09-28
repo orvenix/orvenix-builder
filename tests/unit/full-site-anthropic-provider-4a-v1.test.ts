@@ -86,8 +86,8 @@ async function withMockedSdk<T>(respond: (params: FakeParams) => unknown | Promi
   }
 }
 
-const text = (value: string) => ({ content: [{ type: "text", text: value }] })
-const json = (value: unknown) => text(JSON.stringify(value))
+const text = (value: string, stopReason = "end_turn") => ({ stop_reason: stopReason, content: [{ type: "text", text: value }] })
+const json = (value: unknown, stopReason = "end_turn") => text(JSON.stringify(value), stopReason)
 
 async function buildWith(provider: unknown): Promise<AutonomousMultiPageSiteBuilderResult> {
   return runAutonomousMultiPageSiteBuilder({ ...buildNovaMarketNewStorePreviewInputV1(), commerceArchitecture: { provider: provider as never } })
@@ -106,9 +106,9 @@ test("valid editorial response: one request, injected model, bounded context, va
     const provider = mod.createAnthropicFullSiteCreativeProviderV1({ model: TEST_MODEL, apiKey: TEST_KEY })
     const run = await buildWith(provider)
     assert.equal(recorder.calls.length, 1, "exactly one provider request per generation")
-    assert.deepEqual(recorder.constructed, [{ apiKey: TEST_KEY, timeout: 60_000, maxRetries: 0 }])
+    assert.deepEqual(recorder.constructed, [{ apiKey: TEST_KEY, timeout: 120_000, maxRetries: 0 }])
     assert.equal(recorder.calls[0].model, TEST_MODEL)
-    assert.equal(recorder.calls[0].max_tokens, 8_000)
+    assert.equal(recorder.calls[0].max_tokens, 14_000)
     assert.ok(recorder.calls[0].system.includes("Director Creativo") && recorder.calls[0].system.includes("notAvailable"))
     const context = JSON.parse(recorder.calls[0].messages[0].content)
     assert.equal(context.catalog.productCount, 24)
@@ -138,8 +138,8 @@ test("model selection is injected at the provider boundary (A/B comparable), tim
     await buildWith(mod.createAnthropicFullSiteCreativeProviderV1({ model: "model-a-fixture", apiKey: TEST_KEY, timeoutMs: 999_999, maxTokens: 50 }))
     await buildWith(mod.createAnthropicFullSiteCreativeProviderV1({ model: "model-b-fixture", apiKey: TEST_KEY, timeoutMs: 1 }))
     assert.deepEqual(recorder.calls.map((call) => call.model), ["model-a-fixture", "model-b-fixture"])
-    assert.deepEqual(recorder.constructed.map((options) => options.timeout), [120_000, 5_000], "timeout clamped to [5s, 120s]")
-    assert.deepEqual(recorder.calls.map((call) => call.max_tokens), [1_000, 8_000], "max_tokens clamped")
+    assert.deepEqual(recorder.constructed.map((options) => options.timeout), [240_000, 5_000], "timeout clamped to [5s, 240s]")
+    assert.deepEqual(recorder.calls.map((call) => call.max_tokens), [2_000, 14_000], "max_tokens clamped")
     assert.equal(recorder.calls[0].system, recorder.calls[1].system, "same static prompt for both models")
     assert.deepEqual(JSON.parse(recorder.calls[0].messages[0].content), JSON.parse(recorder.calls[1].messages[0].content), "same facts/references/manifest")
   })
@@ -157,6 +157,8 @@ const FAILURE_CASES: Array<{ name: string; respond: (params: FakeParams) => unkn
   { name: "array instead of object", respond: () => text("[1,2,3]"), status: "failed", reason: "parse_error" },
   { name: "trailing code after object", respond: () => text("{\"version\":1}\n<script>alert(1)</script>"), status: "failed", reason: "parse_error" },
   { name: "empty response", respond: () => ({ content: [] }), status: "failed", reason: "empty_response" },
+  { name: "max_tokens stop with incomplete JSON", respond: () => text("{\"version\":1", "max_tokens"), status: "failed", reason: "output_truncated" },
+  { name: "max_tokens stop with apparently complete JSON", respond: () => json(createCommerceTestingBlueprintV1("editorial-commerce"), "max_tokens"), status: "failed", reason: "output_truncated" },
   { name: "SDK timeout", respond: () => { throw Object.assign(new Error("Request timed out."), { name: "APIConnectionTimeoutError" }) }, status: "failed", reason: "timeout" },
   { name: "provider exception (500 with sensitive text)", respond: () => { throw Object.assign(new Error("upstream failed for key test-credential-placeholder site_secret"), { status: 500 }) }, status: "failed", reason: "provider_error" },
   { name: "valid JSON wrong schema", respond: () => json({ hello: "world" }), status: "rejected", reason: "schema_invalid" },
@@ -244,12 +246,118 @@ test("parser: exactly one JSON object; strings containing braces are safe; overs
   await withMockedSdk(() => json({}), async (mod) => {
     assert.deepEqual(mod.parseFullSiteProviderResponseV1('{"a":"} { not code","b":[1,{"c":"}"}]}'), { a: "} { not code", b: [1, { c: "}" }] })
     assert.deepEqual(mod.parseFullSiteProviderResponseV1("```json\n{\"a\":1}\n```"), { a: 1 })
-    for (const bad of ["", "null", "\"x\"", "[{}]", "{\"a\":1} extra", "{\"a\":1", "x{\"a\":1}", "{\"a\": function(){}}"]) {
+    assert.deepEqual(mod.parseFullSiteProviderResponseV1("\ufeff  {\"a\":1}  "), { a: 1 })
+    for (const bad of ["", "null", "\"x\"", "[{}]", "{\"a\":1} extra", "{\"a\":1", "x{\"a\":1}", "{\"a\":1}\n```", "```json\n{\"a\":1}\n```\n```json\n{\"b\":2}\n```", "{\"a\": function(){}}"]) {
       assert.throws(() => mod.parseFullSiteProviderResponseV1(bad), /full_site_provider_parse_error/, bad)
     }
     assert.throws(() => mod.parseFullSiteProviderResponseV1(`{"a":"${"x".repeat(130_000)}"}`), /parse_error/)
     const source = fs.readFileSync(path.join(process.cwd(), "lib/orvenix-ai/full-site-generation/anthropic-provider.ts"), "utf8")
     assert.equal(/\beval\s*\(|new Function\s*\(/.test(source), false)
+  })
+})
+
+test("response extraction: multiple text blocks combine; thinking/tool blocks ignored; max_tokens metadata preserved", async () => {
+  await withMockedSdk(() => json({}), async (mod) => {
+    assert.deepEqual(
+      mod.extractFullSiteProviderTextV1({
+        stop_reason: "end_turn",
+        content: [
+          { type: "thinking", thinking: "hidden" },
+          { type: "text", text: "{\"a\":" },
+          { type: "tool_use", input: { ignored: true } },
+          { type: "text", text: "1}" },
+        ],
+      }),
+      { text: "{\"a\":1}", stopReason: "end_turn", textBlockCount: 2, nonTextBlockCount: 2 },
+    )
+    assert.deepEqual(mod.parseFullSiteProviderResponseV1(mod.extractFullSiteProviderTextV1({ content: [{ type: "text", text: "{\"a\":1}" }] }).text), { a: 1 })
+    assert.equal(mod.extractFullSiteProviderTextV1({ stop_reason: "max_tokens", content: [{ type: "text", text: "{\"a\":1}" }] }).stopReason, "max_tokens")
+  })
+})
+
+
+test("safe diagnostics: structural categories, metadata and fingerprints never expose raw response", async () => {
+  await withMockedSdk(() => json({}), async (mod) => {
+    const diagnose = (value: string, stopReason = "end_turn") => mod.buildFullSiteProviderResponseDiagnosticsV1(text(value, stopReason))
+    const cases: Array<{ name: string; value: string; category: string; balanced: boolean; fence?: boolean; multipleFence?: boolean }> = [
+      { name: "valid raw JSON", value: '{"a":1}', category: "none", balanced: true },
+      { name: "valid fenced JSON", value: '```json\n{"a":1}\n```', category: "none", balanced: true, fence: true },
+      { name: "BOM + whitespace", value: '\ufeff  {"a":1}  ', category: "none", balanced: true },
+      { name: "unclosed object", value: '{"a":1', category: "parse_incomplete", balanced: false },
+      { name: "unclosed array", value: '[1,2', category: "parse_incomplete", balanced: false },
+      { name: "unterminated string", value: '{"a":"x}', category: "parse_incomplete", balanced: false },
+      { name: "brace inside JSON string", value: '{"a":"} {"}', category: "none", balanced: true },
+      { name: "escaped quote", value: '{"a":"\\\"}"}', category: "none", balanced: true },
+      { name: "two root objects", value: '{"a":1}{"b":2}', category: "parse_ambiguous", balanced: false },
+      { name: "multiple fenced objects", value: '```json\n{"a":1}\n```\n```json\n{"b":2}\n```', category: "parse_ambiguous", balanced: false, fence: true, multipleFence: true },
+      { name: "array root", value: '[1,2,3]', category: "non_object_root", balanced: true },
+      { name: "scalar root", value: 'true', category: "non_object_root", balanced: false },
+      { name: "JSON + JavaScript", value: '{"a":1}\nalert(1)', category: "parse_ambiguous", balanced: false },
+      { name: "JSON + script tag", value: '{"a":1}\n<script>alert(1)</script>', category: "parse_ambiguous", balanced: false },
+      { name: "empty response", value: '', category: "empty", balanced: false },
+    ]
+    for (const entry of cases) {
+      const diagnostic = diagnose(entry.value)
+      assert.equal(diagnostic.parseFailureCategory, entry.category, entry.name)
+      assert.equal(diagnostic.balancedJsonStructure, entry.balanced, entry.name)
+      assert.equal(diagnostic.fenceDetected, Boolean(entry.fence), entry.name)
+      assert.equal(diagnostic.multipleFenceDetected, Boolean(entry.multipleFence), entry.name)
+      if (entry.value) assert.equal(JSON.stringify(diagnostic).includes(entry.value), false, `${entry.name}: raw response leaked`)
+      assert.match(diagnostic.responseFingerprint, /^[a-f0-9]{64}$/)
+    }
+
+    const multi = mod.buildFullSiteProviderResponseDiagnosticsV1({
+      stop_reason: "end_turn",
+      stop_sequence: "END",
+      usage: { input_tokens: 123, output_tokens: 456 },
+      content: [
+        { type: "thinking", thinking: "hidden" },
+        { type: "text", text: "{\"a\":" },
+        { type: "tool_use", input: { ignored: true } },
+        { type: "text", text: "1}" },
+      ],
+    })
+    assert.deepEqual(multi.contentBlockTypes, ["thinking", "text", "tool_use", "text"])
+    assert.equal(multi.contentBlockCount, 4)
+    assert.equal(multi.textBlockCount, 2)
+    assert.equal(multi.nonTextBlockCount, 2)
+    assert.equal(multi.textCharacterCount, 7)
+    assert.equal(multi.stopReason, "end_turn")
+    assert.equal(multi.stopSequencePresent, true)
+    assert.equal(multi.inputTokens, 123)
+    assert.equal(multi.outputTokens, 456)
+    assert.equal(multi.firstNonWhitespaceCharacterClass, "object")
+    assert.equal(multi.lastNonWhitespaceCharacterClass, "object")
+
+    const truncatedIncomplete = diagnose('{"a":1', "max_tokens")
+    const truncatedComplete = diagnose('{"a":1}', "max_tokens")
+    assert.equal(truncatedIncomplete.stopReason, "max_tokens")
+    assert.equal(truncatedIncomplete.parseFailureCategory, "parse_incomplete")
+    assert.equal(truncatedComplete.stopReason, "max_tokens")
+    assert.equal(truncatedComplete.parseFailureCategory, "none")
+
+    const sameA = diagnose('{"a":1}').responseFingerprint
+    const sameB = diagnose('{"a":1}').responseFingerprint
+    const different = diagnose('{"a":2}').responseFingerprint
+    assert.equal(sameA, sameB)
+    assert.notEqual(sameA, different)
+  })
+})
+
+test("provider errors carry safe diagnostics without raw response content", async () => {
+  await withMockedSdk(() => text('{"version":1', "max_tokens"), async (mod) => {
+    const provider = mod.createAnthropicFullSiteCreativeProviderV1({ model: TEST_MODEL, apiKey: TEST_KEY })
+    await assert.rejects(
+      () => provider.generate({ ok: true }),
+      (error: unknown) => {
+        assert.ok(error instanceof mod.FullSiteProviderErrorV1)
+        assert.equal(error.code, "output_truncated")
+        assert.equal(error.diagnostics?.stopReason, "max_tokens")
+        assert.equal(error.diagnostics?.parseFailureCategory, "parse_incomplete")
+        assert.equal(JSON.stringify(error.diagnostics).includes("version"), false)
+        return true
+      },
+    )
   })
 })
 

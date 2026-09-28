@@ -1,3 +1,4 @@
+import { createHash } from "crypto"
 import Anthropic from "@anthropic-ai/sdk"
 import type { FullSiteCreativeBlueprintProviderV1 } from "./contract"
 import { buildFullSiteCommerceCapabilityManifestV1 } from "./capability-manifest"
@@ -24,15 +25,37 @@ import { buildFullSiteCommerceCapabilityManifestV1 } from "./capability-manifest
 
 export const FULL_SITE_ANTHROPIC_PROVIDER_KEY_V1 = "anthropic"
 
-export const FULL_SITE_PROVIDER_TIMEOUT_LIMITS_V1 = { defaultMs: 60_000, minMs: 5_000, maxMs: 120_000 } as const
-export const FULL_SITE_PROVIDER_MAX_TOKENS_LIMITS_V1 = { default: 8_000, min: 1_000, max: 16_000 } as const
+export const FULL_SITE_PROVIDER_TIMEOUT_LIMITS_V1 = { defaultMs: 120_000, minMs: 5_000, maxMs: 240_000 } as const
+export const FULL_SITE_PROVIDER_MAX_TOKENS_LIMITS_V1 = { default: 14_000, min: 2_000, max: 24_000 } as const
 /** Response text ceiling before parsing (characters). */
 export const FULL_SITE_PROVIDER_MAX_RESPONSE_LENGTH_V1 = 120_000
 
-export type FullSiteProviderFailureCodeV1 = "missing_configuration" | "timeout" | "provider_error" | "empty_response" | "parse_error"
+export type FullSiteProviderFailureCodeV1 = "missing_configuration" | "timeout" | "provider_error" | "empty_response" | "output_truncated" | "parse_error"
+
+export type FullSiteProviderParseFailureCategoryV1 = "none" | "empty" | "parse_incomplete" | "parse_ambiguous" | "parse_invalid" | "non_object_root"
+export type FullSiteProviderCharacterClassV1 = "empty" | "object" | "array" | "quote" | "digit" | "scalar" | "fence" | "other"
+
+export type FullSiteProviderResponseDiagnosticsV1 = {
+  contentBlockCount: number
+  contentBlockTypes: string[]
+  textBlockCount: number
+  textCharacterCount: number
+  nonTextBlockCount: number
+  stopReason?: string
+  stopSequencePresent: boolean
+  inputTokens?: number
+  outputTokens?: number
+  firstNonWhitespaceCharacterClass: FullSiteProviderCharacterClassV1
+  lastNonWhitespaceCharacterClass: FullSiteProviderCharacterClassV1
+  fenceDetected: boolean
+  multipleFenceDetected: boolean
+  balancedJsonStructure: boolean
+  parseFailureCategory: FullSiteProviderParseFailureCategoryV1
+  responseFingerprint: string
+}
 
 export class FullSiteProviderErrorV1 extends Error {
-  constructor(readonly code: FullSiteProviderFailureCodeV1) {
+  constructor(readonly code: FullSiteProviderFailureCodeV1, readonly diagnostics?: FullSiteProviderResponseDiagnosticsV1) {
     super(`full_site_provider_${code}`)
     this.name = "FullSiteProviderErrorV1"
   }
@@ -95,7 +118,7 @@ VOCABULARIO (valores exactos):
 
 SALIDA: responde UNICAMENTE un objeto JSON valido (sin markdown, sin comentarios, sin texto antes o despues) con esta forma:
 {"version":1,"roleKey":"full_site_creative_blueprint_v1","strategyKey":"bounded_full_site_generation_v1","siteConcept":{"narrative","rhythm","density"},"navigation":{"concept","primaryPurposes"?,"cartProminence"?},"pages":[{"purpose","target"?,"narrativeGoal"?,"density"?,"sections":[{"intent","role","refs"?,"narrative"?,"mediaIntent"?,"ctaIntent"?,"layout"?,"emphasis"?,"relationToPrevious"?}]}]}
-No incluyas ningun otro campo. No expliques tu razonamiento.`
+No incluyas ningun otro campo. No expliques tu razonamiento. Usa JSON compacto; si el presupuesto de salida no alcanza, reduce primero paginas internas y luego secciones, pero conserva home y catalog.`
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
@@ -149,6 +172,155 @@ export function parseFullSiteProviderResponseV1(raw: string): Record<string, unk
   return parsed
 }
 
+type AnthropicMessageLikeV1 = {
+  stop_reason?: unknown
+  stop_sequence?: unknown
+  content?: unknown
+  usage?: { input_tokens?: unknown; output_tokens?: unknown }
+}
+
+export type ExtractedFullSiteProviderTextV1 = {
+  text: string
+  stopReason?: string
+  textBlockCount: number
+  nonTextBlockCount: number
+}
+
+function isAnthropicContentBlockLike(value: unknown): value is { type?: unknown; text?: unknown } {
+  return Boolean(value) && typeof value === "object"
+}
+
+export function extractFullSiteProviderTextV1(message: AnthropicMessageLikeV1): ExtractedFullSiteProviderTextV1 {
+  const stopReason = typeof message.stop_reason === "string" ? message.stop_reason : undefined
+  const content = Array.isArray(message.content) ? message.content : []
+  const textParts: string[] = []
+  let nonTextBlockCount = 0
+
+  for (const block of content) {
+    if (!isAnthropicContentBlockLike(block)) {
+      nonTextBlockCount += 1
+      continue
+    }
+    if (block.type === "text" && typeof block.text === "string") textParts.push(block.text)
+    else nonTextBlockCount += 1
+  }
+
+  return {
+    text: textParts.join("").trim(),
+    stopReason,
+    textBlockCount: textParts.length,
+    nonTextBlockCount,
+  }
+}
+
+function fingerprintResponseText(text: string): string {
+  return createHash("sha256").update(text).digest("hex")
+}
+
+function characterClass(char: string | undefined): FullSiteProviderCharacterClassV1 {
+  if (!char) return "empty"
+  if (char === "{" || char === "}") return "object"
+  if (char === "[" || char === "]") return "array"
+  if (char === "\"") return "quote"
+  if (/\d|-/.test(char)) return "digit"
+  if (/[tfn]/i.test(char)) return "scalar"
+  if (char === "`") return "fence"
+  return "other"
+}
+
+function wholeFenceInner(text: string): string | null {
+  const fenced = /^```(?:json)?\s*\n([\s\S]*?)\n?```$/i.exec(text.trim())
+  return fenced ? fenced[1].trim() : null
+}
+
+function scanJsonStructure(raw: string): { balancedJsonStructure: boolean; parseFailureCategory: FullSiteProviderParseFailureCategoryV1 } {
+  const text = raw.trim()
+  if (!text) return { balancedJsonStructure: false, parseFailureCategory: "empty" }
+  const candidate = wholeFenceInner(text) ?? text
+  const first = candidate.trim()[0]
+  if (!first) return { balancedJsonStructure: false, parseFailureCategory: "empty" }
+  if (first !== "{" && first !== "[") return { balancedJsonStructure: false, parseFailureCategory: "non_object_root" }
+
+  const stack: string[] = []
+  let inString = false
+  let escaped = false
+  let rootClosedAt = -1
+  let invalid = false
+  for (let index = 0; index < candidate.length; index += 1) {
+    const char = candidate[index]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (char === "\\") escaped = true
+      else if (char === "\"") inString = false
+      continue
+    }
+    if (char === "\"") inString = true
+    else if (char === "{" || char === "[") stack.push(char)
+    else if (char === "}" || char === "]") {
+      const open = stack.pop()
+      if ((char === "}" && open !== "{") || (char === "]" && open !== "[")) {
+        invalid = true
+        break
+      }
+      if (stack.length === 0) {
+        rootClosedAt = index
+        break
+      }
+    }
+  }
+
+  if (invalid) return { balancedJsonStructure: false, parseFailureCategory: "parse_invalid" }
+  if (inString || escaped || stack.length > 0 || rootClosedAt === -1) return { balancedJsonStructure: false, parseFailureCategory: "parse_incomplete" }
+  if (candidate.slice(rootClosedAt + 1).trim()) return { balancedJsonStructure: false, parseFailureCategory: "parse_ambiguous" }
+  if (first !== "{") return { balancedJsonStructure: true, parseFailureCategory: "non_object_root" }
+
+  try {
+    const parsed = JSON.parse(candidate.slice(0, rootClosedAt + 1))
+    return { balancedJsonStructure: isPlainRecord(parsed), parseFailureCategory: isPlainRecord(parsed) ? "none" : "non_object_root" }
+  } catch {
+    return { balancedJsonStructure: false, parseFailureCategory: "parse_invalid" }
+  }
+}
+
+function numericToken(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.round(value) : undefined
+}
+
+export function buildFullSiteProviderResponseDiagnosticsV1(message: AnthropicMessageLikeV1): FullSiteProviderResponseDiagnosticsV1 {
+  const content = Array.isArray(message.content) ? message.content : []
+  const contentBlockTypes = content.map((block) => (isAnthropicContentBlockLike(block) && typeof block.type === "string" ? block.type : "unknown")).slice(0, 32)
+  const extracted = extractFullSiteProviderTextV1(message)
+  const text = extracted.text
+  const trimmed = text.trim()
+  const first = trimmed[0]
+  const last = trimmed[trimmed.length - 1]
+  const fenceCount = (trimmed.match(/```/g) ?? []).length
+  const multipleFenceDetected = fenceCount > 2
+  const scanned = scanJsonStructure(text)
+  const structure = multipleFenceDetected
+    ? { balancedJsonStructure: false, parseFailureCategory: "parse_ambiguous" as const }
+    : scanned
+
+  return {
+    contentBlockCount: content.length,
+    contentBlockTypes,
+    textBlockCount: extracted.textBlockCount,
+    textCharacterCount: text.length,
+    nonTextBlockCount: extracted.nonTextBlockCount,
+    ...(extracted.stopReason ? { stopReason: extracted.stopReason } : {}),
+    stopSequencePresent: typeof message.stop_sequence === "string" && message.stop_sequence.length > 0,
+    ...(numericToken(message.usage?.input_tokens) !== undefined ? { inputTokens: numericToken(message.usage?.input_tokens) } : {}),
+    ...(numericToken(message.usage?.output_tokens) !== undefined ? { outputTokens: numericToken(message.usage?.output_tokens) } : {}),
+    firstNonWhitespaceCharacterClass: characterClass(first),
+    lastNonWhitespaceCharacterClass: characterClass(last),
+    fenceDetected: fenceCount > 0,
+    multipleFenceDetected,
+    balancedJsonStructure: structure.balancedJsonStructure,
+    parseFailureCategory: structure.parseFailureCategory,
+    responseFingerprint: fingerprintResponseText(text),
+  }
+}
+
 function isTimeoutLikeError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false
   const name = "name" in error ? String((error as { name?: unknown }).name) : ""
@@ -173,7 +345,8 @@ export function createAnthropicFullSiteCreativeProviderV1(config: AnthropicFullS
       if (!isPlainRecord(input)) throw new FullSiteProviderErrorV1("provider_error")
 
       const client = new Anthropic({ apiKey, timeout: timeoutMs, maxRetries: 0 })
-      let text: string
+      let extracted: ExtractedFullSiteProviderTextV1
+      let diagnostics: FullSiteProviderResponseDiagnosticsV1 | undefined
       try {
         const message = await client.messages.create({
           model,
@@ -181,15 +354,19 @@ export function createAnthropicFullSiteCreativeProviderV1(config: AnthropicFullS
           system: buildFullSiteCreativeSystemPromptV1(),
           messages: [{ role: "user", content: JSON.stringify(input) }],
         })
-        text = message.content
-          .map((block) => (block.type === "text" ? block.text : ""))
-          .join("")
-          .trim()
+        extracted = extractFullSiteProviderTextV1(message)
+        diagnostics = buildFullSiteProviderResponseDiagnosticsV1(message)
       } catch (error) {
         throw new FullSiteProviderErrorV1(isTimeoutLikeError(error) ? "timeout" : "provider_error")
       }
-      if (!text) throw new FullSiteProviderErrorV1("empty_response")
-      return parseFullSiteProviderResponseV1(text)
+      if (extracted.stopReason === "max_tokens") throw new FullSiteProviderErrorV1("output_truncated", diagnostics)
+      if (!extracted.text) throw new FullSiteProviderErrorV1("empty_response", diagnostics)
+      try {
+        return parseFullSiteProviderResponseV1(extracted.text)
+      } catch (error) {
+        if (error instanceof FullSiteProviderErrorV1 && error.code === "parse_error") throw new FullSiteProviderErrorV1("parse_error", diagnostics)
+        throw error
+      }
     },
   }
 }
