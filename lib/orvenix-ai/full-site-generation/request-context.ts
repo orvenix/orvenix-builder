@@ -48,6 +48,11 @@ const REDACTIONS: ReadonlyArray<RegExp> = [
   /\b[A-Fa-f0-9]{32,}\b/g, // hashes
   /(?:\/(?:home|var|etc|usr|tmp|opt|srv|root|api|app|lib|prisma|p|preview|editor)\/)\S*/g, // internal paths/routes
   /[A-Za-z]:\\\S*/g,
+  // FULL-SITE-5C: gaps found by the canonical request guard (request-guard.ts).
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, // UUID-shaped ids
+  /\bBearer\s+\S+/gi, // bearer credentials
+  /(?:^|(?<=[^A-Za-z0-9._-]))\/dev-[a-z0-9-]+(?:[/?#]\S*)?/gi, // internal dev routes
+  /\b(?:DATABASE_URL|NEXTAUTH_SECRET|API_KEY|SECRET_KEY|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_(?:API_KEY|SECRET|SECRET_KEY|PASSWORD|TOKEN|PRIVATE_KEY))\b/g, // secret env-var names (case-sensitive)
 ]
 
 function safeText(value: unknown, max: number): string | undefined {

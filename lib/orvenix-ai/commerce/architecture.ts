@@ -406,8 +406,33 @@ function indexPlan(plan: CommerceArchitecturePlanV1, products: readonly Commerce
     catalogSlug: plan.pages.find((page) => page.purpose === "catalog")?.slug,
     helpSlug: plan.pages.find((page) => page.purpose === "help")?.slug,
     categorySlugByLabel: new Map(plan.pages.filter((page) => page.purpose === "category" && page.category).map((page) => [page.category as string, page.slug])),
-    productSlugByIndex: new Map(plan.pages.filter((page) => page.purpose === "product_detail" && typeof page.productIndex === "number").map((page) => [page.productIndex as number, page.slug])),
+    productSlugByIndex: productSlugByIndexFor(plan, products),
   }
+}
+
+/**
+ * COMMERCE-5B: the ONE authority for "this exact product has a generated
+ * detail page": a product_detail page whose productIndex is a real product.
+ * First page wins for a product; never derived from names or slugs.
+ */
+function productSlugByIndexFor(plan: CommerceArchitecturePlanV1, products: readonly CommerceProductFactV1[]): Map<number, string> {
+  const map = new Map<number, string>()
+  for (const page of plan.pages) {
+    const productIndex = page.productIndex
+    if (page.purpose !== "product_detail" || typeof productIndex !== "number" || !Number.isInteger(productIndex)) continue
+    if (productIndex < 0 || productIndex >= products.length || map.has(productIndex)) continue
+    map.set(productIndex, page.slug)
+  }
+  return map
+}
+
+/** COMMERCE-5B: detail targets for the products this section shows, never the page's own product/page. */
+function productDetailLinksFor(page: CommerceArchitecturePageV1, entry: CommerceArchitectureSectionV1, index: PlanIndex): SectionInstanceComposition["productDetailLinks"] {
+  const shown = entry.productIndexes ? new Set(entry.productIndexes) : undefined
+  const links = [...index.productSlugByIndex.entries()]
+    .filter(([productIndex, slug]) => slug !== page.slug && productIndex !== page.productIndex && (!shown || shown.has(productIndex)))
+    .map(([productIndex, slug]) => ({ productIndex, href: `page:${slug}` }))
+  return links.length ? links : undefined
 }
 
 function defaultCtaIntent(page: CommerceArchitecturePageV1, entry: CommerceArchitectureSectionV1): CommerceCreativeCtaIntentV1 | undefined {
@@ -500,6 +525,7 @@ function compositionFor(
   const cta = resolveCtaAction(intent.cta ?? defaultCtaIntent(page, entry), page, entry, index)
   const mediaStrategy = mediaStrategyFor(intent.media)
   const categoryLinks = entry.type === "category_navigation" ? categoryLinksFor(page, index) : undefined
+  const productDetailLinks = entry.role === "products" ? productDetailLinksFor(page, entry, index) : undefined
   return {
     ...(layout ? { layout } : {}),
     ...(scale ? { scale } : {}),
@@ -508,6 +534,7 @@ function compositionFor(
     ...(intent.narrative ? { narrativeIntent: intent.narrative } : {}),
     ...(cta === "none" ? { omitCta: true } : cta ? { ctaAction: cta } : {}),
     ...(categoryLinks ? { categoryLinks } : {}),
+    ...(productDetailLinks ? { productDetailLinks } : {}),
     ...((entry.type === "product_detail" || entry.type === "product_spotlight") && !scale ? { alignment: "left" as const } : {}),
   }
 }
@@ -532,6 +559,8 @@ function pageFromCommercePlan(page: CommerceArchitecturePageV1, index: PlanIndex
   const entries = page.sections
     // A discovery row with no real category destination would only render placeholder copy: omit it.
     .filter((entry) => entry.type !== "category_navigation" || Boolean(categoryLinksFor(page, index)))
+  // COMMERCE-5B: the nav CTA is a grounded "contact" action (the help page) or omitted -- never a "#contacto" anchor no page renders.
+  const navCta = resolveCtaAction("contact", page, { type: "commerce_closing", role: "navigation" }, index)
   const sections: OrvenixSiteSectionPlan[] = [
     {
       role: "navigation",
@@ -544,6 +573,7 @@ function pageFromCommercePlan(page: CommerceArchitecturePageV1, index: PlanIndex
         composition: {
           layout: NAVIGATION_LAYOUT_BY_STYLE[index.plan.navigationStyle],
           ...(index.plan.primaryNavigationSlugs?.length ? { navigationSlugs: index.plan.primaryNavigationSlugs } : {}),
+          ...(navCta && navCta !== "none" ? { ctaAction: navCta } : { omitCta: true as const }),
         },
         provenance: "deterministic",
       },

@@ -217,6 +217,13 @@ export interface SectionCompositionContext {
   instanceNarrativeIntent?: SectionInstanceNarrativeIntent
   /** COMMERCE-3C: grounded category labels linked to real generated category pages. */
   commerceCategoryLinks?: Array<{ label: string; href: string }>
+  /**
+   * COMMERCE-5B: positionally aligned with `products` -- the Orvenix-resolved
+   * `page:<detail-slug>` for that exact product, or undefined when the site
+   * has no detail page for it. Set only by the compiler from a validated
+   * SectionInstancePlan; a composer never derives it from names.
+   */
+  commerceProductDetailHrefs?: Array<string | undefined>
   /** COMMERCE-3C: this context's collection was explicitly curated by a SectionInstancePlan selection. */
   instanceSelectionApplied?: boolean
 }

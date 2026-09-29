@@ -8,6 +8,7 @@ import {
   type AssistedComparisonArtifactV1,
 } from "@/lib/orvenix-ai/assisted-generation/e2e/comparison-harness";
 import { ASSISTED_COMPARISON_ARTIFACT_PATH_V1 } from "@/lib/orvenix-ai/assisted-generation/e2e/artifact-path";
+import { rewriteTreeForAssistedViewerV1 } from "@/lib/orvenix-ai/assisted-generation/e2e/viewer-links";
 
 /**
  * ASSISTED-4A: DEV/E2E-ONLY viewer for the NovaMarket comparison artifact
@@ -51,6 +52,9 @@ export default async function DevAssistedGenerationViewerPage({
   if (!page) notFound();
 
   const siteId = `dev-assisted-e2e-${variantKey}`;
+  // FULL-SITE-5A: the synthetic siteId has no /preview route, so canonical
+  // `page:<slug>` hrefs are pointed at this viewer -- on a render copy only.
+  const { tree: viewerTree } = rewriteTreeForAssistedViewerV1(page.tree, variantKey, new Set(run.pages.map((entry) => entry.slug)));
   const availablePages = run.pages.map((entry) => ({
     id: null,
     siteId,
@@ -78,7 +82,7 @@ export default async function DevAssistedGenerationViewerPage({
         ))}
         <span>| assisted: {run.lifecycle.status}</span>
       </div>
-      <PublicRenderer siteId={siteId} tree={page.tree} activePageSlug={page.slug} activePageName={page.name || page.slug} availablePages={availablePages} />
+      <PublicRenderer siteId={siteId} tree={viewerTree} activePageSlug={page.slug} activePageName={page.name || page.slug} availablePages={availablePages} />
     </div>
   );
 }

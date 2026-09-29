@@ -1,4 +1,5 @@
 import type { CartItem } from "@/store/useCartStore";
+import { isInternalPageLink, resolveRuntimeHref } from "@/lib/builder-core/tree/pageLinks";
 
 /**
  * COMMERCE-1: the ONLY way a `store-product-card` produces a CartItem.
@@ -36,6 +37,27 @@ export function isProductCardBoundV1(props: ProductCardBindingPropsV1): boolean 
 
 export function isProductCardOutOfStockV1(stock: unknown): boolean {
   return typeof stock === "number" && stock !== -1 && stock <= 0;
+}
+
+/**
+ * COMMERCE-5B: the runtime href for a card's "view product" affordance, or
+ * null (no link). Only the canonical internal `page:<slug>` contract the
+ * generator emits, resolved exactly like every other internal link; a
+ * site-relative "/path" is also accepted (a host that already resolved it).
+ * External URLs, schemes, anchors and anything malformed render no link.
+ */
+export function resolveProductCardDetailHrefV1(
+  siteId: string | null,
+  detailHref: unknown,
+  mode: "preview" | "published" | "export",
+): string | null {
+  if (typeof detailHref !== "string") return null;
+  const href = detailHref.trim();
+  if (isInternalPageLink(href)) {
+    const resolved = resolveRuntimeHref(siteId, href, mode);
+    return resolved === "#" ? null : resolved;
+  }
+  return /^\/(?!\/)[^\s\\]*$/.test(href) ? href : null;
 }
 
 export function buildCartItemFromProductCardV1(props: ProductCardBindingPropsV1): CartItem | null {

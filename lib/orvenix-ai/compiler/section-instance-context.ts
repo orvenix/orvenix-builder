@@ -2,6 +2,7 @@ import type { SectionRole } from "@/lib/orvenix-ai/architect"
 import {
   ROLE_TREATMENT_VOCABULARY,
   ROLE_VISUAL_PRIMITIVE_VOCABULARY,
+  selectGroundedIndexes,
   selectGroundedItems,
   type SectionInstancePlan,
 } from "@/lib/orvenix-ai/architect/composition-plan"
@@ -75,6 +76,14 @@ export function applySectionInstanceToContext(
   }
 
   const composition = instance.composition
+
+  // COMMERCE-5B: detail targets are keyed by source product index; align them with the selected products.
+  if (instance.role === "products" && composition?.productDetailLinks?.length) {
+    const hrefByIndex = new Map(composition.productDetailLinks.map((link) => [link.productIndex, link.href]))
+    const indexes = selectGroundedIndexes(baseContext.products?.length ?? 0, instance.selection)
+    const hrefs = indexes.map((index) => hrefByIndex.get(index))
+    if (hrefs.some(Boolean)) context = { ...context, commerceProductDetailHrefs: hrefs }
+  }
   if (composition) {
     if (composition.treatment) context = applyTreatment(instance.role, composition.treatment, context)
     if (composition.backgroundStrategy) {

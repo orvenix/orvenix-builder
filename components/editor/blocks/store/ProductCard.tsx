@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
+import { useEditorStore } from "@/components/editor/store/useEditorStore";
 import { ShoppingCart, Tag } from "lucide-react";
-import { buildCartItemFromProductCardV1, isProductCardBoundV1 } from "./product-card-binding";
+import { buildCartItemFromProductCardV1, isProductCardBoundV1, resolveProductCardDetailHrefV1 } from "./product-card-binding";
 
 interface Props {
   id?: string;
@@ -20,6 +22,32 @@ interface Props {
   lowStockThreshold?: number;
   /** COMMERCE-2A: Site Creation preview reference to a product that will be provisioned on confirm (never executable). */
   provisioningRef?: string;
+  /** COMMERCE-5B: Orvenix-resolved `page:<detail-slug>` for this exact product; absent -> no detail link. */
+  detailHref?: string;
+}
+
+/** A plain anchor when there is a detail target, otherwise the children unchanged (never a dead link). */
+function ProductDetailLink({
+  href,
+  className,
+  tabIndex,
+  ariaHidden,
+  dataState,
+  children,
+}: {
+  href: string | null;
+  className?: string;
+  tabIndex?: number;
+  ariaHidden?: boolean;
+  dataState?: string;
+  children: React.ReactNode;
+}) {
+  if (!href) return <>{children}</>;
+  return (
+    <a href={href} className={className} tabIndex={tabIndex} aria-hidden={ariaHidden || undefined} data-store-card-link={dataState}>
+      {children}
+    </a>
+  );
 }
 
 function formatMxn(cents: number) {
@@ -39,8 +67,15 @@ export function ProductCard({
   stock         = -1,
   lowStockThreshold = 5,
   provisioningRef,
+  detailHref,
 }: Props) {
   const addItem = useCartStore((s) => s.addItem);
+  const websiteId = useEditorStore((s) => s.websiteId);
+  const pathname = usePathname();
+  // Same mode rules as CtaButton; never a live link on the editor canvas (a click there selects, it must not navigate).
+  const isEditorCanvas = pathname?.startsWith("/editor/") || pathname?.startsWith("/constructor");
+  const hrefMode = pathname?.startsWith("/p/") ? "published" : "preview";
+  const detailLink = isEditorCanvas ? null : resolveProductCardDetailHrefV1(websiteId, detailHref, hrefMode);
 
   const isOutOfStock = stock !== -1 && stock <= 0;
   const isLowStock   = stock !== -1 && stock > 0 && stock <= lowStockThreshold;
@@ -61,7 +96,8 @@ export function ProductCard({
   return (
     <div className="group flex flex-col rounded-2xl overflow-hidden border border-white/8 bg-white/2 hover:border-white/[0.14] transition-all duration-300">
 
-      {/* Imagen */}
+      {/* Imagen -- a pointer shortcut to the detail page; the title link below is the keyboard/AT target. */}
+      <ProductDetailLink href={detailLink} className="block" tabIndex={-1} ariaHidden>
       <div className="relative aspect-square bg-white/4 overflow-hidden">
         {imageUrl
           ? <Image fill unoptimized src={imageUrl} alt={productName ?? ""} className="object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -86,10 +122,15 @@ export function ProductCard({
           </div>
         )}
       </div>
+      </ProductDetailLink>
 
       {/* Info */}
       <div className="flex flex-col flex-1 p-4">
-        <p className="text-sm font-semibold text-white mb-1 line-clamp-2">{productName}</p>
+        <p className="text-sm font-semibold text-white mb-1 line-clamp-2">
+          <ProductDetailLink href={detailLink} className="hover:underline focus-visible:underline focus-visible:outline-none" dataState="detail-link">
+            {productName}
+          </ProductDetailLink>
+        </p>
         <p className="text-xs text-slate-600 mb-1">{variantName}</p>
         {isLowStock && (
           <p className="text-[10px] text-amber-400 font-semibold mb-2">

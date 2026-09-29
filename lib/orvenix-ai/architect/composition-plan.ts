@@ -150,7 +150,16 @@ export interface SectionInstanceComposition {
   narrativeIntent?: SectionInstanceNarrativeIntent
   /** COMMERCE-3C: grounded category labels linked to REAL generated category pages. */
   categoryLinks?: Array<{ label: string; href: string }>
+  /**
+   * COMMERCE-5B: Orvenix-resolved product -> detail page targets, keyed by
+   * the product's index in the site's authoritative product list (the same
+   * index space `selection` uses). Only products that have a generated
+   * detail page appear; never provider-supplied, never the current page.
+   */
+  productDetailLinks?: Array<{ productIndex: number; href: string }>
 }
+
+export const MAX_PRODUCT_DETAIL_LINKS = 50
 
 export const SECTION_INSTANCE_CTA_LABELS = ["Ver catálogo", "Ver categoría", "Ver producto", "Seguir explorando", "Ver ayuda"] as const
 export type SectionInstanceCtaLabel = (typeof SECTION_INSTANCE_CTA_LABELS)[number]
@@ -211,24 +220,33 @@ export interface CompositionPlan {
  */
 export function selectGroundedItems<T>(source: readonly T[] | undefined, selection: SectionInstanceSelection): T[] {
   const items = source ?? []
-  if (items.length === 0) return []
+  return selectGroundedIndexes(items.length, selection).map((index) => items[index])
+}
 
-  if (selection.mode === "all") return [...items]
+/**
+ * COMMERCE-5B: the source indexes `selectGroundedItems` picks, in the same
+ * order -- lets per-item Orvenix data keyed by source index (eg. product
+ * detail targets) stay aligned with the selected items.
+ */
+export function selectGroundedIndexes(length: number, selection: SectionInstanceSelection): number[] {
+  if (length === 0) return []
+
+  if (selection.mode === "all") return Array.from({ length }, (_, index) => index)
 
   if (selection.mode === "single-item") {
     const index = selection.itemIndex
-    if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= items.length) return []
-    return [items[index]]
+    if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= length) return []
+    return [index]
   }
 
   if (selection.mode === "subset") {
     const seen = new Set<number>()
-    const result: T[] = []
+    const result: number[] = []
     for (const index of selection.indexes ?? []) {
-      if (!Number.isInteger(index) || index < 0 || index >= items.length) continue
+      if (!Number.isInteger(index) || index < 0 || index >= length) continue
       if (seen.has(index)) continue
       seen.add(index)
-      result.push(items[index])
+      result.push(index)
     }
     return result
   }
@@ -292,7 +310,7 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
   if (plan.composition !== undefined) {
     if (!isPlainObject(plan.composition)) return false
     const composition = plan.composition
-    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks"])) return false
+    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks"])) return false
     if (composition.treatment !== undefined && !ALL_TREATMENT_VALUES.has(composition.treatment as string)) return false
     if (composition.alignment !== undefined && !VALID_ALIGNMENTS.has(composition.alignment as string)) return false
     if (composition.scale !== undefined && !VALID_SCALES.has(composition.scale as string)) return false
@@ -318,6 +336,16 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
       for (const link of composition.categoryLinks) {
         if (!isPlainObject(link) || !hasOnlyKeys(link, ["label", "href"])) return false
         if (typeof link.label !== "string" || !link.label.trim() || link.label.length > 60 || /[<>{}]/.test(link.label)) return false
+        if (typeof link.href !== "string" || !SECTION_INSTANCE_PAGE_HREF_PATTERN.test(link.href)) return false
+      }
+    }
+    if (composition.productDetailLinks !== undefined) {
+      if (!Array.isArray(composition.productDetailLinks) || composition.productDetailLinks.length > MAX_PRODUCT_DETAIL_LINKS) return false
+      const seen = new Set<number>()
+      for (const link of composition.productDetailLinks) {
+        if (!isPlainObject(link) || !hasOnlyKeys(link, ["productIndex", "href"])) return false
+        if (typeof link.productIndex !== "number" || !Number.isInteger(link.productIndex) || link.productIndex < 0 || seen.has(link.productIndex)) return false
+        seen.add(link.productIndex)
         if (typeof link.href !== "string" || !SECTION_INSTANCE_PAGE_HREF_PATTERN.test(link.href)) return false
       }
     }

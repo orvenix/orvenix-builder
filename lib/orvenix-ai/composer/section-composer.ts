@@ -48,7 +48,7 @@ import {
   type CommerceProductFactV1,
 } from "@/lib/orvenix-ai/commerce/product-facts"
 import { formatProvisioningRefV1 } from "@/lib/orvenix-ai/commerce/provisioning-plan"
-import type { SectionInstanceCtaLabel } from "@/lib/orvenix-ai/architect/composition-plan"
+import { SECTION_INSTANCE_PAGE_HREF_PATTERN, type SectionInstanceCtaLabel } from "@/lib/orvenix-ai/architect/composition-plan"
 import {
   resolveCtaCopy,
   resolveFeatureItems,
@@ -1001,9 +1001,10 @@ function composeNavigation(
         : "home=Inicio\nservicios=Servicios\nproductos=Productos\nprecios=Precios\ncontacto=Contacto",
       ...(pages.length ? { pages } : {}),
       showHome: true,
-      showCta: navigationCtaEmphasis !== "none",
-      ctaLabel: "Contactar",
-      ctaHref: "#contacto",
+      // COMMERCE-5B: an Orvenix-resolved action (or explicit omission) replaces the legacy "#contacto" anchor.
+      showCta: navigationCtaEmphasis !== "none" && !context.instanceOmitCta,
+      ctaLabel: context.commerceCtaAction?.label ?? "Contactar",
+      ctaHref: context.commerceCtaAction?.href ?? "#contacto",
       layout: "row",
       justify: navLayout === "centered-editorial" ? "center" : navLayout === "split" ? "end" : "center",
       variant: navLayout === "centered-editorial" ? "minimal" : navigationLinkStyle,
@@ -2364,10 +2365,12 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
   for (const [index, product] of selected.entries()) {
     const props = storeCardProps(product, context)
     if (!props) continue
+    // COMMERCE-5B: only the compiler-aligned, Orvenix-resolved detail page for THIS product.
+    const detailHref = context.commerceProductDetailHrefs?.[index]
     cards.push(add(nodes, createComposedNode({
       type: "store-product-card",
       displayName: `Producto ${index + 1}: ${product.name}`,
-      props,
+      props: detailHref && SECTION_INSTANCE_PAGE_HREF_PATTERN.test(detailHref) ? { ...props, detailHref } : props,
     })))
   }
 
