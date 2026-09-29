@@ -103,6 +103,8 @@ export interface CommerceArchitecturePlanV1 {
   storeStrategy: CommerceStoreStrategyV1
   navigationStyle: CommerceNavigationStyleV1
   primaryNavigationSlugs?: string[]
+  /** PCE-2: bounded cart affordance from the blueprint (navigation.cartProminence). */
+  cartProminence?: "none" | "subtle" | "prominent"
   siteDensity?: CommerceCreativeDensityV1
   siteRhythm?: "calm" | "varied" | "dense" | "immersive"
   pages: CommerceArchitecturePageV1[]

@@ -2,6 +2,7 @@
 
 import NextImage from "next/image";
 import { useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { useEditorStore } from "@/store/useEditorStore";
 import type { BlockComponentProps } from "@/types/editor";
@@ -52,9 +53,48 @@ export function Image({
     reader.onerror = () => setIsReading(false);
     reader.readAsDataURL(file);
   };
+  const pathname = usePathname();
   const isFree = positionMode === "free";
   const imageWidth = typeof width === "number" && width > 0 ? width : 800;
   const imageHeight = typeof height === "number" && height > 0 ? height : 400;
+
+  /*
+   * PCE-2: never an <img src="">. A generated image slot whose asset was
+   * never resolved renders nothing on public/preview pages (the layout
+   * reflows around it); on the editor canvas it stays an explicit,
+   * uploadable empty slot.
+   */
+  if (typeof src !== "string" || !src.trim()) {
+    const isEditorCanvas = pathname?.startsWith("/editor/") || pathname?.startsWith("/constructor");
+    if (!isEditorCanvas) return null;
+    return (
+      <div className={`relative grid w-full place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 ${isFree ? "h-full" : "min-h-40"}`} data-empty-image-slot>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) updateImageFromFile(file);
+            event.currentTarget.value = "";
+          }}
+        />
+        <button
+          type="button"
+          disabled={isReading}
+          onClick={(event) => {
+            event.stopPropagation();
+            inputRef.current?.click();
+          }}
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-600 disabled:opacity-60"
+        >
+          {isReading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+          Añadir imagen
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={isFree ? "relative h-full w-full" : "relative"}>

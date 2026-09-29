@@ -106,6 +106,7 @@ export function applySectionInstanceToContext(
     if (composition.omitCta) context = { ...context, instanceOmitCta: true }
     if (composition.narrativeIntent) context = { ...context, instanceNarrativeIntent: composition.narrativeIntent }
     if (composition.categoryLinks?.length) context = { ...context, commerceCategoryLinks: composition.categoryLinks }
+    if (composition.cartProminence && instance.role === "navigation") context = { ...context, navigationCartProminence: composition.cartProminence }
     if (composition.emphasis === "opening" && instance.role === "hero") context = { ...context, instanceOmitCta: true }
 
     /*

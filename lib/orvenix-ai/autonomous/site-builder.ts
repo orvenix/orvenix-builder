@@ -34,6 +34,7 @@ import {
 import {
   resolveTreeImageAssets,
 } from "@/lib/orvenix-ai/assets/resolve-tree-assets"
+import { collapseEmptyImageSlotsV1 } from "@/lib/orvenix-ai/assets/collapse-empty-image-slots"
 
 import {
   resolveCreativeDirectorSectionOrderV1,
@@ -1023,6 +1024,9 @@ export async function runAutonomousMultiPageSiteBuilder(
       visualFamily: compositionVisualFamily,
       creativeDirection: input.creativeDirection,
       accentColor: themeColors(theme).accent,
+      // PCE-2: same resolved theme -> theme-derived commerce surfaces (store sections, cards, closing, footer).
+      themePalette: themeColors(theme),
+      ...(commerceArchitectureResult.plan ? { commerceSurfaces: true } : {}),
       businessEvidence: input.business.businessEvidence,
     },
   )
@@ -1086,7 +1090,7 @@ export async function runAutonomousMultiPageSiteBuilder(
   const aiHeroIntent = input.creativeDirection?.pageDirections?.find((direction) => direction.slug === "home")?.assetIntent
     ?? input.creativeDirection?.pageDirections?.[0]?.assetIntent
 
-  const pages = await resolveTreeImageAssets(rawPages, {
+  const resolvedPages = await resolveTreeImageAssets(rawPages, {
     provider: input.assetProvider ?? createPexelsProvider(),
     visualFamily: assetVisualFamily,
     industry: input.business.industry,
@@ -1094,6 +1098,10 @@ export async function runAutonomousMultiPageSiteBuilder(
     businessName: input.business.name,
     ...(aiHeroIntent ? { aiHeroIntent } : {}),
   })
+  // PCE-2: commerce sites never ship an unresolved image slot -- the composition reflows instead.
+  const pages = commerceArchitectureResult.plan
+    ? resolvedPages.map((page) => ({ ...page, tree: collapseEmptyImageSlotsV1(page.tree) }))
+    : resolvedPages
 
   const pageQuality = pages.map((page) => {
     const quality = evaluateTreeQuality(page.tree)

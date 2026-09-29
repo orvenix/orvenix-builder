@@ -2,9 +2,17 @@
 
 import Image from "next/image";
 import { useId, useState } from "react";
-import { ShoppingCart, Tag } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { buildCartItemFromProductCardV1 } from "./product-card-binding";
+import { isSafeProductMediaUrlV1 } from "@/lib/commerce/product-media";
+import {
+  LEGACY_DARK_COMMERCE_SURFACE_V1,
+  mixHexV1,
+  productMonogramV1,
+  sanitizeCommerceSurfaceV1,
+  type CommerceSurfaceV1,
+} from "@/lib/orvenix-ai/commerce/commerce-surface";
 
 /**
  * COMMERCE-6: the reusable dynamic product-detail block. Rendered ONLY by
@@ -14,6 +22,11 @@ import { buildCartItemFromProductCardV1 } from "./product-card-binding";
  * only those facts: name, image, description, variants, price, compare
  * price, stock state. Add to Cart goes through the same binding the
  * product card uses; checkout re-prices everything from the DB.
+ *
+ * PCE-2: colors come from the Orvenix-computed theme surface; with no
+ * authoritative image the layout reflows to one column with a compact,
+ * honest monogram instead of a large empty media square. `imageUrls` is
+ * kept for the future gallery; only the primary image renders today.
  */
 
 interface VariantProps {
@@ -29,9 +42,11 @@ interface Props {
   productName?: string;
   description?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   variants?: VariantProps[];
   accentColor?: string;
   lowStockThreshold?: number;
+  surface?: CommerceSurfaceV1;
 }
 
 const MAX_QUANTITY = 99;
@@ -49,15 +64,21 @@ export function ProductDetail({
   productName = "Producto",
   description,
   imageUrl,
+  imageUrls,
   variants = [],
   accentColor = "#00b5f6",
   lowStockThreshold = 5,
+  surface: rawSurface,
 }: Props) {
   const addItem = useCartStore((s) => s.addItem);
   const groupId = useId();
   const firstAvailable = variants.find((variant) => !isOutOfStock(variant.stock)) ?? variants[0];
   const [selectedId, setSelectedId] = useState(firstAvailable?.variantId);
   const [quantity, setQuantity] = useState(1);
+
+  const themed = sanitizeCommerceSurfaceV1(rawSurface);
+  const surface = themed ?? { ...LEGACY_DARK_COMMERCE_SURFACE_V1, accent: accentColor };
+  const primaryImage = [imageUrl, ...(imageUrls ?? [])].find(isSafeProductMediaUrlV1)?.trim() ?? null;
 
   const selected = variants.find((variant) => variant.variantId === selectedId) ?? firstAvailable;
   if (!selected) return null;
@@ -69,6 +90,7 @@ export function ProductDetail({
   const discount = selected.comparePriceMxn && selected.comparePriceMxn > selected.priceMxn
     ? Math.round((1 - selected.priceMxn / selected.comparePriceMxn) * 100)
     : null;
+  const tileBackground = mixHexV1(surface.accent, surface.card, surface.tone === "light" ? 0.9 : 0.82);
 
   const handleAdd = () => {
     const item = buildCartItemFromProductCardV1({
@@ -77,99 +99,121 @@ export function ProductDetail({
       productName,
       variantName: selected.label,
       priceMxn: selected.priceMxn,
-      imageUrl,
+      imageUrl: primaryImage ?? undefined,
       stock: selected.stock,
     });
     if (!item) return;
     addItem({ ...item, quantity: safeQuantity });
   };
 
-  return (
-    <article className="grid gap-10 lg:grid-cols-2 lg:items-start" data-store-product-detail>
-      <div className="relative aspect-square overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-        {imageUrl
-          ? <Image fill unoptimized src={imageUrl} alt={productName} className="object-cover" />
-          : <div className="grid h-full w-full place-items-center text-slate-600"><Tag size={48} aria-hidden="true" /></div>}
-        {discount && !outOfStock && (
-          <span className="absolute right-3 top-3 rounded-full bg-red-500 px-3 py-1 text-xs font-extrabold text-white">-{discount}%</span>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">{productName}</h1>
-          {description && <p className="text-base leading-relaxed text-slate-300 md:text-lg">{description}</p>}
-        </div>
-
-        <div className="flex items-baseline gap-3">
-          <span className="text-3xl font-extrabold" style={{ color: accentColor }}>{formatMxn(selected.priceMxn)}</span>
-          {selected.comparePriceMxn && selected.comparePriceMxn > selected.priceMxn && (
-            <span className="text-base text-slate-500 line-through">{formatMxn(selected.comparePriceMxn)}</span>
-          )}
-        </div>
-
-        {variants.length > 1 && (
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-slate-200">Variante</legend>
-            <div className="flex flex-wrap gap-2">
-              {variants.map((variant) => {
-                const checked = variant.variantId === selected.variantId;
-                const inputId = `${groupId}-${variant.variantId}`;
-                return (
-                  <label
-                    key={variant.variantId}
-                    htmlFor={inputId}
-                    className={`cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-colors focus-within:ring-2 focus-within:ring-white/60 ${checked ? "text-white" : "border-white/15 text-slate-300 hover:border-white/30"} ${isOutOfStock(variant.stock) ? "opacity-50" : ""}`}
-                    style={checked ? { borderColor: accentColor, background: `${accentColor}33` } : undefined}
-                  >
-                    <input
-                      id={inputId}
-                      type="radio"
-                      name={groupId}
-                      value={variant.variantId}
-                      checked={checked}
-                      onChange={() => { setSelectedId(variant.variantId); setQuantity(1); }}
-                      className="sr-only"
-                    />
-                    {variant.label}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-        )}
-
-        <p className={`text-sm font-semibold ${outOfStock ? "text-slate-400" : lowStock ? "text-amber-400" : "text-emerald-400"}`} data-store-detail-stock={outOfStock ? "out-of-stock" : lowStock ? "low" : "available"}>
-          {outOfStock ? "Sin stock" : lowStock ? `¡Solo quedan ${selected.stock} unidades!` : "Disponible"}
-        </p>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="flex flex-col gap-2 text-sm font-semibold text-slate-200">
-            Cantidad
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={maxQuantity}
-              value={safeQuantity}
-              disabled={outOfStock}
-              onChange={(event) => setQuantity(Number.parseInt(event.target.value, 10) || 1)}
-              className="h-12 w-24 rounded-xl border border-white/15 bg-white/5 px-3 text-base text-white disabled:opacity-50"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={outOfStock}
-            data-store-card-state={outOfStock ? "out-of-stock" : "bound"}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ background: outOfStock ? "#374151" : `linear-gradient(135deg, ${accentColor}, ${accentColor}bb)` }}
+  const info = (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        {!primaryImage && (
+          <span
+            className="grid h-20 w-20 place-items-center rounded-2xl text-2xl font-black"
+            style={{ background: tileBackground, color: surface.accent }}
+            data-store-media="fallback"
+            aria-hidden="true"
           >
-            <ShoppingCart size={18} aria-hidden="true" />
-            {outOfStock ? "Sin stock" : "Añadir al carrito"}
-          </button>
-        </div>
+            {productMonogramV1(productName)}
+          </span>
+        )}
+        <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl" style={{ color: surface.heading }}>{productName}</h1>
+        {description && <p className="text-base leading-relaxed md:text-lg" style={{ color: surface.body }}>{description}</p>}
       </div>
+
+      <div className="flex flex-wrap items-baseline gap-3">
+        <span className="text-3xl font-extrabold" style={{ color: surface.accent }}>{formatMxn(selected.priceMxn)}</span>
+        {selected.comparePriceMxn && selected.comparePriceMxn > selected.priceMxn && (
+          <span className="text-base line-through" style={{ color: surface.muted }}>{formatMxn(selected.comparePriceMxn)}</span>
+        )}
+        {discount && !outOfStock && (
+          <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-extrabold text-white">-{discount}%</span>
+        )}
+      </div>
+
+      {variants.length > 1 && (
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-3 text-sm font-semibold" style={{ color: surface.heading }}>Variante</legend>
+          <div className="flex flex-wrap gap-2">
+            {variants.map((variant) => {
+              const checked = variant.variantId === selected.variantId;
+              const inputId = `${groupId}-${variant.variantId}`;
+              return (
+                <label
+                  key={variant.variantId}
+                  htmlFor={inputId}
+                  className={`cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-colors focus-within:ring-2 focus-within:ring-offset-2 ${isOutOfStock(variant.stock) ? "opacity-50" : ""}`}
+                  style={checked
+                    ? { borderColor: surface.accent, background: mixHexV1(surface.accent, surface.card, 0.85), color: surface.heading }
+                    : { borderColor: surface.border, color: surface.body }}
+                >
+                  <input
+                    id={inputId}
+                    type="radio"
+                    name={groupId}
+                    value={variant.variantId}
+                    checked={checked}
+                    onChange={() => { setSelectedId(variant.variantId); setQuantity(1); }}
+                    className="sr-only"
+                  />
+                  {variant.label}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
+      <p className={`text-sm font-semibold ${outOfStock ? "" : lowStock ? "text-amber-600" : "text-emerald-600"}`} style={outOfStock ? { color: surface.muted } : undefined} data-store-detail-stock={outOfStock ? "out-of-stock" : lowStock ? "low" : "available"}>
+        {outOfStock ? "Sin stock" : lowStock ? `¡Solo quedan ${selected.stock} unidades!` : "Disponible"}
+      </p>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="flex flex-col gap-2 text-sm font-semibold" style={{ color: surface.heading }}>
+          Cantidad
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={maxQuantity}
+            value={safeQuantity}
+            disabled={outOfStock}
+            onChange={(event) => setQuantity(Number.parseInt(event.target.value, 10) || 1)}
+            className="h-12 w-24 rounded-xl border px-3 text-base disabled:opacity-50"
+            style={{ borderColor: surface.border, background: surface.card, color: surface.heading }}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={outOfStock}
+          data-store-card-state={outOfStock ? "out-of-stock" : "bound"}
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          style={outOfStock ? { background: surface.border, color: surface.muted } : { background: surface.accent, color: surface.onAccent }}
+        >
+          <ShoppingCart size={18} aria-hidden="true" />
+          {outOfStock ? "Sin stock" : "Añadir al carrito"}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (!primaryImage) {
+    return (
+      <article className="mx-auto w-full max-w-3xl rounded-3xl border p-6 md:p-10" style={{ background: surface.card, borderColor: surface.border }} data-store-product-detail data-store-surface={themed ? surface.tone : "legacy"}>
+        {info}
+      </article>
+    );
+  }
+
+  return (
+    <article className="grid gap-10 lg:grid-cols-2 lg:items-start" data-store-product-detail data-store-surface={themed ? surface.tone : "legacy"}>
+      <div className="relative aspect-square overflow-hidden rounded-3xl border" style={{ background: tileBackground, borderColor: surface.border }}>
+        <Image fill unoptimized src={primaryImage} alt={productName} className="object-cover" data-store-media="image" />
+      </div>
+      {info}
     </article>
   );
 }

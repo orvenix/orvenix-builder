@@ -560,6 +560,13 @@ function instanceFor(page: CommerceArchitecturePageV1, entry: CommerceArchitectu
   }
 }
 
+function footerSlugsFor(index: PlanIndex): string[] {
+  const existing = new Set(index.plan.pages.map((page) => page.slug))
+  const slugs = (index.plan.primaryNavigationSlugs ?? []).filter((slug) => existing.has(slug))
+  if (index.helpSlug && !slugs.includes(index.helpSlug)) slugs.push(index.helpSlug)
+  return slugs
+}
+
 function pageFromCommercePlan(page: CommerceArchitecturePageV1, index: PlanIndex): OrvenixSitePagePlan {
   // Site rhythm "varied": consecutive split layouts on one page alternate sides (bounded, deterministic).
   let lastMirror: boolean | undefined
@@ -582,6 +589,7 @@ function pageFromCommercePlan(page: CommerceArchitecturePageV1, index: PlanIndex
           layout: NAVIGATION_LAYOUT_BY_STYLE[index.plan.navigationStyle],
           ...(index.plan.primaryNavigationSlugs?.length ? { navigationSlugs: index.plan.primaryNavigationSlugs } : {}),
           ...(navCta && navCta !== "none" ? { ctaAction: navCta } : { omitCta: true as const }),
+          ...(index.plan.cartProminence ? { cartProminence: index.plan.cartProminence } : {}),
         },
         provenance: "deterministic",
       },
@@ -600,7 +608,15 @@ function pageFromCommercePlan(page: CommerceArchitecturePageV1, index: PlanIndex
         instance: instanceFor(page, entry, sectionIndex, index, mirrorOverride),
       }
     }),
-    { role: "footer", blockType: null, purpose: "Cerrar navegacion y datos del sitio." },
+    {
+      role: "footer",
+      blockType: null,
+      purpose: "Cerrar navegacion y datos del sitio.",
+      // PCE-2: footer links = the plan's own primary pages (+ help when it exists) -- real generated pages only.
+      ...(footerSlugsFor(index).length
+        ? { instance: { id: `${page.slug}:footer`, role: "footer" as const, selection: { mode: "all" as const }, composition: { navigationSlugs: footerSlugsFor(index) }, provenance: "deterministic" as const } }
+        : {}),
+    },
   ]
   return {
     name: page.name,

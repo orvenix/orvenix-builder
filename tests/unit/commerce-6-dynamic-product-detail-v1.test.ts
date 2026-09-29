@@ -237,6 +237,7 @@ test("public product: authoritative variant data copied as-is; no SKU/metadata; 
     name: "Silla ergonómica",
     description: "Respaldo de malla.",
     imageUrl: "https://cdn.example.invalid/silla.jpg",
+    imageUrls: ["https://cdn.example.invalid/silla.jpg"],
     variants: [
       { variantId: "var_1", label: "Negro", priceMxn: 199900, comparePriceMxn: 249900, stock: 4 },
       { variantId: "var_2", label: "Gris", priceMxn: 189900, stock: 0 },
@@ -279,7 +280,9 @@ test("dynamic detail tree inherits the site's nav, cart shell, footer and theme;
   assert.equal(types.includes("store-product-card"), false, "no generated cards leak into the detail page")
   const baseRoot = base.nodes[base.rootId]
   const root = tree.nodes[tree.rootId]
-  assert.equal(root.children.at(-1), baseRoot.children.at(-1), "site footer kept last")
+  // PCE-2: the nav-integrated cart drawer may follow the footer; the footer is the last root SECTION.
+  const lastSection = (ids: string[], nodes: EditorTree["nodes"]) => [...ids].reverse().find((id) => nodes[id]?.type === "section")
+  assert.equal(lastSection(root.children, tree.nodes), lastSection(baseRoot.children, base.nodes), "site footer kept as the last section")
   assert.equal(root.children[0], baseRoot.children[0], "site navigation kept first")
   assert.deepEqual(tree.theme, base.theme)
 
@@ -292,7 +295,9 @@ test("dynamic detail tree inherits the site's nav, cart shell, footer and theme;
   assert.equal(tree.seo?.title, "Silla ergonómica")
   // no back link when the site has no catalog page
   const noCatalog = buildDynamicProductDetailTreeV1({ baseTree: base, product: detail })
-  assert.equal(nodesOf(noCatalog).some((node) => node.type === "ctaButton" && String(node.props.href).startsWith("page:")), false)
+  // (PCE-2 footers carry real page: links, so assert the back affordance itself is absent)
+  assert.equal(nodesOf(noCatalog).some((node) => node.type === "ctaButton" && node.props.label === "Volver al catálogo"), false)
+  assert.equal(nodesOf(noCatalog).some((node) => node.id === "dyn-product-detail-back"), false)
 })
 
 // --- routing contexts ---

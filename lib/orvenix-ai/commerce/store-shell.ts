@@ -5,11 +5,12 @@ import type { EditorNode, EditorTree, NodeProps } from "@/types/editor"
 /**
  * COMMERCE-1/2A: the ONE cart-shell injection, shared by the compiler
  * (bound cards at generation time) and the COMMERCE-2A confirm-time binder
- * (pending cards bound to freshly provisioned rows). Adds the EXISTING
- * `store-cart-button` + `store-cart-drawer` blocks once per page, right
- * after the navigation section (the root child containing a `siteNav`),
- * ONLY when the page contains a bound `store-product-card`. Idempotent: a
- * page that already has a cart drawer is returned unchanged.
+ * (pending cards bound to freshly provisioned rows). ONLY when the page
+ * contains a bound `store-product-card` (or the dynamic detail block).
+ * PCE-2: with a `siteNav` the cart becomes a nav affordance plus the
+ * existing `store-cart-drawer`; without one, the original
+ * `store-cart-button` + drawer band right after the first root child.
+ * Idempotent: a page that already has a cart drawer is returned unchanged.
  */
 
 export const STORE_CART_SHELL_DISPLAY_NAME_V1 = "Carrito de la tienda"
@@ -62,6 +63,22 @@ export function injectStoreCartShellNodesV1(
   if (Object.values(nodes).some((candidate) => candidate.type === "store-cart-drawer")) return children
 
   const accent = accentColor ? { accentColor } : {}
+
+  /*
+   * PCE-2: when the page has a site navigation, the cart entry lives IN the
+   * nav (SiteNav `showCart`, desktop + mobile share the one cart store) and
+   * only the off-canvas drawer is added -- no detached full-width band.
+   * Pages without a siteNav keep the original shell below.
+   */
+  const navNode = Object.values(nodes).find((candidate) => candidate.type === "siteNav")
+  if (navNode) {
+    navNode.props = { ...navNode.props, showCart: true }
+    const drawerOnly = node("store-cart-drawer", "Carrito (panel)", { checkoutLabel: "Ir a pagar", ...accent })
+    drawerOnly.parentId = rootId
+    nodes[drawerOnly.id] = drawerOnly
+    return [...children, drawerOnly.id]
+  }
+
   const button = node("store-cart-button", "Carrito (boton)", { label: "Carrito", ...accent })
   const drawer = node("store-cart-drawer", "Carrito (panel)", { checkoutLabel: "Ir a pagar", ...accent })
   const bar = node("genericWrapper", "Barra carrito", { tag: "div", className: "flex justify-end" }, [button.id])

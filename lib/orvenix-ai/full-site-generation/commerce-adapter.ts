@@ -212,6 +212,7 @@ export function adaptFullSiteCreativeBlueprintToCommercePlanV1(params: {
       storeStrategy: strategyFromBlueprint(validation.blueprint),
       navigationStyle: navFromBlueprint(validation.blueprint),
       primaryNavigationSlugs: primaryNavigationSlugsFromBlueprint(validation.blueprint, pages),
+      ...(validation.blueprint.navigation.cartProminence ? { cartProminence: validation.blueprint.navigation.cartProminence } : {}),
       siteDensity: validation.blueprint.siteConcept.density === "rich" ? "compact" : validation.blueprint.siteConcept.density === "minimal" ? "spacious" : "balanced",
       siteRhythm: validation.blueprint.siteConcept.rhythm,
       pages,

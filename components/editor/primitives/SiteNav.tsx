@@ -8,6 +8,8 @@ import { buildEditorPageUrl } from "@/components/editor/pageNavigation";
 import { resolveSiteNavPages } from "@/lib/builder-core/tree/siteNavigation";
 import { readableTextOn } from "@/lib/orvenix-ai/theme/visual-direction";
 import type { BlockComponentProps } from "@/types/editor";
+import { ShoppingCart } from "lucide-react";
+import { useCartStore } from "@/store/useCartStore";
 
 type InlineNavLink = {
   label?: string;
@@ -44,6 +46,67 @@ export interface SiteNavProps {
   accent?: string;
   navLayout?: "classic" | "centered-editorial" | "split" | "overlay";
   pages?: InlineNavLink[];
+  /** PCE-2: set by the store shell ONLY when the page can sell; renders the cart entry inside the nav. */
+  showCart?: boolean;
+  /** PCE-2: bounded cart treatment (blueprint navigation.cartProminence); absent -> "standard". */
+  cartProminence?: "none" | "subtle" | "prominent";
+}
+
+type NavCartTreatment = "compact" | "standard" | "prominent";
+
+/** PCE-2: the bounded prominence -> treatment map. "none" cannot hide the only checkout path, so it reads as compact. */
+export function navCartTreatment(prominence: SiteNavProps["cartProminence"]): NavCartTreatment {
+  if (prominence === "prominent") return "prominent";
+  if (prominence === "subtle" || prominence === "none") return "compact";
+  return "standard";
+}
+
+/** PCE-2: the nav cart entry -- desktop and mobile instances share the ONE cart store (same drawer, same count). */
+function NavCartButton({
+  treatment,
+  surface,
+  navAccent,
+  mobile = false,
+}: {
+  treatment: NavCartTreatment;
+  surface: "dark" | "light";
+  navAccent: { background: string; text: string } | null;
+  mobile?: boolean;
+}) {
+  const toggle = useCartStore((s) => s.toggle);
+  const count = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0));
+  const accentBackground = navAccent?.background ?? "#1BB3FA";
+  const accentText = navAccent?.text ?? readableTextOn(accentBackground);
+  const iconOnly = mobile || treatment === "compact";
+  const filled = treatment === "prominent";
+  const outline = surface === "dark" ? "rgba(255,255,255,0.22)" : "rgba(7,89,133,0.2)";
+  const ink = surface === "dark" ? "#ffffff" : "#075985";
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={count > 0 ? `Abrir carrito (${count} ${count === 1 ? "producto" : "productos"})` : "Abrir carrito"}
+      data-nav-cart={treatment}
+      className={`orvenix-site-nav-cart relative inline-flex shrink-0 items-center justify-center gap-2 border font-bold transition-all duration-300 hover:-translate-y-0.5 ${iconOnly ? "h-10 w-10 rounded-xl" : "min-h-11 rounded-full px-4 text-sm md:text-[15px]"}`}
+      style={filled
+        ? { background: accentBackground, color: accentText, borderColor: accentBackground }
+        : { background: "transparent", color: ink, borderColor: outline }}
+    >
+      <ShoppingCart size={iconOnly ? 18 : 16} aria-hidden="true" />
+      {!iconOnly && <span>Carrito</span>}
+      {count > 0 && (
+        <span
+          className={iconOnly
+            ? "absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-extrabold"
+            : "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold"}
+          style={filled ? { background: accentText, color: accentBackground } : { background: accentBackground, color: accentText }}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
 }
 
 const JUSTIFY_CLASS = {
@@ -93,7 +156,10 @@ export function SiteNav({
   accent,
   navLayout = "classic",
   pages,
+  showCart = false,
+  cartProminence,
 }: BlockComponentProps<SiteNavProps>) {
+  const cartTreatment = navCartTreatment(cartProminence);
   const availablePages = useEditorStore((state) => state.availablePages);
   const storeActivePageSlug = useEditorStore((state) => state.activePageSlug);
   const websiteId = useEditorStore((state) => state.websiteId);
@@ -405,7 +471,19 @@ export function SiteNav({
               </a>
             </li>
           ) : null}
+          {showCart ? (
+            <li>
+              <NavCartButton treatment={cartTreatment} surface={surface} navAccent={navAccent} />
+            </li>
+          ) : null}
         </ul>
+
+        {/* PCE-2: the same cart entry on small screens, next to the menu trigger (not hidden inside the panel). */}
+        {showCart ? (
+          <div className="ml-auto md:hidden">
+            <NavCartButton treatment={cartTreatment} surface={surface} navAccent={navAccent} mobile />
+          </div>
+        ) : null}
 
         {/* V2-5C.1: mobile menu trigger -- desktop keeps its unchanged link list above; this button (and the panel below) only ever render meaningfully at <md, via Tailwind's md:hidden. */}
         <button

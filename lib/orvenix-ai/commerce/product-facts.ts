@@ -1,3 +1,5 @@
+import { sanitizeProductMediaUrlsV1 } from "@/lib/commerce/product-media"
+
 /**
  * COMMERCE-1: bounded commerce fact contract for AI Site Creation.
  *
@@ -94,6 +96,13 @@ export type CommerceProductFactV1 = {
    * input: normalizeCommercePresentationProductsV1 never copies it.
    */
   pendingProvisioning?: { sourceIndex: number; variantIndex: number }
+  /**
+   * PCE-2: authoritative store media (Product.media), set ONLY by
+   * bindStoreProductRecordsV1 for BOUND products -- never accepted from
+   * public input and never part of the provider request (request-context.ts
+   * builds its product view through an explicit field allowlist).
+   */
+  imageUrls?: string[]
 }
 
 function cleanString(value: unknown, maxLength: number): string {
@@ -201,6 +210,8 @@ export type StoreProductRecordV1 = {
   status: string
   /** Product.metadata JSON -- only a string `category` is read. */
   metadata?: unknown
+  /** PCE-2: Product.media JSON (array of URLs); only safe URLs are kept. */
+  media?: unknown
   variants: Array<{
     id: string
     sku: string
@@ -261,12 +272,14 @@ export function bindStoreProductRecordsV1(siteId: string, records: readonly Stor
 
     const description = cleanString(record.description, COMMERCE_FACT_LIMITS_V1.maxDescriptionLength)
     const category = metadataCategory(record.metadata)
+    const imageUrls = sanitizeProductMediaUrlsV1(record.media)
     bound.push({
       name,
       ...(description ? { description } : {}),
       ...(category && commerceCategoryKeyV1(category) ? { category } : {}),
       variants,
       storeBinding: { productId },
+      ...(imageUrls.length ? { imageUrls } : {}),
     })
   }
   return bound

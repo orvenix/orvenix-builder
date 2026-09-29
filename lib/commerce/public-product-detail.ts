@@ -1,3 +1,5 @@
+import { sanitizeProductMediaUrlsV1 } from "./product-media"
+
 /**
  * COMMERCE-6: the public, authoritative view of ONE store product for the
  * dynamic product-detail runtime. Pure (the DB read lives in
@@ -25,6 +27,8 @@ export interface PublicProductDetailV1 {
   name: string
   description?: string
   imageUrl?: string
+  /** PCE-2: every safe authoritative image, in store order (primary first). */
+  imageUrls?: string[]
   variants: PublicProductVariantV1[]
 }
 
@@ -39,16 +43,6 @@ export interface PublicProductRowV1 {
 }
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,191}$/
-
-function primaryImageUrl(media: unknown): string | undefined {
-  if (!Array.isArray(media)) return undefined
-  for (const entry of media) {
-    if (typeof entry !== "string") continue
-    const url = entry.trim()
-    if (/^https:\/\/\S+$/i.test(url) || /^\/(?!\/)\S+$/.test(url)) return url
-  }
-  return undefined
-}
 
 function validPrice(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0
@@ -73,12 +67,13 @@ export function toPublicProductDetailV1(row: PublicProductRowV1 | null | undefin
   if (!variants.length) return null
 
   const description = row.description?.trim()
-  const imageUrl = primaryImageUrl(row.media)
+  // PCE-2: same media rule as the generated cards (lib/commerce/product-media.ts); all safe URLs kept for the future gallery.
+  const imageUrls = sanitizeProductMediaUrlsV1(row.media)
   return {
     productId: row.id,
     name,
     ...(description ? { description } : {}),
-    ...(imageUrl ? { imageUrl } : {}),
+    ...(imageUrls.length ? { imageUrl: imageUrls[0], imageUrls } : {}),
     variants,
   }
 }

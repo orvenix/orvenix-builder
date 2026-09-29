@@ -159,7 +159,12 @@ export interface SectionInstanceComposition {
    * provider-supplied, never the current page's own product.
    */
   productDetailLinks?: Array<{ productIndex: number; href: string }>
+  /** PCE-2: bounded cart affordance for a navigation instance (never markup/classes). */
+  cartProminence?: SectionInstanceCartProminence
 }
+
+export const SECTION_INSTANCE_CART_PROMINENCES = ["none", "subtle", "prominent"] as const
+export type SectionInstanceCartProminence = (typeof SECTION_INSTANCE_CART_PROMINENCES)[number]
 
 export const MAX_PRODUCT_DETAIL_LINKS = 64
 
@@ -330,7 +335,8 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
   if (plan.composition !== undefined) {
     if (!isPlainObject(plan.composition)) return false
     const composition = plan.composition
-    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks"])) return false
+    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks", "cartProminence"])) return false
+    if (composition.cartProminence !== undefined && !(SECTION_INSTANCE_CART_PROMINENCES as readonly string[]).includes(composition.cartProminence as string)) return false
     if (composition.treatment !== undefined && !ALL_TREATMENT_VALUES.has(composition.treatment as string)) return false
     if (composition.alignment !== undefined && !VALID_ALIGNMENTS.has(composition.alignment as string)) return false
     if (composition.scale !== undefined && !VALID_SCALES.has(composition.scale as string)) return false

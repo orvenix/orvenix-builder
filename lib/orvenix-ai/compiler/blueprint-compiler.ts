@@ -154,6 +154,10 @@ interface CompileBlueprintOptions {
    * richComposition).
    */
   accentColor?: string
+  /** PCE-2: the same resolved theme's colors, for theme-derived commerce surfaces (commerce/commerce-surface.ts). */
+  themePalette?: SectionCompositionContext["themePalette"]
+  /** PCE-2: true only when the commerce architecture built this site. */
+  commerceSurfaces?: boolean
   businessEvidence?: NormalizedSiteCreationBusinessEvidenceV1
   /**
    * V2-6.2: real, already-resolved gallery/media assets, threaded into
@@ -309,6 +313,8 @@ function compilePage(
         ...(options.creativeDirection?.pricingTreatment ? { aiPreferredPricingTreatment: options.creativeDirection.pricingTreatment } : {}),
         ...(richComposition ? { richComposition: true } : {}),
         ...(options.accentColor ? { accentColor: options.accentColor } : {}),
+        ...(options.themePalette ? { themePalette: options.themePalette } : {}),
+        ...(options.commerceSurfaces ? { commerceSurfaces: true } : {}),
         ...(options.resolvedGalleryAssets?.length ? { resolvedGalleryAssets: options.resolvedGalleryAssets } : {}),
         ...(options.resolvedMediaAsset ? { resolvedMediaAsset: options.resolvedMediaAsset } : {}),
     }

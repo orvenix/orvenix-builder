@@ -252,6 +252,8 @@ function structuralShape(tree: EditorTree) {
       void _r
       // COMMERCE-6: pending `product-ref:` -> bound `product:` is part of binding; creative `page:` targets must stay identical.
       if (typeof props.detailHref === "string" && /^product(?:-ref)?:/.test(props.detailHref)) props.detailHref = "<dynamic-product-target>"
+      // PCE-2: enabling the nav cart is part of binding (the page can now sell), like productId/variantId.
+      if (node.type === "siteNav") delete props.showCart
       return { type: node.type, props, children: node.children.length }
     })
 }
@@ -883,8 +885,11 @@ test("review/binder: only card binding props + one cart shell change; every othe
     const beforeRoot = before.tree.nodes[before.tree.rootId]
     const afterRoot = page.tree.nodes[page.tree.rootId]
     const added = Object.keys(page.tree.nodes).filter((id) => !(id in before.tree.nodes))
-    const shellCount = cardsOf(before.tree).length > 0 ? 4 : 0
-    assert.equal(added.length, shellCount, `${page.slug}: only the 4 cart-shell nodes are added`)
+    // PCE-2: the cart lives in the nav -> the binder adds only the off-canvas drawer and sets siteNav.showCart.
+    const sells = cardsOf(before.tree).length > 0
+    const shellCount = sells ? 1 : 0
+    assert.equal(added.length, shellCount, `${page.slug}: only the cart drawer node is added`)
+    if (sells) assert.equal(page.tree.nodes[added[0]].type, "store-cart-drawer")
     assert.deepEqual(afterRoot.children.filter((id) => !added.includes(id)), beforeRoot.children, `${page.slug}: section order unchanged`)
     const afterNodes = page.tree.nodes as Record<string, EditorNode>
     for (const [id, beforeNode] of Object.entries(before.tree.nodes as Record<string, EditorNode>)) {
@@ -910,6 +915,8 @@ test("review/binder: only card binding props + one cart shell change; every othe
         assert.equal(productId, expected.productId)
         assert.equal(variantId, expected.variants.find((variant) => variant.variantIndex === Number(ref[2]))!.variantId)
         assert.deepEqual({ ...afterNode, props: {} }, { ...beforeNode, props: {} })
+      } else if (beforeNode.type === "siteNav" && sells) {
+        assert.deepEqual(afterNode, { ...beforeNode, props: { ...beforeNode.props, showCart: true } }, `${page.slug}: siteNav only gains showCart`)
       } else {
         assert.deepEqual(afterNode, beforeNode, `${page.slug}: node ${id} (${beforeNode.type}) byte-identical`)
       }

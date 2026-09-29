@@ -48,7 +48,14 @@ import {
   type CommerceProductFactV1,
 } from "@/lib/orvenix-ai/commerce/product-facts"
 import { formatProvisioningRefV1 } from "@/lib/orvenix-ai/commerce/provisioning-plan"
-import { isValidProductDetailHrefV1, type SectionInstanceCtaLabel } from "@/lib/orvenix-ai/architect/composition-plan"
+import { isValidProductDetailHrefV1, SECTION_INSTANCE_PAGE_HREF_PATTERN, type SectionInstanceCtaLabel } from "@/lib/orvenix-ai/architect/composition-plan"
+import {
+  mixHexV1,
+  resolveCommerceSurfaceV1,
+  type CommerceSurfaceRelationV1,
+  type CommerceSurfaceV1,
+} from "@/lib/orvenix-ai/commerce/commerce-surface"
+import { isSafeProductMediaUrlV1 } from "@/lib/commerce/product-media"
 import {
   resolveCtaCopy,
   resolveFeatureItems,
@@ -1013,6 +1020,8 @@ function composeNavigation(
       ...(navLayout === "overlay" ? {} : navigationSurfaceStyle ? { surfaceStyle: navigationSurfaceStyle } : {}),
       ...(resolvedSurface ? { surface: resolvedSurface } : {}),
       ...(context.accentColor ? { accent: context.accentColor } : {}),
+      // PCE-2: bounded cart treatment; the cart itself is enabled by the store shell only when the store can sell.
+      ...(context.navigationCartProminence ? { cartProminence: context.navigationCartProminence } : {}),
     },
   }))
   return { role: "navigation", rootId: root, nodes, purpose: "Navegacion principal editable del sitio." }
@@ -2260,10 +2269,13 @@ const STORE_PRODUCTS_SECTION_BACKGROUND = "#0f172a"
  * existing cart store / CartDrawer / checkout route. Dark section
  * background because the existing card is styled for dark surfaces.
  */
-function storeCardProps(product: CommerceProductFactV1, context: SectionCompositionContext): Record<string, unknown> | null {
+function storeCardProps(product: CommerceProductFactV1, context: SectionCompositionContext, surface?: CommerceSurfaceV1): Record<string, unknown> | null {
   const accent = context.accentColor ? { accentColor: context.accentColor } : {}
+  const themed = surface ? { surface } : {}
   const variant = executableVariantForProductV1(product)
   if (variant && product.storeBinding) {
+    // PCE-2: authoritative store media only (bound products); none -> the card's honest monogram tile.
+    const imageUrl = product.imageUrls?.find(isSafeProductMediaUrlV1)
     return {
       productId: product.storeBinding.productId,
       variantId: variant.variantId,
@@ -2272,7 +2284,9 @@ function storeCardProps(product: CommerceProductFactV1, context: SectionComposit
       priceMxn: variant.priceMxn,
       ...(variant.comparePriceMxn !== undefined ? { comparePriceMxn: variant.comparePriceMxn } : {}),
       stock: variant.stock ?? 0,
+      ...(imageUrl ? { imageUrl } : {}),
       ...accent,
+      ...themed,
     }
   }
 
@@ -2292,9 +2306,17 @@ function storeCardProps(product: CommerceProductFactV1, context: SectionComposit
       ...(pendingVariant.comparePriceMxn !== undefined ? { comparePriceMxn: pendingVariant.comparePriceMxn } : {}),
       stock: pendingVariant.initialStock ?? 0,
       ...accent,
+      ...themed,
     }
   }
   return null
+}
+
+/** PCE-2: the bounded commerce surface relation a products instance asked for (existing tone-strategy vocabulary). */
+function commerceSurfaceRelationFor(context: SectionCompositionContext): CommerceSurfaceRelationV1 {
+  if (context.aiSectionToneStrategy === "contrast-led") return "contrast"
+  if (context.aiSectionToneStrategy === "soft-rhythm") return "soft"
+  return "continuous"
 }
 
 /**
@@ -2355,7 +2377,9 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
   const nodes: Record<string, ComposedNode> = {}
   // An explicit curated selection (COMMERCE-3C) is authoritative; the teaser cut only applies to un-curated overview grids.
   const selected = context.archetype === "overview" && !context.instanceSelectionApplied ? products.slice(0, OVERVIEW_SERVICE_TEASER_COUNT) : products
-  const background = (context.aiSectionToneStrategy && STORE_SECTION_BACKGROUND_BY_TONE[context.aiSectionToneStrategy]) || STORE_PRODUCTS_SECTION_BACKGROUND
+  // PCE-2: with the site theme available, every store color is derived from it; without it, the pre-PCE-2 fixed surfaces.
+  const storeSurface = context.themePalette ? resolveCommerceSurfaceV1(context.themePalette, { relation: commerceSurfaceRelationFor(context) }) : undefined
+  const background = storeSurface?.background ?? ((context.aiSectionToneStrategy && STORE_SECTION_BACKGROUND_BY_TONE[context.aiSectionToneStrategy]) || STORE_PRODUCTS_SECTION_BACKGROUND)
   const textColors = readableTextColorsFor(background)
   const layoutKind = context.instanceVisualLayout?.kind
   const isSplit = layoutKind === "editorial-split" || layoutKind === "mirror-split"
@@ -2363,7 +2387,7 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
 
   const cards: string[] = []
   for (const [index, product] of selected.entries()) {
-    const props = storeCardProps(product, context)
+    const props = storeCardProps(product, context, storeSurface)
     if (!props) continue
     // COMMERCE-5B: only the compiler-aligned, Orvenix-resolved detail page for THIS product.
     const detailHref = context.commerceProductDetailHrefs?.[index]
@@ -2724,14 +2748,54 @@ function applyCommerceIntentToSection(role: SectionRole, section: ComposedSectio
   return section
 }
 
+/**
+ * PCE-2: commerce closing + footer adopt theme-derived surfaces (contrast
+ * relation, colors from commerce-surface.ts, readable text from the
+ * existing helper) instead of the fixed navy templates, and the footer
+ * links become real canonical `page:<slug>` links to the pages the
+ * compiler already resolved for this instance (never invented routes).
+ * Only for commerce-architecture sites with a theme palette.
+ */
+function applyCommerceSurfaceToSection(role: SectionRole, section: ComposedSection, context: SectionCompositionContext): ComposedSection {
+  if ((role !== "cta" && role !== "footer") || !context.commerceSurfaces || !context.themePalette) return section
+  const contrast = resolveCommerceSurfaceV1(context.themePalette, { relation: "contrast" })
+  const background = role === "footer"
+    ? mixHexV1(contrast.background, contrast.tone === "dark" ? "#000000" : contrast.heading, contrast.tone === "dark" ? 0.3 : 0.04)
+    : contrast.background
+  const text = readableTextColorsFor(background)
+  const root = section.nodes[section.rootId]
+  if (root) root.props = { ...root.props, background }
+  for (const node of Object.values(section.nodes)) {
+    if (node.type === "heading") node.props = { ...node.props, color: text.heading }
+    if (node.type === "text") node.props = { ...node.props, color: text.body }
+  }
+
+  if (role === "footer") {
+    const pages = (context.sitePages ?? []).filter((page) => SECTION_INSTANCE_PAGE_HREF_PATTERN.test(`page:${page.slug}`))
+    const linksNode = Object.values(section.nodes).find((node) => node.displayName === "Links footer")
+    if (linksNode && pages.length) {
+      const buttons = pages.map((page) => add(section.nodes, createComposedNode({
+        type: "ctaButton",
+        displayName: `Enlace footer ${page.slug}`,
+        props: { label: page.name?.trim() || page.slug, href: `page:${page.slug}`, variant: "secondary", size: "sm" },
+      })))
+      const row = add(section.nodes, createComposedNode({ type: "genericWrapper", displayName: "Enlaces footer", props: { tag: "nav", className: "flex flex-wrap gap-2 md:justify-end" }, children: buttons }))
+      for (const node of Object.values(section.nodes)) node.children = node.children.map((child) => (child === linksNode.tempId ? row : child))
+      delete section.nodes[linksNode.tempId]
+    }
+  }
+  return section
+}
+
 export function composeSection(
   role: SectionRole,
   context: SectionCompositionContext = {},
 ): ComposedSection | null {
-  const section = composeSectionForRole(role, context)
-  return section && (context.commerceCtaAction || context.instanceOmitCta || context.instanceNarrativeIntent)
-    ? applyCommerceIntentToSection(role, section, context)
-    : section
+  const composed = composeSectionForRole(role, context)
+  const section = composed && (context.commerceCtaAction || context.instanceOmitCta || context.instanceNarrativeIntent)
+    ? applyCommerceIntentToSection(role, composed, context)
+    : composed
+  return section ? applyCommerceSurfaceToSection(role, section, context) : section
 }
 
 function composeSectionForRole(

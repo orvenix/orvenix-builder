@@ -86,6 +86,7 @@ export function createPrismaCommerceProvisioningRepositoryV1(db: ProvisioningDb)
         description: product.description,
         status: product.status,
         metadata: product.metadata,
+        media: product.media,
         variants: product.variants.map((variant) => ({
           id: variant.id,
           sku: variant.sku,

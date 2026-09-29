@@ -278,14 +278,17 @@ test("NovaMarket MOCK EXECUTABLE: existing store-product-card nodes carry the gr
     { productId: "nm-mock-prod-001", variantId: "nm-mock-var-001-1", priceMxn: 549900, comparePriceMxn: 629900 },
   )
 
+  // PCE-2: the cart entry lives in the site navigation (SiteNav showCart) + one off-canvas drawer; no detached button band.
   for (const page of run.plan.pages) {
     const hasCards = storeNodes(run, "store-product-card", page.slug).length > 0
-    assert.equal(storeNodes(run, "store-cart-button", page.slug).length, hasCards ? 1 : 0, `${page.slug} cart button`)
+    const navNode = Object.values(page.tree.nodes as Record<string, EditorNode>).find((node) => node.type === "siteNav")
+    assert.equal(storeNodes(run, "store-cart-button", page.slug).length, 0, `${page.slug}: no detached cart button band`)
     assert.equal(storeNodes(run, "store-cart-drawer", page.slug).length, hasCards ? 1 : 0, `${page.slug} cart drawer`)
+    assert.equal(navNode?.props.showCart === true, hasCards, `${page.slug}: cart in navigation exactly when the page sells`)
     if (hasCards) {
       const root = page.tree.nodes[page.tree.rootId]
-      const shellIndex = root.children.findIndex((id) => orderedNodes({ ...page.tree, rootId: id }).some((node) => node.type === "store-cart-drawer"))
-      assert.equal(shellIndex, 1, `${page.slug}: cart shell sits right after navigation`)
+      const drawerId = root.children.find((id) => page.tree.nodes[id]?.type === "store-cart-drawer")
+      assert.ok(drawerId, `${page.slug}: drawer is a root child (no wrapper section)`)
     }
   }
 })

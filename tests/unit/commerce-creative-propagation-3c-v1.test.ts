@@ -288,12 +288,19 @@ test("siteConcept.rhythm 'varied' alternates consecutive split sections; 'calm' 
 })
 
 test("section.relationToPrevious 'contrast' / 'continuous' change the section tone (background)", async () => {
+  // PCE-2: still three distinct tones, now derived from the site theme instead of fixed navy.
+  let themeBackground: string | undefined
   const backgroundOf = async (relation: "standard" | "contrast" | "continuous") => {
     const blueprint = editorial()
     homeCollection(blueprint).relationToPrevious = relation
-    return productSections(page(await build(blueprint), "home").tree).find((section) => section.nodes.filter((node) => node.type === "store-product-card").length === 3)!.root.props.background
+    const run = await build(blueprint)
+    themeBackground = run.plan.theme.colors?.background?.toLowerCase()
+    return productSections(page(run, "home").tree).find((section) => section.nodes.filter((node) => node.type === "store-product-card").length === 3)!.root.props.background
   }
-  assert.deepEqual([await backgroundOf("standard"), await backgroundOf("contrast"), await backgroundOf("continuous")], ["#0f172a", "#020617", "#111827"])
+  const tones = [await backgroundOf("standard"), await backgroundOf("contrast"), await backgroundOf("continuous")]
+  assert.equal(new Set(tones).size, 3, "each relation is a materially different surface")
+  assert.equal(tones[0], themeBackground, "standard = continuous with the page's own theme background")
+  for (const legacy of ["#0f172a", "#020617", "#111827"]) assert.equal(tones.includes(legacy), false, `no fixed commerce navy ${legacy}`)
 })
 
 // ---------------------------------------------------------------- 6) full EditorTree difference
@@ -362,14 +369,21 @@ test("PRODUCT_DETAIL: same product facts, editorial vs compact blueprint -> diff
 
 // ---------------------------------------------------------------- 6b) advisory boundary + representational ceiling
 
-test("advisory: navigation.cartProminence has no V1 consumer and is NOT represented as creative control (trees identical)", async () => {
+test("PCE-2: navigation.cartProminence is consumed ONLY as the bounded siteNav cart treatment (everything else identical)", async () => {
   const shapeOf = async (cartProminence: "none" | "prominent") => {
     const blueprint = editorial()
     blueprint.navigation = { ...blueprint.navigation, cartProminence }
     const run = await build(blueprint)
-    return run.plan.pages.map((entry) => ordered(entry.tree).map((node) => `${node.type}:${JSON.stringify({ ...node.props, provisioningRef: undefined })}`).join("|"))
+    return {
+      navProminence: run.plan.pages.map((entry) => nav(entry.tree).props.cartProminence),
+      rest: run.plan.pages.map((entry) => ordered(entry.tree).map((node) => `${node.type}:${JSON.stringify({ ...node.props, provisioningRef: undefined, cartProminence: undefined })}`).join("|")),
+    }
   }
-  assert.deepEqual(await shapeOf("none"), await shapeOf("prominent"))
+  const quiet = await shapeOf("none")
+  const loud = await shapeOf("prominent")
+  assert.ok(quiet.navProminence.every((value) => value === "none"))
+  assert.ok(loud.navProminence.every((value) => value === "prominent"))
+  assert.deepEqual(quiet.rest, loud.rest, "no other node or prop changes")
 })
 
 test("ceiling: a single-product store blueprint renders a product-led site within the current commerce runtime", async () => {

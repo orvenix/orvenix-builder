@@ -176,6 +176,17 @@ export interface SectionCompositionContext {
   accentColor?: string
 
   /**
+   * PCE-2: the site's resolved theme colors (Orvenix-owned), from which
+   * commerce/commerce-surface.ts derives every commerce surface color.
+   * Absent -> the pre-PCE-2 fixed store surfaces, unchanged.
+   */
+  themePalette?: { primary: string; secondary: string; background: string; text: string; accent: string }
+  /** PCE-2: set only for sites built by the commerce architecture -- closing/footer adopt theme surfaces. */
+  commerceSurfaces?: boolean
+  /** PCE-2: bounded cart affordance for the store navigation (blueprint navigation.cartProminence). */
+  navigationCartProminence?: "none" | "subtle" | "prominent"
+
+  /**
    * V2-6.1: bounded, purely additive Composition Plan instance directives
    * -- set ONLY by the deterministic compiler translation of a
    * SectionInstancePlan (see architect/composition-plan.ts and
