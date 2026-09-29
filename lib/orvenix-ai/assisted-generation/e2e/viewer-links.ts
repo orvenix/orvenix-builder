@@ -55,6 +55,8 @@ export function resolveAssistedViewerHrefV1(
   variant: AssistedViewerVariantV1,
   pageSlugs: ReadonlySet<string>,
 ): { href: string; internal: boolean; resolved: boolean; slug: string | null } {
+  // COMMERCE-6: dynamic product-detail targets need the store runtime (DB); the artifact viewer has none -> inert.
+  if (/^product(?:-ref)?:/.test(href.trim())) return { href: UNRESOLVED_INTERNAL_HREF_V1, internal: false, resolved: false, slug: null }
   const slug = internalPageSlugOfHrefV1(href)
   if (slug === null) return { href, internal: false, resolved: false, slug: null }
   if (!pageSlugs.has(slug)) return { href: UNRESOLVED_INTERNAL_HREF_V1, internal: true, resolved: false, slug }

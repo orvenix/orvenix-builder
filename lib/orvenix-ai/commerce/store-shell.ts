@@ -31,6 +31,11 @@ export function isBoundStoreProductCardNodeV1(candidate: EditorNode): boolean {
   return candidate.type === "store-product-card" && typeof candidate.props.productId === "string" && typeof candidate.props.variantId === "string"
 }
 
+/** COMMERCE-6: the dynamic detail runtime's block also sells, so it also needs the cart shell. */
+export function isStoreProductDetailNodeV1(candidate: EditorNode): boolean {
+  return candidate.type === "store-product-detail" && typeof candidate.props.productId === "string"
+}
+
 function subtreeHasType(nodes: Record<string, EditorNode>, rootId: string, type: string): boolean {
   const stack = [rootId]
   const seen = new Set<string>()
@@ -53,7 +58,7 @@ export function injectStoreCartShellNodesV1(
   children: string[],
   accentColor: string | undefined,
 ): string[] {
-  if (!Object.values(nodes).some(isBoundStoreProductCardNodeV1)) return children
+  if (!Object.values(nodes).some((candidate) => isBoundStoreProductCardNodeV1(candidate) || isStoreProductDetailNodeV1(candidate))) return children
   if (Object.values(nodes).some((candidate) => candidate.type === "store-cart-drawer")) return children
 
   const accent = accentColor ? { accentColor } : {}

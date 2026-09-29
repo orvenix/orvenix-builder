@@ -151,15 +151,35 @@ export interface SectionInstanceComposition {
   /** COMMERCE-3C: grounded category labels linked to REAL generated category pages. */
   categoryLinks?: Array<{ label: string; href: string }>
   /**
-   * COMMERCE-5B: Orvenix-resolved product -> detail page targets, keyed by
-   * the product's index in the site's authoritative product list (the same
-   * index space `selection` uses). Only products that have a generated
-   * detail page appear; never provider-supplied, never the current page.
+   * COMMERCE-5B/6: Orvenix-resolved product -> detail targets, keyed by the
+   * product's index in the site's authoritative product list (the same
+   * index space `selection` uses), as decided by
+   * resolveProductDetailTargetV1: creative `page:<slug>` first, else the
+   * dynamic `product:`/`product-ref:` runtime target. Never
+   * provider-supplied, never the current page's own product.
    */
   productDetailLinks?: Array<{ productIndex: number; href: string }>
 }
 
-export const MAX_PRODUCT_DETAIL_LINKS = 50
+export const MAX_PRODUCT_DETAIL_LINKS = 64
+
+/**
+ * COMMERCE-6: Orvenix runtime product-detail targets, next to the creative
+ * `page:<slug>`. `product:<store product id>` opens the dynamic detail
+ * runtime for a BOUND store product; `product-ref:<source index>` is the
+ * pending form for a not-yet-provisioned product, replaced by the confirm
+ * step with the real id (never rendered as a link while pending).
+ */
+export const DYNAMIC_PRODUCT_DETAIL_HREF_PATTERN = /^product:[A-Za-z0-9_-]{1,191}$/
+export const PENDING_PRODUCT_DETAIL_HREF_PATTERN = /^product-ref:(?:0|[1-9]\d{0,3})$/
+
+export function isValidProductDetailHrefV1(href: unknown): href is string {
+  return typeof href === "string" && (
+    SECTION_INSTANCE_PAGE_HREF_PATTERN.test(href) ||
+    DYNAMIC_PRODUCT_DETAIL_HREF_PATTERN.test(href) ||
+    PENDING_PRODUCT_DETAIL_HREF_PATTERN.test(href)
+  )
+}
 
 export const SECTION_INSTANCE_CTA_LABELS = ["Ver catálogo", "Ver categoría", "Ver producto", "Seguir explorando", "Ver ayuda"] as const
 export type SectionInstanceCtaLabel = (typeof SECTION_INSTANCE_CTA_LABELS)[number]
@@ -346,7 +366,7 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
         if (!isPlainObject(link) || !hasOnlyKeys(link, ["productIndex", "href"])) return false
         if (typeof link.productIndex !== "number" || !Number.isInteger(link.productIndex) || link.productIndex < 0 || seen.has(link.productIndex)) return false
         seen.add(link.productIndex)
-        if (typeof link.href !== "string" || !SECTION_INSTANCE_PAGE_HREF_PATTERN.test(link.href)) return false
+        if (!isValidProductDetailHrefV1(link.href)) return false
       }
     }
   }

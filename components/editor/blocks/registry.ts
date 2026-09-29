@@ -716,6 +716,12 @@ export const blockRegistry: Record<string, EditorBlockDefinition> = {
     version: 1,
     ...storeBlockDefinitions["store-product-card"],
   },
+  "store-product-detail": {
+    type: "store-product-detail",
+    acceptsChildren: false,
+    version: 1,
+    ...storeBlockDefinitions["store-product-detail"],
+  },
 
   // New Vertical Blocks
   "ai-metrics-grid": {

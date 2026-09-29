@@ -6,6 +6,7 @@ import type { EditorNode, EditorTree } from "@/types/editor"
 import { parseProvisioningRefV1 } from "./provisioning-plan"
 import type { ProvisionedProductRefV1 } from "./provisioning-executor"
 import { injectStoreCartShellIntoTreeV1 } from "./store-shell"
+import { parsePendingProductDetailHrefV1 } from "./product-detail-target"
 
 /**
  * COMMERCE-2A: the confirm-time PREVIEW -> FINAL transition. Pure.
@@ -29,11 +30,23 @@ export class CommerceBindingErrorV1 extends Error {
   }
 }
 
-function bindTree(tree: EditorTree, idsByRef: Map<string, { productId: string; variantId: string }>): { tree: EditorTree; boundCards: number } {
+function bindTree(
+  tree: EditorTree,
+  idsByRef: Map<string, { productId: string; variantId: string }>,
+  productIdBySource: Map<number, string>,
+): { tree: EditorTree; boundCards: number } {
   const nodes = structuredClone(tree.nodes) as Record<string, EditorNode>
   let boundCards = 0
   for (const node of Object.values(nodes)) {
-    if (node.type !== "store-product-card" || node.props.provisioningRef === undefined) continue
+    if (node.type !== "store-product-card") continue
+    // COMMERCE-6: a pending dynamic detail target becomes the created product's runtime target.
+    const pendingDetail = parsePendingProductDetailHrefV1(node.props.detailHref)
+    if (pendingDetail !== null) {
+      const productId = productIdBySource.get(pendingDetail)
+      if (!productId) throw new CommerceBindingErrorV1("Un enlace de detalle del Preview no tiene un producto aprovisionado.")
+      node.props = { ...node.props, detailHref: `product:${productId}` }
+    }
+    if (node.props.provisioningRef === undefined) continue
     const ref = parseProvisioningRefV1(node.props.provisioningRef)
     const ids = ref ? idsByRef.get(`${ref.sourceIndex}:${ref.variantIndex}`) : undefined
     if (!ids) throw new CommerceBindingErrorV1("Una tarjeta de producto del Preview no tiene un producto aprovisionado.")
@@ -61,9 +74,10 @@ export function bindProvisionedCommerceIntoPlanV1(plan: SiteCreationPlanV2, prov
     }
   }
 
+  const productIdBySource = new Map([...bySource.entries()].map(([sourceIndex, product]) => [sourceIndex, product.productId]))
   const accent = plan.theme.colors?.accent
   const pages = plan.pages.map((page) => {
-    const bound = bindTree(page.tree, idsByRef)
+    const bound = bindTree(page.tree, idsByRef, productIdBySource)
     return { ...page, tree: bound.boundCards > 0 ? injectStoreCartShellIntoTreeV1(bound.tree, accent) : bound.tree }
   })
 

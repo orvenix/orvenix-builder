@@ -1,5 +1,5 @@
 import type { CartItem } from "@/store/useCartStore";
-import { isInternalPageLink, resolveRuntimeHref } from "@/lib/builder-core/tree/pageLinks";
+import { isInternalPageLink, parseDynamicProductLink, resolveDynamicProductHref, resolveRuntimeHref } from "@/lib/builder-core/tree/pageLinks";
 
 /**
  * COMMERCE-1: the ONLY way a `store-product-card` produces a CartItem.
@@ -40,11 +40,13 @@ export function isProductCardOutOfStockV1(stock: unknown): boolean {
 }
 
 /**
- * COMMERCE-5B: the runtime href for a card's "view product" affordance, or
- * null (no link). Only the canonical internal `page:<slug>` contract the
- * generator emits, resolved exactly like every other internal link; a
- * site-relative "/path" is also accepted (a host that already resolved it).
- * External URLs, schemes, anchors and anything malformed render no link.
+ * COMMERCE-5B/6: the runtime href for a card's "view product" affordance, or
+ * null (no link). Only the canonical targets the generator emits: creative
+ * `page:<slug>` (resolved exactly like every other internal link) or the
+ * dynamic `product:<id>` runtime; a site-relative "/path" is also accepted
+ * (a host that already resolved it). A pending `product-ref:` (not yet
+ * provisioned), external URLs, schemes, anchors and anything malformed
+ * render no link.
  */
 export function resolveProductCardDetailHrefV1(
   siteId: string | null,
@@ -53,6 +55,7 @@ export function resolveProductCardDetailHrefV1(
 ): string | null {
   if (typeof detailHref !== "string") return null;
   const href = detailHref.trim();
+  if (parseDynamicProductLink(href)) return resolveDynamicProductHref(siteId, href, mode);
   if (isInternalPageLink(href)) {
     const resolved = resolveRuntimeHref(siteId, href, mode);
     return resolved === "#" ? null : resolved;

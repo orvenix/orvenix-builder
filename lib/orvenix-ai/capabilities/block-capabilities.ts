@@ -1,4 +1,5 @@
 import { blockRegistry } from "@/components/editor/blocks/registry"
+import { STORE_RUNTIME_CATEGORY } from "@/components/editor/blocks/ecommerce"
 import type {
   EditorBlockDefinition,
   SettingsField,
@@ -145,7 +146,10 @@ function flattenSettings(
 }
 
 export function getBlockCapabilities(): OrvenixBlockCapability[] {
-  return Object.entries(blockRegistry).map(([type, rawDefinition]) => {
+  return Object.entries(blockRegistry)
+    // COMMERCE-6: runtime-only store blocks are rendered from authoritative rows, never generated or selected.
+    .filter(([, rawDefinition]) => (rawDefinition as EditorBlockDefinition).category !== STORE_RUNTIME_CATEGORY)
+    .map(([type, rawDefinition]) => {
     const definition =
       rawDefinition as EditorBlockDefinition
 

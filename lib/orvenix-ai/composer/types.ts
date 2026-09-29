@@ -218,10 +218,11 @@ export interface SectionCompositionContext {
   /** COMMERCE-3C: grounded category labels linked to real generated category pages. */
   commerceCategoryLinks?: Array<{ label: string; href: string }>
   /**
-   * COMMERCE-5B: positionally aligned with `products` -- the Orvenix-resolved
-   * `page:<detail-slug>` for that exact product, or undefined when the site
-   * has no detail page for it. Set only by the compiler from a validated
-   * SectionInstancePlan; a composer never derives it from names.
+   * COMMERCE-5B/6: positionally aligned with `products` -- the Orvenix-resolved
+   * detail target for that exact product (`page:<slug>`, `product:<id>` or
+   * pending `product-ref:<n>`), or undefined when there is none. Set only by
+   * the compiler from a validated SectionInstancePlan; a composer never
+   * derives it from names.
    */
   commerceProductDetailHrefs?: Array<string | undefined>
   /** COMMERCE-3C: this context's collection was explicitly curated by a SectionInstancePlan selection. */

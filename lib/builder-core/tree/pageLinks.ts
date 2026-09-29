@@ -25,6 +25,43 @@ export function buildExportPageHref(slug: string) {
   return slug === "home" ? "/index.html" : `/${slug}/index.html`;
 }
 
+/**
+ * COMMERCE-6: the dynamic product-detail runtime target `product:<productId>`
+ * (see lib/orvenix-ai/commerce/product-detail-target.ts). Published sites
+ * serve it at /p/<siteId>/producto/<productId>; the owner preview at
+ * /preview/<siteId>?product=<productId>. There is no static-export form.
+ */
+export const DYNAMIC_PRODUCT_LINK_PREFIX = "product:";
+const DYNAMIC_PRODUCT_ID_PATTERN = /^[A-Za-z0-9_-]{1,191}$/;
+
+export function parseDynamicProductLink(value: unknown): string | null {
+  if (typeof value !== "string" || !value.startsWith(DYNAMIC_PRODUCT_LINK_PREFIX)) return null;
+  const productId = value.slice(DYNAMIC_PRODUCT_LINK_PREFIX.length);
+  return DYNAMIC_PRODUCT_ID_PATTERN.test(productId) ? productId : null;
+}
+
+export function isValidDynamicProductId(value: unknown): value is string {
+  return typeof value === "string" && DYNAMIC_PRODUCT_ID_PATTERN.test(value);
+}
+
+export function buildPublishedProductHref(siteId: string, productId: string) {
+  return `/p/${siteId}/producto/${encodeURIComponent(productId)}`;
+}
+
+export function buildPreviewProductHref(siteId: string, productId: string) {
+  return `/preview/${siteId}?product=${encodeURIComponent(productId)}`;
+}
+
+export function resolveDynamicProductHref(
+  siteId: string | null,
+  href: unknown,
+  mode: "preview" | "published" | "export"
+): string | null {
+  const productId = parseDynamicProductLink(href);
+  if (!productId || !siteId || mode === "export") return null;
+  return mode === "preview" ? buildPreviewProductHref(siteId, productId) : buildPublishedProductHref(siteId, productId);
+}
+
 export function resolveRuntimeHref(
   siteId: string | null,
   href: unknown,

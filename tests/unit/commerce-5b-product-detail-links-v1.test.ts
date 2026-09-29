@@ -95,13 +95,20 @@ function auditRun(run: Run): DetailAudit {
       const name = String(card.props.productName)
       const expected = details.get(name)
       const detailHref = card.props.detailHref
+      // COMMERCE-6: creative page when this exact product has one, otherwise the dynamic runtime target of the card's OWN product.
+      const ownDynamic = typeof card.props.productId === "string"
+        ? `product:${card.props.productId}`
+        : typeof card.props.provisioningRef === "string" ? `product-ref:${card.props.provisioningRef.split(":")[1]}` : undefined
+      const isOwnProductPage = expected === page.slug
       if (typeof detailHref === "string") {
         audit.withTarget += 1
-        const slug = detailHref.replace(/^page:/, "")
-        if (!detailHref.startsWith("page:") || !universe.has(slug) || slug === page.slug || slug !== expected) audit.invalidTargets.push(`${page.slug}:${name}->${detailHref}`)
+        const valid = expected
+          ? !isOwnProductPage && detailHref === `page:${expected}` && universe.has(expected)
+          : detailHref === ownDynamic
+        if (!valid) audit.invalidTargets.push(`${page.slug}:${name}->${detailHref}`)
       } else {
         audit.withoutTarget += 1
-        if (expected && expected !== page.slug) audit.missingTargets.push(`${page.slug}:${name}`)
+        if (!isOwnProductPage && (expected || ownDynamic)) audit.missingTargets.push(`${page.slug}:${name}`)
       }
     }
     for (const node of nodesOf(page)) {

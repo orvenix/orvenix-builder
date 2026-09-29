@@ -250,6 +250,8 @@ function structuralShape(tree: EditorTree) {
       void _p
       void _v
       void _r
+      // COMMERCE-6: pending `product-ref:` -> bound `product:` is part of binding; creative `page:` targets must stay identical.
+      if (typeof props.detailHref === "string" && /^product(?:-ref)?:/.test(props.detailHref)) props.detailHref = "<dynamic-product-target>"
       return { type: node.type, props, children: node.children.length }
     })
 }
@@ -893,11 +895,18 @@ test("review/binder: only card binding props + one cart shell change; every othe
         continue
       }
       if (beforeNode.type === "store-product-card") {
-        const { provisioningRef, ...beforeProps } = beforeNode.props as Record<string, unknown>
-        const { productId, variantId, ...afterProps } = afterNode.props as Record<string, unknown>
+        const { provisioningRef, detailHref: beforeDetail, ...beforeProps } = beforeNode.props as Record<string, unknown>
+        const { productId, variantId, detailHref: afterDetail, ...afterProps } = afterNode.props as Record<string, unknown>
         assert.deepEqual(afterProps, beforeProps, `${page.slug}: card props other than the binding are unchanged`)
         const ref = String(provisioningRef).split(":")
         const expected = provisioned.products.find((product) => product.sourceIndex === Number(ref[1]))!
+        // COMMERCE-6: a pending dynamic detail target binds to THIS card's own created product; any other target is untouched.
+        if (typeof beforeDetail === "string" && beforeDetail.startsWith("product-ref:")) {
+          assert.equal(beforeDetail, `product-ref:${ref[1]}`, `${page.slug}: pending detail target is the card's own product`)
+          assert.equal(afterDetail, `product:${expected.productId}`)
+        } else {
+          assert.equal(afterDetail, beforeDetail)
+        }
         assert.equal(productId, expected.productId)
         assert.equal(variantId, expected.variants.find((variant) => variant.variantIndex === Number(ref[2]))!.variantId)
         assert.deepEqual({ ...afterNode, props: {} }, { ...beforeNode, props: {} })

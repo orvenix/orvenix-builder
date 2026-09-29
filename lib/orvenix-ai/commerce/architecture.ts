@@ -8,6 +8,7 @@ import type { SectionInstanceComposition, SectionInstancePlan } from "@/lib/orve
 import type { SectionVisualLayoutPlan } from "@/lib/orvenix-ai/composer/visual-layout-plan"
 import { adaptFullSiteCreativeBlueprintToCommercePlanV1 } from "@/lib/orvenix-ai/full-site-generation/commerce-adapter"
 import { commerceCategoryKeyV1, type CommerceProductFactV1 } from "./product-facts"
+import { resolveProductDetailTargetV1 } from "./product-detail-target"
 import {
   COMMERCE_ARCHITECTURE_PLAN_VERSION_V1,
   COMMERCE_ARCHITECTURE_ROLE_KEY_V1,
@@ -426,12 +427,19 @@ function productSlugByIndexFor(plan: CommerceArchitecturePlanV1, products: reado
   return map
 }
 
-/** COMMERCE-5B: detail targets for the products this section shows, never the page's own product/page. */
+/** COMMERCE-5B/6: detail targets for the products this section shows, decided ONLY by resolveProductDetailTargetV1. */
 function productDetailLinksFor(page: CommerceArchitecturePageV1, entry: CommerceArchitectureSectionV1, index: PlanIndex): SectionInstanceComposition["productDetailLinks"] {
-  const shown = entry.productIndexes ? new Set(entry.productIndexes) : undefined
-  const links = [...index.productSlugByIndex.entries()]
-    .filter(([productIndex, slug]) => slug !== page.slug && productIndex !== page.productIndex && (!shown || shown.has(productIndex)))
-    .map(([productIndex, slug]) => ({ productIndex, href: `page:${slug}` }))
+  const shown = entry.productIndexes ?? index.products.map((_, productIndex) => productIndex)
+  const links: NonNullable<SectionInstanceComposition["productDetailLinks"]> = []
+  for (const productIndex of new Set(shown)) {
+    const href = resolveProductDetailTargetV1({
+      product: index.products[productIndex],
+      productIndex,
+      creativeSlugByIndex: index.productSlugByIndex,
+      currentPage: { slug: page.slug, productIndex: page.productIndex },
+    })
+    if (href) links.push({ productIndex, href })
+  }
   return links.length ? links : undefined
 }
 

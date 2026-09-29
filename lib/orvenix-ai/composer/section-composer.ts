@@ -48,7 +48,7 @@ import {
   type CommerceProductFactV1,
 } from "@/lib/orvenix-ai/commerce/product-facts"
 import { formatProvisioningRefV1 } from "@/lib/orvenix-ai/commerce/provisioning-plan"
-import { SECTION_INSTANCE_PAGE_HREF_PATTERN, type SectionInstanceCtaLabel } from "@/lib/orvenix-ai/architect/composition-plan"
+import { isValidProductDetailHrefV1, type SectionInstanceCtaLabel } from "@/lib/orvenix-ai/architect/composition-plan"
 import {
   resolveCtaCopy,
   resolveFeatureItems,
@@ -2370,7 +2370,7 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
     cards.push(add(nodes, createComposedNode({
       type: "store-product-card",
       displayName: `Producto ${index + 1}: ${product.name}`,
-      props: detailHref && SECTION_INSTANCE_PAGE_HREF_PATTERN.test(detailHref) ? { ...props, detailHref } : props,
+      props: isValidProductDetailHrefV1(detailHref) ? { ...props, detailHref } : props,
     })))
   }
 

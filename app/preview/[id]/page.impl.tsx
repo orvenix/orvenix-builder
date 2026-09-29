@@ -5,17 +5,20 @@ import { getResolvedSiteRuntimeContext } from "@/lib/builder-core/tree/siteRunti
 import { editorPrisma } from "@/lib/editor-db";
 import { canManageSite, type UserRole } from "@/lib/auth";
 import { isEditorWebId, WEB_LABELS } from "@/lib/editorWebs";
+import { loadDynamicProductDetailPageV1 } from "@/lib/commerce/dynamic-product-detail-page";
 
 export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ page?: string }>;
+  searchParams?: Promise<{ page?: string; product?: string }>;
 }
 
 export default async function PreviewPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const pageSlug = (await searchParams)?.page?.trim() || "home";
+  const resolvedSearchParams = await searchParams;
+  const pageSlug = resolvedSearchParams?.page?.trim() || "home";
+  const productId = resolvedSearchParams?.product?.trim();
 
   if (!isEditorWebId(id)) {
     const session = await getAuthSession();
@@ -31,6 +34,23 @@ export default async function PreviewPage({ params, searchParams }: Props) {
     if (!allowed) {
       notFound();
     }
+  }
+
+  // COMMERCE-6: dynamic product detail (same loader as the published route, after the access check above).
+  if (productId) {
+    const productPage = await loadDynamicProductDetailPageV1(id, productId);
+    if (!productPage) notFound();
+    return (
+      <main className="min-h-screen">
+        <PublicRenderer
+          siteId={id}
+          tree={productPage.tree}
+          activePageSlug={productPage.activePageSlug}
+          activePageName={productPage.productName}
+          availablePages={productPage.pages}
+        />
+      </main>
+    );
   }
 
   let runtimeContext;

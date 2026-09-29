@@ -2,6 +2,10 @@ import type { SettingsField, EditorBlockDefinition } from "@/types/editor";
 import { CartDrawer } from "./store/CartDrawer";
 import { CartButton } from "./store/CartButton";
 import { ProductCard } from "./store/ProductCard";
+import { ProductDetail } from "./store/ProductDetail";
+
+/** COMMERCE-6: blocks only the store runtime builds; absent from the palette's CATEGORY_ORDER. */
+export const STORE_RUNTIME_CATEGORY = "store-runtime";
 
 /**
  * Definiciones de bloques específicos para el nicho de E-commerce.
@@ -127,5 +131,19 @@ export const storeBlockDefinitions: Record<string, Omit<EditorBlockDefinition, "
       { kind: "text",   key: "badge",           label: "Badge (ej: Nuevo, Oferta)" },
       { kind: "color",  key: "accentColor",     label: "Color acento", presets: [...COLOR_PRESETS] },
     ] as SettingsField[],
+  },
+  /*
+   * COMMERCE-6: runtime-only. Built by the dynamic product-detail route from
+   * the authoritative store row; its category is deliberately NOT in the
+   * block palette's CATEGORY_ORDER, so it is never inserted by hand.
+   */
+  "store-product-detail": {
+    label: "Detalle de producto",
+    icon: "Package",
+    category: STORE_RUNTIME_CATEGORY,
+    description: "Detalle dinámico de un producto de la tienda (solo runtime)",
+    component: ProductDetail,
+    defaults: {},
+    settings: [] as SettingsField[],
   },
 };
