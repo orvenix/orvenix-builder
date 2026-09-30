@@ -4,6 +4,13 @@
 @source "../components";
 @source "../blocks";
 @source "../templates";
+/* CF-1 renderer truth: Orvenix's AI visual generation emits Tailwind
+   utilities into EditorTree nodes from these lib/ modules. Explicit and
+   narrow (no repo-wide scan); guarded by tests/unit/cf-1-renderer-truth-v1. */
+@source "../lib/orvenix-ai/composer";
+@source "../lib/orvenix-ai/section";
+@source "../lib/orvenix-ai/commerce";
+@source "../lib/commerce/dynamic-product-detail-tree.ts";
 
 @theme inline {
   --color-background: var(--background);

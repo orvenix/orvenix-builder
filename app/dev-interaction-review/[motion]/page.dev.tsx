@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PublicRenderer } from "@/components/PublicRenderer";
 import { RUNTIME_MOTION_BUCKETS } from "@/lib/builder-core/runtime/motion";
-import { buildReviewCartItems, buildVocabularyReviewTree, readPce3cArtifact, REVIEW_CART_PRESETS } from "../review-fixtures";
+import { buildReviewCartItems, buildVocabularyReviewTree, CF1_REVIEW_LABELS, readPce3cArtifact, REVIEW_CART_PRESETS } from "../review-fixtures";
 import { ReviewCartSeeder } from "../ReviewCartSeeder";
 import { ReviewBar } from "../ReviewBar";
 
@@ -39,7 +39,7 @@ export default async function DevInteractionReviewVocabularyPage({
 
   return (
     <div>
-      <ReviewBar bucket={bucket} current="vocabulary" artifactVariants={artifact ? Object.entries(artifact.labels) : []} cartPresets={[...REVIEW_CART_PRESETS]} activeCartPreset={cartPreset} />
+      <ReviewBar bucket={bucket} current="vocabulary" artifactVariants={[...(artifact ? Object.entries(artifact.labels) : []), ...Object.entries(CF1_REVIEW_LABELS)]} cartPresets={[...REVIEW_CART_PRESETS]} activeCartPreset={cartPreset} />
       <PublicRenderer siteId="" tree={buildVocabularyReviewTree(bucket)} activePageSlug="home" activePageName="Inicio" />
       {cartPreset ? <ReviewCartSeeder items={buildReviewCartItems(cartPreset)} /> : null}
     </div>

@@ -428,7 +428,9 @@ test("layout vocabulary: prompt manifest and validator stay in parity and fail c
     const system = mod.buildFullSiteCreativeSystemPromptV1()
     assert.ok(system.includes("con kind EXACTAMENTE permitido por role"))
     assert.ok(system.includes("No inventes identificadores de layout"))
-    assert.ok(system.includes("expresala con narrative, mediaIntent, emphasis, relationToPrevious, density o rhythm"))
+    // CF-1 capability truth: no escape valve through fields that do not change the composition.
+    assert.ok(system.includes("no la simules con otros campos"))
+    assert.ok(system.includes("Cada kind listado produce un resultado distinto"))
     for (const [role, layouts] of Object.entries(manifest.layoutsByRole)) {
       assert.ok(system.includes(`${role}: ${(layouts as readonly string[]).join(" | ")}`), `${role} layouts exposed to prompt`)
     }

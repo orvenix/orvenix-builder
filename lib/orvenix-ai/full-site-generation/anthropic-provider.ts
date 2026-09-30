@@ -92,6 +92,10 @@ export function buildFullSiteCreativeSystemPromptV1(): string {
   const m = buildFullSiteCommerceCapabilityManifestV1()
   const sectionIntents = Object.entries(m.sectionIntents).map(([intent, role]) => `${intent}(role:${role})`).join(", ")
   const layouts = Object.entries(m.layoutsByRole).map(([role, kinds]) => `${role}: ${list(kinds as readonly string[])}`).join("; ")
+  // CF-1 renderer truth: say what each choice really does.
+  const merchandising = Object.entries(m.merchandisingByRole).map(([role, kinds]) => `role:"${role}": ${list(kinds as readonly string[])}`).join("; ")
+  const rhythmEffects = Object.entries(m.rhythmEffects).map(([rhythm, effect]) => `${rhythm}=${effect ?? "sin efecto propio"}`).join("; ")
+  const navEffects = Object.entries(m.navigationConceptEffects).map(([concept, effect]) => `${concept}=layout ${effect.renderedLayout}, enlaces por defecto ${effect.defaultPrimaryPurposes.join("+")}`).join("; ")
   return `Eres el Director Creativo y Arquitecto de Informacion senior de Orvenix para tiendas en linea: diseñas la experiencia COMPLETA de un sitio de comercio (universo de paginas, jerarquia, secuencia de secciones, navegacion, ritmo narrativo, enfasis de productos y categorias, medios y llamadas a la accion).
 
 Recibes en el mensaje del usuario un JSON con: "business" (contexto), "catalog" (productos y categorias REALES, con indices), "capabilities" (lo que Orvenix realmente puede construir), "designReferences" (gramaticas de diseño de referencia) y "outputContract".
@@ -107,15 +111,15 @@ LIMITES ESTRICTOS:
 VOCABULARIO (valores exactos):
 - page.purpose: ${list(m.pagePurposes)}; debe existir "home" y "catalog"; "category" requiere target {"kind":"category","key"}; "product_detail" requiere target {"kind":"product","index"}
 - section.intent con su role obligatorio: ${sectionIntents}
-- section.layout {"kind", "mirror"?: boolean, "rhythm"?: "compact"|"standard"|"spacious"} con kind EXACTAMENTE permitido por role: ${layouts}. No inventes identificadores de layout; si una composicion deseada no existe en la lista, expresala con narrative, mediaIntent, emphasis, relationToPrevious, density o rhythm.
+- section.layout {"kind", "mirror"?: boolean, "rhythm"?: "compact"|"standard"|"spacious"} con kind EXACTAMENTE permitido por role: ${layouts}. Cada kind listado produce un resultado distinto; role:"${m.layoutIgnoredRoles.join('","')}" ignora layout. No inventes identificadores de layout; si una composicion deseada no existe, no la simules con otros campos: elige la opcion listada mas cercana.
 - section.refs: [{"kind":"product","index"} | {"kind":"category","key"}]
 - section.narrative y page.narrativeGoal: preferir uno de ${list(m.narrativeTokens)}
 - section.mediaIntent: preferir uno de ${list(m.mediaTokens)}
-- section.ctaIntent: ${list(m.ctaIntents)}; section.emphasis: ${list(m.emphases)}; section.relationToPrevious: ${list(m.relations)}
-- productos: section.productCardTreatment: ${list(m.productCardTreatments)}; section.merchandisingComposition: ${list(m.merchandisingCompositions)}. Usalos solo en secciones role:"products" para variar composicion comercial sin inventar hechos.
+- section.ctaIntent: ${list(m.ctaIntents)}; section.emphasis: ${list(m.emphases)} (role:"${m.emphasisIgnoredRoles.join('","')}" la ignora); section.relationToPrevious: ${list(m.relations)}
+- productos: section.productCardTreatment (solo role:"products"): ${list(m.productCardTreatments)}; section.merchandisingComposition por role: ${merchandising}. Una composicion de productos organiza VARIOS productos y define la estructura de la seccion (tiene prioridad sobre un layout split); con un solo producto se usa el layout.
 - page.density: ${list(m.pageDensities)}
-- siteConcept.narrative: ${list(m.siteNarratives)}; siteConcept.rhythm: ${list(m.rhythms)}; siteConcept.density: ${list(m.siteDensities)}
-- navigation.concept: ${list(m.navigationConcepts)}; navigation.primaryPurposes: lista de page.purpose; navigation.cartProminence: ${list(m.cartProminence)}
+- siteConcept.narrative: ${list(m.siteNarratives)}; siteConcept.rhythm: ${list(m.rhythms)} (efecto real: ${rhythmEffects}); siteConcept.density: ${list(m.siteDensities)}
+- navigation.concept: ${list(m.navigationConcepts)} (efecto real: ${navEffects}); navigation.primaryPurposes: lista de page.purpose; navigation.cartProminence: ${list(m.cartProminence)}
 
 SALIDA: responde UNICAMENTE un objeto JSON valido (sin markdown, sin comentarios, sin texto antes o despues) con esta forma:
 {"version":1,"roleKey":"full_site_creative_blueprint_v1","strategyKey":"bounded_full_site_generation_v1","siteConcept":{"narrative","rhythm","density"},"navigation":{"concept","primaryPurposes"?,"cartProminence"?},"pages":[{"purpose","target"?,"narrativeGoal"?,"density"?,"sections":[{"intent","role","refs"?,"narrative"?,"mediaIntent"?,"ctaIntent"?,"layout"?,"emphasis"?,"relationToPrevious"?,"productCardTreatment"?,"merchandisingComposition"?}]}]}

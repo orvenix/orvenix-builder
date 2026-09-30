@@ -236,7 +236,8 @@ test("builder: same NovaMarket facts produce three materially different commerce
   const signatures = [conservative, editorial, catalog].map(commerceSignature)
   assert.equal(new Set(signatures.map((entry) => entry.signature)).size, 3)
   assert.ok(signatures.some((entry) => entry.compositions.includes("featured-plus-grid")))
-  assert.ok(signatures.some((entry) => entry.compositions.includes("editorial-collection") || entry.compositions.includes("alternating-story")))
+  // CF-1: compositions report what RENDERS -- the editorial variant is split/passage-led (it never truly rendered editorial-collection/alternating-story).
+  assert.ok(signatures.some((entry) => ["editorial-collection", "alternating-story", "editorial-split", "mirror-split", "editorial-passage"].some((kind) => entry.compositions.includes(kind))))
   assert.ok(signatures.some((entry) => entry.compositions.includes("dense-catalog")))
   assert.ok(signatures.flatMap((entry) => entry.treatments).includes("featured"))
   assert.ok(signatures.flatMap((entry) => entry.treatments).includes("horizontal"))

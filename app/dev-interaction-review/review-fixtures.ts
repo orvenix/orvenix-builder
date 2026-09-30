@@ -9,6 +9,9 @@ import { injectStoreCartShellNodesV1 } from "@/lib/orvenix-ai/commerce/store-she
 import { resolveCommerceSurfaceV1 } from "@/lib/orvenix-ai/commerce/commerce-surface";
 import { toPublicProductDetailV1 } from "@/lib/commerce/public-product-detail";
 import type { CartItem } from "@/store/useCartStore";
+import { runAutonomousMultiPageSiteBuilder } from "@/lib/orvenix-ai/autonomous/site-builder";
+import { buildNovaMarketNewStorePreviewInputV1, DISABLED_ASSET_PROVIDER_V1 } from "@/lib/orvenix-ai/assisted-generation/e2e/comparison-harness";
+import { createDeterministicFullSiteCreativeTestingProviderV1 } from "@/lib/orvenix-ai/full-site-generation/testing-provider";
 import type { RuntimeMotionBucket } from "@/lib/builder-core/runtime/motion";
 import type { EditorNode, EditorTree, GlobalTheme } from "@/types/editor";
 
@@ -209,4 +212,36 @@ export function buildReviewCartItems(preset: ReviewCartPreset): CartItem[] {
     };
   }
   return items;
+}
+
+/**
+ * CF-1: the SAME three PCE-3C testing blueprints, regenerated live through
+ * the current (renderer-truth) pipeline. Offline and side-effect free: the
+ * deterministic testing providers (no Anthropic), the disabled asset
+ * provider (no Pexels), the new-store preview input (pending cards, no DB).
+ */
+export const CF1_REVIEW_VARIANTS = {
+  "cf1-conservative": "conservative-commerce",
+  "cf1-editorial": "editorial-commerce",
+  "cf1-catalog": "catalog-heavy-commerce",
+} as const;
+export type Cf1ReviewVariant = keyof typeof CF1_REVIEW_VARIANTS;
+
+export const CF1_REVIEW_LABELS: Record<Cf1ReviewVariant, string> = {
+  "cf1-conservative": "CF-1 Conservative",
+  "cf1-editorial": "CF-1 Editorial",
+  "cf1-catalog": "CF-1 Catalog",
+};
+
+export function isCf1ReviewVariant(value: string): value is Cf1ReviewVariant {
+  return Object.prototype.hasOwnProperty.call(CF1_REVIEW_VARIANTS, value);
+}
+
+export async function buildCf1ReviewPages(variant: Cf1ReviewVariant): Promise<ArtifactPage[]> {
+  const run = await runAutonomousMultiPageSiteBuilder({
+    ...buildNovaMarketNewStorePreviewInputV1(),
+    assetProvider: DISABLED_ASSET_PROVIDER_V1,
+    commerceArchitecture: { provider: createDeterministicFullSiteCreativeTestingProviderV1(CF1_REVIEW_VARIANTS[variant]) },
+  });
+  return run.plan.pages.map((page) => ({ slug: page.slug, name: page.name, isHome: page.isHome, tree: page.tree }));
 }

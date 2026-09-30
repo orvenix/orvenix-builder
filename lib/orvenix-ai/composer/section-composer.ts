@@ -2345,7 +2345,8 @@ function commerceProductsCopy(
     case "product-led":
       return single ? { title: single.name, intro: description } : { title: "Productos destacados", intro: "Una selección de productos de la tienda." }
     case "category-discovery":
-      return category ? { title: category, intro: `Productos de ${category}.` } : { title: "Explora por categoría", intro: "Recorre los productos por categoría." }
+      // CF-1: without ONE shared category, "Explora por categoría" would mislabel a mixed product set.
+      return category ? { title: category, intro: `Productos de ${category}.` } : { title: "Selección de la tienda", ...(categories.size > 1 ? { intro: "Productos de varias categorías de la tienda." } : {}) }
     case "editorial-story":
       return single ? { title: single.name, intro: description } : { title: category ?? "Selección de la tienda" }
     case "benefit-led":
@@ -2368,8 +2369,10 @@ const STORE_SECTION_BACKGROUND_BY_TONE: Record<string, string> = {
 
 type CommerceSectionScaleV1 = "compact" | "standard" | "spacious" | "statement"
 
-function commerceSectionScaleFor(context: SectionCompositionContext): CommerceSectionScaleV1 {
-  const merchandising = context.commerceMerchandisingComposition
+/** CF-1: the multi-product merchandising compositions the store products section implements. */
+const PRODUCTS_MERCHANDISING_COMPOSITIONS: ReadonlySet<string> = new Set(["featured-plus-grid", "product-rail", "editorial-collection", "alternating-story", "dense-catalog"])
+
+function commerceSectionScaleFor(context: SectionCompositionContext, merchandising: SectionCompositionContext["commerceMerchandisingComposition"]): CommerceSectionScaleV1 {
   if (merchandising === "dense-catalog") return "compact"
   if (merchandising === "featured-plus-grid" || merchandising === "editorial-collection") return "statement"
   if (merchandising === "alternating-story" || context.instanceScale === "large") return "spacious"
@@ -2441,17 +2444,32 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
   const background = storeSurface?.background ?? ((context.aiSectionToneStrategy && STORE_SECTION_BACKGROUND_BY_TONE[context.aiSectionToneStrategy]) || STORE_PRODUCTS_SECTION_BACKGROUND)
   const textColors = readableTextColorsFor(background)
   const layoutKind = context.instanceVisualLayout?.kind
-  const isSplit = layoutKind === "editorial-split" || layoutKind === "mirror-split"
+  const splitRequested = layoutKind === "editorial-split" || layoutKind === "mirror-split"
   const mirrored = visualLayoutMirrorsContent(context.instanceVisualLayout)
-  const merchandising = context.commerceMerchandisingComposition
-  const sectionScale = commerceSectionScaleFor(context)
+  /*
+   * CF-1 renderer truth: exactly ONE structural owner per section.
+   * - Only the products merchandising vocabulary applies here
+   *   (category-spotlight is a category-cards composition, see
+   *   composeCommerceCategoryCards).
+   * - A multi-product merchandising composition (a commerce-specific
+   *   decision) owns the structure over a generic split; a single product
+   *   keeps the split (every merchandising composition arranges several).
+   * - featured-plus-grid needs a lead AND support products.
+   * The section's reported `commerceComposition` is what actually renders.
+   */
+  const requestedMerchandising = context.commerceMerchandisingComposition && PRODUCTS_MERCHANDISING_COMPOSITIONS.has(context.commerceMerchandisingComposition)
+    ? context.commerceMerchandisingComposition
+    : undefined
+  let merchandising = requestedMerchandising && !(splitRequested && selected.length <= 1) ? requestedMerchandising : undefined
 
   const cards: string[] = []
   for (const [index, product] of selected.entries()) {
+    // CF-1 responsive safety: below sm the rail minimums are capped to the
+    // viewport so the focal card is never wider than a narrow phone; sm+ unchanged.
     const railClass = merchandising === "product-rail"
       ? index === 0
-        ? "min-w-[20rem] snap-start sm:min-w-[24rem] lg:min-w-[28rem]"
-        : "min-w-[16.5rem] snap-start sm:min-w-[18rem]"
+        ? "min-w-[min(20rem,85vw)] snap-start sm:min-w-[24rem] lg:min-w-[28rem]"
+        : "min-w-[min(16.5rem,72vw)] snap-start sm:min-w-[18rem]"
       : undefined
     const storyClass = merchandising === "alternating-story"
       ? index % 2 === 0 ? "md:ml-0" : "md:ml-auto"
@@ -2459,13 +2477,18 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
     const id = addStoreCardNode(nodes, product, context, storeSurface, index, railClass ?? storyClass)
     if (id) cards.push(id)
   }
+  if (merchandising === "featured-plus-grid" && cards.length < 2) merchandising = undefined
+  const isSplit = splitRequested && !merchandising
+  const sectionScale = commerceSectionScaleFor(context, merchandising)
 
   const fallbackTitle = context.archetype === "overview" ? "Productos destacados" : "Catalogo"
   const copy = commerceProductsCopy(context.instanceNarrativeIntent, selected, { title: fallbackTitle, intro: "Agrega productos al carrito para iniciar tu compra." })
   const showHeader = !context.singleItemInstance || Boolean(context.instanceNarrativeIntent)
   const align = isSplit || merchandising === "editorial-collection" || merchandising === "alternating-story" ? "left" : "center"
   const headingSize = layoutKind === "oversized-typography" || merchandising === "editorial-collection" ? "7xl" : sectionScale === "statement" || layoutKind === "editorial-passage" || context.instanceScale === "large" || merchandising === "featured-plus-grid" ? "5xl" : undefined
-  const finishLabel = merchandising === "dense-catalog"
+  const finishLabel = isSplit && cards.length === 1
+    ? "Producto destacado"
+    : merchandising === "dense-catalog"
     ? "Catálogo ordenado"
     : merchandising === "product-rail"
       ? "Selección rápida"
@@ -2530,7 +2553,7 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
   const root = add(nodes, createComposedNode({
     type: "section",
     displayName: `${copy.title} (${layoutVariant})`,
-    props: { maxWidth, paddingY, paddingX: "lg", background, commerceComposition: merchandising ?? "default", commerceVisualFinish: "pce-3c", commerceSectionScale: sectionScale },
+    props: { maxWidth, paddingY, paddingX: "lg", background, commerceComposition: merchandising ?? (isSplit ? (mirrored ? "mirror-split" : "editorial-split") : layoutKind === "editorial-passage" ? "editorial-passage" : "default"), commerceVisualFinish: "pce-3c", commerceSectionScale: sectionScale },
     children,
   }))
   return { role: "products", rootId: root, nodes, purpose: "Catalogo de productos de la tienda con carrito." }
@@ -2820,7 +2843,7 @@ function composeCategoryLinks(context: SectionCompositionContext, links: NonNull
       ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
       : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
   const row = wrapperNode(nodes, "Category cards", gridClass, cards)
-  const root = add(nodes, createComposedNode({ type: "section", displayName: "Categorias (category-cards)", props: { maxWidth: "xl", paddingY: context.instanceScale === "condensed" ? "lg" : "xl", paddingX: "lg", background, commerceComposition: context.commerceMerchandisingComposition ?? "category-cards", commerceVisualFinish: "pce-3c", commerceSectionScale: context.commerceMerchandisingComposition === "category-spotlight" ? "spacious" : "standard" }, children: [header, row].filter((id): id is string => Boolean(id)) }))
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Categorias (category-cards)", props: { maxWidth: "xl", paddingY: context.instanceScale === "condensed" ? "lg" : "xl", paddingX: "lg", background, commerceComposition: context.commerceMerchandisingComposition === "category-spotlight" ? "category-spotlight" : "category-cards", commerceVisualFinish: "pce-3c", commerceSectionScale: context.commerceMerchandisingComposition === "category-spotlight" ? "spacious" : "standard" }, children: [header, row].filter((id): id is string => Boolean(id)) }))
   return { role: "content", rootId: root, nodes, purpose: "Descubrir categorias reales de la tienda." }
 }
 

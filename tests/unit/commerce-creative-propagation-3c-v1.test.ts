@@ -198,7 +198,9 @@ test("section.narrative (free text) is classified into a closed intent and refra
   homeCollection(b).narrative = "Llevar a la compra"
   const headingA = productSections(page(await build(a), "home").tree).map(headingOf)
   const headingB = productSections(page(await build(b), "home").tree).map(headingOf)
-  assert.ok(headingA.includes("Explora por categoría"), headingA.join("|"))
+  // CF-1: category-discovery over a MIXED product set no longer claims "Explora por categoría" (truthful fallback).
+  assert.ok(headingA.includes("Selección de la tienda"), headingA.join("|"))
+  assert.ok(!headingA.includes("Explora por categoría"), headingA.join("|"))
   assert.ok(headingB.includes("Elige tu producto"), headingB.join("|"))
   assert.equal(normalizeNarrativeIntentV1("editorial-story"), "editorial-story", "exact vocabulary token")
   assert.equal(normalizeNarrativeIntentV1("zzz"), undefined, "unclassifiable prose is advisory, never rendered")
@@ -250,9 +252,12 @@ test("section.emphasis changes bounded scale (section width / spacing)", async (
   homeCollection(a).emphasis = "heroic"
   const b = editorial()
   homeCollection(b).emphasis = "quiet"
-  const scaleA = instances(await build(a), "home").find((instance) => instance.role === "products" && instance.selection.mode === "subset")!.composition?.scale
+  // CF-1: the grounded editorial_passage is now a products section too -- select the collection by its own refs.
+  const collectionIndexes = homeCollection(editorial()).refs!.map((ref) => (ref as { index: number }).index)
+  const isCollection = (instance: { role: string; selection: { mode: string; indexes?: number[] } }) => instance.role === "products" && JSON.stringify(instance.selection.indexes) === JSON.stringify(collectionIndexes)
+  const scaleA = instances(await build(a), "home").find(isCollection)!.composition?.scale
   const runB = await build(b)
-  const scaleB = instances(runB, "home").find((instance) => instance.role === "products" && instance.selection.mode === "subset")!.composition?.scale
+  const scaleB = instances(runB, "home").find(isCollection)!.composition?.scale
   assert.equal(scaleA, "large")
   assert.equal(scaleB, "condensed")
   const quietSection = productSections(page(runB, "home").tree).find((section) => section.nodes.filter((node) => node.type === "store-product-card").length === 3)!

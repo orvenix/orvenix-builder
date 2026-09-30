@@ -8,6 +8,7 @@ import type { SectionInstanceComposition, SectionInstancePlan } from "@/lib/orve
 import type { SectionVisualLayoutPlan } from "@/lib/orvenix-ai/composer/visual-layout-plan"
 import { adaptFullSiteCreativeBlueprintToCommercePlanV1 } from "@/lib/orvenix-ai/full-site-generation/commerce-adapter"
 import { commerceCategoryKeyV1, type CommerceProductFactV1 } from "./product-facts"
+import { NAVIGATION_LAYOUT_BY_STYLE_V1 } from "@/lib/orvenix-ai/full-site-generation/navigation-concepts"
 import { resolveProductDetailTargetV1 } from "./product-detail-target"
 import {
   COMMERCE_ARCHITECTURE_PLAN_VERSION_V1,
@@ -385,13 +386,7 @@ function purposeFor(type: CommerceSectionTypeV1): string {
 
 type CommerceCtaActionV1 = NonNullable<SectionInstanceComposition["ctaAction"]>
 
-const NAVIGATION_LAYOUT_BY_STYLE: Record<CommerceNavigationStyleV1, SectionVisualLayoutPlan> = {
-  "classic-store": { kind: "navigation-classic" },
-  "category-forward": { kind: "navigation-split" },
-  "editorial-commerce": { kind: "navigation-centered-editorial" },
-  "compact-catalog": { kind: "navigation-classic", rhythm: "compact" },
-  promotional: { kind: "navigation-split", rhythm: "spacious" },
-}
+const NAVIGATION_LAYOUT_BY_STYLE = NAVIGATION_LAYOUT_BY_STYLE_V1
 
 type PlanIndex = {
   plan: CommerceArchitecturePlanV1
@@ -525,13 +520,21 @@ function defaultProductCardTreatmentFor(entry: CommerceArchitectureSectionV1, in
   return undefined
 }
 
-function defaultMerchandisingCompositionFor(entry: CommerceArchitectureSectionV1, intent: CommerceCreativeIntentV1): CommerceMerchandisingCompositionV1 | undefined {
+/**
+ * CF-1 renderer truth: an explicit merchandising composition is kept (the
+ * composer decides precedence and reports what renders). DEFAULTS never
+ * override an explicitly requested split/editorial-passage layout, and products sections are
+ * never defaulted to "category-spotlight" (a category-cards composition the
+ * products composer does not implement).
+ */
+function defaultMerchandisingCompositionFor(entry: CommerceArchitectureSectionV1, intent: CommerceCreativeIntentV1, layout: SectionVisualLayoutPlan | undefined): CommerceMerchandisingCompositionV1 | undefined {
   if (intent.merchandisingComposition) return intent.merchandisingComposition
+  // Explicit structure-owning layouts (splits, the editorial passage) are never overridden by a default.
+  if (layout?.kind === "editorial-split" || layout?.kind === "mirror-split" || layout?.kind === "editorial-passage") return undefined
   if (entry.type === "featured_products") return "featured-plus-grid"
   if (entry.type === "product_spotlight" || entry.type === "product_detail") return "editorial-collection"
   if (entry.type === "related_products") return "product-rail"
   if (entry.type === "product_collection" && intent.narrative === "editorial-story" && !intent.media) return "alternating-story"
-  if (entry.type === "product_collection" && entry.category) return "category-spotlight"
   if (entry.type === "catalog_grid" || intent.density === "compact") return "dense-catalog"
   return undefined
 }
@@ -570,7 +573,7 @@ function compositionFor(
     ...(categoryLinks ? { categoryLinks } : {}),
     ...(productDetailLinks ? { productDetailLinks } : {}),
     ...(defaultProductCardTreatmentFor(entry, intent) ? { productCardTreatment: defaultProductCardTreatmentFor(entry, intent) } : {}),
-    ...(defaultMerchandisingCompositionFor(entry, intent) ? { merchandisingComposition: defaultMerchandisingCompositionFor(entry, intent) } : {}),
+    ...(defaultMerchandisingCompositionFor(entry, intent, layout) ? { merchandisingComposition: defaultMerchandisingCompositionFor(entry, intent, layout) } : {}),
     ...((entry.type === "product_detail" || entry.type === "product_spotlight") && !scale ? { alignment: "left" as const } : {}),
   }
 }

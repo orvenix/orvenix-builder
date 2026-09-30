@@ -94,6 +94,7 @@ const SITE_NARRATIVE_DEFAULT: Record<FullSiteCreativeBlueprintV1["siteConcept"][
 
 const SECTION_INTENT_NARRATIVE: Partial<Record<FullSiteCreativeSectionV1["intent"], CommerceCreativeNarrativeIntentV1>> = {
   navigation_discovery: "category-discovery",
+  featured_collection: "product-led",
   spotlight: "product-led",
   detail_surface: "product-led",
   related_items: "category-discovery",
@@ -144,12 +145,16 @@ export function resolveSectionCreativeIntentV1(params: {
   section: FullSiteCreativeSectionV1
 }): ResolvedSectionCreativeIntentV1 {
   const { blueprint, page, section } = params
+  // CF-1: the site-level "catalog" default describes the WHOLE catalog
+  // ("N productos en el catálogo"); on any other product section it would be
+  // factually wrong for the curated subset, so those fall back to product-led.
+  const siteDefault = SITE_NARRATIVE_DEFAULT[blueprint.siteConcept.narrative]
   const narrative =
     normalizeNarrativeIntentV1(section.narrative) ??
     normalizeNarrativeIntentV1(page.narrativeGoal) ??
     SECTION_INTENT_NARRATIVE[section.intent] ??
     (section.emphasis === "conversion" ? "conversion-led" : undefined) ??
-    SITE_NARRATIVE_DEFAULT[blueprint.siteConcept.narrative]
+    (siteDefault === "catalog-orientation" && section.role === "products" && section.intent !== "catalog_surface" ? "product-led" : siteDefault)
   const media = normalizeMediaIntentV1(section.mediaIntent) ?? SECTION_INTENT_MEDIA[section.intent]
   const emphasis: CommerceCreativeEmphasisV1 | undefined =
     section.emphasis ?? (blueprint.siteConcept.rhythm === "immersive" && section.intent === "opening" ? "heroic" : undefined)

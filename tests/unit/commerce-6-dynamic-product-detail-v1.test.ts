@@ -29,6 +29,7 @@ globalThis.fetch = (async () => {
   throw new Error("COMMERCE-6 test: network is forbidden")
 }) as typeof fetch
 
+import { ROLE_VISUAL_LAYOUT_VOCABULARY } from "../../lib/orvenix-ai/composer/visual-layout-plan"
 import { runAutonomousMultiPageSiteBuilder } from "../../lib/orvenix-ai/autonomous/site-builder"
 import type { AutonomousMultiPageSiteBuilderResult } from "../../lib/orvenix-ai/autonomous/types"
 import {
@@ -53,6 +54,23 @@ import type { EditorNode, EditorTree } from "../../types/editor"
 
 type Run = AutonomousMultiPageSiteBuilderResult
 const REQUEST_FINGERPRINT_4F = "7c17ffffd3011c056c8ad4c0911640d0e8aa5fedd96d7fa946009dbfe4f631a1"
+
+/** The CF-1 request fingerprint: the 4F request plus ONLY the CF-1 capability-truth manifest fields. */
+const REQUEST_FINGERPRINT_CF1 = "fecbdb391512d1f6fa9f6097bc1a52d98bfc0733b99b9dd164d89facd1243186"
+
+/** Reverses exactly the CF-1 capability-truth manifest edits (key order preserved) -> must equal the accepted 4F request. */
+function withoutCf1CapabilityTruth(context: unknown): unknown {
+  const reverted = structuredClone(context) as { capabilities: Record<string, unknown> & { sectionIntents: Record<string, string> } }
+  const capabilities = reverted.capabilities
+  for (const key of ["layoutEquivalents", "layoutIgnoredRoles", "rhythmEffects", "navigationConceptEffects", "merchandisingByRole", "emphasisIgnoredRoles"]) delete capabilities[key]
+  const layoutsByRole: Record<string, readonly string[]> = {}
+  for (const role of [...new Set(Object.values(capabilities.sectionIntents))]) {
+    const layouts = (ROLE_VISUAL_LAYOUT_VOCABULARY as Record<string, readonly string[] | undefined>)[role]
+    if (layouts) layoutsByRole[role] = layouts
+  }
+  capabilities.layoutsByRole = layoutsByRole
+  return reverted
+}
 
 const nodesOf = (tree: EditorTree) => Object.values(tree.nodes as Record<string, EditorNode>)
 const cardsOf = (tree: EditorTree) => nodesOf(tree).filter((node) => node.type === "store-product-card")
@@ -200,7 +218,9 @@ test("provider request: PCE-3 fingerprint accepted, guard clean, and no runtime 
   const capture = { async generate(input: unknown) { captured = input; throw new Error("capture_only") } } as FullSiteCreativeBlueprintProviderV1
   const dry = await runNovaMarketFullSiteDryRunV1({ mode: "real", env: { NODE_ENV: "test", ORVENIX_DEV_ASSISTED_E2E: "1" }, authorizeRealProviderCall: true, realProvider: capture })
   assert.equal(dry.status, "completed")
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(captured)).digest("hex"), REQUEST_FINGERPRINT_4F)
+  // CF-1: only the capability-truth manifest fields changed; everything else is the accepted 4F request.
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(captured)).digest("hex"), REQUEST_FINGERPRINT_CF1)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf1CapabilityTruth(captured))).digest("hex"), REQUEST_FINGERPRINT_4F)
   assert.deepEqual(findProhibitedFullSiteRequestValuesV1(captured), [])
 
   let boundRequest: unknown = null

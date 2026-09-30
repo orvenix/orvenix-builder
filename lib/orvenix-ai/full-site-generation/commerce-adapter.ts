@@ -13,7 +13,8 @@ import {
 } from "@/lib/orvenix-ai/commerce/architecture-contract"
 import type { FullSiteContentRefV1, FullSiteCreativeBlueprintV1, FullSiteCreativePageV1, FullSiteCreativeSectionV1 } from "./contract"
 import { validateFullSiteCreativeBlueprintV1 } from "./validator"
-import { resolveSectionCreativeIntentV1 } from "./creative-intent"
+import { normalizeNarrativeIntentV1, resolveSectionCreativeIntentV1 } from "./creative-intent"
+import { DEFAULT_PRIMARY_PURPOSES_BY_CONCEPT_V1, NAVIGATION_STYLE_BY_CONCEPT_V1 } from "./navigation-concepts"
 
 export type CommerceBlueprintAdapterResultV1 =
   | { ok: true; plan: CommerceArchitecturePlanV1; warnings: string[]; fingerprint: string }
@@ -87,6 +88,7 @@ function commerceSectionFromCreative(
   groups: readonly CategoryGroup[],
   blueprint: FullSiteCreativeBlueprintV1,
   page: FullSiteCreativePageV1,
+  warnings: string[],
 ): CommerceArchitectureSectionV1 | null {
   const productIndexes = indexesFromRefs(section.refs, products, groups)
   const categoryRef = section.refs?.find((ref): ref is Extract<FullSiteContentRefV1, { kind: "category" }> => ref.kind === "category")
@@ -105,7 +107,28 @@ function commerceSectionFromCreative(
   if (section.intent === "featured_collection") return productIndexes.length ? { type: "featured_products", role: "products", ...common } : null
   if (section.intent === "collection") return productIndexes.length ? { type: "product_collection", role: "products", ...common } : null
   if (section.intent === "spotlight") return productIndexes.length ? { type: "product_spotlight", role: "products", productIndexes: productIndexes.slice(0, 1), ...(section.layout ? { layout: section.layout } : {}), creativeIntent } : null
-  if (section.intent === "editorial_passage") return { type: "promotional_banner", role: "features", ...common }
+  if (section.intent === "editorial_passage") {
+    /*
+     * CF-1 renderer truth: a grounded editorial passage keeps its refs --
+     * it compiles as a products section with the composer's real
+     * editorial-passage structure (narrow editorial column over the
+     * referenced products/category). Without product/category refs there is
+     * nothing grounded to pass through: it is honestly the benefits section
+     * (which is exactly what it rendered before), with a warning.
+     */
+    if (productIndexes.length) {
+      const explicitNarrative = normalizeNarrativeIntentV1(section.narrative) ?? normalizeNarrativeIntentV1(page.narrativeGoal)
+      return {
+        type: "product_collection",
+        role: "products",
+        ...common,
+        layout: section.layout ?? { kind: "editorial-passage" },
+        creativeIntent: { ...creativeIntent, narrative: explicitNarrative ?? "editorial-story" },
+      }
+    }
+    warnings.push("editorial_passage sin refs de producto/categoria se compila como benefits.")
+    return { type: "commerce_benefits", role: "features", ...common }
+  }
   if (section.intent === "benefits") return { type: "commerce_benefits", role: "features", ...common }
   if (section.intent === "trust") return { type: "commerce_trust", role: "trust", ...common }
   if (section.intent === "catalog_surface") return { type: "catalog_grid", role: "products", productIndexes: productIndexes.length ? productIndexes : products.map((_, index) => index), ...(section.layout ? { layout: section.layout } : {}), creativeIntent }
@@ -123,11 +146,7 @@ function strategyFromBlueprint(blueprint: FullSiteCreativeBlueprintV1): Commerce
 }
 
 function navFromBlueprint(blueprint: FullSiteCreativeBlueprintV1): CommerceNavigationStyleV1 {
-  if (blueprint.navigation.concept === "catalog-forward") return "category-forward"
-  if (blueprint.navigation.concept === "editorial") return "editorial-commerce"
-  if (blueprint.navigation.concept === "compact") return "compact-catalog"
-  if (blueprint.navigation.concept === "conversion-led") return "promotional"
-  return "classic-store"
+  return NAVIGATION_STYLE_BY_CONCEPT_V1[blueprint.navigation.concept]
 }
 
 const MAX_PRIMARY_CATEGORY_LINKS = 4
@@ -139,14 +158,7 @@ const MAX_PRIMARY_CATEGORY_LINKS = 4
  * capped. Without primaryPurposes the concept decides a safe default.
  */
 function primaryNavigationSlugsFromBlueprint(blueprint: FullSiteCreativeBlueprintV1, pages: readonly CommerceArchitecturePageV1[]): string[] {
-  const defaults: Record<FullSiteCreativeBlueprintV1["navigation"]["concept"], string[]> = {
-    classic: ["home", "catalog", "category", "help"],
-    editorial: ["home", "catalog", "help"],
-    "catalog-forward": ["home", "catalog", "category"],
-    compact: ["home", "catalog"],
-    "conversion-led": ["home", "catalog"],
-  }
-  const purposes = blueprint.navigation.primaryPurposes?.length ? blueprint.navigation.primaryPurposes : defaults[blueprint.navigation.concept]
+  const purposes = blueprint.navigation.primaryPurposes?.length ? blueprint.navigation.primaryPurposes : DEFAULT_PRIMARY_PURPOSES_BY_CONCEPT_V1[blueprint.navigation.concept]
   const slugs: string[] = []
   for (const purpose of purposes) {
     if (purpose === "product_detail") continue
@@ -172,6 +184,7 @@ export function adaptFullSiteCreativeBlueprintToCommercePlanV1(params: {
 
   const pages: CommerceArchitecturePageV1[] = []
   const slugs = new Set<string>()
+  const warnings = [...validation.warnings]
   for (const page of validation.blueprint.pages) {
     if (!["home", "catalog", "category", "product_detail", "help"].includes(page.purpose)) continue
     if (page.purpose === "category" && page.target?.kind !== "category") continue
@@ -182,7 +195,7 @@ export function adaptFullSiteCreativeBlueprintToCommercePlanV1(params: {
     for (let suffix = 2; slugs.has(slug); suffix += 1) slug = `${baseSlug}-${suffix}`
     const ownProduct = page.purpose === "product_detail" && page.target?.kind === "product" ? page.target.index : undefined
     const sections = page.sections
-      .map((section) => commerceSectionFromCreative(section, params.products, groups, validation.blueprint, page))
+      .map((section) => commerceSectionFromCreative(section, params.products, groups, validation.blueprint, page, warnings))
       .filter((section): section is CommerceArchitectureSectionV1 => Boolean(section))
       // A product's own detail page never lists that same product as "related".
       .map((section) => section.type === "related_products" && ownProduct !== undefined ? { ...section, productIndexes: section.productIndexes?.filter((index) => index !== ownProduct) } : section)
@@ -200,7 +213,7 @@ export function adaptFullSiteCreativeBlueprintToCommercePlanV1(params: {
   }
 
   if (!pages.some((page) => page.purpose === "home") || !pages.some((page) => page.purpose === "catalog")) {
-    return { ok: false, errors: ["commerce blueprint debe producir home y catalogo."], warnings: validation.warnings }
+    return { ok: false, errors: ["commerce blueprint debe producir home y catalogo."], warnings }
   }
 
   return {
@@ -217,7 +230,7 @@ export function adaptFullSiteCreativeBlueprintToCommercePlanV1(params: {
       siteRhythm: validation.blueprint.siteConcept.rhythm,
       pages,
     },
-    warnings: validation.warnings,
+    warnings,
     fingerprint: validation.fingerprint,
   }
 }
