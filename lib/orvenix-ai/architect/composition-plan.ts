@@ -120,6 +120,11 @@ export const ROLE_VISUAL_PRIMITIVE_VOCABULARY: Partial<Record<SectionRole, reado
   cta: ["standard", "dramatic-closing"],
 }
 
+export const SECTION_INSTANCE_PRODUCT_CARD_TREATMENTS = ["compact-catalog", "editorial", "image-led", "featured", "horizontal"] as const
+export const SECTION_INSTANCE_MERCHANDISING_COMPOSITIONS = ["featured-plus-grid", "product-rail", "category-spotlight", "editorial-collection", "alternating-story", "dense-catalog"] as const
+export type SectionInstanceProductCardTreatment = (typeof SECTION_INSTANCE_PRODUCT_CARD_TREATMENTS)[number]
+export type SectionInstanceMerchandisingComposition = (typeof SECTION_INSTANCE_MERCHANDISING_COMPOSITIONS)[number]
+
 export interface SectionInstanceComposition {
   treatment?: SectionInstanceTreatment
   alignment?: SectionInstanceAlignment
@@ -148,8 +153,8 @@ export interface SectionInstanceComposition {
   omitCta?: boolean
   /** COMMERCE-3C: closed narrative intent; selects Orvenix-owned structural copy, never provider prose. */
   narrativeIntent?: SectionInstanceNarrativeIntent
-  /** COMMERCE-3C: grounded category labels linked to REAL generated category pages. */
-  categoryLinks?: Array<{ label: string; href: string }>
+  /** COMMERCE-3C/PCE-3: grounded category labels linked to REAL generated category pages, optionally with authoritative representative product media. */
+  categoryLinks?: Array<{ label: string; href: string; imageUrl?: string }>
   /**
    * COMMERCE-5B/6: Orvenix-resolved product -> detail targets, keyed by the
    * product's index in the site's authoritative product list (the same
@@ -161,6 +166,10 @@ export interface SectionInstanceComposition {
   productDetailLinks?: Array<{ productIndex: number; href: string }>
   /** PCE-2: bounded cart affordance for a navigation instance (never markup/classes). */
   cartProminence?: SectionInstanceCartProminence
+  /** PCE-3: bounded commerce product card treatment; renderer-owned semantics only. */
+  productCardTreatment?: SectionInstanceProductCardTreatment
+  /** PCE-3: bounded section-level merchandising composition; renderer-owned structure only. */
+  merchandisingComposition?: SectionInstanceMerchandisingComposition
 }
 
 export const SECTION_INSTANCE_CART_PROMINENCES = ["none", "subtle", "prominent"] as const
@@ -286,6 +295,8 @@ const VALID_MEDIA_STRATEGIES = new Set<string>(SECTION_INSTANCE_MEDIA_STRATEGIES
 const VALID_BACKGROUND_STRATEGIES = new Set<string>(SECTION_TONE_STRATEGIES)
 const VALID_EMPHASIS = new Set(["standard", "opening", "closing"])
 const VALID_VISUAL_PRIMITIVES = new Set<string>(SECTION_INSTANCE_VISUAL_PRIMITIVES)
+const VALID_PRODUCT_CARD_TREATMENTS = new Set<string>(SECTION_INSTANCE_PRODUCT_CARD_TREATMENTS)
+const VALID_MERCHANDISING_COMPOSITIONS = new Set<string>(SECTION_INSTANCE_MERCHANDISING_COMPOSITIONS)
 const VALID_PROVENANCE = new Set<SectionInstanceProvenance>(["deterministic", "design-reference", "creative-director", "fallback"])
 const VALID_TRANSITIONS = new Set(["standard", "continuous"])
 const ALL_TREATMENT_VALUES = new Set<string>([
@@ -335,8 +346,10 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
   if (plan.composition !== undefined) {
     if (!isPlainObject(plan.composition)) return false
     const composition = plan.composition
-    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks", "cartProminence"])) return false
+    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks", "cartProminence", "productCardTreatment", "merchandisingComposition"])) return false
     if (composition.cartProminence !== undefined && !(SECTION_INSTANCE_CART_PROMINENCES as readonly string[]).includes(composition.cartProminence as string)) return false
+    if (composition.productCardTreatment !== undefined && !VALID_PRODUCT_CARD_TREATMENTS.has(composition.productCardTreatment as string)) return false
+    if (composition.merchandisingComposition !== undefined && !VALID_MERCHANDISING_COMPOSITIONS.has(composition.merchandisingComposition as string)) return false
     if (composition.treatment !== undefined && !ALL_TREATMENT_VALUES.has(composition.treatment as string)) return false
     if (composition.alignment !== undefined && !VALID_ALIGNMENTS.has(composition.alignment as string)) return false
     if (composition.scale !== undefined && !VALID_SCALES.has(composition.scale as string)) return false
@@ -360,9 +373,10 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
     if (composition.categoryLinks !== undefined) {
       if (!Array.isArray(composition.categoryLinks) || composition.categoryLinks.length > 8) return false
       for (const link of composition.categoryLinks) {
-        if (!isPlainObject(link) || !hasOnlyKeys(link, ["label", "href"])) return false
+        if (!isPlainObject(link) || !hasOnlyKeys(link, ["label", "href", "imageUrl"])) return false
         if (typeof link.label !== "string" || !link.label.trim() || link.label.length > 60 || /[<>{}]/.test(link.label)) return false
         if (typeof link.href !== "string" || !SECTION_INSTANCE_PAGE_HREF_PATTERN.test(link.href)) return false
+        if (link.imageUrl !== undefined && (typeof link.imageUrl !== "string" || (!/^https:\/\/[^\s]+$/i.test(link.imageUrl) && !/^\/(?!\/)\S+$/.test(link.imageUrl)))) return false
       }
     }
     if (composition.productDetailLinks !== undefined) {

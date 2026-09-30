@@ -48,7 +48,7 @@ import {
   type CommerceProductFactV1,
 } from "@/lib/orvenix-ai/commerce/product-facts"
 import { formatProvisioningRefV1 } from "@/lib/orvenix-ai/commerce/provisioning-plan"
-import { isValidProductDetailHrefV1, SECTION_INSTANCE_PAGE_HREF_PATTERN, type SectionInstanceCtaLabel } from "@/lib/orvenix-ai/architect/composition-plan"
+import { isValidProductDetailHrefV1, SECTION_INSTANCE_PAGE_HREF_PATTERN, type SectionInstanceCtaLabel, type SectionInstanceProductCardTreatment } from "@/lib/orvenix-ai/architect/composition-plan"
 import {
   mixHexV1,
   resolveCommerceSurfaceV1,
@@ -2269,9 +2269,10 @@ const STORE_PRODUCTS_SECTION_BACKGROUND = "#0f172a"
  * existing cart store / CartDrawer / checkout route. Dark section
  * background because the existing card is styled for dark surfaces.
  */
-function storeCardProps(product: CommerceProductFactV1, context: SectionCompositionContext, surface?: CommerceSurfaceV1): Record<string, unknown> | null {
+function storeCardProps(product: CommerceProductFactV1, context: SectionCompositionContext, surface?: CommerceSurfaceV1, treatment?: SectionInstanceProductCardTreatment): Record<string, unknown> | null {
   const accent = context.accentColor ? { accentColor: context.accentColor } : {}
   const themed = surface ? { surface } : {}
+  const treatmentProps = treatment ? { treatment } : {}
   const variant = executableVariantForProductV1(product)
   if (variant && product.storeBinding) {
     // PCE-2: authoritative store media only (bound products); none -> the card's honest monogram tile.
@@ -2287,6 +2288,7 @@ function storeCardProps(product: CommerceProductFactV1, context: SectionComposit
       ...(imageUrl ? { imageUrl } : {}),
       ...accent,
       ...themed,
+      ...treatmentProps,
     }
   }
 
@@ -2307,6 +2309,7 @@ function storeCardProps(product: CommerceProductFactV1, context: SectionComposit
       stock: pendingVariant.initialStock ?? 0,
       ...accent,
       ...themed,
+      ...treatmentProps,
     }
   }
   return null
@@ -2363,7 +2366,30 @@ const STORE_SECTION_BACKGROUND_BY_TONE: Record<string, string> = {
   "soft-rhythm": "#111827",
 }
 
+type CommerceSectionScaleV1 = "compact" | "standard" | "spacious" | "statement"
+
+function commerceSectionScaleFor(context: SectionCompositionContext): CommerceSectionScaleV1 {
+  const merchandising = context.commerceMerchandisingComposition
+  if (merchandising === "dense-catalog") return "compact"
+  if (merchandising === "featured-plus-grid" || merchandising === "editorial-collection") return "statement"
+  if (merchandising === "alternating-story" || context.instanceScale === "large") return "spacious"
+  return "standard"
+}
+
+function commerceSectionHeaderClass(scale: CommerceSectionScaleV1, align: "left" | "center"): string {
+  const base = align === "center" ? "mx-auto text-center" : ""
+  if (scale === "statement") return `${base} max-w-5xl`.trim()
+  if (scale === "spacious") return `${base} max-w-4xl`.trim()
+  if (scale === "compact") return `${base} max-w-3xl`.trim()
+  return `${base} max-w-3xl`.trim()
+}
+
 function storeCardsGridClass(context: SectionCompositionContext, inSplit: boolean): string {
+  const merchandising = context.commerceMerchandisingComposition
+  if (!inSplit && merchandising === "dense-catalog") return "grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"
+  if (!inSplit && merchandising === "product-rail") return "flex snap-x gap-5 overflow-x-auto pb-6 pr-[12vw] [scrollbar-width:thin] md:pr-10"
+  if (!inSplit && merchandising === "alternating-story") return "grid gap-8 md:gap-10"
+  if (!inSplit && merchandising === "featured-plus-grid") return "grid items-stretch gap-5 lg:grid-cols-3"
   const mediaLed = context.instanceMediaStrategy === "led"
   const compact = context.instanceScale === "condensed" || context.instanceMediaStrategy === "none"
   if (inSplit) return mediaLed || context.instanceScale === "large" ? "grid gap-6" : "grid gap-4 sm:grid-cols-2"
@@ -2371,6 +2397,39 @@ function storeCardsGridClass(context: SectionCompositionContext, inSplit: boolea
   if (compact) return "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
   if (context.instanceScale === "large") return "grid gap-8 md:grid-cols-2"
   return "grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+}
+
+function cardTreatmentFor(context: SectionCompositionContext, index: number): SectionInstanceProductCardTreatment {
+  const explicit = context.commerceProductCardTreatment
+  if (explicit) return explicit
+  if (context.commerceMerchandisingComposition === "featured-plus-grid" && index === 0) return "featured"
+  if (context.commerceMerchandisingComposition === "product-rail") return "horizontal"
+  if (context.commerceMerchandisingComposition === "editorial-collection") return "editorial"
+  if (context.commerceMerchandisingComposition === "alternating-story") return "horizontal"
+  if (context.commerceMerchandisingComposition === "dense-catalog") return "compact-catalog"
+  return context.instanceMediaStrategy === "led" ? "image-led" : context.instanceScale === "large" ? "featured" : "compact-catalog"
+}
+
+function addStoreCardNode(
+  nodes: Record<string, ComposedNode>,
+  product: CommerceProductFactV1,
+  context: SectionCompositionContext,
+  surface: CommerceSurfaceV1 | undefined,
+  index: number,
+  className?: string,
+): string | null {
+  const treatment = cardTreatmentFor(context, index)
+  const props = storeCardProps(product, context, surface, treatment)
+  if (!props) return null
+  const detailHref = context.commerceProductDetailHrefs?.[index]
+  return add(nodes, createComposedNode({
+    type: "store-product-card",
+    displayName: `Producto ${index + 1}: ${product.name}`,
+    props: {
+      ...(isValidProductDetailHrefV1(detailHref) ? { ...props, detailHref } : props),
+      ...(className ? { className } : {}),
+    },
+  }))
 }
 
 function composeStoreProductsSection(context: SectionCompositionContext, products: CommerceProductFactV1[]): ComposedSection {
@@ -2384,57 +2443,94 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
   const layoutKind = context.instanceVisualLayout?.kind
   const isSplit = layoutKind === "editorial-split" || layoutKind === "mirror-split"
   const mirrored = visualLayoutMirrorsContent(context.instanceVisualLayout)
+  const merchandising = context.commerceMerchandisingComposition
+  const sectionScale = commerceSectionScaleFor(context)
 
   const cards: string[] = []
   for (const [index, product] of selected.entries()) {
-    const props = storeCardProps(product, context, storeSurface)
-    if (!props) continue
-    // COMMERCE-5B: only the compiler-aligned, Orvenix-resolved detail page for THIS product.
-    const detailHref = context.commerceProductDetailHrefs?.[index]
-    cards.push(add(nodes, createComposedNode({
-      type: "store-product-card",
-      displayName: `Producto ${index + 1}: ${product.name}`,
-      props: isValidProductDetailHrefV1(detailHref) ? { ...props, detailHref } : props,
-    })))
+    const railClass = merchandising === "product-rail"
+      ? index === 0
+        ? "min-w-[20rem] snap-start sm:min-w-[24rem] lg:min-w-[28rem]"
+        : "min-w-[16.5rem] snap-start sm:min-w-[18rem]"
+      : undefined
+    const storyClass = merchandising === "alternating-story"
+      ? index % 2 === 0 ? "md:ml-0" : "md:ml-auto"
+      : undefined
+    const id = addStoreCardNode(nodes, product, context, storeSurface, index, railClass ?? storyClass)
+    if (id) cards.push(id)
   }
 
   const fallbackTitle = context.archetype === "overview" ? "Productos destacados" : "Catalogo"
   const copy = commerceProductsCopy(context.instanceNarrativeIntent, selected, { title: fallbackTitle, intro: "Agrega productos al carrito para iniciar tu compra." })
   const showHeader = !context.singleItemInstance || Boolean(context.instanceNarrativeIntent)
-  const align = isSplit ? "left" : "center"
-  const headingSize = layoutKind === "oversized-typography" ? "7xl" : layoutKind === "editorial-passage" || context.instanceScale === "large" ? "5xl" : undefined
+  const align = isSplit || merchandising === "editorial-collection" || merchandising === "alternating-story" ? "left" : "center"
+  const headingSize = layoutKind === "oversized-typography" || merchandising === "editorial-collection" ? "7xl" : sectionScale === "statement" || layoutKind === "editorial-passage" || context.instanceScale === "large" || merchandising === "featured-plus-grid" ? "5xl" : undefined
+  const finishLabel = merchandising === "dense-catalog"
+    ? "Catálogo ordenado"
+    : merchandising === "product-rail"
+      ? "Selección rápida"
+      : merchandising === "featured-plus-grid"
+        ? "Producto protagonista"
+        : merchandising === "editorial-collection" || merchandising === "alternating-story"
+          ? "Colección editorial"
+          : "Tienda"
+  const eyebrow = showHeader ? textNode(nodes, "Etiqueta products", finishLabel, { align, size: "xs", color: storeSurface?.accent ?? textColors.body, weight: "black", className: "uppercase tracking-[0.26em]" }) : null
   const heading = showHeader ? headingNode(nodes, "Titulo products", copy.title, 2, { align, color: textColors.heading, ...(headingSize ? { size: headingSize } : {}) }) : null
   const intro = showHeader && copy.intro ? textNode(nodes, "Intro products", copy.intro, { align, size: "lg", color: textColors.body }) : null
 
   const action = context.commerceCtaAction && !context.instanceOmitCta
-    ? add(nodes, createComposedNode({ type: "ctaButton", displayName: "Accion products", props: { label: context.commerceCtaAction.label, href: context.commerceCtaAction.href, variant: "secondary", size: "md" } }))
+    ? add(nodes, createComposedNode({ type: "ctaButton", displayName: "Accion products", props: { label: context.commerceCtaAction.label, href: context.commerceCtaAction.href, variant: "secondary", size: sectionScale === "compact" ? "sm" : "md" } }))
+    : null
+  const headerStack = showHeader
+    ? wrapperNode(nodes, "Encabezado products", commerceSectionHeaderClass(sectionScale, align), [eyebrow, heading, intro].filter((id): id is string => Boolean(id)))
     : null
 
   let children: string[]
-  let layoutVariant = "store-product-cards"
+  let layoutVariant = merchandising ?? "store-product-cards"
   if (isSplit) {
     layoutVariant = mirrored ? "store-mirror-split" : "store-editorial-split"
-    const textColumn = wrapperNode(nodes, "Texto products", "flex flex-col justify-center gap-5", [heading, intro, action].filter((id): id is string => Boolean(id)))
+    const textColumn = wrapperNode(nodes, "Texto products", "flex flex-col justify-center gap-5", [eyebrow, heading, intro, action].filter((id): id is string => Boolean(id)))
     const cardsColumn = wrapperNode(nodes, "Grid productos tienda", storeCardsGridClass(context, true), cards)
     const columns = mirrored ? [cardsColumn, textColumn] : [textColumn, cardsColumn]
     children = [wrapperNode(nodes, "Split products", "grid items-center gap-10 lg:grid-cols-2", columns)]
+  } else if (merchandising === "featured-plus-grid" && cards.length > 1) {
+    const header = wrapperNode(nodes, "Featured header", "grid gap-5 lg:grid-cols-[0.72fr_0.28fr] lg:items-end", [headerStack, ...(action ? [wrapperNode(nodes, "Acciones products", "flex lg:justify-end", [action])] : [])].filter((id): id is string => Boolean(id)))
+    const hero = wrapperNode(nodes, "Producto protagonista", "lg:col-span-2", [cards[0]])
+    const support = wrapperNode(nodes, "Productos de apoyo", "grid gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:pt-14", cards.slice(1))
+    const grid = wrapperNode(nodes, "Featured plus grid", "relative grid items-stretch gap-5 lg:grid-cols-3", [hero, support])
+    children = [header, grid].filter((id): id is string => Boolean(id))
+  } else if (merchandising === "product-rail") {
+    const header = wrapperNode(nodes, "Rail header", "grid gap-4 md:grid-cols-[1fr_auto] md:items-end", [headerStack, ...(action ? [wrapperNode(nodes, "Acciones products", "flex md:justify-end", [action])] : [])].filter((id): id is string => Boolean(id)))
+    const rail = wrapperNode(nodes, "Rail productos tienda", storeCardsGridClass(context, false), cards)
+    children = [header, rail].filter((id): id is string => Boolean(id))
+  } else if (merchandising === "editorial-collection") {
+    const leadCard = cards[0] ? wrapperNode(nodes, "Producto editorial principal", "sm:col-span-2 lg:col-span-1 lg:row-span-2", [cards[0]]) : null
+    const supportingCards = cards.slice(1)
+    const collection = wrapperNode(nodes, "Coleccion editorial", "grid gap-5 sm:grid-cols-2 lg:auto-rows-fr", [leadCard, ...supportingCards].filter((id): id is string => Boolean(id)))
+    const lead = wrapperNode(nodes, "Editorial comercio", "mx-auto grid max-w-6xl items-start gap-10 lg:grid-cols-[0.68fr_1.32fr]", [wrapperNode(nodes, "Narrativa editorial", "flex flex-col gap-5 lg:sticky lg:top-24", [eyebrow, heading, intro, action].filter((id): id is string => Boolean(id))), collection])
+    children = [lead]
+  } else if (merchandising === "alternating-story") {
+    children = [headerStack, wrapperNode(nodes, "Historias alternadas", "grid gap-8 md:gap-10", cards.map((card, index) => wrapperNode(nodes, `Historia producto ${index + 1}`, index % 2 === 0 ? "md:mr-auto md:w-[78%]" : "md:ml-auto md:w-[78%]", [card]))), ...(action ? [wrapperNode(nodes, "Acciones products", "mt-8 flex justify-center", [action])] : [])].filter((id): id is string => Boolean(id))
   } else if (layoutKind === "editorial-passage") {
     layoutVariant = "store-editorial-passage"
-    const header = wrapperNode(nodes, "Encabezado products", "mx-auto flex max-w-3xl flex-col gap-4", [heading, intro].filter((id): id is string => Boolean(id)))
+    const header = wrapperNode(nodes, "Encabezado products", "mx-auto flex max-w-3xl flex-col gap-4", [eyebrow, heading, intro].filter((id): id is string => Boolean(id)))
     const stack = wrapperNode(nodes, "Grid productos tienda", "mx-auto grid max-w-3xl gap-6", cards)
     children = [header, stack, ...(action ? [wrapperNode(nodes, "Acciones products", "mt-8 flex justify-center", [action])] : [])]
   } else {
     if (layoutKind === "oversized-typography") layoutVariant = "store-oversized-typography"
     const grid = wrapperNode(nodes, "Grid productos tienda", storeCardsGridClass(context, false), cards)
-    children = [heading, intro, grid, ...(action ? [wrapperNode(nodes, "Acciones products", "mt-8 flex justify-center", [action])] : [])].filter((id): id is string => Boolean(id))
+    const header = merchandising === "dense-catalog"
+      ? wrapperNode(nodes, "Dense catalog header", "grid gap-3 md:grid-cols-[1fr_auto] md:items-end", [headerStack, ...(action ? [wrapperNode(nodes, "Acciones products", "flex md:justify-end", [action])] : [])].filter((id): id is string => Boolean(id)))
+      : headerStack
+    children = [header, grid, ...(action && merchandising !== "dense-catalog" ? [wrapperNode(nodes, "Acciones products", "mt-8 flex justify-center", [action])] : [])].filter((id): id is string => Boolean(id))
   }
 
-  const paddingY = context.instanceScale === "condensed" || context.aiSectionToneStrategy === "soft-rhythm" ? "lg" : "xl"
-  const maxWidth = context.instanceScale === "condensed" ? "lg" : "xl"
+  const paddingY = sectionScale === "compact" || context.instanceScale === "condensed" || context.aiSectionToneStrategy === "soft-rhythm" ? "lg" : "xl"
+  const maxWidth = merchandising === "dense-catalog" || merchandising === "product-rail" ? "xl" : sectionScale === "statement" ? "full" : context.instanceScale === "condensed" ? "lg" : "xl"
   const root = add(nodes, createComposedNode({
     type: "section",
     displayName: `${copy.title} (${layoutVariant})`,
-    props: { maxWidth, paddingY, paddingX: "lg", background },
+    props: { maxWidth, paddingY, paddingX: "lg", background, commerceComposition: merchandising ?? "default", commerceVisualFinish: "pce-3c", commerceSectionScale: sectionScale },
     children,
   }))
   return { role: "products", rootId: root, nodes, purpose: "Catalogo de productos de la tienda con carrito." }
@@ -2688,11 +2784,43 @@ function composeFooter(
 function composeCategoryLinks(context: SectionCompositionContext, links: NonNullable<SectionCompositionContext["commerceCategoryLinks"]>): ComposedSection {
   const nodes: Record<string, ComposedNode> = {}
   const minimal = context.instanceNarrativeIntent === "minimal-introduction"
-  const heading = headingNode(nodes, "Titulo categorias", minimal ? "Categorías" : "Explora por categoría", 2, { align: "center" })
-  const intro = minimal ? null : textNode(nodes, "Intro categorias", "Elige una categoría para ver sus productos.", { align: "center", size: "lg" })
-  const buttons = links.map((link, index) => add(nodes, createComposedNode({ type: "ctaButton", displayName: `Categoria ${index + 1}`, props: { label: link.label, href: link.href, variant: "secondary", size: context.instanceScale === "large" ? "lg" : "md" } })))
-  const row = wrapperNode(nodes, "Enlaces categorias", context.instanceScale === "condensed" ? "flex flex-wrap justify-center gap-2" : "flex flex-wrap justify-center gap-3", buttons)
-  const root = add(nodes, createComposedNode({ type: "section", displayName: "Categorias (category-links)", props: { maxWidth: "xl", paddingY: context.instanceScale === "condensed" ? "lg" : "xl", paddingX: "lg", background: "#ffffff" }, children: [heading, intro, row].filter((id): id is string => Boolean(id)) }))
+  const storeSurface = context.themePalette ? resolveCommerceSurfaceV1(context.themePalette, { relation: "soft" }) : undefined
+  const background = storeSurface?.background ?? "#ffffff"
+  const card = storeSurface?.card ?? "#ffffff"
+  const border = storeSurface?.border ?? "#dbeafe"
+  const textColors = readableTextColorsFor(background)
+  const heading = headingNode(nodes, "Titulo categorias", minimal ? "Categorías" : "Explora por categoría", 2, { align: "left", color: textColors.heading, size: "5xl" })
+  const intro = minimal ? null : textNode(nodes, "Intro categorias", "Elige una categoría para ver sus productos.", { align: "left", size: "lg", color: textColors.body })
+  const header = wrapperNode(nodes, "Encabezado categorias", "max-w-3xl", [heading, intro].filter((id): id is string => Boolean(id)))
+  const cards = links.map((link, index) => {
+    const safeImage = isSafeProductMediaUrlV1(link.imageUrl) ? link.imageUrl.trim() : null
+    const media = safeImage
+      ? add(nodes, createComposedNode({ type: "image", displayName: `Imagen categoria ${index + 1}`, props: { src: safeImage, alt: link.label, className: "h-full w-full object-cover" } }))
+      : add(nodes, createComposedNode({ type: "genericWrapper", displayName: `Inicial categoria ${index + 1}`, props: { tag: "div", className: "grid h-full w-full place-items-center text-5xl font-black", style: { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC" } }, children: [textNode(nodes, `Inicial ${link.label}`, link.label.trim().slice(0, 2).toUpperCase(), { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC" })] }))
+    const mediaFrame = wrapperNode(nodes, `Media categoria ${index + 1}`, index === 0 ? "relative aspect-[16/10] overflow-hidden rounded-[1.55rem] bg-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] lg:aspect-[4/3]" : "relative aspect-[4/3] overflow-hidden rounded-[1.35rem] bg-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]", [media])
+    const eyebrow = textNode(nodes, `Etiqueta categoria ${index + 1}`, "Categoría", { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC", size: "xs", weight: "black", className: "uppercase tracking-[0.24em]" })
+    const title = headingNode(nodes, `Categoria ${index + 1}`, link.label, 3, { size: "xl", align: "left", color: storeSurface?.heading ?? textColors.heading })
+    const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: `Abrir categoria ${index + 1}`, props: { label: "Ver categoría", href: link.href, variant: "secondary", size: "sm" } }))
+    return add(nodes, createComposedNode({
+      type: "genericWrapper",
+      displayName: `Category card ${index + 1}`,
+      props: {
+        tag: "article",
+        className: index === 0 ? "group flex min-h-full flex-col gap-5 overflow-hidden rounded-[1.9rem] border p-5 shadow-[0_34px_110px_-62px_rgba(15,23,42,0.82)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_40px_130px_-66px_rgba(15,23,42,0.92)] lg:row-span-2" : "group flex min-h-full flex-col gap-4 overflow-hidden rounded-[1.45rem] border p-4 shadow-[0_22px_64px_-50px_rgba(15,23,42,0.62)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_82px_-54px_rgba(15,23,42,0.74)]",
+        commerceVisualFinish: "pce-3c",
+        dataCommerceCategoryCard: "pce-3c",
+        style: { background: card, borderColor: border },
+      },
+      children: [mediaFrame, eyebrow, title, cta],
+    }))
+  })
+  const gridClass = context.commerceMerchandisingComposition === "category-spotlight"
+    ? "grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:auto-rows-fr"
+    : context.instanceScale === "condensed"
+      ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+  const row = wrapperNode(nodes, "Category cards", gridClass, cards)
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Categorias (category-cards)", props: { maxWidth: "xl", paddingY: context.instanceScale === "condensed" ? "lg" : "xl", paddingX: "lg", background, commerceComposition: context.commerceMerchandisingComposition ?? "category-cards", commerceVisualFinish: "pce-3c", commerceSectionScale: context.commerceMerchandisingComposition === "category-spotlight" ? "spacious" : "standard" }, children: [header, row].filter((id): id is string => Boolean(id)) }))
   return { role: "content", rootId: root, nodes, purpose: "Descubrir categorias reales de la tienda." }
 }
 

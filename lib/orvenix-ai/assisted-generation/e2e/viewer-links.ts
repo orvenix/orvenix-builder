@@ -20,7 +20,7 @@ import type { EditorTree } from "@/types/editor"
 
 export const ASSISTED_VIEWER_BASE_PATH_V1 = "/dev-assisted-generation-e2e/view"
 
-export type AssistedViewerVariantV1 = "off" | "assisted"
+export type AssistedViewerVariantV1 = string
 
 export function buildAssistedViewerPageHrefV1(variant: AssistedViewerVariantV1, slug: string): string {
   return `${ASSISTED_VIEWER_BASE_PATH_V1}/${variant}/${encodeURIComponent(slug)}`

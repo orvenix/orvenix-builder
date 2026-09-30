@@ -10,6 +10,8 @@ import {
   FULL_SITE_EMPHASES_V1,
   FULL_SITE_NAVIGATION_CONCEPTS_V1,
   FULL_SITE_PAGE_DENSITIES_V1,
+  FULL_SITE_PRODUCT_CARD_TREATMENTS_V1,
+  FULL_SITE_MERCHANDISING_COMPOSITIONS_V1,
   FULL_SITE_REF_KINDS_V1,
   FULL_SITE_RELATIONS_V1,
   FULL_SITE_RHYTHMS_V1,
@@ -45,6 +47,8 @@ const PAGE_DENSITIES = new Set<string>(FULL_SITE_PAGE_DENSITIES_V1)
 const CTA_INTENTS = new Set<string>(FULL_SITE_CTA_INTENTS_V1)
 const EMPHASES = new Set<string>(FULL_SITE_EMPHASES_V1)
 const RELATIONS = new Set<string>(FULL_SITE_RELATIONS_V1)
+const PRODUCT_CARD_TREATMENTS = new Set<string>(FULL_SITE_PRODUCT_CARD_TREATMENTS_V1)
+const MERCHANDISING_COMPOSITIONS = new Set<string>(FULL_SITE_MERCHANDISING_COMPOSITIONS_V1)
 const CART_PROMINENCE = new Set<string>(FULL_SITE_CART_PROMINENCE_V1)
 const REF_KINDS = new Set<string>(FULL_SITE_REF_KINDS_V1)
 const ROLE_VALUES = new Set<SectionRole>([
@@ -131,7 +135,7 @@ function validateSection(value: unknown, context: FullSiteCreativeGroundingConte
     errors.push(`${path} debe ser seccion.`)
     return null
   }
-  onlyKeys(value, ["intent", "role", "refs", "narrative", "mediaIntent", "ctaIntent", "layout", "emphasis", "relationToPrevious"], path, errors)
+  onlyKeys(value, ["intent", "role", "refs", "narrative", "mediaIntent", "ctaIntent", "layout", "emphasis", "relationToPrevious", "productCardTreatment", "merchandisingComposition"], path, errors)
   if (typeof value.intent !== "string" || !SECTION_INTENTS.has(value.intent)) errors.push(`${path}.intent invalido.`)
   if (typeof value.role !== "string" || !ROLE_VALUES.has(value.role as SectionRole)) errors.push(`${path}.role invalido.`)
   const refs = Array.isArray(value.refs)
@@ -141,6 +145,8 @@ function validateSection(value: unknown, context: FullSiteCreativeGroundingConte
   if (value.ctaIntent !== undefined && (typeof value.ctaIntent !== "string" || !CTA_INTENTS.has(value.ctaIntent))) errors.push(`${path}.ctaIntent invalido.`)
   if (value.emphasis !== undefined && (typeof value.emphasis !== "string" || !EMPHASES.has(value.emphasis))) errors.push(`${path}.emphasis invalido.`)
   if (value.relationToPrevious !== undefined && (typeof value.relationToPrevious !== "string" || !RELATIONS.has(value.relationToPrevious))) errors.push(`${path}.relationToPrevious invalido.`)
+  if (value.productCardTreatment !== undefined && (typeof value.productCardTreatment !== "string" || !PRODUCT_CARD_TREATMENTS.has(value.productCardTreatment))) errors.push(`${path}.productCardTreatment invalido.`)
+  if (value.merchandisingComposition !== undefined && (typeof value.merchandisingComposition !== "string" || !MERCHANDISING_COMPOSITIONS.has(value.merchandisingComposition))) errors.push(`${path}.merchandisingComposition invalido.`)
   const narrative = cleanText(value.narrative, FULL_SITE_BLUEPRINT_LIMITS_V1.maxNarrativeLength, `${path}.narrative`, errors)
   const mediaIntent = cleanText(value.mediaIntent, FULL_SITE_BLUEPRINT_LIMITS_V1.maxMediaIntentLength, `${path}.mediaIntent`, errors)
   if (typeof value.intent !== "string" || typeof value.role !== "string" || !SECTION_INTENTS.has(value.intent) || !ROLE_VALUES.has(value.role as SectionRole)) return null
@@ -154,6 +160,8 @@ function validateSection(value: unknown, context: FullSiteCreativeGroundingConte
     ...(isValidSectionVisualLayoutPlan(value.layout, value.role as SectionRole) ? { layout: value.layout } : {}),
     ...(typeof value.emphasis === "string" && EMPHASES.has(value.emphasis) ? { emphasis: value.emphasis as FullSiteCreativeSectionV1["emphasis"] } : {}),
     ...(typeof value.relationToPrevious === "string" && RELATIONS.has(value.relationToPrevious) ? { relationToPrevious: value.relationToPrevious as FullSiteCreativeSectionV1["relationToPrevious"] } : {}),
+    ...(typeof value.productCardTreatment === "string" && PRODUCT_CARD_TREATMENTS.has(value.productCardTreatment) ? { productCardTreatment: value.productCardTreatment as FullSiteCreativeSectionV1["productCardTreatment"] } : {}),
+    ...(typeof value.merchandisingComposition === "string" && MERCHANDISING_COMPOSITIONS.has(value.merchandisingComposition) ? { merchandisingComposition: value.merchandisingComposition as FullSiteCreativeSectionV1["merchandisingComposition"] } : {}),
   }
 }
 

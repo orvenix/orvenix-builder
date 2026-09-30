@@ -107,6 +107,8 @@ export function applySectionInstanceToContext(
     if (composition.narrativeIntent) context = { ...context, instanceNarrativeIntent: composition.narrativeIntent }
     if (composition.categoryLinks?.length) context = { ...context, commerceCategoryLinks: composition.categoryLinks }
     if (composition.cartProminence && instance.role === "navigation") context = { ...context, navigationCartProminence: composition.cartProminence }
+    if (composition.productCardTreatment && instance.role === "products") context = { ...context, commerceProductCardTreatment: composition.productCardTreatment }
+    if (composition.merchandisingComposition && (instance.role === "products" || instance.role === "content")) context = { ...context, commerceMerchandisingComposition: composition.merchandisingComposition }
     if (composition.emphasis === "opening" && instance.role === "hero") context = { ...context, instanceOmitCta: true }
 
     /*

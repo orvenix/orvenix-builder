@@ -52,7 +52,7 @@ import { rewriteTreeForAssistedViewerV1 } from "../../lib/orvenix-ai/assisted-ge
 import type { EditorNode, EditorTree } from "../../types/editor"
 
 type Run = AutonomousMultiPageSiteBuilderResult
-const REQUEST_FINGERPRINT_4F = "cfb5aee3520b398011d10bca2fd3e9a07cc36688ba732f590726ee261abe0ec8"
+const REQUEST_FINGERPRINT_4F = "7c17ffffd3011c056c8ad4c0911640d0e8aa5fedd96d7fa946009dbfe4f631a1"
 
 const nodesOf = (tree: EditorTree) => Object.values(tree.nodes as Record<string, EditorNode>)
 const cardsOf = (tree: EditorTree) => nodesOf(tree).filter((node) => node.type === "store-product-card")
@@ -195,7 +195,7 @@ test("NovaMarket (new store preview -> confirm): pending targets bind to the car
 
 // --- provider isolation ---
 
-test("provider request: 4F fingerprint unchanged, guard clean, and no runtime ids even for a bound store", async () => {
+test("provider request: PCE-3 fingerprint accepted, guard clean, and no runtime ids even for a bound store", async () => {
   let captured: unknown = null
   const capture = { async generate(input: unknown) { captured = input; throw new Error("capture_only") } } as FullSiteCreativeBlueprintProviderV1
   const dry = await runNovaMarketFullSiteDryRunV1({ mode: "real", env: { NODE_ENV: "test", ORVENIX_DEV_ASSISTED_E2E: "1" }, authorizeRealProviderCall: true, realProvider: capture })

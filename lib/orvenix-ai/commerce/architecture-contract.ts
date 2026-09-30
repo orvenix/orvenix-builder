@@ -68,6 +68,10 @@ export type CommerceCreativeCtaIntentV1 = "none" | "browse_catalog" | "view_cate
 export type CommerceCreativeEmphasisV1 = "quiet" | "standard" | "strong" | "heroic" | "conversion"
 export type CommerceCreativeDensityV1 = "compact" | "balanced" | "spacious"
 export type CommerceCreativeRelationV1 = "standard" | "continuous" | "contrast"
+export const COMMERCE_PRODUCT_CARD_TREATMENTS_V1 = ["compact-catalog", "editorial", "image-led", "featured", "horizontal"] as const
+export const COMMERCE_MERCHANDISING_COMPOSITIONS_V1 = ["featured-plus-grid", "product-rail", "category-spotlight", "editorial-collection", "alternating-story", "dense-catalog"] as const
+export type CommerceProductCardTreatmentV1 = (typeof COMMERCE_PRODUCT_CARD_TREATMENTS_V1)[number]
+export type CommerceMerchandisingCompositionV1 = (typeof COMMERCE_MERCHANDISING_COMPOSITIONS_V1)[number]
 
 export interface CommerceCreativeIntentV1 {
   narrative?: CommerceCreativeNarrativeIntentV1
@@ -76,6 +80,8 @@ export interface CommerceCreativeIntentV1 {
   emphasis?: CommerceCreativeEmphasisV1
   density?: CommerceCreativeDensityV1
   relation?: CommerceCreativeRelationV1
+  productCardTreatment?: CommerceProductCardTreatmentV1
+  merchandisingComposition?: CommerceMerchandisingCompositionV1
 }
 
 export interface CommerceArchitectureSectionV1 {

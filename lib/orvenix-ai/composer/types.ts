@@ -1,4 +1,4 @@
-import type { SectionInstanceCtaLabel, SectionInstanceNarrativeIntent } from "@/lib/orvenix-ai/architect/composition-plan"
+import type { SectionInstanceCtaLabel, SectionInstanceMerchandisingComposition, SectionInstanceNarrativeIntent, SectionInstanceProductCardTreatment } from "@/lib/orvenix-ai/architect/composition-plan"
 import type { CommerceProductFactV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type { NodeProps } from "@/types/editor"
 import type { PageArchetype, SectionRole } from "@/lib/orvenix-ai/architect"
@@ -185,6 +185,10 @@ export interface SectionCompositionContext {
   commerceSurfaces?: boolean
   /** PCE-2: bounded cart affordance for the store navigation (blueprint navigation.cartProminence). */
   navigationCartProminence?: "none" | "subtle" | "prominent"
+  /** PCE-3: bounded product card visual treatment for commerce sections. */
+  commerceProductCardTreatment?: SectionInstanceProductCardTreatment
+  /** PCE-3: bounded merchandising composition for commerce product/category sections. */
+  commerceMerchandisingComposition?: SectionInstanceMerchandisingComposition
 
   /**
    * V2-6.1: bounded, purely additive Composition Plan instance directives
@@ -227,7 +231,7 @@ export interface SectionCompositionContext {
   /** COMMERCE-3C: closed narrative intent selecting Orvenix-owned structural copy. */
   instanceNarrativeIntent?: SectionInstanceNarrativeIntent
   /** COMMERCE-3C: grounded category labels linked to real generated category pages. */
-  commerceCategoryLinks?: Array<{ label: string; href: string }>
+  commerceCategoryLinks?: Array<{ label: string; href: string; imageUrl?: string }>
   /**
    * COMMERCE-5B/6: positionally aligned with `products` -- the Orvenix-resolved
    * detail target for that exact product (`page:<slug>`, `product:<id>` or

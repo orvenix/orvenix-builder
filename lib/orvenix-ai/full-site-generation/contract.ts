@@ -55,6 +55,11 @@ export const FULL_SITE_EMPHASES_V1 = ["standard", "heroic", "quiet", "conversion
 export const FULL_SITE_RELATIONS_V1 = ["standard", "continuous", "contrast"] as const
 export const FULL_SITE_CART_PROMINENCE_V1 = ["none", "subtle", "prominent"] as const
 export const FULL_SITE_REF_KINDS_V1 = ["product", "category", "service", "evidence"] as const
+export const FULL_SITE_PRODUCT_CARD_TREATMENTS_V1 = ["compact-catalog", "editorial", "image-led", "featured", "horizontal"] as const
+export const FULL_SITE_MERCHANDISING_COMPOSITIONS_V1 = ["featured-plus-grid", "product-rail", "category-spotlight", "editorial-collection", "alternating-story", "dense-catalog"] as const
+
+export type FullSiteProductCardTreatmentV1 = (typeof FULL_SITE_PRODUCT_CARD_TREATMENTS_V1)[number]
+export type FullSiteMerchandisingCompositionV1 = (typeof FULL_SITE_MERCHANDISING_COMPOSITIONS_V1)[number]
 
 export type FullSiteContentRefV1 =
   | { kind: "product"; index: number }
@@ -72,6 +77,8 @@ export interface FullSiteCreativeSectionV1 {
   layout?: SectionVisualLayoutPlan
   emphasis?: "standard" | "heroic" | "quiet" | "conversion"
   relationToPrevious?: "standard" | "continuous" | "contrast"
+  productCardTreatment?: FullSiteProductCardTreatmentV1
+  merchandisingComposition?: FullSiteMerchandisingCompositionV1
 }
 
 export interface FullSiteCreativePageV1 {

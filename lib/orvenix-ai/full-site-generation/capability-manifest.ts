@@ -7,6 +7,8 @@ import {
   FULL_SITE_EMPHASES_V1,
   FULL_SITE_NAVIGATION_CONCEPTS_V1,
   FULL_SITE_PAGE_DENSITIES_V1,
+  FULL_SITE_PRODUCT_CARD_TREATMENTS_V1,
+  FULL_SITE_MERCHANDISING_COMPOSITIONS_V1,
   FULL_SITE_RELATIONS_V1,
   FULL_SITE_RHYTHMS_V1,
   FULL_SITE_SITE_DENSITIES_V1,
@@ -79,6 +81,8 @@ export function buildFullSiteCommerceCapabilityManifestV1() {
     ctaIntents: FULL_SITE_CTA_INTENTS_V1,
     emphases: FULL_SITE_EMPHASES_V1,
     relations: FULL_SITE_RELATIONS_V1,
+    productCardTreatments: FULL_SITE_PRODUCT_CARD_TREATMENTS_V1,
+    merchandisingCompositions: FULL_SITE_MERCHANDISING_COMPOSITIONS_V1,
     /** Preferred exact tokens for the free-text `narrative` / `narrativeGoal` fields. */
     narrativeTokens: COMMERCE_NARRATIVE_INTENTS_V1,
     /** Preferred exact tokens for the free-text `mediaIntent` field. */

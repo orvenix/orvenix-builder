@@ -112,12 +112,13 @@ VOCABULARIO (valores exactos):
 - section.narrative y page.narrativeGoal: preferir uno de ${list(m.narrativeTokens)}
 - section.mediaIntent: preferir uno de ${list(m.mediaTokens)}
 - section.ctaIntent: ${list(m.ctaIntents)}; section.emphasis: ${list(m.emphases)}; section.relationToPrevious: ${list(m.relations)}
+- productos: section.productCardTreatment: ${list(m.productCardTreatments)}; section.merchandisingComposition: ${list(m.merchandisingCompositions)}. Usalos solo en secciones role:"products" para variar composicion comercial sin inventar hechos.
 - page.density: ${list(m.pageDensities)}
 - siteConcept.narrative: ${list(m.siteNarratives)}; siteConcept.rhythm: ${list(m.rhythms)}; siteConcept.density: ${list(m.siteDensities)}
 - navigation.concept: ${list(m.navigationConcepts)}; navigation.primaryPurposes: lista de page.purpose; navigation.cartProminence: ${list(m.cartProminence)}
 
 SALIDA: responde UNICAMENTE un objeto JSON valido (sin markdown, sin comentarios, sin texto antes o despues) con esta forma:
-{"version":1,"roleKey":"full_site_creative_blueprint_v1","strategyKey":"bounded_full_site_generation_v1","siteConcept":{"narrative","rhythm","density"},"navigation":{"concept","primaryPurposes"?,"cartProminence"?},"pages":[{"purpose","target"?,"narrativeGoal"?,"density"?,"sections":[{"intent","role","refs"?,"narrative"?,"mediaIntent"?,"ctaIntent"?,"layout"?,"emphasis"?,"relationToPrevious"?}]}]}
+{"version":1,"roleKey":"full_site_creative_blueprint_v1","strategyKey":"bounded_full_site_generation_v1","siteConcept":{"narrative","rhythm","density"},"navigation":{"concept","primaryPurposes"?,"cartProminence"?},"pages":[{"purpose","target"?,"narrativeGoal"?,"density"?,"sections":[{"intent","role","refs"?,"narrative"?,"mediaIntent"?,"ctaIntent"?,"layout"?,"emphasis"?,"relationToPrevious"?,"productCardTreatment"?,"merchandisingComposition"?}]}]}
 No incluyas ningun otro campo. No expliques tu razonamiento. Usa JSON compacto; si el presupuesto de salida no alcanza, reduce primero paginas internas y luego secciones, pero conserva home y catalog.`
 }
 

@@ -4,6 +4,8 @@ import type {
   CommerceCreativeEmphasisV1,
   CommerceCreativeMediaIntentV1,
   CommerceCreativeNarrativeIntentV1,
+  CommerceMerchandisingCompositionV1,
+  CommerceProductCardTreatmentV1,
   CommerceCreativeRelationV1,
 } from "@/lib/orvenix-ai/commerce/architecture-contract"
 import type { FullSiteCreativeBlueprintV1, FullSiteCreativePageV1, FullSiteCreativeSectionV1 } from "./contract"
@@ -32,6 +34,8 @@ export const COMMERCE_NARRATIVE_INTENTS_V1 = [
 ] as const satisfies readonly CommerceCreativeNarrativeIntentV1[]
 
 export const COMMERCE_MEDIA_INTENTS_V1 = ["none", "minimal", "supporting", "dominant", "product-focus", "gallery"] as const satisfies readonly CommerceCreativeMediaIntentV1[]
+export const COMMERCE_PRODUCT_CARD_TREATMENTS_FOR_CREATIVE_V1 = ["compact-catalog", "editorial", "image-led", "featured", "horizontal"] as const satisfies readonly CommerceProductCardTreatmentV1[]
+export const COMMERCE_MERCHANDISING_COMPOSITIONS_FOR_CREATIVE_V1 = ["featured-plus-grid", "product-rail", "category-spotlight", "editorial-collection", "alternating-story", "dense-catalog"] as const satisfies readonly CommerceMerchandisingCompositionV1[]
 
 function normalizeToken(value: string): string {
   return value
@@ -123,6 +127,8 @@ export type ResolvedSectionCreativeIntentV1 = {
   emphasis?: CommerceCreativeEmphasisV1
   density: CommerceCreativeDensityV1
   relation?: CommerceCreativeRelationV1
+  productCardTreatment?: CommerceProductCardTreatmentV1
+  merchandisingComposition?: CommerceMerchandisingCompositionV1
 }
 
 /**
@@ -155,6 +161,8 @@ export function resolveSectionCreativeIntentV1(params: {
     ...(emphasis ? { emphasis } : {}),
     density: densityFromPage(page.density) ?? densityFromSite(blueprint.siteConcept.density),
     ...(section.relationToPrevious ? { relation: section.relationToPrevious } : {}),
+    ...(section.productCardTreatment ? { productCardTreatment: section.productCardTreatment } : {}),
+    ...(section.merchandisingComposition ? { merchandisingComposition: section.merchandisingComposition } : {}),
   }
 }
 

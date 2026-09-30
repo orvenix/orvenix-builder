@@ -21,8 +21,25 @@ import { rewriteTreeForAssistedViewerV1 } from "@/lib/orvenix-ai/assisted-genera
 
 export const dynamic = "force-dynamic";
 
-const VARIANTS = { off: "ORVENIX ONLY", assisted: "ORVENIX + CLAUDE" } as const;
-type VariantKey = keyof typeof VARIANTS;
+const DEFAULT_VARIANT_LABELS = { off: "ORVENIX ONLY", assisted: "ORVENIX + CLAUDE" } as const;
+type ViewerVariantRun = AssistedComparisonArtifactV1["off"];
+type ViewerArtifact = AssistedComparisonArtifactV1 & {
+  variantLabels?: Record<string, string>;
+  [key: string]: unknown;
+};
+
+function getViewerVariantKeys(artifact: ViewerArtifact): string[] {
+  if (artifact.variantLabels) return Object.keys(artifact.variantLabels).filter((key) => isViewerVariantRun(artifact[key]));
+  return ["off", "assisted"];
+}
+
+function isViewerVariantRun(value: unknown): value is ViewerVariantRun {
+  return Boolean(value) && typeof value === "object" && Array.isArray((value as { pages?: unknown }).pages);
+}
+
+function viewerVariantLabel(artifact: ViewerArtifact, key: string): string {
+  return artifact.variantLabels?.[key] ?? DEFAULT_VARIANT_LABELS[key as keyof typeof DEFAULT_VARIANT_LABELS] ?? key;
+}
 
 export default async function DevAssistedGenerationViewerPage({
   params,
@@ -37,17 +54,19 @@ export default async function DevAssistedGenerationViewerPage({
   if (!session?.user?.id) return <pre>No active session.</pre>;
 
   const { variant, slug } = await params;
-  if (variant !== "off" && variant !== "assisted") notFound();
-  const variantKey: VariantKey = variant;
 
-  let artifact: AssistedComparisonArtifactV1;
+  let artifact: ViewerArtifact;
   try {
-    artifact = JSON.parse(await fs.readFile(ASSISTED_COMPARISON_ARTIFACT_PATH_V1, "utf8")) as AssistedComparisonArtifactV1;
+    artifact = JSON.parse(await fs.readFile(ASSISTED_COMPARISON_ARTIFACT_PATH_V1, "utf8")) as ViewerArtifact;
   } catch {
     return <pre>No comparison artifact yet. POST /dev-assisted-generation-e2e/run first.</pre>;
   }
 
+  const variantKeys = getViewerVariantKeys(artifact);
+  if (!variantKeys.includes(variant)) notFound();
+  const variantKey = variant;
   const run = artifact[variantKey];
+  if (!isViewerVariantRun(run)) notFound();
   const page = run.pages.find((entry) => entry.slug === slug);
   if (!page) notFound();
 
@@ -68,12 +87,16 @@ export default async function DevAssistedGenerationViewerPage({
   return (
     <div>
       <div style={{ position: "sticky", top: 0, zIndex: 50, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", padding: "8px 16px", background: "#0f172a", color: "#e2e8f0", fontFamily: "monospace", fontSize: 12 }}>
-        <strong>{artifact.fixture.name} · {VARIANTS[variantKey]}</strong>
-        {(Object.keys(VARIANTS) as VariantKey[]).map((key) => (
-          <Link key={key} href={`/dev-assisted-generation-e2e/view/${key}/${artifact[key].pages.some((p) => p.slug === slug) ? slug : "home"}`} style={{ textDecoration: key === variantKey ? "underline" : "none" }}>
-            {VARIANTS[key]}
-          </Link>
-        ))}
+        <strong>{artifact.fixture.name} · {viewerVariantLabel(artifact, variantKey)}</strong>
+        {variantKeys.map((key) => {
+          const targetRun = artifact[key];
+          if (!isViewerVariantRun(targetRun)) return null;
+          return (
+            <Link key={key} href={`/dev-assisted-generation-e2e/view/${key}/${targetRun.pages.some((p) => p.slug === slug) ? slug : "home"}`} style={{ textDecoration: key === variantKey ? "underline" : "none" }}>
+              {viewerVariantLabel(artifact, key)}
+            </Link>
+          );
+        })}
         <span>|</span>
         {run.pages.map((entry) => (
           <Link key={entry.slug} href={`/dev-assisted-generation-e2e/view/${variantKey}/${entry.slug}`} style={{ textDecoration: entry.slug === slug ? "underline" : "none" }}>

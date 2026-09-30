@@ -22,7 +22,9 @@ import {
   type CommerceArchitectureSectionV1,
   type CommerceCreativeCtaIntentV1,
   type CommerceCreativeIntentV1,
+  type CommerceMerchandisingCompositionV1,
   type CommerceNavigationStyleV1,
+  type CommerceProductCardTreatmentV1,
   type CommercePagePurposeV1,
   type CommerceSectionTypeV1,
   type CommerceStoreStrategyV1,
@@ -143,8 +145,8 @@ function homeSections(strategy: CommerceStoreStrategyV1, products: readonly Comm
     return [
       section("commerce_hero", "hero", { layout: { kind: "editorial-passage", rhythm: "spacious" } }),
       section("category_navigation", "content"),
-      section("featured_products", "products", { productIndexes: featured, layout: { kind: "card-grid", rhythm: "standard" } }),
-      section("catalog_grid", "products", { productIndexes: products.slice(0, Math.min(8, products.length)).map((_, index) => index), layout: { kind: "card-grid" } }),
+      section("featured_products", "products", { productIndexes: featured, layout: { kind: "card-grid", rhythm: "spacious" }, creativeIntent: { productCardTreatment: "featured", merchandisingComposition: "featured-plus-grid", media: "dominant", density: "spacious" } }),
+      section("catalog_grid", "products", { productIndexes: products.slice(0, Math.min(8, products.length)).map((_, index) => index), layout: { kind: "card-grid", rhythm: "compact" }, creativeIntent: { productCardTreatment: "compact-catalog", merchandisingComposition: "dense-catalog", density: "compact" } }),
       section("commerce_trust", "trust"),
       section("commerce_closing", "cta", { layout: { kind: "dramatic-closing" } }),
     ]
@@ -154,7 +156,7 @@ function homeSections(strategy: CommerceStoreStrategyV1, products: readonly Comm
     return [
       section("commerce_hero", "hero", { layout: { kind: "oversized-typography", rhythm: "spacious" } }),
       section("product_spotlight", "products", { productIndexes: spotlight, layout: { kind: "editorial-split", rhythm: "spacious" } }),
-      section("featured_products", "products", { productIndexes: featured, layout: { kind: "card-grid" } }),
+      section("featured_products", "products", { productIndexes: featured, layout: { kind: "card-grid" }, creativeIntent: { productCardTreatment: "image-led", merchandisingComposition: "featured-plus-grid", media: "dominant" } }),
       section("category_navigation", "content"),
       section("commerce_benefits", "features"),
       section("commerce_closing", "cta", { layout: { kind: "dramatic-closing" } }),
@@ -164,7 +166,7 @@ function homeSections(strategy: CommerceStoreStrategyV1, products: readonly Comm
   if (strategy === "promotional") {
     return [
       section("commerce_hero", "hero", { layout: { kind: "editorial-passage" } }),
-      section("featured_products", "products", { productIndexes: featured, layout: { kind: "card-grid" } }),
+      section("featured_products", "products", { productIndexes: featured, layout: { kind: "card-grid" }, creativeIntent: { productCardTreatment: "featured", merchandisingComposition: "product-rail" } }),
       section("promotional_banner", "features", { layout: { kind: "editorial-split" } }),
       section("category_navigation", "content"),
       section("product_collection", "products", { productIndexes: secondGroup ?? featured, layout: { kind: "mirror-split" } }),
@@ -175,8 +177,8 @@ function homeSections(strategy: CommerceStoreStrategyV1, products: readonly Comm
   return [
     section("commerce_hero", "hero", { layout: { kind: "editorial-passage", rhythm: "spacious" } }),
     section("category_navigation", "content"),
-    section("featured_products", "products", { productIndexes: featured, layout: { kind: "card-grid" } }),
-    section("product_spotlight", "products", { productIndexes: spotlight, layout: { kind: "editorial-split", rhythm: "spacious" } }),
+    section("featured_products", "products", { productIndexes: featured, layout: { kind: "card-grid" }, creativeIntent: { productCardTreatment: "featured", merchandisingComposition: "featured-plus-grid" } }),
+    section("product_spotlight", "products", { productIndexes: spotlight, layout: { kind: "editorial-split", rhythm: "spacious" }, creativeIntent: { productCardTreatment: "featured", merchandisingComposition: "editorial-collection", media: "product-focus" } }),
     section("commerce_benefits", "features"),
     section("product_collection", "products", { productIndexes: secondGroup ?? featured, layout: { kind: "mirror-split" } }),
     section("commerce_closing", "cta", { layout: { kind: "dramatic-closing" } }),
@@ -201,7 +203,7 @@ function makeCommercePlan(products: CommerceProductFactV1[], mode: CommerceArchi
       sections: [
         section("commerce_hero", "hero", { layout: { kind: "oversized-typography" } }),
         section("category_navigation", "content"),
-        section("catalog_grid", "products", { productIndexes: products.map((_, index) => index), layout: { kind: "card-grid" } }),
+        section("catalog_grid", "products", { productIndexes: products.map((_, index) => index), layout: { kind: "card-grid", rhythm: "compact" }, creativeIntent: { productCardTreatment: "compact-catalog", merchandisingComposition: "dense-catalog", density: "compact" } }),
         section("commerce_trust", "trust"),
         section("commerce_closing", "cta", { layout: { kind: "dramatic-closing" } }),
       ],
@@ -482,7 +484,10 @@ function categoryLinksFor(page: CommerceArchitecturePageV1, index: PlanIndex): S
   const links = [...index.categorySlugByLabel.entries()]
     .filter(([, slug]) => slug !== page.slug)
     .slice(0, 6)
-    .map(([label, slug]) => ({ label, href: `page:${slug}` }))
+    .map(([label, slug]) => {
+      const representative = index.products.find((product) => product.category === label && product.imageUrls?.[0])
+      return { label, href: `page:${slug}`, ...(representative?.imageUrls?.[0] ? { imageUrl: representative.imageUrls[0] } : {}) }
+    })
   return links.length ? links : undefined
 }
 
@@ -507,6 +512,27 @@ function mediaStrategyFor(media: CommerceCreativeIntentV1["media"]): SectionInst
   if (media === "dominant" || media === "product-focus" || media === "gallery") return "led"
   if (media === "supporting") return "supporting"
   if (media === "minimal" || media === "none") return "none"
+  return undefined
+}
+
+function defaultProductCardTreatmentFor(entry: CommerceArchitectureSectionV1, intent: CommerceCreativeIntentV1): CommerceProductCardTreatmentV1 | undefined {
+  if (intent.productCardTreatment) return intent.productCardTreatment
+  if (entry.type === "product_spotlight" || entry.type === "product_detail") return intent.media === "none" ? "editorial" : "featured"
+  if (entry.type === "featured_products") return intent.media === "dominant" || intent.emphasis === "heroic" ? "image-led" : "featured"
+  if (entry.type === "related_products") return "horizontal"
+  if (entry.type === "catalog_grid" || intent.density === "compact") return "compact-catalog"
+  if (intent.narrative === "editorial-story") return "editorial"
+  return undefined
+}
+
+function defaultMerchandisingCompositionFor(entry: CommerceArchitectureSectionV1, intent: CommerceCreativeIntentV1): CommerceMerchandisingCompositionV1 | undefined {
+  if (intent.merchandisingComposition) return intent.merchandisingComposition
+  if (entry.type === "featured_products") return "featured-plus-grid"
+  if (entry.type === "product_spotlight" || entry.type === "product_detail") return "editorial-collection"
+  if (entry.type === "related_products") return "product-rail"
+  if (entry.type === "product_collection" && intent.narrative === "editorial-story" && !intent.media) return "alternating-story"
+  if (entry.type === "product_collection" && entry.category) return "category-spotlight"
+  if (entry.type === "catalog_grid" || intent.density === "compact") return "dense-catalog"
   return undefined
 }
 
@@ -543,6 +569,8 @@ function compositionFor(
     ...(cta === "none" ? { omitCta: true } : cta ? { ctaAction: cta } : {}),
     ...(categoryLinks ? { categoryLinks } : {}),
     ...(productDetailLinks ? { productDetailLinks } : {}),
+    ...(defaultProductCardTreatmentFor(entry, intent) ? { productCardTreatment: defaultProductCardTreatmentFor(entry, intent) } : {}),
+    ...(defaultMerchandisingCompositionFor(entry, intent) ? { merchandisingComposition: defaultMerchandisingCompositionFor(entry, intent) } : {}),
     ...((entry.type === "product_detail" || entry.type === "product_spotlight") && !scale ? { alignment: "left" as const } : {}),
   }
 }

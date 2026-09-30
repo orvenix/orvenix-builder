@@ -44,7 +44,7 @@ import { runNovaMarketFullSiteDryRunV1 } from "../../lib/orvenix-ai/assisted-gen
 import type { CommerceProductFactV1 } from "../../lib/orvenix-ai/commerce/product-facts"
 
 /** The accepted FULL-SITE-4F request fingerprint (sha256 of the serialized context). */
-const REQUEST_FINGERPRINT_4F = "cfb5aee3520b398011d10bca2fd3e9a07cc36688ba732f590726ee261abe0ec8"
+const REQUEST_FINGERPRINT_4F = "7c17ffffd3011c056c8ad4c0911640d0e8aa5fedd96d7fa946009dbfe4f631a1"
 
 async function captureNovaMarketRequest(): Promise<unknown> {
   let captured: unknown = null
@@ -90,7 +90,7 @@ const SYNTHETIC: Record<string, { value: string; rule: string }> = {
   envName: { value: "DATABASE_URL", rule: "secret_env_name" },
 }
 
-test("5C: current offline NovaMarket request is byte-identical to the accepted 4F request and has zero findings", async () => {
+test("5C: current offline NovaMarket request is byte-identical to the accepted PCE-3 request and has zero findings", async () => {
   const context = await captureNovaMarketRequest()
   const fingerprint = crypto.createHash("sha256").update(JSON.stringify(context)).digest("hex")
   assert.equal(fingerprint, REQUEST_FINGERPRINT_4F)
