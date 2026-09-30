@@ -7,11 +7,15 @@ export function ReviewBar({
   current,
   artifactVariants,
   suffix = "",
+  cartPresets = [],
+  activeCartPreset,
 }: {
   bucket: string;
   current: string;
   artifactVariants: Array<[string, string]>;
   suffix?: string;
+  cartPresets?: string[];
+  activeCartPreset?: string;
 }) {
   const style = (active: boolean) => ({ color: active ? "#7dd3fc" : "#e2e8f0", textDecoration: active ? "underline" : "none" });
   return (
@@ -26,7 +30,11 @@ export function ReviewBar({
         <Link key={key} href={`/dev-interaction-review/${bucket}/${key}/home`} style={style(current === key)}>{label}</Link>
       ))}
       {artifactVariants.length === 0 ? <span>(PCE-3C artifact not found locally)</span> : null}
-      <span style={{ opacity: 0.7 }}>Tab / Shift+Tab / Enter / Escape · reduced motion: OS or DevTools</span>
+      {cartPresets.length > 0 ? <span>| cart:</span> : null}
+      {cartPresets.map((preset) => (
+        <Link key={preset} href={`/dev-interaction-review/${bucket}?cart=${preset}`} style={style(preset === activeCartPreset)}>{preset}</Link>
+      ))}
+      <span style={{ opacity: 0.7 }}>Tab / Shift+Tab / Enter / Escape · reduced motion: OS or DevTools · narrow: DevTools device mode</span>
     </div>
   );
 }

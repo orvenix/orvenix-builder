@@ -10,7 +10,10 @@ import type { EditorNode, EditorTree, NodeProps } from "@/types/editor"
  * PCE-2: with a `siteNav` the cart becomes a nav affordance plus the
  * existing `store-cart-drawer`; without one, the original
  * `store-cart-button` + drawer band right after the first root child.
- * Idempotent: a page that already has a cart drawer is returned unchanged.
+ * Idempotent: a page that already RENDERS a cart drawer is returned unchanged.
+ * PCE-4B: the decision is made on nodes reachable from the root, and any
+ * actionable cart trigger (bound card, product detail, CartButton, nav with
+ * showCart) guarantees exactly one drawer -- see auditStoreCartShellV1.
  */
 
 export const STORE_CART_SHELL_DISPLAY_NAME_V1 = "Carrito de la tienda"
@@ -52,6 +55,45 @@ function subtreeHasType(nodes: Record<string, EditorNode>, rootId: string, type:
   return false
 }
 
+/** Node ids reachable from the given root children (what the runtime actually renders). */
+function reachableIds(nodes: Record<string, EditorNode>, rootChildren: readonly string[]): Set<string> {
+  const seen = new Set<string>()
+  const stack = [...rootChildren]
+  while (stack.length) {
+    const id = stack.pop()!
+    if (seen.has(id) || !nodes[id]) continue
+    seen.add(id)
+    stack.push(...nodes[id].children)
+  }
+  return seen
+}
+
+/**
+ * PCE-4B: every node a customer can use to reach the cart. Pending/unbound
+ * cards are presentation-only and are NOT triggers.
+ */
+export function isActionableCartTriggerNodeV1(candidate: EditorNode): boolean {
+  return isBoundStoreProductCardNodeV1(candidate)
+    || isStoreProductDetailNodeV1(candidate)
+    || candidate.type === "store-cart-button"
+    || (candidate.type === "siteNav" && candidate.props.showCart === true)
+}
+
+export type StoreCartShellAuditV1 = { actionableTriggers: number; reachableDrawers: number; ok: boolean }
+
+/**
+ * PCE-4B invariant, over what the runtime renders (reachable nodes only):
+ * an actionable cart trigger implies exactly one functional CartDrawer, and
+ * a page never renders more than one drawer.
+ */
+export function auditStoreCartShellV1(tree: Pick<EditorTree, "nodes" | "rootId">): StoreCartShellAuditV1 {
+  const root = tree.nodes[tree.rootId]
+  const reachable = [...reachableIds(tree.nodes, root ? root.children : [])].map((id) => tree.nodes[id])
+  const actionableTriggers = reachable.filter(isActionableCartTriggerNodeV1).length
+  const reachableDrawers = reachable.filter((candidate) => candidate.type === "store-cart-drawer").length
+  return { actionableTriggers, reachableDrawers, ok: reachableDrawers <= 1 && (actionableTriggers === 0 || reachableDrawers === 1) }
+}
+
 /** Mutates `nodes` and returns the new root children order. */
 export function injectStoreCartShellNodesV1(
   nodes: Record<string, EditorNode>,
@@ -59,8 +101,13 @@ export function injectStoreCartShellNodesV1(
   children: string[],
   accentColor: string | undefined,
 ): string[] {
-  if (!Object.values(nodes).some((candidate) => isBoundStoreProductCardNodeV1(candidate) || isStoreProductDetailNodeV1(candidate))) return children
-  if (Object.values(nodes).some((candidate) => candidate.type === "store-cart-drawer")) return children
+  // PCE-4B: decide on what the runtime renders -- nodes reachable from the
+  // root children -- not on every entry in `nodes`. An orphaned drawer (left
+  // in `nodes` but not rendered) must not satisfy the invariant.
+  const reachable = [...reachableIds(nodes, children)].map((id) => nodes[id])
+  const sells = reachable.some((candidate) => isBoundStoreProductCardNodeV1(candidate) || isStoreProductDetailNodeV1(candidate))
+  if (!reachable.some(isActionableCartTriggerNodeV1)) return children
+  if (reachable.some((candidate) => candidate.type === "store-cart-drawer")) return children
 
   const accent = accentColor ? { accentColor } : {}
 
@@ -70,9 +117,11 @@ export function injectStoreCartShellNodesV1(
    * only the off-canvas drawer is added -- no detached full-width band.
    * Pages without a siteNav keep the original shell below.
    */
-  const navNode = Object.values(nodes).find((candidate) => candidate.type === "siteNav")
-  if (navNode) {
-    navNode.props = { ...navNode.props, showCart: true }
+  const navNode = reachable.find((candidate) => candidate.type === "siteNav")
+  const hasOwnCartEntry = reachable.some((candidate) => candidate.type === "store-cart-button" || (candidate.type === "siteNav" && candidate.props.showCart === true))
+  if (navNode || (!sells && hasOwnCartEntry)) {
+    // Only a selling page turns the nav cart ON; an existing entry just gets its drawer.
+    if (navNode && sells) navNode.props = { ...navNode.props, showCart: true }
     const drawerOnly = node("store-cart-drawer", "Carrito (panel)", { checkoutLabel: "Ir a pagar", ...accent })
     drawerOnly.parentId = rootId
     nodes[drawerOnly.id] = drawerOnly

@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { buildCartItemFromProductCardV1 } from "./product-card-binding";
+import { addItemWithResultV1, useAddToCartFeedbackV1 } from "./cart-feedback";
 import { isSafeProductMediaUrlV1 } from "@/lib/commerce/product-media";
 import {
   LEGACY_DARK_COMMERCE_SURFACE_V1,
@@ -70,7 +71,7 @@ export function ProductDetail({
   lowStockThreshold = 5,
   surface: rawSurface,
 }: Props) {
-  const addItem = useCartStore((s) => s.addItem);
+  const feedback = useAddToCartFeedbackV1();
   const groupId = useId();
   const firstAvailable = variants.find((variant) => !isOutOfStock(variant.stock)) ?? variants[0];
   const [selectedId, setSelectedId] = useState(firstAvailable?.variantId);
@@ -103,7 +104,8 @@ export function ProductDetail({
       stock: selected.stock,
     });
     if (!item) return;
-    addItem({ ...item, quantity: safeQuantity });
+    // PCE-4B: feedback only after the store really added it.
+    feedback.report(addItemWithResultV1(useCartStore, { ...item, quantity: safeQuantity }));
   };
 
   const info = (
@@ -139,15 +141,24 @@ export function ProductDetail({
           <div className="flex flex-wrap gap-2">
             {variants.map((variant) => {
               const checked = variant.variantId === selected.variantId;
+              const unavailable = isOutOfStock(variant.stock);
               const inputId = `${groupId}-${variant.variantId}`;
+              // PCE-4B: selected is unmistakable without motion (accent border +
+              // inset accent ring + tint); keyboard focus gets its own outline;
+              // unavailability comes only from the authoritative stock.
               return (
                 <label
                   key={variant.variantId}
                   htmlFor={inputId}
-                  className={`cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-colors focus-within:ring-2 focus-within:ring-offset-2 ${isOutOfStock(variant.stock) ? "opacity-50" : ""}`}
-                  style={checked
-                    ? { borderColor: surface.accent, background: mixHexV1(surface.accent, surface.card, 0.85), color: surface.heading }
-                    : { borderColor: surface.border, color: surface.body }}
+                  data-variant-state={checked ? "selected" : unavailable ? "unavailable" : "available"}
+                  className={`cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-colors duration-[var(--orv-interaction-duration,300ms)] [border-color:var(--orv-variant-border)] hover:[border-color:var(--orv-variant-accent)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:[outline-style:solid] has-[:focus-visible]:[outline-color:var(--orv-variant-accent)] ${unavailable ? "opacity-50 line-through" : ""}`}
+                  style={{
+                    "--orv-variant-accent": surface.accent,
+                    "--orv-variant-border": checked ? surface.accent : surface.border,
+                    ...(checked
+                      ? { background: mixHexV1(surface.accent, surface.card, 0.85), color: surface.heading, boxShadow: `inset 0 0 0 1px ${surface.accent}` }
+                      : { color: surface.body }),
+                  } as React.CSSProperties & Record<"--orv-variant-accent" | "--orv-variant-border", string>}
                 >
                   <input
                     id={inputId}
@@ -159,6 +170,7 @@ export function ProductDetail({
                     className="sr-only"
                   />
                   {variant.label}
+                  {unavailable && <span className="sr-only"> (sin stock)</span>}
                 </label>
               );
             })}
@@ -190,12 +202,14 @@ export function ProductDetail({
           onClick={handleAdd}
           disabled={outOfStock}
           data-store-card-state={outOfStock ? "out-of-stock" : "bound"}
+          data-cart-feedback={feedback.added ? "added" : undefined}
           className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           style={outOfStock ? { background: surface.border, color: surface.muted } : { background: surface.accent, color: surface.onAccent }}
         >
           <ShoppingCart size={18} aria-hidden="true" />
-          {outOfStock ? "Sin stock" : "Añadir al carrito"}
+          {outOfStock ? "Sin stock" : feedback.added ? <>Añadido <span aria-hidden="true">✓</span></> : "Añadir al carrito"}
         </button>
+        <span className="sr-only" role="status" aria-live="polite">{feedback.message}</span>
       </div>
     </div>
   );

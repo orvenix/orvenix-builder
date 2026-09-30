@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEditorStore } from "@/store/useEditorStore";
 import { getFocusableElements, isEscapeKey, restoreFocus } from "@/lib/builder-core/runtime/interaction";
+import { useCartCountPulseV1 } from "@/components/editor/blocks/store/cart-feedback";
 import { resolveRuntimeHref, resolveSiteNavItemTarget } from "@/lib/builder-core/tree/pageLinks";
 import { buildEditorPageUrl } from "@/components/editor/pageNavigation";
 import { resolveSiteNavPages } from "@/lib/builder-core/tree/siteNavigation";
@@ -77,6 +78,8 @@ function NavCartButton({
   const toggle = useCartStore((s) => s.toggle);
   const cartOpen = useCartStore((s) => s.isOpen);
   const count = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0));
+  // PCE-4B: one-shot emphasis only after a real local add (never on restore).
+  const countPulse = useCartCountPulseV1();
   const accentBackground = navAccent?.background ?? "#1BB3FA";
   const accentText = navAccent?.text ?? readableTextOn(accentBackground);
   const iconOnly = mobile || treatment === "compact";
@@ -102,9 +105,10 @@ function NavCartButton({
       {!iconOnly && <span>Carrito</span>}
       {count > 0 && (
         <span
-          className={iconOnly
+          key={countPulse}
+          className={`${iconOnly
             ? "absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-extrabold"
-            : "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold"}
+            : "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold"}${countPulse ? " orvenix-cart-count-pulse" : ""}`}
           style={filled ? { background: accentText, color: accentBackground } : { background: accentBackground, color: accentText }}
         >
           {count}

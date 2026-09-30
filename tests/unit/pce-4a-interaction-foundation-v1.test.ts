@@ -34,23 +34,6 @@ globalThis.fetch = (async () => {
 const read = (file: string) => fs.readFileSync(path.join(process.cwd(), file), "utf8")
 const GLOBALS_CSS = read("app/globals.css")
 
-/**
- * Returns the declarations of a top-level rule whose selector matches exactly
- * (the first one, or the first one containing `mustInclude` when a selector
- * has several rule blocks).
- */
-function cssRule(selector: string, mustInclude?: string): string {
-  let from = 0
-  for (;;) {
-    const index = GLOBALS_CSS.indexOf(`\n${selector} {`, from)
-    assert.notEqual(index, -1, `missing CSS rule: ${selector}${mustInclude ? ` containing ${mustInclude}` : ""}`)
-    const start = GLOBALS_CSS.indexOf("{", index)
-    const body = GLOBALS_CSS.slice(start + 1, GLOBALS_CSS.indexOf("}", start))
-    if (!mustInclude || body.includes(mustInclude)) return body
-    from = start
-  }
-}
-
 /** Minimal CSS walker (no dependency): calls back with each style rule, its enclosing at-rules and its declarations. */
 function walkCssRules(css: string, visit: (selector: string, atRules: string[], decls: Array<{ prop: string; value: string }>) => void) {
   const source = css.replace(/\/\*[\s\S]*?\*\//g, "")
@@ -74,6 +57,23 @@ function walkCssRules(css: string, visit: (selector: string, atRules: string[], 
       buffer += char
     }
   }
+}
+
+/**
+ * Declarations ("prop: value;" lines) of the first rule whose selector LIST
+ * contains `selector` exactly (optionally the first such rule containing
+ * `mustInclude`). Rules inside @media blocks are skipped.
+ */
+function cssRule(selector: string, mustInclude?: string): string {
+  let found: string | null = null
+  walkCssRules(GLOBALS_CSS, (ruleSelector, atRules, decls) => {
+    if (found !== null || atRules.length > 0) return
+    if (!ruleSelector.split(",").map((part) => part.trim()).includes(selector)) return
+    const body = decls.map((decl) => `${decl.prop}: ${decl.value};`).join("\n")
+    if (!mustInclude || body.includes(mustInclude)) found = body
+  })
+  assert.notEqual(found, null, `missing CSS rule: ${selector}${mustInclude ? ` containing ${mustInclude}` : ""}`)
+  return found!
 }
 
 function reducedMotionBlocks(): string {
@@ -282,7 +282,7 @@ test("PCE-3C resting CSS is preserved: CTA base, shine at rest, nav links, motio
 test("reduced motion zeroes interaction tokens and entrance, keeps state changes immediate", async () => {
   const reduced = reducedMotionBlocks()
   assert.match(reduced, /transition-duration: 1ms !important/)
-  assert.match(reduced, /\.editor-render-scope,\s*\n\s*\.editor-render-scope\[data-motion\] \{[^}]*--orv-motion-distance-md: 0px[^}]*--orv-motion-media-scale: 1;[^}]*--orv-press-scale: 1;/)
+  assert.match(reduced, /\.editor-render-scope,\s*\n\s*\.editor-render-scope\[data-motion\],[^{]*\{[^}]*--orv-motion-distance-md: 0px[^}]*--orv-motion-media-scale: 1;[^}]*--orv-press-scale: 1;/)
   assert.match(reduced, /\.editor-motion-frame,\s*\n\s*\.orvenix-site-nav-mobile-panel \{\s*\n\s*animation: none !important/)
   assert.match(reduced, /\.editor-motion-pending \{\s*\n\s*opacity: 1 !important/)
   assert.match(reduced, /\.orvenix-cta-button:hover::before \{\s*\n\s*transform: translateX\(-130%\) !important/)

@@ -6,6 +6,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { useEditorStore } from "@/components/editor/store/useEditorStore";
 import { ShoppingCart } from "lucide-react";
 import { buildCartItemFromProductCardV1, isProductCardBoundV1, resolveProductCardDetailHrefV1 } from "./product-card-binding";
+import { addItemWithResultV1, useAddToCartFeedbackV1 } from "./cart-feedback";
 import type { SectionInstanceProductCardTreatment } from "@/lib/orvenix-ai/architect/composition-plan";
 import { isSafeProductMediaUrlV1 } from "@/lib/commerce/product-media";
 import {
@@ -87,7 +88,7 @@ export function ProductCard({
   className,
   treatment = "compact-catalog",
 }: Props) {
-  const addItem = useCartStore((s) => s.addItem);
+  const feedback = useAddToCartFeedbackV1();
   const websiteId = useEditorStore((s) => s.websiteId);
   const pathname = usePathname();
   // Same mode rules as CtaButton; never a live link on the editor canvas (a click there selects, it must not navigate).
@@ -108,7 +109,8 @@ export function ProductCard({
   const handleAdd = () => {
     const item = buildCartItemFromProductCardV1({ productId, variantId, productName, variantName, priceMxn, imageUrl: image ?? undefined, stock });
     if (!item) return;
-    addItem(item);
+    // PCE-4B: feedback only after the store really added it.
+    feedback.report(addItemWithResultV1(useCartStore, item));
   };
 
   const tileBackground = mixHexV1(surface.accent, surface.card, surface.tone === "light" ? 0.9 : 0.82);
@@ -230,18 +232,22 @@ export function ProductCard({
       Producto sin vincular a la tienda
     </p>
   ) : (
+    <>
     <button
       type="button"
       onClick={handleAdd}
       disabled={isOutOfStock}
       data-store-card-state={isOutOfStock ? "out-of-stock" : "bound"}
       data-commerce-cta="primary-purchase"
+      data-cart-feedback={feedback.added ? "added" : undefined}
       className={buttonClass}
       style={isOutOfStock ? { background: surface.border, color: surface.muted } : { background: surface.accent, color: surface.onAccent }}
     >
       <ShoppingCart size={isFeatured ? 16 : 14} aria-hidden="true" />
-      {isOutOfStock ? "Sin stock" : "Añadir al carrito"}
+      {isOutOfStock ? "Sin stock" : feedback.added ? <>Añadido <span aria-hidden="true">✓</span></> : "Añadir al carrito"}
     </button>
+    <span className="sr-only" role="status" aria-live="polite">{feedback.message}</span>
+    </>
   );
 
   return (

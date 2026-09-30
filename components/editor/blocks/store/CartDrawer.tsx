@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
 import { useEditorStore } from "@/store/useEditorStore";
@@ -13,6 +14,8 @@ import {
   resolveFocusTrapTarget,
   restoreFocus,
 } from "@/lib/builder-core/runtime/interaction";
+import { getRuntimeMotionAttributes } from "@/lib/builder-core/runtime/motion";
+import { useCartCountPulseV1 } from "./cart-feedback";
 
 interface Props {
   id?: string;
@@ -28,6 +31,11 @@ function findVisibleCartTrigger(): HTMLElement | null {
   const triggers = Array.from(document.querySelectorAll<HTMLElement>("[data-cart-trigger]"));
   return triggers.find((element) => element.getClientRects().length > 0) ?? null;
 }
+
+const subscribeNothing = () => () => {};
+
+/** Opaque equivalent of the former rgba(255,255,255,0.02) footer tint over #0a1628 (sticky content must not show through). */
+const FOOTER_BACKGROUND = "#0f1b2c";
 
 function formatMxn(cents: number) {
   return `$${(cents / 100).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
@@ -64,6 +72,15 @@ export function CartDrawer({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const resolvedPersistenceSiteId = pathname?.startsWith("/p/") ? (siteId || storeSiteId) : null;
+  // PCE-4B: outside the editor canvas the drawer is portaled to <body> after
+  // hydration, so no ancestor (the render scope's container-type, a motion
+  // frame's translate, a transformed section) can capture its position:fixed
+  // and size it to the page instead of the viewport. SSR, hydration and the
+  // editor canvas render it in place; the tokens travel with data-motion.
+  const isEditorCanvas = Boolean(pathname?.startsWith("/editor/") || pathname?.startsWith("/constructor"));
+  const hydrated = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  const siteTheme = useEditorStore((s) => s.tree.theme);
+  const countPulse = useCartCountPulseV1();
 
   useEffect(() => {
     setCartSite(resolvedPersistenceSiteId);
@@ -183,17 +200,17 @@ export function CartDrawer({
     }
   };
 
-  return (
-    <>
+  const drawer = (
+    <div className="orvenix-cart-portal contents" {...getRuntimeMotionAttributes(siteTheme)}>
       {/* Overlay -- always mounted so it can fade; inert/hidden while closed. */}
       <div
-        className="orvenix-cart-overlay fixed inset-0 bg-black/50 z-40"
+        className="orvenix-cart-overlay fixed inset-0 bg-black/50 z-[1000]"
         data-state={isOpen ? "open" : "closed"}
         onClick={close}
         aria-hidden="true"
       />
 
-      {/* Drawer */}
+      {/* Drawer: viewport-high column; header fixed, ONE scroll region below it. */}
       <aside
         ref={drawerRef}
         id={drawerId}
@@ -203,8 +220,8 @@ export function CartDrawer({
         aria-hidden={isOpen ? undefined : true}
         inert={!isOpen}
         data-state={isOpen ? "open" : "closed"}
-        className="orvenix-cart-drawer fixed top-0 right-0 h-full w-full max-w-sm z-50 flex flex-col shadow-2xl"
-        style={{ background: "#0a1628", borderLeft: "1px solid rgba(255,255,255,0.07)" }}
+        className="orvenix-cart-drawer fixed top-0 right-0 h-full w-full max-w-sm z-[1001] flex flex-col shadow-2xl"
+        style={{ height: "100dvh", background: "#0a1628", borderLeft: "1px solid rgba(255,255,255,0.07)" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07] shrink-0">
@@ -212,7 +229,7 @@ export function CartDrawer({
             <ShoppingCart size={18} style={{ color: accentColor }} />
             <span id={titleId} className="text-base font-bold text-white">Carrito</span>
             {totalItems() > 0 && (
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white"
+              <span key={countPulse} className={`inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-[10px] font-bold text-white${countPulse ? " orvenix-cart-count-pulse" : ""}`}
                 style={{ background: accentColor }}>
                 {totalItems()}
               </span>
@@ -225,10 +242,13 @@ export function CartDrawer({
           </button>
         </div>
 
-        {/* Items */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        {/* Scroll region: items + sticky footer. min-h-0 lets it shrink inside
+            the viewport-high column, so the list scrolls instead of being cut,
+            and the footer stays reachable even on very short viewports. */}
+        <div className="orvenix-cart-scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+        <div className="flex flex-1 flex-col gap-3 px-5 py-4">
           {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-16">
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center py-16">
               <ShoppingCart size={36} className="text-slate-700" />
               <p className="text-sm text-slate-500">Tu carrito está vacío</p>
             </div>
@@ -244,10 +264,10 @@ export function CartDrawer({
                 )}
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{item.productName}</p>
-                  <p className="text-xs text-slate-500 mb-2">{item.variantName}</p>
+                  <p className="text-sm font-semibold text-white break-words [overflow-wrap:anywhere]">{item.productName}</p>
+                  <p className="text-xs text-slate-500 mb-2 break-words [overflow-wrap:anywhere]">{item.variantName}</p>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                     <div className="flex items-center gap-1">
                       <button type="button" onClick={() => updateQty(item.variantId, item.quantity - 1)}
                         aria-label={`Disminuir cantidad de ${item.productName}`}
@@ -262,7 +282,7 @@ export function CartDrawer({
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold" style={{ color: accentColor }}>
+                      <span className="text-sm font-bold whitespace-nowrap" style={{ color: accentColor }}>
                         {formatMxn(item.priceMxn * item.quantity)}
                       </span>
                       <button type="button" onClick={() => removeItem(item.variantId)}
@@ -278,10 +298,10 @@ export function CartDrawer({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer (sticky inside the scroll region, opaque) */}
         {items.length > 0 && (
-          <div className="shrink-0 px-5 py-4 border-t border-white/[0.07]"
-            style={{ background: "rgba(255,255,255,0.02)" }}>
+          <div className="sticky bottom-0 shrink-0 px-5 py-4 border-t border-white/[0.07]"
+            style={{ background: FOOTER_BACKGROUND }}>
             <div className="mb-3 space-y-2">
               <input
                 type="email"
@@ -330,7 +350,10 @@ export function CartDrawer({
 </div>
           </div>
         )}
+        </div>
       </aside>
-    </>
+    </div>
   );
+
+  return hydrated && !isEditorCanvas ? createPortal(drawer, document.body) : drawer;
 }

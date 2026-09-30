@@ -2,6 +2,7 @@
 
 import { useCartStore } from "@/store/useCartStore";
 import { ShoppingCart } from "lucide-react";
+import { useCartCountPulseV1 } from "./cart-feedback";
 
 interface Props {
   id?: string;
@@ -13,6 +14,7 @@ export function CartButton({ accentColor = "#00b5f6", label = "Carrito" }: Props
   const toggle     = useCartStore((s) => s.toggle);
   const totalItems = useCartStore((s) => s.totalItems);
   const isOpen     = useCartStore((s) => s.isOpen);
+  const countPulse = useCartCountPulseV1();
 
   return (
     <button
@@ -28,7 +30,8 @@ export function CartButton({ accentColor = "#00b5f6", label = "Carrito" }: Props
       {label}
       {totalItems() > 0 && (
         <span
-          className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-extrabold text-white"
+          key={countPulse}
+          className={`absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-extrabold text-white${countPulse ? " orvenix-cart-count-pulse" : ""}`}
           style={{ background: accentColor }}
         >
           {totalItems()}

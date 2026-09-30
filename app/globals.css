@@ -5123,7 +5123,10 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
    (also the default without the attribute) tones them down; "none" zeroes
    them. */
 
-.editor-render-scope {
+/* PCE-4B: .orvenix-cart-portal carries the same tokens for the CartDrawer
+   when it is portaled to <body> (it copies the site's data-motion). */
+.editor-render-scope,
+.orvenix-cart-portal {
   --orv-interaction-duration: var(--dur-fast, 220ms);
   --orv-interaction-ease: var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
   --orv-drawer-duration: var(--dur-base, 300ms);
@@ -5132,17 +5135,25 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
   --orv-motion-distance-md: 2px;
   --orv-motion-media-scale: 1.02;
   --orv-press-scale: 0.98;
+  --orv-feedback-duration: 360ms;
+  --orv-feedback-scale: 1.02;
+  --orv-count-pulse-scale: 1.12;
 }
 
-.editor-render-scope[data-motion="expressive"] {
+.editor-render-scope[data-motion="expressive"],
+.orvenix-cart-portal[data-motion="expressive"] {
   --orv-interaction-duration: var(--dur-base, 300ms);
   --orv-media-duration: 700ms;
   --orv-motion-distance-sm: 2px;
   --orv-motion-distance-md: 4px;
   --orv-motion-media-scale: 1.055;
+  --orv-feedback-duration: 420ms;
+  --orv-feedback-scale: 1.04;
+  --orv-count-pulse-scale: 1.22;
 }
 
-.editor-render-scope[data-motion="none"] {
+.editor-render-scope[data-motion="none"],
+.orvenix-cart-portal[data-motion="none"] {
   --orv-interaction-duration: 0ms;
   --orv-drawer-duration: 0ms;
   --orv-media-duration: 0ms;
@@ -5150,11 +5161,16 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
   --orv-motion-distance-md: 0px;
   --orv-motion-media-scale: 1;
   --orv-press-scale: 1;
+  --orv-feedback-duration: 0ms;
+  --orv-feedback-scale: 1;
+  --orv-count-pulse-scale: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .editor-render-scope,
-  .editor-render-scope[data-motion] {
+  .editor-render-scope[data-motion],
+  .orvenix-cart-portal,
+  .orvenix-cart-portal[data-motion] {
     --orv-interaction-duration: 0ms;
     --orv-drawer-duration: 0ms;
     --orv-media-duration: 0ms;
@@ -5162,11 +5178,38 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
     --orv-motion-distance-md: 0px;
     --orv-motion-media-scale: 1;
     --orv-press-scale: 1;
+    --orv-feedback-duration: 0ms;
+    --orv-feedback-scale: 1;
+    --orv-count-pulse-scale: 1;
   }
 }
 
 .editor-render-scope[data-motion="none"] .orvenix-site-nav-mobile-panel {
   animation: none;
+}
+
+/* PCE-4B: truthful commerce feedback. One-shot, bounded, token-driven
+   (0ms / scale 1 under data-motion="none" and reduced motion, where the
+   semantic change -- "Añadido ✓", the new count, aria-live -- remains).
+   fill-mode none: nothing persists after the animation. */
+@keyframes orv-cart-confirm {
+  0%   { scale: 1; }
+  40%  { scale: var(--orv-feedback-scale, 1.02); }
+  100% { scale: 1; }
+}
+
+@keyframes orv-cart-count-pulse {
+  0%   { scale: 1; }
+  45%  { scale: var(--orv-count-pulse-scale, 1.12); }
+  100% { scale: 1; }
+}
+
+[data-cart-feedback="added"] {
+  animation: orv-cart-confirm var(--orv-feedback-duration, 360ms) var(--orv-interaction-ease, ease);
+}
+
+.orvenix-cart-count-pulse {
+  animation: orv-cart-count-pulse var(--orv-feedback-duration, 360ms) var(--orv-interaction-ease, ease);
 }
 
 /* CartDrawer: overlay fade + drawer slide. Visibility is transitioned so the

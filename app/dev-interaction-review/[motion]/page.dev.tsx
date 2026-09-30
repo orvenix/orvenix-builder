@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { PublicRenderer } from "@/components/PublicRenderer";
 import { RUNTIME_MOTION_BUCKETS } from "@/lib/builder-core/runtime/motion";
-import { buildVocabularyReviewTree, readPce3cArtifact } from "../review-fixtures";
+import { buildReviewCartItems, buildVocabularyReviewTree, readPce3cArtifact, REVIEW_CART_PRESETS } from "../review-fixtures";
+import { ReviewCartSeeder } from "../ReviewCartSeeder";
 import { ReviewBar } from "../ReviewBar";
 
 /**
@@ -16,21 +17,31 @@ import { ReviewBar } from "../ReviewBar";
  *
  * Empty siteId: the cart stays in memory (non-/p/ path) and CartDrawer
  * checkout stops at "Configura el sitio" before any request.
+ * PCE-4B: ?cart=empty|one|several|long preloads the in-memory cart.
  */
 
 export const dynamic = "force-dynamic";
 
-export default async function DevInteractionReviewVocabularyPage({ params }: { params: Promise<{ motion: string }> }) {
+export default async function DevInteractionReviewVocabularyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ motion: string }>;
+  searchParams: Promise<{ cart?: string | string[] }>;
+}) {
   if (process.env.NODE_ENV === "production") notFound();
   const { motion } = await params;
   const bucket = RUNTIME_MOTION_BUCKETS.find((value) => value === motion);
   if (!bucket) notFound();
   const artifact = await readPce3cArtifact();
+  const cartParam = (await searchParams).cart;
+  const cartPreset = REVIEW_CART_PRESETS.find((preset) => preset === cartParam);
 
   return (
     <div>
-      <ReviewBar bucket={bucket} current="vocabulary" artifactVariants={artifact ? Object.entries(artifact.labels) : []} />
+      <ReviewBar bucket={bucket} current="vocabulary" artifactVariants={artifact ? Object.entries(artifact.labels) : []} cartPresets={[...REVIEW_CART_PRESETS]} activeCartPreset={cartPreset} />
       <PublicRenderer siteId="" tree={buildVocabularyReviewTree(bucket)} activePageSlug="home" activePageName="Inicio" />
+      {cartPreset ? <ReviewCartSeeder items={buildReviewCartItems(cartPreset)} /> : null}
     </div>
   );
 }

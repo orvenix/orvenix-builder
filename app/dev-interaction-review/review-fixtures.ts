@@ -5,6 +5,10 @@ import type { ComposedSection, SectionCompositionContext } from "@/lib/orvenix-a
 import { bindStoreProductRecordsV1 } from "@/lib/orvenix-ai/commerce/product-facts";
 import { buildNovaMarketMockStoreRecordsV1, NOVAMARKET_MOCK_SITE_ID_V1 } from "@/lib/orvenix-ai/assisted-generation/e2e/novamarket-fixture";
 import { rewriteTreeForAssistedViewerV1 } from "@/lib/orvenix-ai/assisted-generation/e2e/viewer-links";
+import { injectStoreCartShellNodesV1 } from "@/lib/orvenix-ai/commerce/store-shell";
+import { resolveCommerceSurfaceV1 } from "@/lib/orvenix-ai/commerce/commerce-surface";
+import { toPublicProductDetailV1 } from "@/lib/commerce/public-product-detail";
+import type { CartItem } from "@/store/useCartStore";
 import type { RuntimeMotionBucket } from "@/lib/builder-core/runtime/motion";
 import type { EditorNode, EditorTree, GlobalTheme } from "@/types/editor";
 
@@ -95,13 +99,7 @@ export function buildVocabularyReviewTree(bucket: RuntimeMotionBucket): EditorTr
     if (rootId) children.push(rootId);
   };
 
-  const navigation = composeSection("navigation", { ...base, navigationCartProminence: "prominent" });
-  const navRoot = copyComposed(navigation, "nav", nodes);
-  if (navRoot) {
-    // The store shell sets showCart on selling pages (PCE-2); nothing else is changed.
-    for (const node of Object.values(nodes)) if (node.type === "siteNav") node.props = { ...node.props, showCart: true };
-    children.push(navRoot);
-  }
+  push("nav", composeSection("navigation", { ...base, navigationCartProminence: "prominent" }));
 
   push("hero", composeSection("hero", base));
   for (const composition of REVIEW_COMPOSITIONS) {
@@ -120,11 +118,32 @@ export function buildVocabularyReviewTree(bucket: RuntimeMotionBucket): EditorTr
   for (const treatment of REVIEW_TREATMENTS) {
     push(`treatment-${treatment}`, composeSection("products", { ...base, products: products.slice(0, 3), commerceProductCardTreatment: treatment }));
   }
+  // PCE-4B: variant selection review -- the authoritative row mapping
+  // (toPublicProductDetailV1), not hand-written variants.
+  const detail = toPublicProductDetailV1({ ...records[0], media: [] }, NOVAMARKET_MOCK_SITE_ID_V1);
+  if (detail) {
+    nodes["detail-section"] = { id: "detail-section", type: "section", props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg" }, children: ["detail"], version: 1 };
+    nodes.detail = {
+      id: "detail",
+      type: "store-product-detail",
+      props: {
+        productId: detail.productId,
+        productName: detail.name,
+        ...(detail.description ? { description: detail.description } : {}),
+        variants: detail.variants.map((variant) => ({ ...variant })),
+        surface: resolveCommerceSurfaceV1(palette, { relation: "continuous" }),
+      },
+      children: [],
+      version: 1,
+    };
+    children.push("detail-section");
+  }
   push("cta", composeSection("cta", base));
 
-  nodes["cart-drawer"] = { id: "cart-drawer", type: "store-cart-drawer", props: {}, children: [], version: 1 };
-  children.push("cart-drawer");
-  nodes.root = { id: "root", type: "section", props: { maxWidth: "full", paddingY: "none", paddingX: "none" }, children, version: 1 };
+  // PCE-4B: the cart shell comes from the canonical store shell -- the same
+  // call the compiler makes -- never hand-inserted.
+  const shellChildren = injectStoreCartShellNodesV1(nodes, "root", children, palette.accent);
+  nodes.root = { id: "root", type: "section", props: { maxWidth: "full", paddingY: "none", paddingX: "none" }, children: shellChildren, version: 1 };
 
   const theme = withMotionBucket(PCE3C_THEME, bucket);
   return { version: 1, rootId: "root", nodes, theme, globalTheme: theme };
@@ -160,4 +179,34 @@ export function buildPce3cReviewTree(page: ArtifactPage, variant: string, slugs:
   ) as EditorTree;
   const theme = withMotionBucket(relinked.theme, bucket);
   return { ...relinked, theme, globalTheme: relinked.globalTheme ? theme : relinked.globalTheme };
+}
+
+export const REVIEW_CART_PRESETS = ["empty", "one", "several", "long"] as const;
+export type ReviewCartPreset = (typeof REVIEW_CART_PRESETS)[number];
+
+/**
+ * In-memory cart contents for drawer review (never persisted: the review
+ * route is not /p/, so the cart has no site key). Items come from the mock
+ * catalog; "long" stretches one name/variant to exercise wrapping.
+ */
+export function buildReviewCartItems(preset: ReviewCartPreset): CartItem[] {
+  if (preset === "empty") return [];
+  const records = buildNovaMarketMockStoreRecordsV1(NOVAMARKET_MOCK_SITE_ID_V1);
+  const toItem = (index: number, quantity: number): CartItem | null => {
+    const record = records[index];
+    const variant = record?.variants[0];
+    if (!record || !variant) return null;
+    return { productId: record.id, variantId: variant.id, productName: record.name, variantName: variant.name, priceMxn: variant.priceMxn, quantity };
+  };
+  const items = (preset === "one" ? [toItem(0, 1)] : [toItem(0, 2), toItem(1, 1), toItem(3, 3), toItem(8, 1), toItem(16, 2), toItem(17, 1)])
+    .filter((item): item is CartItem => item !== null);
+  if (preset === "long" && items[0]) {
+    items[0] = {
+      ...items[0],
+      productName: `${items[0].productName} edición extendida con un nombre deliberadamente largo para revisar el ajuste de línea`,
+      variantName: "Variante con una descripción también larga: 128 GB · Wi-Fi · color grafito",
+      quantity: 99,
+    };
+  }
+  return items;
 }
