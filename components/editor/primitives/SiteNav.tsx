@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEditorStore } from "@/store/useEditorStore";
+import { getFocusableElements, isEscapeKey, restoreFocus } from "@/lib/builder-core/runtime/interaction";
 import { resolveRuntimeHref, resolveSiteNavItemTarget } from "@/lib/builder-core/tree/pageLinks";
 import { buildEditorPageUrl } from "@/components/editor/pageNavigation";
 import { resolveSiteNavPages } from "@/lib/builder-core/tree/siteNavigation";
@@ -74,6 +75,7 @@ function NavCartButton({
   mobile?: boolean;
 }) {
   const toggle = useCartStore((s) => s.toggle);
+  const cartOpen = useCartStore((s) => s.isOpen);
   const count = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0));
   const accentBackground = navAccent?.background ?? "#1BB3FA";
   const accentText = navAccent?.text ?? readableTextOn(accentBackground);
@@ -87,8 +89,11 @@ function NavCartButton({
       type="button"
       onClick={toggle}
       aria-label={count > 0 ? `Abrir carrito (${count} ${count === 1 ? "producto" : "productos"})` : "Abrir carrito"}
+      aria-haspopup="dialog"
+      aria-expanded={cartOpen}
       data-nav-cart={treatment}
-      className={`orvenix-site-nav-cart relative inline-flex shrink-0 items-center justify-center gap-2 border font-bold transition-all duration-300 hover:-translate-y-0.5 ${iconOnly ? "h-10 w-10 rounded-xl" : "min-h-11 rounded-full px-4 text-sm md:text-[15px]"}`}
+      data-cart-trigger=""
+      className={`orvenix-site-nav-cart relative inline-flex shrink-0 items-center justify-center gap-2 border font-bold transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-sm,2px)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1BB3FA]/70 focus-visible:ring-offset-2 ${iconOnly ? "h-10 w-10 rounded-xl" : "min-h-11 rounded-full px-4 text-sm md:text-[15px]"}`}
       style={filled
         ? { background: accentBackground, color: accentText, borderColor: accentBackground }
         : { background: "transparent", color: ink, borderColor: outline }}
@@ -169,6 +174,8 @@ export function SiteNav({
   const flushPendingSave = useEditorStore((state) => state.flushPendingSave);
   const markError = useEditorStore((state) => state.markError);
   const navigationInFlightRef = useRef(false);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobilePanelRef = useRef<HTMLDivElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobilePanelId = useId();
 
@@ -182,6 +189,29 @@ export function SiteNav({
     setLastPathname(pathname);
     if (mobileOpen) setMobileOpen(false);
   }
+
+  // PCE-4A: mobile menu keyboard behavior. Focus enters the panel on open;
+  // Escape closes it and returns focus to the trigger. Following a link
+  // closes it WITHOUT refocusing the trigger (that would scroll the page back
+  // to the header after an in-page anchor jump).
+  useEffect(() => {
+    if (!mobileOpen) return;
+    getFocusableElements<HTMLElement>(mobilePanelRef.current)[0]?.focus({ preventScroll: true });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isEscapeKey(event)) return;
+      event.preventDefault();
+      setMobileOpen(false);
+      restoreFocus(mobileTriggerRef.current);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileOpen]);
+
+  const closeMobileMenuAfterNavigation = () => {
+    if (mobileOpen) setMobileOpen(false);
+  };
 
   const currentPageSlug = useMemo(() => {
     if (storeActivePageSlug) return storeActivePageSlug;
@@ -458,7 +488,7 @@ export function SiteNav({
               <a
                 href={ctaHrefResolved}
                 onClick={ctaOnClick}
-                className="orvenix-site-nav-cta group relative inline-flex min-h-[44px] items-center overflow-hidden rounded-full px-5 py-2.5 text-sm font-black transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-22px_rgba(27,179,250,0.95)] md:text-[15px]"
+                className="orvenix-site-nav-cta group relative inline-flex min-h-[44px] items-center overflow-hidden rounded-full px-5 py-2.5 text-sm font-black transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-sm,2px)] hover:shadow-[0_22px_44px_-22px_rgba(27,179,250,0.95)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1BB3FA]/70 focus-visible:ring-offset-2 md:text-[15px]"
                 style={{
                   background: ctaBackground,
                   color: ctaTextColor,
@@ -488,7 +518,8 @@ export function SiteNav({
         {/* V2-5C.1: mobile menu trigger -- desktop keeps its unchanged link list above; this button (and the panel below) only ever render meaningfully at <md, via Tailwind's md:hidden. */}
         <button
           type="button"
-          className="orvenix-site-nav-trigger relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors md:hidden"
+          className="orvenix-site-nav-trigger relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors duration-[var(--orv-interaction-duration,300ms)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1BB3FA]/70 focus-visible:ring-offset-2 md:hidden"
+          ref={mobileTriggerRef}
           style={{
             borderColor: surface === "dark" ? "rgba(255,255,255,0.16)" : "rgba(7,89,133,0.18)",
             color: mobileTriggerColor,
@@ -517,10 +548,15 @@ export function SiteNav({
           desktop (linkDescriptors, computed once above), a simple stacked
           shell coherent with the header's own surface/accent. Structurally
           always present (so aria-controls always resolves to a real element
-          and layout never shifts); visibility toggles via className only. */}
+          and layout never shifts); visibility toggles via the hidden attribute.
+          PCE-4A: the restrained open motion is CSS-owned
+          (.orvenix-site-nav-mobile-panel in globals.css) and follows data-motion
+          and prefers-reduced-motion; closing is always immediate. */}
       <div
         id={mobilePanelId}
-        className={`orvenix-site-nav-mobile-panel md:hidden w-full ${mobileOpen ? "block" : "hidden"}`}
+        ref={mobilePanelRef}
+        hidden={!mobileOpen}
+        className="orvenix-site-nav-mobile-panel md:hidden w-full"
         style={{
           marginTop: "0.5rem",
           borderRadius: isIntegratedChrome ? "16px" : "20px",
@@ -536,7 +572,7 @@ export function SiteNav({
               <a
                 href={href}
                 aria-current={isActive ? "page" : undefined}
-                onClick={onClick}
+                onClick={(event) => { onClick?.(event); closeMobileMenuAfterNavigation(); }}
                 className="block w-full rounded-lg px-3 py-2.5 text-sm font-bold transition-colors"
                 style={{
                   color: isActive ? (navAccent ? navAccent.text : "#ffffff") : surface === "dark" ? "rgba(247,252,255,0.92)" : "#075985",
@@ -551,7 +587,7 @@ export function SiteNav({
             <li className="pt-1">
               <a
                 href={ctaHrefResolved}
-                onClick={ctaOnClick}
+                onClick={(event) => { ctaOnClick(event); closeMobileMenuAfterNavigation(); }}
                 className="block w-full rounded-lg px-3 py-2.5 text-center text-sm font-black"
                 style={{ background: ctaBackground, color: ctaTextColor }}
               >

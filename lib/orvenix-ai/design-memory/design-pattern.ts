@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2";
 import type { EditorNode, EditorTree, GlobalTheme } from "@/types/editor";
+import { motionBucketFromDuration } from "../../builder-core/runtime/motion";
 
 export const DESIGN_PATTERN_V1_VERSION = 1;
 
@@ -380,12 +381,9 @@ function typographyBucket(theme: GlobalTheme) {
   return "sans";
 }
 
+// PCE-4A: same inversion the runtime uses (one canonical motion path).
 function motionBucket(theme: GlobalTheme) {
-  const duration = numericCss(theme.motion?.duration);
-  if (duration === null) return null;
-  if (duration <= 0) return "none";
-  if (duration <= 200) return "subtle";
-  return "expressive";
+  return motionBucketFromDuration(theme.motion?.duration);
 }
 
 export function extractDesignPatternV1(input: ExtractDesignPatternV1Input): ExtractedDesignPatternV1 {

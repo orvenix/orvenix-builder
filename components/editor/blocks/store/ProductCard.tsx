@@ -123,54 +123,54 @@ export function ProductCard({
   const commerceCardFinish = isHorizontal
     ? {
       media: "relative min-h-40 w-full overflow-hidden sm:min-h-0 sm:w-44 sm:shrink-0",
-      root: "group flex flex-col overflow-hidden rounded-[1.35rem] border shadow-[0_22px_55px_-42px_rgba(15,23,42,0.65)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_70px_-44px_rgba(15,23,42,0.78)] sm:flex-row",
+      root: "group flex flex-col overflow-hidden rounded-[1.35rem] border shadow-[0_22px_55px_-42px_rgba(15,23,42,0.65)] transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-md,4px)] hover:shadow-[0_26px_70px_-44px_rgba(15,23,42,0.78)] sm:flex-row",
       body: "flex min-w-0 flex-1 flex-col justify-center gap-1 p-[1.125rem] sm:p-5",
       title: "mb-1 line-clamp-2 text-base font-extrabold leading-tight",
       price: "text-lg font-black tracking-tight",
-      button: "flex h-10 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-extrabold transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
+      button: "flex h-10 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-extrabold transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-sm,2px)] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[var(--orv-press-scale,0.98)] disabled:cursor-not-allowed disabled:opacity-50",
       monogram: "text-5xl font-black tracking-tight",
       eyebrow: "Vista rápida",
     }
     : isFeatured
       ? {
         media: "relative aspect-[1.18/1] overflow-hidden md:aspect-[16/9]",
-        root: "group relative flex min-h-full flex-col overflow-hidden rounded-[2rem] border shadow-[0_36px_120px_-62px_rgba(15,23,42,0.9)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_44px_140px_-66px_rgba(15,23,42,0.95)]",
+        root: "group relative flex min-h-full flex-col overflow-hidden rounded-[2rem] border shadow-[0_36px_120px_-62px_rgba(15,23,42,0.9)] transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-md,4px)] hover:shadow-[0_44px_140px_-66px_rgba(15,23,42,0.95)]",
         body: "relative z-20 mx-4 -mt-10 mb-4 flex flex-1 flex-col rounded-[1.45rem] border p-5 shadow-[0_24px_70px_-52px_rgba(15,23,42,0.9)] backdrop-blur-md md:mx-6 md:-mt-12 md:p-6",
         title: "mb-2 line-clamp-2 text-2xl font-black leading-[0.98] md:text-3xl",
         price: "text-3xl font-black tracking-tight",
-        button: "flex h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
+        button: "flex h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-sm,2px)] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[var(--orv-press-scale,0.98)] disabled:cursor-not-allowed disabled:opacity-50",
         monogram: "text-7xl font-black tracking-tight md:text-8xl",
         eyebrow: "Destacado",
       }
       : isImageLed
         ? {
           media: "relative aspect-[3/4] overflow-hidden",
-          root: "group relative flex flex-col overflow-hidden rounded-[1.7rem] border shadow-[0_28px_90px_-56px_rgba(15,23,42,0.82)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_34px_110px_-60px_rgba(15,23,42,0.9)]",
+          root: "group relative flex flex-col overflow-hidden rounded-[1.7rem] border shadow-[0_28px_90px_-56px_rgba(15,23,42,0.82)] transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-md,4px)] hover:shadow-[0_34px_110px_-60px_rgba(15,23,42,0.9)]",
           body: "relative z-20 flex flex-1 flex-col p-[1.125rem] md:p-5",
           title: "mb-2 line-clamp-2 text-lg font-black leading-tight",
           price: "text-xl font-black tracking-tight",
-          button: "flex h-10 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-extrabold transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
+          button: "flex h-10 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-extrabold transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-sm,2px)] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[var(--orv-press-scale,0.98)] disabled:cursor-not-allowed disabled:opacity-50",
           monogram: "text-6xl font-black tracking-tight",
           eyebrow: "Imagen principal",
         }
         : isEditorial
           ? {
             media: "relative aspect-[5/4] overflow-hidden",
-            root: "group flex flex-col overflow-hidden rounded-[1.7rem] border shadow-[0_28px_86px_-56px_rgba(15,23,42,0.74)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_34px_104px_-60px_rgba(15,23,42,0.86)]",
+            root: "group flex flex-col overflow-hidden rounded-[1.7rem] border shadow-[0_28px_86px_-56px_rgba(15,23,42,0.74)] transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-md,4px)] hover:shadow-[0_34px_104px_-60px_rgba(15,23,42,0.86)]",
             body: "flex flex-1 flex-col p-5 md:p-6",
             title: "mb-2 line-clamp-2 text-xl font-black leading-[1.02]",
             price: "text-xl font-black tracking-tight",
-            button: "flex h-10 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-extrabold transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
+            button: "flex h-10 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-extrabold transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-sm,2px)] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[var(--orv-press-scale,0.98)] disabled:cursor-not-allowed disabled:opacity-50",
             monogram: "text-5xl font-black tracking-tight",
             eyebrow: "Selección",
           }
           : {
             media: "relative aspect-square overflow-hidden",
-            root: "group flex flex-col overflow-hidden rounded-[1.15rem] border shadow-[0_14px_36px_-32px_rgba(15,23,42,0.58)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_54px_-40px_rgba(15,23,42,0.74)]",
+            root: "group flex flex-col overflow-hidden rounded-[1.15rem] border shadow-[0_14px_36px_-32px_rgba(15,23,42,0.58)] transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-sm,2px)] hover:shadow-[0_20px_54px_-40px_rgba(15,23,42,0.74)]",
             body: "flex flex-1 flex-col p-3",
             title: "mb-1 line-clamp-2 text-sm font-extrabold leading-tight",
             price: "text-lg font-black tracking-tight",
-            button: "flex h-9 w-full items-center justify-center gap-2 rounded-xl px-3 text-xs font-extrabold transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
+            button: "flex h-9 w-full items-center justify-center gap-2 rounded-xl px-3 text-xs font-extrabold transition-all duration-[var(--orv-interaction-duration,300ms)] hover:-translate-y-[var(--orv-motion-distance-sm,2px)] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[var(--orv-press-scale,0.98)] disabled:cursor-not-allowed disabled:opacity-50",
             monogram: "text-4xl font-black tracking-tight",
             eyebrow: "Catálogo",
           };
@@ -193,7 +193,7 @@ export function ProductCard({
         <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0)_38%,rgba(2,6,23,0.22))] opacity-85" aria-hidden="true" />
         {isFeatured && <div className="pointer-events-none absolute bottom-4 right-4 z-10 h-24 w-24 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm" aria-hidden="true" />}
         {image
-          ? <Image fill unoptimized src={image} alt={productName ?? ""} className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.055]" data-store-media="image" />
+          ? <Image fill unoptimized src={image} alt={productName ?? ""} className="object-cover transition-transform duration-[var(--orv-media-duration,700ms)] ease-out group-hover:scale-[var(--orv-motion-media-scale,1.055)]" data-store-media="image" />
           : (
             <div className="grid h-full w-full place-items-center px-6" data-store-media="fallback" aria-hidden="true">
               <span className={`${commerceCardFinish.monogram} grid aspect-square min-h-20 min-w-20 place-items-center rounded-full border bg-white/20 px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.48),0_22px_60px_-36px_rgba(15,23,42,0.84)] backdrop-blur-sm`} style={{ color: surface.accent, borderColor: mixHexV1(surface.accent, surface.card, 0.42) }}>{productMonogramV1(productName)}</span>

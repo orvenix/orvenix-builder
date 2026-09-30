@@ -1,11 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
 import { useEditorStore } from "@/store/useEditorStore";
 import { ShoppingCart, X, Minus, Plus, Trash2 } from "lucide-react";
+import {
+  getFocusableElements,
+  isEscapeKey,
+  lockBodyScroll,
+  resolveFocusTrapTarget,
+  restoreFocus,
+} from "@/lib/builder-core/runtime/interaction";
 
 interface Props {
   id?: string;
@@ -14,6 +21,12 @@ interface Props {
   checkoutLabel?: string;
   funnelId?: string;
   funnelStep?: "landing" | "checkout" | "upsell" | "downsell" | "thankyou";
+}
+
+/** PCE-4A: fallback return target when the opener did not keep focus (e.g. Safari click). */
+function findVisibleCartTrigger(): HTMLElement | null {
+  const triggers = Array.from(document.querySelectorAll<HTMLElement>("[data-cart-trigger]"));
+  return triggers.find((element) => element.getClientRects().length > 0) ?? null;
 }
 
 function formatMxn(cents: number) {
@@ -45,6 +58,11 @@ export function CartDrawer({
   const [customerName, setCustomerName] = useState("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const drawerId = useId();
+  const titleId = `${drawerId}-title`;
+  const drawerRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const resolvedPersistenceSiteId = pathname?.startsWith("/p/") ? (siteId || storeSiteId) : null;
 
   useEffect(() => {
@@ -59,6 +77,60 @@ export function CartDrawer({
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
   }, [storageKey, syncCartFromStorage]);
+
+  // PCE-4A: modal dialog behavior. Owns ONLY focus/keyboard/scroll -- the
+  // cart persistence effects above (Cart Continuity V1) are untouched.
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (!isOpen) {
+      if (wasOpenRef.current) {
+        wasOpenRef.current = false;
+        const active = document.activeElement;
+        const focusWasInDrawer = !active || active === document.body || Boolean(drawerRef.current?.contains(active));
+        if (focusWasInDrawer) restoreFocus(triggerRef.current);
+        triggerRef.current = null;
+      }
+      return;
+    }
+
+    wasOpenRef.current = true;
+    const active = document.activeElement;
+    triggerRef.current = active instanceof HTMLElement && active !== document.body && !drawerRef.current?.contains(active)
+      ? active
+      : findVisibleCartTrigger();
+    const releaseScrollLock = lockBodyScroll(document.body);
+    const focusFrame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus({ preventScroll: true });
+    });
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (isEscapeKey(event)) {
+        event.preventDefault();
+        close();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const container = drawerRef.current;
+      if (!container) return;
+      const target = resolveFocusTrapTarget({
+        focusables: getFocusableElements<HTMLElement>(container),
+        active: document.activeElement,
+        shiftKey: event.shiftKey,
+        activeInside: container.contains(document.activeElement),
+      });
+      if (target) {
+        event.preventDefault();
+        target.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown);
+      releaseScrollLock();
+    };
+  }, [isOpen, close]);
 
   const handleCheckout = async () => {
     if (items.length === 0 || isCheckingOut) return;
@@ -113,28 +185,32 @@ export function CartDrawer({
 
   return (
     <>
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
-          onClick={close}
-          aria-hidden="true"
-        />
-      )}
+      {/* Overlay -- always mounted so it can fade; inert/hidden while closed. */}
+      <div
+        className="orvenix-cart-overlay fixed inset-0 bg-black/50 z-40"
+        data-state={isOpen ? "open" : "closed"}
+        onClick={close}
+        aria-hidden="true"
+      />
 
       {/* Drawer */}
       <aside
-        className={`fixed top-0 right-0 h-full w-full max-w-sm z-50 flex flex-col shadow-2xl transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        ref={drawerRef}
+        id={drawerId}
+        role="dialog"
+        aria-modal={isOpen ? true : undefined}
+        aria-labelledby={titleId}
+        aria-hidden={isOpen ? undefined : true}
+        inert={!isOpen}
+        data-state={isOpen ? "open" : "closed"}
+        className="orvenix-cart-drawer fixed top-0 right-0 h-full w-full max-w-sm z-50 flex flex-col shadow-2xl"
         style={{ background: "#0a1628", borderLeft: "1px solid rgba(255,255,255,0.07)" }}
-        aria-label="Carrito de compras"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07] shrink-0">
           <div className="flex items-center gap-2">
             <ShoppingCart size={18} style={{ color: accentColor }} />
-            <span className="text-base font-bold text-white">Carrito</span>
+            <span id={titleId} className="text-base font-bold text-white">Carrito</span>
             {totalItems() > 0 && (
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white"
                 style={{ background: accentColor }}>
@@ -142,8 +218,9 @@ export function CartDrawer({
               </span>
             )}
           </div>
-          <button type="button" onClick={close}
-            className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.06] transition-colors">
+          <button type="button" ref={closeButtonRef} onClick={close}
+            className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-colors"
+            aria-label="Cerrar carrito">
             <X size={16} />
           </button>
         </div>
@@ -173,12 +250,14 @@ export function CartDrawer({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       <button type="button" onClick={() => updateQty(item.variantId, item.quantity - 1)}
-                        className="grid h-6 w-6 place-items-center rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-slate-400 transition-colors">
+                        aria-label={`Disminuir cantidad de ${item.productName}`}
+                        className="grid h-6 w-6 place-items-center rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-slate-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
                         <Minus size={10} />
                       </button>
                       <span className="w-6 text-center text-sm font-semibold text-white">{item.quantity}</span>
                       <button type="button" onClick={() => updateQty(item.variantId, item.quantity + 1)}
-                        className="grid h-6 w-6 place-items-center rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-slate-400 transition-colors">
+                        aria-label={`Aumentar cantidad de ${item.productName}`}
+                        className="grid h-6 w-6 place-items-center rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-slate-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
                         <Plus size={10} />
                       </button>
                     </div>
@@ -187,7 +266,8 @@ export function CartDrawer({
                         {formatMxn(item.priceMxn * item.quantity)}
                       </span>
                       <button type="button" onClick={() => removeItem(item.variantId)}
-                        className="grid h-6 w-6 place-items-center rounded text-slate-700 hover:text-red-400 transition-colors">
+                        aria-label={`Quitar ${item.productName} del carrito`}
+                        className="grid h-6 w-6 place-items-center rounded text-slate-700 hover:text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
                         <Trash2 size={11} />
                       </button>
                     </div>
@@ -232,7 +312,8 @@ export function CartDrawer({
     type="button"
     onClick={handleCheckout}
     disabled={isCheckingOut}
-    className="w-full h-11 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+    aria-busy={isCheckingOut || undefined}
+    className="w-full h-11 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1628] disabled:cursor-not-allowed disabled:opacity-60"
     style={{
       background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
     }}

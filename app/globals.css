@@ -5078,28 +5078,28 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
 }
 
 @keyframes editor-motion-fade-up {
-  from { opacity: 0; transform: translateY(var(--editor-motion-distance, 18px)); filter: blur(var(--editor-motion-blur, 5px)); }
-  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+  from { opacity: 0; transform: translateY(var(--editor-motion-distance, 18px)); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes editor-motion-fade-down {
-  from { opacity: 0; transform: translateY(calc(var(--editor-motion-distance, 18px) * -1)); filter: blur(var(--editor-motion-blur, 5px)); }
-  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+  from { opacity: 0; transform: translateY(calc(var(--editor-motion-distance, 18px) * -1)); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes editor-motion-slide-left {
-  from { opacity: 0; transform: translateX(calc(var(--editor-motion-distance, 22px) * -1)); filter: blur(var(--editor-motion-blur, 4px)); }
-  to   { opacity: 1; transform: translateX(0); filter: blur(0); }
+  from { opacity: 0; transform: translateX(calc(var(--editor-motion-distance, 22px) * -1)); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes editor-motion-slide-right {
-  from { opacity: 0; transform: translateX(var(--editor-motion-distance, 22px)); filter: blur(var(--editor-motion-blur, 4px)); }
-  to   { opacity: 1; transform: translateX(0); filter: blur(0); }
+  from { opacity: 0; transform: translateX(var(--editor-motion-distance, 22px)); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes editor-motion-scale {
-  from { opacity: 0; transform: scale(var(--editor-motion-scale, 0.96)); filter: blur(var(--editor-motion-blur, 4px)); }
-  to   { opacity: 1; transform: scale(1); filter: blur(0); }
+  from { opacity: 0; transform: scale(var(--editor-motion-scale, 0.96)); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 /* ── Animation utilities ───────────────────────────────────── */
@@ -5110,7 +5110,103 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
 .editor-anim-scale-in   { animation: editor-scale-in  240ms var(--motion-emphasis) both; }
 .editor-anim-slide-left { animation: editor-slide-left 260ms var(--motion-emphasis) both; }
 
-/* ── Editable block motion ─────────────────────────────────── */
+/* ── Orvenix interaction foundation (PCE-4A) ──────────────────
+   The site root (.editor-render-scope) carries data-motion, resolved ONCE
+   from the persisted theme (lib/builder-core/runtime/motion.ts). These are
+   Orvenix-owned implementation tokens -- never AI/provider-facing.
+
+   RESTING-LAYOUT CONTRACT: these rules only define custom properties (and
+   the menu animation). They never set transform/translate/scale, display,
+   position, sizing or spacing, so data-motion and reduced motion change
+   interaction intensity only -- never the resting PCE-3C composition.
+   "expressive" reproduces the accepted PCE-3C hover intensities; "subtle"
+   (also the default without the attribute) tones them down; "none" zeroes
+   them. */
+
+.editor-render-scope {
+  --orv-interaction-duration: var(--dur-fast, 220ms);
+  --orv-interaction-ease: var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+  --orv-drawer-duration: var(--dur-base, 300ms);
+  --orv-media-duration: var(--dur-slow, 400ms);
+  --orv-motion-distance-sm: 1px;
+  --orv-motion-distance-md: 2px;
+  --orv-motion-media-scale: 1.02;
+  --orv-press-scale: 0.98;
+}
+
+.editor-render-scope[data-motion="expressive"] {
+  --orv-interaction-duration: var(--dur-base, 300ms);
+  --orv-media-duration: 700ms;
+  --orv-motion-distance-sm: 2px;
+  --orv-motion-distance-md: 4px;
+  --orv-motion-media-scale: 1.055;
+}
+
+.editor-render-scope[data-motion="none"] {
+  --orv-interaction-duration: 0ms;
+  --orv-drawer-duration: 0ms;
+  --orv-media-duration: 0ms;
+  --orv-motion-distance-sm: 0px;
+  --orv-motion-distance-md: 0px;
+  --orv-motion-media-scale: 1;
+  --orv-press-scale: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-render-scope,
+  .editor-render-scope[data-motion] {
+    --orv-interaction-duration: 0ms;
+    --orv-drawer-duration: 0ms;
+    --orv-media-duration: 0ms;
+    --orv-motion-distance-sm: 0px;
+    --orv-motion-distance-md: 0px;
+    --orv-motion-media-scale: 1;
+    --orv-press-scale: 1;
+  }
+}
+
+.editor-render-scope[data-motion="none"] .orvenix-site-nav-mobile-panel {
+  animation: none;
+}
+
+/* CartDrawer: overlay fade + drawer slide. Visibility is transitioned so the
+   slide-out stays visible until it ends; none/reduced-motion = immediate. */
+.orvenix-cart-overlay {
+  transition:
+    opacity var(--orv-drawer-duration, 300ms) var(--orv-interaction-ease, ease),
+    visibility var(--orv-drawer-duration, 300ms);
+}
+
+.orvenix-cart-overlay[data-state="closed"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.orvenix-cart-drawer {
+  transform: translateX(0);
+  transition:
+    transform var(--orv-drawer-duration, 300ms) var(--orv-interaction-ease, ease),
+    visibility var(--orv-drawer-duration, 300ms);
+}
+
+.orvenix-cart-drawer[data-state="closed"] {
+  transform: translateX(100%);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* SiteNav mobile menu: restrained open motion (close is immediate). */
+@keyframes orv-menu-open {
+  from { opacity: 0; transform: translateY(calc(var(--orv-motion-distance-md, 3px) * -1)); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.orvenix-site-nav-mobile-panel:not([hidden]) {
+  animation: orv-menu-open var(--orv-interaction-duration, 220ms) var(--orv-interaction-ease, ease) both;
+}
+
+/* ── Author-defined block motion (MotionWrapper) ───────────── */
 
 .editor-motion-frame {
   --editor-motion-duration: 560ms;
@@ -5118,14 +5214,22 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
   --editor-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --editor-motion-distance: 18px;
   --editor-motion-scale: 0.96;
-  --editor-motion-blur: 5px;
   transform-origin: center;
+  /* PCE-4A: replaces the former permanent layer hint. isolation keeps the
+     same stacking context and a zero translate keeps the same containing
+     block for positioned descendants -- layout-identical, no layer promotion. */
+  isolation: isolate;
+  translate: 0 0;
   transition:
     transform var(--editor-motion-duration) var(--editor-motion-ease),
     opacity var(--editor-motion-duration) var(--editor-motion-ease),
-    filter var(--editor-motion-duration) var(--editor-motion-ease),
     box-shadow var(--editor-motion-duration) var(--editor-motion-ease);
-  will-change: transform, opacity, filter;
+}
+
+/* Scroll-triggered content held back ONLY while still off-screen (set by JS
+   after mount; SSR/no-JS never hides content). */
+.editor-motion-pending {
+  opacity: 0;
 }
 
 .editor-motion-ease-smooth { --editor-motion-ease: cubic-bezier(0.22, 1, 0.36, 1); }
@@ -5378,6 +5482,23 @@ body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
   .motion-button:hover,
   .motion-button:active {
     transform: none;
+  }
+
+  /* PCE-4A: author hover effects are decorative motion (resting state is
+     untouched: the frame has no resting transform). */
+  .editor-motion-frame:hover {
+    transform: none !important;
+  }
+
+  /* PCE-4A: no entrance/reveal/replay and nothing held hidden; drawer/menu
+     state changes are immediate (transition-duration guard above). */
+  .editor-motion-frame,
+  .orvenix-site-nav-mobile-panel {
+    animation: none !important;
+  }
+
+  .editor-motion-pending {
+    opacity: 1 !important;
   }
 }
 
@@ -7983,16 +8104,19 @@ body.light-mode .cb-badge { border-color: #f8fafc; }
   .premium-transform-card:hover { transform: none; }
 }
 
-/* Premium CTA button interactions for editable sites. */
+/* Premium CTA button interactions for editable sites.
+   PCE-4A: the ONE canonical CtaButton interaction layer. Timing/distance come
+   from the site's data-motion tokens; no permanent will-change/layer
+   promotion, no filter animation; the shine sweep and hover dot are
+   expressive-only. Focus ring follows the theme primary (--orv-focus-ring). */
 .orvenix-cta-button {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   gap: 0.45rem;
   transform: translateZ(0);
-  will-change: transform, box-shadow, color, border-color, filter;
-  transition-property: transform, box-shadow, color, border-color, background, filter;
-  transition-duration: 280ms;
+  transition-property: transform, box-shadow, color, border-color, background-color, opacity;
+  transition-duration: var(--orv-interaction-duration, 280ms);
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -8020,22 +8144,36 @@ body.light-mode .cb-badge { border-color: #f8fafc; }
   transition: opacity 240ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.orvenix-cta-button:hover {
-  transform: translateY(-3px) scale(1.015);
-  filter: saturate(1.08) contrast(1.02);
-}
+/* Hover: PCE-3C feedback; intensity from tokens (filter is not
+   transitioned, so it changes instantly). The shine sweep and the dot reveal
+   are expressive-only; at rest both are invisible in every bucket. Hover-
+   capable pointers only (no sticky lift after tap). */
+@media (hover: hover) {
+  .orvenix-cta-button:hover {
+    transform: translateY(calc(var(--orv-motion-distance-sm, 2px) * -1.5));
+    filter: saturate(1.08) contrast(1.02);
+  }
 
-.orvenix-cta-button:hover::before {
-  transform: translateX(130%);
-}
+  [data-motion="expressive"] .orvenix-cta-button:hover {
+    transform: translateY(-3px) scale(1.015);
+  }
 
-.orvenix-cta-button:hover::after {
-  opacity: 0.82;
-  transform: translateX(0) scale(1);
+  [data-motion="expressive"] .orvenix-cta-button:hover::before {
+    transform: translateX(130%);
+  }
+
+  [data-motion="expressive"] .orvenix-cta-button:hover::after {
+    opacity: 0.82;
+    transform: translateX(0) scale(1);
+  }
 }
 
 .orvenix-cta-button:active {
-  transform: translateY(-1px) scale(0.99);
+  transform: translateY(calc(var(--orv-motion-distance-sm, 2px) * -0.5)) scale(var(--orv-press-scale, 0.99));
+}
+
+.orvenix-cta-button:active:not([aria-disabled="true"]) {
+  opacity: 0.92;
 }
 
 .orvenix-cta-primary:hover {
@@ -8062,8 +8200,12 @@ body.light-mode .cb-badge { border-color: #f8fafc; }
 }
 
 .orvenix-cta-button:focus-visible {
-  outline: 2px solid rgba(23,148,204,0.72);
-  outline-offset: 4px;
+  outline: 2px solid var(--orv-focus-ring, var(--primary, rgba(23,148,204,0.72)));
+  outline-offset: 3px;
+}
+
+.orvenix-cta-button[aria-disabled="true"] {
+  transform: translateZ(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -8073,9 +8215,17 @@ body.light-mode .cb-badge { border-color: #f8fafc; }
     transition: none;
   }
 
+  .orvenix-cta-button:hover::before {
+    transform: translateX(-130%) !important;
+  }
+
+  .orvenix-cta-button:hover::after {
+    opacity: 0 !important;
+  }
+
   .orvenix-cta-button:hover,
   .orvenix-cta-button:active {
-    transform: none;
+    transform: translateZ(0) !important;
   }
 }
 
@@ -8591,8 +8741,15 @@ body.light-mode .home-hero-trust-item {
   opacity: 1;
 }
 
+/* PCE-4A: the former permanent will-change is replaced by isolation (same
+   stacking context, no layer promotion). The resting sheen is unchanged; its
+   nav-wide hover sweep is expressive-only. */
 .orvenix-premium-site-nav a {
-  will-change: transform, background, box-shadow, color;
+  isolation: isolate;
+}
+
+.editor-render-scope:not([data-motion="expressive"]) .orvenix-premium-site-nav:hover::before {
+  transform: translateX(-40%);
 }
 
 .orvenix-premium-site-nav a:hover {

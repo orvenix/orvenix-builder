@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { prefersReducedMotion } from "@/lib/builder-core/runtime/interaction";
 
 // ─── Formal animation types ───────────────────────────────────────────────────
 
@@ -60,6 +61,8 @@ export interface MotionProps {
   motionDistance?: number;
   motionScale?: number;
   motionBlur?: number;
+  /** Renderer mode; never stored in node props (not in MOTION_KEYS). */
+  runtimeMode?: "edit" | "preview";
 }
 
 const MOTION_KEYS = new Set([
@@ -85,6 +88,22 @@ export function splitMotionProps<T extends Record<string, unknown>>(props: T) {
 
 // ─── MotionWrapper ────────────────────────────────────────────────────────────
 
+/**
+ * Renders AUTHOR-defined node motion (AnimationsPanel). Deliberately separate
+ * from AI semantic site motion (data-motion on the render root, PCE-4A).
+ *
+ * Policy (PCE-4A):
+ * - edit: the frame (and its hover transition) still renders so the canvas
+ *   keeps the same DOM/layout as public, but entrance animations never replay
+ *   while authoring. The stored motion props are untouched.
+ * - preview/public: entrance plays. Blur is never rendered (motionBlur stays
+ *   in data for compatibility only). No will-change is ever set.
+ * - SSR/no-JS: content is visible. Non-load triggers never hide content on
+ *   the server; scroll-triggered content that is ALREADY in view at mount is
+ *   left alone (no visible -> hidden -> visible flash); only content still
+ *   off-screen is held back until it scrolls in.
+ * - prefers-reduced-motion: no entrance/replay at all (plus the CSS guard).
+ */
 export function MotionWrapper({
   children,
   motionAnimation = "none",
@@ -95,70 +114,85 @@ export function MotionWrapper({
   motionEasing = "smooth",
   motionDistance = 18,
   motionScale = 0.96,
-  motionBlur = 5,
+  runtimeMode = "preview",
 }: MotionProps & { children: ReactNode }) {
-  const hasAnimation = motionAnimation !== "none";
+  const hasConfiguredAnimation = motionAnimation !== "none";
+  const playsEntrance = hasConfiguredAnimation && runtimeMode !== "edit";
   const hasTransition = motionTransition !== "none";
   const ref = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
 
   const duration = clampNumber(motionDuration, 120, 2400);
   const delay    = clampNumber(motionDelay, 0, 2000);
   const distance = clampNumber(motionDistance, 0, 120);
   const scale    = clampNumber(motionScale, 0.8, 1);
-  const blur     = clampNumber(motionBlur, 0, 16);
-  const enterClass = hasAnimation ? `editor-motion-enter-${motionAnimation}` : "";
+  const enterClass = playsEntrance ? `editor-motion-enter-${motionAnimation}` : "";
 
   // Handle non-load triggers
   useEffect(() => {
     const el = ref.current;
-    if (!el || !hasAnimation || motionTrigger === "load") return;
-
-    // Remove the enter class that was applied on mount
-    el.classList.remove(enterClass);
+    if (!el || !playsEntrance || motionTrigger === "load") return;
+    if (prefersReducedMotion(typeof window === "undefined" ? undefined : window)) return;
 
     if (motionTrigger === "scroll") {
-      observerRef.current?.disconnect();
-      observerRef.current = new IntersectionObserver(
+      if (typeof IntersectionObserver === "undefined") return;
+      let firstCallback = true;
+      const observer = new IntersectionObserver(
         (entries) => {
-          entries.forEach((entry) => {
+          const entry = entries[entries.length - 1];
+          if (!entry) return;
+          if (firstCallback) {
+            firstCallback = false;
             if (entry.isIntersecting) {
-              el.classList.add(enterClass);
-              observerRef.current?.disconnect();
+              // Already visible at mount: never hide what the reader sees.
+              observer.disconnect();
+              return;
             }
-          });
+            el.classList.add("editor-motion-pending");
+            return;
+          }
+          if (entry.isIntersecting) {
+            el.classList.remove("editor-motion-pending");
+            el.classList.add(enterClass);
+            observer.disconnect();
+          }
         },
-        { threshold: 0.15 }
+        // Threshold 0 (any visible pixel): a ratio threshold can never be
+        // reached by content taller than the viewport / ratio, which would
+        // leave held-back content hidden forever.
+        { threshold: 0 }
       );
-      observerRef.current.observe(el);
-      return () => observerRef.current?.disconnect();
+      observer.observe(el);
+      return () => {
+        observer.disconnect();
+        el.classList.remove("editor-motion-pending");
+      };
     }
 
+    const replay = () => {
+      el.classList.remove(enterClass);
+      void el.offsetWidth; // force reflow
+      el.classList.add(enterClass);
+    };
+
     if (motionTrigger === "click") {
-      const play = () => {
-        el.classList.remove(enterClass);
-        void el.offsetWidth; // force reflow
-        el.classList.add(enterClass);
-      };
-      el.addEventListener("click", play);
-      return () => el.removeEventListener("click", play);
+      el.addEventListener("click", replay);
+      return () => el.removeEventListener("click", replay);
     }
 
     if (motionTrigger === "hover") {
-      const playIn  = () => { el.classList.remove(enterClass); void el.offsetWidth; el.classList.add(enterClass); };
-      el.addEventListener("mouseenter", playIn);
-      return () => el.removeEventListener("mouseenter", playIn);
+      el.addEventListener("mouseenter", replay);
+      return () => el.removeEventListener("mouseenter", replay);
     }
-  }, [hasAnimation, motionTrigger, enterClass]);
+  }, [playsEntrance, motionTrigger, enterClass]);
 
-  if (!hasAnimation && !hasTransition) return <>{children}</>;
+  if (!hasConfiguredAnimation && !hasTransition) return <>{children}</>;
 
   return (
     <div
       ref={ref}
       className={cn(
         "editor-motion-frame",
-        hasAnimation && motionTrigger === "load" && enterClass,
+        playsEntrance && motionTrigger === "load" && enterClass,
         hasTransition && `editor-motion-hover-${motionTransition}`,
         `editor-motion-ease-${motionEasing}`
       )}
@@ -168,7 +202,6 @@ export function MotionWrapper({
           "--editor-motion-delay": `${delay}ms`,
           "--editor-motion-distance": `${distance}px`,
           "--editor-motion-scale": scale,
-          "--editor-motion-blur": `${blur}px`,
         } as CSSProperties
       }
     >
@@ -189,22 +222,21 @@ function getKeyframeBlock(anim: Partial<NodeAnimation>) {
   const type = anim.type ?? "none";
   const distance = clampNumber(anim.distance ?? DEFAULT_NODE_ANIMATION.distance, 0, 120);
   const scale = clampNumber(anim.scale ?? DEFAULT_NODE_ANIMATION.scale, 0.8, 1);
-  const blur = clampNumber(anim.blur ?? DEFAULT_NODE_ANIMATION.blur, 0, 16);
-
-  const blurFrom = `filter: blur(${blur}px);`;
-  const clear = "opacity: 1; transform: translate(0, 0) scale(1); filter: blur(0);";
+  // PCE-4A: blur is never exported (filter animation is too expensive for
+  // public runtime); anim.blur is accepted for compatibility and ignored.
+  const clear = "opacity: 1; transform: translate(0, 0) scale(1);";
 
   if (type === "fade") return `  from { opacity: 0; }
   to   { opacity: 1; }`;
-  if (type === "fade-up") return `  from { opacity: 0; transform: translateY(${distance}px); ${blurFrom} }
+  if (type === "fade-up") return `  from { opacity: 0; transform: translateY(${distance}px); }
   to   { ${clear} }`;
-  if (type === "fade-down") return `  from { opacity: 0; transform: translateY(-${distance}px); ${blurFrom} }
+  if (type === "fade-down") return `  from { opacity: 0; transform: translateY(-${distance}px); }
   to   { ${clear} }`;
-  if (type === "slide-left") return `  from { opacity: 0; transform: translateX(-${distance}px); ${blurFrom} }
+  if (type === "slide-left") return `  from { opacity: 0; transform: translateX(-${distance}px); }
   to   { ${clear} }`;
-  if (type === "slide-right") return `  from { opacity: 0; transform: translateX(${distance}px); ${blurFrom} }
+  if (type === "slide-right") return `  from { opacity: 0; transform: translateX(${distance}px); }
   to   { ${clear} }`;
-  if (type === "scale") return `  from { opacity: 0; transform: scale(${scale}); ${blurFrom} }
+  if (type === "scale") return `  from { opacity: 0; transform: scale(${scale}); }
   to   { ${clear} }`;
   return "";
 }
@@ -242,5 +274,9 @@ export function exportAnimationCss(anim: Partial<NodeAnimation>): string {
     ? `.element {\n${animDecl}}\n`
     : "";
 
-  return (kfBlock + elementBlock + hoverBlock).trim() || "/* Sin animaciones configuradas */";
+  const reducedMotionBlock = animDecl || hoverLines.length
+    ? `\n@media (prefers-reduced-motion: reduce) {\n  .element, .element:hover { animation: none; transform: none; }\n}\n`
+    : "";
+
+  return (kfBlock + elementBlock + hoverBlock + reducedMotionBlock).trim() || "/* Sin animaciones configuradas */";
 }

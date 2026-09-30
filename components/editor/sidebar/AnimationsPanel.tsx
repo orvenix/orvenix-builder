@@ -240,18 +240,14 @@ export function AnimationsPanel() {
                   onChange={(v) => update({ motionScale: v / 100 })}
                 />
               )}
-              <SliderRow
-                label={`Blur inicial: ${anim.blur}px`}
-                min={0} max={16} step={1}
-                value={anim.blur}
-                onChange={(v) => update({ motionBlur: v })}
-              />
+              {/* PCE-4A: no blur slider -- blur is never rendered (filter animation is
+                  too expensive for public runtime). Stored motionBlur is preserved. */}
               <div className="grid grid-cols-2 gap-1.5 pt-1">
                 <KeyframePreviewCard label="0%" active muted={false}>
                   {getInitialKeyframeLabel(anim)}
                 </KeyframePreviewCard>
                 <KeyframePreviewCard label="100%" muted>
-                  opacity 1 · transform 0 · blur 0
+                  opacity 1 · transform 0
                 </KeyframePreviewCard>
               </div>
             </div>
@@ -314,7 +310,7 @@ export function AnimationsPanel() {
                 {/* Keyframe values */}
                 <div className="flex-1 py-2 px-3 font-mono text-[9px] space-y-3">
                   <KeyframePoint label="0%" details={getInitialKeyframeLabel(anim)} isFrom />
-                  <KeyframePoint label="100%" details="opacity 1 · transform 0 · blur 0" />
+                  <KeyframePoint label="100%" details="opacity 1 · transform 0" />
                 </div>
               </div>
               <div className="px-3 pb-2">
@@ -373,12 +369,12 @@ export function AnimationsPanel() {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function getInitialKeyframeLabel(anim: NodeAnimation) {
-  if (anim.type === "fade") return `opacity 0 · blur ${anim.blur}px`;
-  if (anim.type === "scale") return `opacity 0 · scale ${Math.round(anim.scale * 100)}% · blur ${anim.blur}px`;
-  if (anim.type === "fade-up") return `opacity 0 · y +${anim.distance}px · blur ${anim.blur}px`;
-  if (anim.type === "fade-down") return `opacity 0 · y -${anim.distance}px · blur ${anim.blur}px`;
-  if (anim.type === "slide-left") return `opacity 0 · x -${anim.distance}px · blur ${anim.blur}px`;
-  if (anim.type === "slide-right") return `opacity 0 · x +${anim.distance}px · blur ${anim.blur}px`;
+  if (anim.type === "fade") return `opacity 0`;
+  if (anim.type === "scale") return `opacity 0 · scale ${Math.round(anim.scale * 100)}%`;
+  if (anim.type === "fade-up") return `opacity 0 · y +${anim.distance}px`;
+  if (anim.type === "fade-down") return `opacity 0 · y -${anim.distance}px`;
+  if (anim.type === "slide-left") return `opacity 0 · x -${anim.distance}px`;
+  if (anim.type === "slide-right") return `opacity 0 · x +${anim.distance}px`;
   return "sin transform";
 }
 

@@ -12,15 +12,19 @@ interface Props {
 export function CartButton({ accentColor = "#00b5f6", label = "Carrito" }: Props) {
   const toggle     = useCartStore((s) => s.toggle);
   const totalItems = useCartStore((s) => s.totalItems);
+  const isOpen     = useCartStore((s) => s.isOpen);
 
   return (
     <button
       type="button"
       onClick={toggle}
-      className="relative inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.97]"
+      aria-haspopup="dialog"
+      aria-expanded={isOpen}
+      data-cart-trigger=""
+      className="relative inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2"
       style={{ background: `${accentColor}20`, border: `1px solid ${accentColor}40` }}
     >
-      <ShoppingCart size={16} style={{ color: accentColor }} />
+      <ShoppingCart size={16} style={{ color: accentColor }} aria-hidden="true" />
       {label}
       {totalItems() > 0 && (
         <span

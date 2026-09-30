@@ -12,21 +12,25 @@ export interface CtaButtonProps {
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   positionMode?: "flow" | "free";
+  disabled?: boolean;
+  busy?: boolean;
 }
 
-// Matches the main site's design system (orvenix-tokens.css)
+// Matches the main site's design system (orvenix-tokens.css). PCE-4A: hover
+// distances are Orvenix motion tokens (PCE-3C values at "expressive", zero
+// under data-motion="none" / reduced motion); resting classes are unchanged.
 const VARIANT = {
   primary:
     "bg-gradient-to-br from-[#1BB3FA] via-[#1794CC] to-[#075985] text-white font-black " +
     "shadow-[0_16px_34px_-16px_rgba(27,179,250,0.68)] " +
-    "hover:shadow-[0_26px_52px_-16px_rgba(23,148,204,0.74)] hover:-translate-y-1 hover:saturate-125 transition-all",
+    "hover:shadow-[0_26px_52px_-16px_rgba(23,148,204,0.74)] hover:-translate-y-[var(--orv-motion-distance-md,4px)] hover:saturate-125 transition-all",
   secondary:
     "border border-[#1BB3FA]/24 bg-white/70 text-[#075985] font-black backdrop-blur " +
-    "hover:border-[#1BB3FA]/50 hover:bg-[#e5f6ff] hover:text-[#062f44] hover:-translate-y-1 transition-all",
+    "hover:border-[#1BB3FA]/50 hover:bg-[#e5f6ff] hover:text-[#062f44] hover:-translate-y-[var(--orv-motion-distance-md,4px)] transition-all",
   ghost:
-    "text-[#1379A8] font-black hover:text-[#1BB3FA] transition-all underline-offset-4 hover:underline hover:-translate-y-0.5",
+    "text-[#1379A8] font-black hover:text-[#1BB3FA] transition-all underline-offset-4 hover:underline hover:-translate-y-[var(--orv-motion-distance-sm,2px)]",
   danger:
-    "bg-red-600 text-white font-semibold hover:bg-red-500 hover:-translate-y-px transition-all",
+    "bg-red-600 text-white font-semibold hover:bg-red-500 hover:-translate-y-[calc(var(--orv-motion-distance-sm,2px)*0.5)] transition-all",
 } as const;
 
 const SIZE = {
@@ -42,6 +46,8 @@ export function CtaButton({
   variant = "primary",
   size = "md",
   positionMode = "flow",
+  disabled = false,
+  busy = false,
 }: BlockComponentProps<CtaButtonProps>) {
   const ref = useRef<HTMLAnchorElement>(null);
   const editingNodeId = useEditorStore((s) => s.editingNodeId);
@@ -62,11 +68,17 @@ export function CtaButton({
   const primaryColor = theme?.colors?.primary ?? "#1BB3FA";
   const secondaryColor = theme?.colors?.secondary ?? "#075985";
   const accentColor = theme?.colors?.accent ?? primaryColor;
+  const isDisabled = disabled || busy;
 
-  const themeStyle: React.CSSProperties = {
+  // PCE-4A: interaction timing comes from Orvenix tokens resolved by the
+  // site's data-motion bucket; the theme duration is only a fallback outside
+  // a render scope. Filter is intentionally not transitioned.
+  const themeStyle: React.CSSProperties & Record<"--orv-focus-ring", string> = {
+    "--orv-focus-ring": primaryColor,
     borderRadius: buttonRadius,
     boxShadow: variant === "primary" ? buttonShadow : undefined,
-    transitionDuration: motionDuration,
+    transitionDuration: `var(--orv-interaction-duration, ${motionDuration})`,
+    transitionProperty: "background-color, background-image, border-color, box-shadow, color, opacity, transform, translate",
     transitionTimingFunction: motionEasing,
     background:
       variant === "primary"
@@ -98,8 +110,11 @@ export function CtaButton({
   return (
     <a
       ref={ref}
-      href={resolvedHref}
-      onClick={isEditing ? (e) => e.preventDefault() : undefined}
+      href={isDisabled ? undefined : resolvedHref}
+      role={isDisabled ? "link" : undefined}
+      aria-disabled={isDisabled || undefined}
+      aria-busy={busy || undefined}
+      onClick={isEditing || isDisabled ? (e) => e.preventDefault() : undefined}
       contentEditable={isEditing}
       suppressContentEditableWarning
       onDoubleClick={(e) => {
@@ -125,12 +140,13 @@ export function CtaButton({
         orvenix-cta-button orvenix-cta-${variant}
         items-center outline-none select-none tracking-[0.01em]
         ${SIZE[size]} ${VARIANT[variant]}
-        ${isEditing ? "ring-2 ring-[#1BB3FA]/75 ring-offset-2 ring-offset-[#075985] cursor-text select-text" : "cursor-pointer"}
+        ${isDisabled ? "pointer-events-none opacity-60" : ""}
+        ${isEditing ? "ring-2 ring-[#1BB3FA]/75 ring-offset-2 ring-offset-[#075985] cursor-text select-text" : isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
       `}
       style={themeStyle}
     >
       <span className="relative z-10">{label}</span>
-      {variant !== "ghost" ? <span className="relative z-10 transition-transform duration-300 group-hover:translate-x-1">→</span> : null}
+      {variant !== "ghost" ? <span className="orvenix-cta-arrow relative z-10 transition-transform duration-[var(--orv-interaction-duration,300ms)] group-hover:translate-x-[var(--orv-motion-distance-md,4px)]" aria-hidden="true">→</span> : null}
     </a>
   );
 }

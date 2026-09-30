@@ -137,6 +137,17 @@ img {
 .site-nav--minimal a[aria-current="page"] {
   color: var(--primary, #6366f1);
   border-color: color-mix(in srgb, var(--primary, #6366f1) 32%, white);
+}
+.cta-button:focus-visible,
+.site-nav a:focus-visible {
+  outline: 2px solid var(--primary, #6366f1);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-button,
+  .site-nav a {
+    transition: none;
+  }
 }`
 }
 

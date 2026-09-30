@@ -6,6 +6,7 @@ import { getBlockDefinition } from "@/components/editor/blocks/registry";
 import { editorError } from "@/components/editor/logger";
 import { EditableNode } from "./EditableNode";
 import { MotionWrapper, splitMotionProps } from "./MotionWrapper";
+import { getRuntimeMotionAttributes } from "@/lib/builder-core/runtime/motion";
 import { getEditorVisualStyle, resolveResponsiveProps } from "@/components/editor/responsive";
 import {
   getRuntimeFreePositionStyle,
@@ -91,7 +92,7 @@ export const DynamicRenderer = memo(function DynamicRenderer({
       : null;
 
   const content = (
-    <MotionWrapper {...motionProps}>
+    <MotionWrapper {...motionProps} runtimeMode={mode}>
       <Component {...blockProps} id={id}>
         {children}
       </Component>
@@ -100,12 +101,14 @@ export const DynamicRenderer = memo(function DynamicRenderer({
 
   // Construir variables CSS basadas en el tema global
   const themeStyles = getRuntimeThemeStyleVars(tree.theme);
+  const motionAttributes = getRuntimeMotionAttributes(tree.theme);
 
   // Root con contexto de drag-and-drop
 if (isRoot && mode === "edit") {
   const editMinHeight = getRuntimePreviewMinHeight(tree, currentDevice, resolveResponsiveProps);
   return (
     <div
+      {...motionAttributes}
       className="editor-render-scope relative w-full min-w-0"
       style={{ ...themeStyles, minHeight: editMinHeight }}
     >
@@ -126,6 +129,7 @@ if (isRoot && mode === "edit") {
 if (isRoot) {
   return (
     <div
+      {...motionAttributes}
       className="editor-render-scope relative w-full min-w-0"
       style={{ 
         ...themeStyles,
