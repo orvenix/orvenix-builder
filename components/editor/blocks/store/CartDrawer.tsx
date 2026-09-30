@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
 import { useEditorStore } from "@/store/useEditorStore";
 import { ShoppingCart, X, Minus, Plus, Trash2 } from "lucide-react";
@@ -34,12 +35,30 @@ export function CartDrawer({
   const clear      = useCartStore((s) => s.clear);
   const totalMxn   = useCartStore((s) => s.totalMxn);
   const totalItems = useCartStore((s) => s.totalItems);
+  const setCartSite = useCartStore((s) => s.setSite);
+  const syncCartFromStorage = useCartStore((s) => s.syncFromStorage);
+  const storageKey = useCartStore((s) => s.storageKey);
   // Fallback to the editor store's websiteId (available in both edit and public preview mode)
   const storeSiteId = useEditorStore((s) => s.websiteId);
+  const pathname = usePathname();
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const resolvedPersistenceSiteId = pathname?.startsWith("/p/") ? (siteId || storeSiteId) : null;
+
+  useEffect(() => {
+    setCartSite(resolvedPersistenceSiteId);
+  }, [resolvedPersistenceSiteId, setCartSite]);
+
+  useEffect(() => {
+    if (!storageKey || typeof window === "undefined") return;
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === storageKey) syncCartFromStorage();
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [storageKey, syncCartFromStorage]);
 
   const handleCheckout = async () => {
     if (items.length === 0 || isCheckingOut) return;
