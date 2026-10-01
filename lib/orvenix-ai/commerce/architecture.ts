@@ -561,7 +561,9 @@ function compositionFor(
     : withDensity
   const cta = resolveCtaAction(intent.cta ?? defaultCtaIntent(page, entry), page, entry, index)
   const mediaStrategy = mediaStrategyFor(intent.media)
-  const categoryLinks = entry.type === "category_navigation" ? categoryLinksFor(page, index) : undefined
+  // CF-3A: a provider graph that references categories needs the REAL category destinations too.
+  const graphUsesCategories = JSON.stringify(entry.graph?.regions ?? []).includes('"kind":"category"')
+  const categoryLinks = entry.type === "category_navigation" || graphUsesCategories ? categoryLinksFor(page, index) : undefined
   const productDetailLinks = entry.role === "products" ? productDetailLinksFor(page, entry, index) : undefined
   return {
     ...(layout ? { layout } : {}),
@@ -575,6 +577,9 @@ function compositionFor(
     ...(defaultProductCardTreatmentFor(entry, intent) ? { productCardTreatment: defaultProductCardTreatmentFor(entry, intent) } : {}),
     ...(defaultMerchandisingCompositionFor(entry, intent, layout) ? { merchandisingComposition: defaultMerchandisingCompositionFor(entry, intent, layout) } : {}),
     ...((entry.type === "product_detail" || entry.type === "product_spotlight") && !scale ? { alignment: "left" as const } : {}),
+    ...(entry.graph ? { graph: entry.graph } : {}),
+    ...(entry.creativeCopy ? { creativeCopy: entry.creativeCopy } : {}),
+    ...(entry.creativeCopyFallback?.length ? { creativeCopyFallback: entry.creativeCopyFallback } : {}),
   }
 }
 

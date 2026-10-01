@@ -1,0 +1,1113 @@
+{
+ "kind": "cf3b-call3-provider-output",
+ "note": "EXACT parsed provider output of CF-3B real call #3 (2026-10-01), copied programmatically from the sanitized .tmp artifact. Immutable replay input: never hand-edit.",
+ "source": {
+  "artifact": ".tmp/dev-assisted-generation-e2e/novamarket-cf3b-call3-real.json",
+  "model": "claude-sonnet-5",
+  "thinking": {
+   "type": "disabled"
+  },
+  "timeoutMs": 240000,
+  "maxTokens": 14000,
+  "stopReason": "end_turn",
+  "inputTokens": 9971,
+  "outputTokens": 6351,
+  "responseChars": 14848,
+  "responseFingerprint": "49187e4d74e1918ed8c7716cc92caaed42a3246e485a029c17b5527d6c9abde1",
+  "requestFingerprint": "445a7194cce542225e9484a8c093eec03d88b2b9fb4881ac8da7a525d8d41bf0"
+ },
+ "historicalLifecycle": {
+  "status": "rejected",
+  "reasonCode": "schema_invalid",
+  "reasons": [
+   "pages[0].sections[6].layout invalido."
+  ]
+ },
+ "providerOutputSha256": "7f1ee89683f6a8b671735b69410c4385aa788a7ac39fa472535a17f94b505d6d",
+ "providerOutput": {
+  "version": 1,
+  "roleKey": "full_site_creative_blueprint_v1",
+  "strategyKey": "bounded_full_site_generation_v1",
+  "siteConcept": {
+   "narrative": "catalog",
+   "rhythm": "varied",
+   "density": "balanced"
+  },
+  "navigation": {
+   "concept": "catalog-forward",
+   "primaryPurposes": [
+    "home",
+    "catalog",
+    "category",
+    "help"
+   ],
+   "cartProminence": "prominent"
+  },
+  "pages": [
+   {
+    "purpose": "home",
+    "narrativeGoal": "category-discovery",
+    "density": "balanced",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "product-led",
+      "mediaIntent": "dominant",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "refs": [
+       {
+        "kind": "product",
+        "index": 16
+       }
+      ],
+      "copy": {
+       "eyebrow": "Tecnología y hogar en un solo lugar",
+       "headline": "Equipa tu día a día con piezas pensadas para funcionar",
+       "intro": "Una selección de tecnología, hogar, oficina y audio para quienes buscan orden y funcionalidad."
+      }
+     },
+     {
+      "intent": "navigation_discovery",
+      "role": "content",
+      "narrative": "catalog-orientation",
+      "mediaIntent": "minimal",
+      "ctaIntent": "browse",
+      "relationToPrevious": "standard",
+      "composition": {
+       "version": 1,
+       "role": "content",
+       "beat": "build",
+       "density": 1,
+       "whitespace": 2,
+       "edge": "contained",
+       "continuityToNext": "continue",
+       "regions": [
+        {
+         "id": "cats",
+         "role": "category-group",
+         "span": 12,
+         "weight": 3,
+         "arrangement": "grid",
+         "refs": [
+          {
+           "kind": "category",
+           "key": "tecnologia"
+          },
+          {
+           "kind": "category",
+           "key": "hogar"
+          },
+          {
+           "kind": "category",
+           "key": "oficina"
+          },
+          {
+           "kind": "category",
+           "key": "accesorios"
+          },
+          {
+           "kind": "category",
+           "key": "audio"
+          },
+          {
+           "kind": "category",
+           "key": "gaming"
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "intent": "featured_collection",
+      "role": "products",
+      "narrative": "product-led",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "relationToPrevious": "continuous",
+      "productCardTreatment": "featured",
+      "merchandisingComposition": "featured-plus-grid",
+      "composition": {
+       "version": 1,
+       "role": "products",
+       "beat": "peak",
+       "density": 2,
+       "whitespace": 1,
+       "edge": "contained",
+       "continuityToNext": "contrast",
+       "regions": [
+        {
+         "id": "anchor",
+         "role": "single-product",
+         "span": 5,
+         "weight": 5,
+         "anchor": true,
+         "refs": [
+          {
+           "kind": "product",
+           "index": 8
+          }
+         ]
+        },
+        {
+         "id": "grid",
+         "role": "product-group",
+         "span": 7,
+         "weight": 3,
+         "arrangement": "grid",
+         "refs": [
+          {
+           "kind": "product",
+           "index": 9
+          },
+          {
+           "kind": "product",
+           "index": 21
+          },
+          {
+           "kind": "product",
+           "index": 0
+          }
+         ]
+        }
+       ]
+      },
+      "copy": {
+       "headline": "Piezas que destacan por sí solas",
+       "intro": "Selecciones con presencia propia para tu espacio de trabajo y tu bolsillo digital."
+      }
+     },
+     {
+      "intent": "collection",
+      "role": "products",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "browse",
+      "relationToPrevious": "contrast",
+      "productCardTreatment": "horizontal",
+      "merchandisingComposition": "product-rail",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 17
+       },
+       {
+        "kind": "product",
+        "index": 18
+       },
+       {
+        "kind": "product",
+        "index": 19
+       },
+       {
+        "kind": "product",
+        "index": 16
+       }
+      ]
+     },
+     {
+      "intent": "editorial_passage",
+      "role": "features",
+      "narrative": "benefit-led",
+      "mediaIntent": "minimal",
+      "ctaIntent": "learn",
+      "layout": {
+       "kind": "editorial-split",
+       "mirror": false
+      },
+      "relationToPrevious": "standard",
+      "copy": {
+       "headline": "Organización que se siente natural",
+       "intro": "Del escritorio a la sala, piezas que ayudan a mantener cada espacio en su lugar."
+      }
+     },
+     {
+      "intent": "spotlight",
+      "role": "products",
+      "narrative": "product-led",
+      "mediaIntent": "dominant",
+      "ctaIntent": "buy",
+      "relationToPrevious": "contrast",
+      "productCardTreatment": "image-led",
+      "merchandisingComposition": "alternating-story",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 6
+       },
+       {
+        "kind": "product",
+        "index": 4
+       },
+       {
+        "kind": "product",
+        "index": 5
+       }
+      ]
+     },
+     {
+      "intent": "trust",
+      "role": "trust",
+      "narrative": "trust-led",
+      "mediaIntent": "none",
+      "ctaIntent": "learn",
+      "layout": {
+       "kind": "card-grid"
+      },
+      "relationToPrevious": "standard",
+      "copy": {
+       "headline": "Pensado para el uso diario",
+       "intro": "Productos elegidos por su utilidad real, no solo por su apariencia."
+      }
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "minimal",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "dramatic-closing"
+      },
+      "relationToPrevious": "standard",
+      "copy": {
+       "headline": "Explora todo el catálogo",
+       "intro": "Tecnología, hogar, oficina, accesorios, audio y gaming en un mismo recorrido."
+      }
+     }
+    ]
+   },
+   {
+    "purpose": "catalog",
+    "narrativeGoal": "catalog-orientation",
+    "density": "immersive",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "catalog-orientation",
+      "mediaIntent": "supporting",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Todo el catálogo",
+       "intro": "Explora cada categoría y encuentra lo que necesitas para tu día."
+      }
+     },
+     {
+      "intent": "navigation_discovery",
+      "role": "content",
+      "narrative": "category-discovery",
+      "mediaIntent": "minimal",
+      "ctaIntent": "browse",
+      "composition": {
+       "version": 1,
+       "role": "content",
+       "beat": "open",
+       "density": 1,
+       "whitespace": 1,
+       "edge": "contained",
+       "continuityToNext": "continue",
+       "regions": [
+        {
+         "id": "cats",
+         "role": "category-group",
+         "span": 12,
+         "weight": 3,
+         "arrangement": "grid",
+         "refs": [
+          {
+           "kind": "category",
+           "key": "tecnologia"
+          },
+          {
+           "kind": "category",
+           "key": "hogar"
+          },
+          {
+           "kind": "category",
+           "key": "oficina"
+          },
+          {
+           "kind": "category",
+           "key": "accesorios"
+          },
+          {
+           "kind": "category",
+           "key": "audio"
+          },
+          {
+           "kind": "category",
+           "key": "gaming"
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "intent": "catalog_surface",
+      "role": "products",
+      "narrative": "catalog-orientation",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "relationToPrevious": "continuous",
+      "productCardTreatment": "compact-catalog",
+      "merchandisingComposition": "dense-catalog",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 0
+       },
+       {
+        "kind": "product",
+        "index": 1
+       },
+       {
+        "kind": "product",
+        "index": 2
+       },
+       {
+        "kind": "product",
+        "index": 3
+       },
+       {
+        "kind": "product",
+        "index": 4
+       },
+       {
+        "kind": "product",
+        "index": 5
+       },
+       {
+        "kind": "product",
+        "index": 6
+       },
+       {
+        "kind": "product",
+        "index": 7
+       },
+       {
+        "kind": "product",
+        "index": 8
+       },
+       {
+        "kind": "product",
+        "index": 9
+       },
+       {
+        "kind": "product",
+        "index": 10
+       },
+       {
+        "kind": "product",
+        "index": 11
+       }
+      ]
+     },
+     {
+      "intent": "collection",
+      "role": "products",
+      "narrative": "catalog-orientation",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "relationToPrevious": "continuous",
+      "productCardTreatment": "compact-catalog",
+      "merchandisingComposition": "dense-catalog",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 12
+       },
+       {
+        "kind": "product",
+        "index": 13
+       },
+       {
+        "kind": "product",
+        "index": 14
+       },
+       {
+        "kind": "product",
+        "index": 15
+       },
+       {
+        "kind": "product",
+        "index": 16
+       },
+       {
+        "kind": "product",
+        "index": 17
+       },
+       {
+        "kind": "product",
+        "index": 18
+       },
+       {
+        "kind": "product",
+        "index": 19
+       },
+       {
+        "kind": "product",
+        "index": 20
+       },
+       {
+        "kind": "product",
+        "index": 21
+       },
+       {
+        "kind": "product",
+        "index": 22
+       },
+       {
+        "kind": "product",
+        "index": 23
+       }
+      ]
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "none",
+      "ctaIntent": "contact",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "¿Buscas algo específico?",
+       "intro": "Nuestro equipo puede ayudarte a encontrar la pieza correcta."
+      }
+     }
+    ]
+   },
+   {
+    "purpose": "category",
+    "target": {
+     "kind": "category",
+     "key": "tecnologia"
+    },
+    "narrativeGoal": "category-discovery",
+    "density": "balanced",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Tecnología",
+       "intro": "Dispositivos y accesorios para mantenerte conectado y productivo."
+      }
+     },
+     {
+      "intent": "featured_collection",
+      "role": "products",
+      "narrative": "product-led",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "relationToPrevious": "continuous",
+      "productCardTreatment": "featured",
+      "merchandisingComposition": "featured-plus-grid",
+      "composition": {
+       "version": 1,
+       "role": "products",
+       "beat": "peak",
+       "density": 2,
+       "whitespace": 1,
+       "edge": "contained",
+       "regions": [
+        {
+         "id": "anchor",
+         "role": "single-product",
+         "span": 5,
+         "weight": 5,
+         "anchor": true,
+         "refs": [
+          {
+           "kind": "product",
+           "index": 0
+          }
+         ]
+        },
+        {
+         "id": "grid",
+         "role": "product-group",
+         "span": 7,
+         "weight": 3,
+         "arrangement": "grid",
+         "refs": [
+          {
+           "kind": "product",
+           "index": 1
+          },
+          {
+           "kind": "product",
+           "index": 2
+          },
+          {
+           "kind": "product",
+           "index": 3
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "intent": "catalog_surface",
+      "role": "products",
+      "narrative": "catalog-orientation",
+      "mediaIntent": "supporting",
+      "ctaIntent": "buy",
+      "relationToPrevious": "standard",
+      "productCardTreatment": "compact-catalog",
+      "merchandisingComposition": "dense-catalog",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 0
+       },
+       {
+        "kind": "product",
+        "index": 1
+       },
+       {
+        "kind": "product",
+        "index": 2
+       },
+       {
+        "kind": "product",
+        "index": 3
+       }
+      ]
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "none",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Sigue explorando el catálogo completo"
+      }
+     }
+    ]
+   },
+   {
+    "purpose": "category",
+    "target": {
+     "kind": "category",
+     "key": "hogar"
+    },
+    "narrativeGoal": "category-discovery",
+    "density": "balanced",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Hogar",
+       "intro": "Soluciones simples para iluminar, organizar y mejorar tus espacios."
+      }
+     },
+     {
+      "intent": "collection",
+      "role": "products",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "buy",
+      "relationToPrevious": "continuous",
+      "productCardTreatment": "image-led",
+      "merchandisingComposition": "alternating-story",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 4
+       },
+       {
+        "kind": "product",
+        "index": 5
+       },
+       {
+        "kind": "product",
+        "index": 6
+       },
+       {
+        "kind": "product",
+        "index": 7
+       }
+      ]
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "none",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Descubre más categorías"
+      }
+     }
+    ]
+   },
+   {
+    "purpose": "category",
+    "target": {
+     "kind": "category",
+     "key": "oficina"
+    },
+    "narrativeGoal": "benefit-led",
+    "density": "balanced",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Oficina",
+       "intro": "Piezas para un espacio de trabajo más cómodo y ordenado."
+      }
+     },
+     {
+      "intent": "editorial_passage",
+      "role": "features",
+      "narrative": "benefit-led",
+      "mediaIntent": "minimal",
+      "ctaIntent": "learn",
+      "layout": {
+       "kind": "mirror-split"
+      },
+      "copy": {
+       "headline": "Comodidad para jornadas largas"
+      }
+     },
+     {
+      "intent": "collection",
+      "role": "products",
+      "narrative": "category-discovery",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "relationToPrevious": "standard",
+      "productCardTreatment": "compact-catalog",
+      "merchandisingComposition": "dense-catalog",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 8
+       },
+       {
+        "kind": "product",
+        "index": 9
+       },
+       {
+        "kind": "product",
+        "index": 10
+       },
+       {
+        "kind": "product",
+        "index": 11
+       }
+      ]
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "none",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      }
+     }
+    ]
+   },
+   {
+    "purpose": "category",
+    "target": {
+     "kind": "category",
+     "key": "audio"
+    },
+    "narrativeGoal": "product-led",
+    "density": "balanced",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "category-discovery",
+      "mediaIntent": "dominant",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "refs": [
+       {
+        "kind": "product",
+        "index": 16
+       }
+      ],
+      "copy": {
+       "headline": "Audio",
+       "intro": "Sonido claro para trabajo, llamadas y tiempo libre."
+      }
+     },
+     {
+      "intent": "featured_collection",
+      "role": "products",
+      "narrative": "product-led",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "relationToPrevious": "continuous",
+      "productCardTreatment": "featured",
+      "merchandisingComposition": "featured-plus-grid",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 16
+       },
+       {
+        "kind": "product",
+        "index": 17
+       },
+       {
+        "kind": "product",
+        "index": 18
+       },
+       {
+        "kind": "product",
+        "index": 19
+       }
+      ]
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "none",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      }
+     }
+    ]
+   },
+   {
+    "purpose": "category",
+    "target": {
+     "kind": "category",
+     "key": "gaming"
+    },
+    "narrativeGoal": "product-led",
+    "density": "balanced",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Gaming",
+       "intro": "Accesorios para mejorar tu configuración de juego."
+      }
+     },
+     {
+      "intent": "collection",
+      "role": "products",
+      "narrative": "category-discovery",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "relationToPrevious": "continuous",
+      "productCardTreatment": "horizontal",
+      "merchandisingComposition": "product-rail",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 20
+       },
+       {
+        "kind": "product",
+        "index": 21
+       },
+       {
+        "kind": "product",
+        "index": 22
+       },
+       {
+        "kind": "product",
+        "index": 23
+       }
+      ]
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "none",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      }
+     }
+    ]
+   },
+   {
+    "purpose": "category",
+    "target": {
+     "kind": "category",
+     "key": "accesorios"
+    },
+    "narrativeGoal": "category-discovery",
+    "density": "compact",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Accesorios",
+       "intro": "Pequeños complementos para tu rutina diaria."
+      }
+     },
+     {
+      "intent": "collection",
+      "role": "products",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "buy",
+      "relationToPrevious": "continuous",
+      "productCardTreatment": "compact-catalog",
+      "merchandisingComposition": "dense-catalog",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 12
+       },
+       {
+        "kind": "product",
+        "index": 13
+       },
+       {
+        "kind": "product",
+        "index": 14
+       },
+       {
+        "kind": "product",
+        "index": 15
+       }
+      ]
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "none",
+      "ctaIntent": "browse",
+      "layout": {
+       "kind": "standard"
+      }
+     }
+    ]
+   },
+   {
+    "purpose": "product_detail",
+    "target": {
+     "kind": "product",
+     "index": 8
+    },
+    "narrativeGoal": "product-led",
+    "density": "balanced",
+    "sections": [
+     {
+      "intent": "detail_surface",
+      "role": "products",
+      "narrative": "product-led",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "layout": {
+       "kind": "editorial-split",
+       "mirror": false
+      },
+      "refs": [
+       {
+        "kind": "product",
+        "index": 8
+       }
+      ]
+     },
+     {
+      "intent": "editorial_passage",
+      "role": "features",
+      "narrative": "benefit-led",
+      "mediaIntent": "minimal",
+      "ctaIntent": "learn",
+      "layout": {
+       "kind": "mirror-split"
+      },
+      "copy": {
+       "headline": "Soporte para largas jornadas"
+      }
+     },
+     {
+      "intent": "related_items",
+      "role": "products",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "buy",
+      "relationToPrevious": "standard",
+      "productCardTreatment": "compact-catalog",
+      "merchandisingComposition": "product-rail",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 9
+       },
+       {
+        "kind": "product",
+        "index": 10
+       },
+       {
+        "kind": "product",
+        "index": 11
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "purpose": "product_detail",
+    "target": {
+     "kind": "product",
+     "index": 16
+    },
+    "narrativeGoal": "product-led",
+    "density": "balanced",
+    "sections": [
+     {
+      "intent": "detail_surface",
+      "role": "products",
+      "narrative": "product-led",
+      "mediaIntent": "product-focus",
+      "ctaIntent": "buy",
+      "layout": {
+       "kind": "editorial-split",
+       "mirror": true
+      },
+      "refs": [
+       {
+        "kind": "product",
+        "index": 16
+       }
+      ]
+     },
+     {
+      "intent": "related_items",
+      "role": "products",
+      "narrative": "category-discovery",
+      "mediaIntent": "supporting",
+      "ctaIntent": "buy",
+      "relationToPrevious": "standard",
+      "productCardTreatment": "compact-catalog",
+      "merchandisingComposition": "product-rail",
+      "refs": [
+       {
+        "kind": "product",
+        "index": 17
+       },
+       {
+        "kind": "product",
+        "index": 18
+       },
+       {
+        "kind": "product",
+        "index": 19
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "purpose": "help",
+    "narrativeGoal": "trust-led",
+    "density": "compact",
+    "sections": [
+     {
+      "intent": "opening",
+      "role": "hero",
+      "narrative": "trust-led",
+      "mediaIntent": "minimal",
+      "ctaIntent": "contact",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "¿Necesitas ayuda?",
+       "intro": "Estamos para orientarte en lo que necesites sobre nuestros productos."
+      }
+     },
+     {
+      "intent": "benefits",
+      "role": "features",
+      "narrative": "trust-led",
+      "mediaIntent": "none",
+      "ctaIntent": "learn",
+      "layout": {
+       "kind": "card-grid"
+      },
+      "copy": {
+       "headline": "Aquí para apoyarte"
+      }
+     },
+     {
+      "intent": "closing",
+      "role": "cta",
+      "narrative": "conversion-led",
+      "mediaIntent": "none",
+      "ctaIntent": "contact",
+      "layout": {
+       "kind": "standard"
+      },
+      "copy": {
+       "headline": "Contáctanos"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

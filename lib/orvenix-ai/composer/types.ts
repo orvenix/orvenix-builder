@@ -230,6 +230,8 @@ export interface SectionCompositionContext {
   commerceCtaAction?: { label: SectionInstanceCtaLabel; href: string }
   /** COMMERCE-3C: closed narrative intent selecting Orvenix-owned structural copy. */
   instanceNarrativeIntent?: SectionInstanceNarrativeIntent
+  /** CF-3A: claim-guarded provider copy slots; a missing slot keeps Orvenix's own copy. */
+  instanceCreativeCopy?: { eyebrow?: string; headline?: string; intro?: string }
   /** COMMERCE-3C: grounded category labels linked to real generated category pages. */
   commerceCategoryLinks?: Array<{ label: string; href: string; imageUrl?: string }>
   /**

@@ -1,4 +1,5 @@
 import { COMMERCE_FACT_LIMITS_V1, commerceCategoryKeyV1, type CommerceAvailabilityV1, type CommerceProductFactV1 } from "@/lib/orvenix-ai/commerce/product-facts"
+import { isSafeProductMediaUrlV1 } from "@/lib/commerce/product-media"
 import { buildCreativeDirectorReferenceContextV1, type CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
 import { retrieveDesignReferences } from "@/lib/orvenix-ai/design-reference/retrieve"
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
@@ -73,6 +74,8 @@ export type FullSiteRequestProductV1 = {
   availability?: CommerceAvailabilityV1
   variantCount?: number
   variantLabels?: string[]
+  /** CF-3A: present (true) only when the product has an authoritative image -> eligible for product-media refs. */
+  hasImage?: true
 }
 
 export type FullSiteRequestCategoryV1 = { key: string; label: string; productIndexes: number[] }
@@ -115,6 +118,7 @@ function productContext(product: CommerceProductFactV1, index: number, compact: 
     ...(availabilities.size === 1 ? { availability: [...availabilities][0] } : availabilities.size > 1 ? { availability: availabilities.has("in_stock") ? "in_stock" : [...availabilities][0] } : {}),
     ...(variants.length > 1 ? { variantCount: Math.min(variants.length, COMMERCE_FACT_LIMITS_V1.maxVariantsPerProduct) } : {}),
     ...(labels.length > 1 ? { variantLabels: labels } : {}),
+    ...(product.imageUrls?.some(isSafeProductMediaUrlV1) ? { hasImage: true as const } : {}),
   }
 }
 

@@ -1,6 +1,8 @@
 import { createHash } from "crypto"
+import { GRAPH_LIMITS_V1, type GraphSectionV1 } from "@/lib/orvenix-ai/composer/graph/contract"
+import { CREATIVE_COPY_LIMITS_V1, CREATIVE_COPY_SLOTS_V1, type CreativeCopyV1 } from "./copy-guard"
 import type { SectionRole } from "@/lib/orvenix-ai/architect"
-import { isValidSectionVisualLayoutPlan } from "@/lib/orvenix-ai/composer/visual-layout-plan"
+import { isValidSectionVisualLayoutPlan, ROLE_VISUAL_LAYOUT_VOCABULARY } from "@/lib/orvenix-ai/composer/visual-layout-plan"
 import {
   FULL_SITE_CREATIVE_BLUEPRINT_ROLE_KEY_V1,
   FULL_SITE_CREATIVE_BLUEPRINT_STRATEGY_KEY_V1,
@@ -23,7 +25,7 @@ import {
   type FullSiteCreativeBlueprintV1,
   type FullSiteCreativeSectionV1,
 } from "./contract"
-import { FULL_SITE_BLUEPRINT_LIMITS_V1 } from "./capability-manifest"
+import { FULL_SITE_BLUEPRINT_LIMITS_V1, FULL_SITE_GRAPH_AUTHORING_LIMITS_V1 } from "./capability-manifest"
 
 export interface FullSiteCreativeGroundingContextV1 {
   productCount?: number
@@ -130,18 +132,93 @@ function validateRef(value: unknown, context: FullSiteCreativeGroundingContextV1
   return { kind: value.kind, index: value.index } as FullSiteContentRefV1
 }
 
-function validateSection(value: unknown, context: FullSiteCreativeGroundingContextV1, path: string, errors: string[]): FullSiteCreativeSectionV1 | null {
+type GraphBudgetV1 = { page: number; site: number }
+
+/**
+ * CF-3A: a provider composition graph is OPTIONAL and SHAPE-checked here
+ * only (eligible role, plain object, bounded size, authoring caps). Its
+ * strict validation and grounding happen at compile time, where an invalid
+ * graph sends only THIS section back to V1 -- so a bad graph is a WARNING
+ * that drops the graph, never an error that rejects the blueprint.
+ */
+function validateComposition(value: unknown, role: string, path: string, warnings: string[], budget: GraphBudgetV1): GraphSectionV1 | undefined {
+  if (value === undefined) return undefined
+  if (!(FULL_SITE_GRAPH_AUTHORING_LIMITS_V1.graphSectionRoles as readonly string[]).includes(role)) {
+    warnings.push(`${path}.composition ignorada: role ${role} no admite grafo; la seccion usa V1.`)
+    return undefined
+  }
+  if (!isRecord(value)) {
+    warnings.push(`${path}.composition ignorada: debe ser objeto; la seccion usa V1.`)
+    return undefined
+  }
+  let length = Infinity
+  try {
+    length = JSON.stringify(value).length
+  } catch {
+    length = Infinity
+  }
+  if (length > GRAPH_LIMITS_V1.maxCanonicalLength) {
+    warnings.push(`${path}.composition ignorada: excede el tamano maximo; la seccion usa V1.`)
+    return undefined
+  }
+  if (budget.page >= FULL_SITE_GRAPH_AUTHORING_LIMITS_V1.maxGraphSectionsPerPage || budget.site >= FULL_SITE_GRAPH_AUTHORING_LIMITS_V1.maxGraphSectionsPerSite) {
+    warnings.push(`${path}.composition ignorada: excede el limite de secciones con grafo; la seccion usa V1.`)
+    return undefined
+  }
+  budget.page += 1
+  budget.site += 1
+  return structuredClone(value) as unknown as GraphSectionV1
+}
+
+/** CF-3A: bounded copy slots. Shape/markup/length here (no truncation, no repair); factual claims are guarded with facts in the adapter. */
+function validateCopy(value: unknown, path: string, warnings: string[]): CreativeCopyV1 | undefined {
+  if (value === undefined) return undefined
+  if (!isRecord(value)) {
+    warnings.push(`${path}.copy ignorado: debe ser objeto.`)
+    return undefined
+  }
+  for (const key of Object.keys(value)) if (!(CREATIVE_COPY_SLOTS_V1 as readonly string[]).includes(key)) warnings.push(`${path}.copy.${key} ignorado.`)
+  const copy: CreativeCopyV1 = {}
+  for (const slot of CREATIVE_COPY_SLOTS_V1) {
+    const raw = value[slot]
+    if (raw === undefined) continue
+    if (typeof raw !== "string") {
+      warnings.push(`${path}.copy.${slot} ignorado: debe ser texto.`)
+      continue
+    }
+    const text = raw.trim().replace(/\s+/g, " ")
+    if (!text || UNSAFE_TEXT_PATTERN.test(text) || text.length > CREATIVE_COPY_LIMITS_V1[slot].max) {
+      warnings.push(`${path}.copy.${slot} ignorado: vacio, demasiado largo o con contenido no permitido.`)
+      continue
+    }
+    copy[slot] = text
+  }
+  return Object.keys(copy).length ? copy : undefined
+}
+
+function validateSection(value: unknown, context: FullSiteCreativeGroundingContextV1, path: string, errors: string[], warnings: string[], budget: GraphBudgetV1): FullSiteCreativeSectionV1 | null {
   if (!isRecord(value)) {
     errors.push(`${path} debe ser seccion.`)
     return null
   }
-  onlyKeys(value, ["intent", "role", "refs", "narrative", "mediaIntent", "ctaIntent", "layout", "emphasis", "relationToPrevious", "productCardTreatment", "merchandisingComposition"], path, errors)
+  onlyKeys(value, ["intent", "role", "refs", "narrative", "mediaIntent", "ctaIntent", "layout", "emphasis", "relationToPrevious", "productCardTreatment", "merchandisingComposition", "composition", "copy"], path, errors)
   if (typeof value.intent !== "string" || !SECTION_INTENTS.has(value.intent)) errors.push(`${path}.intent invalido.`)
   if (typeof value.role !== "string" || !ROLE_VALUES.has(value.role as SectionRole)) errors.push(`${path}.role invalido.`)
   const refs = Array.isArray(value.refs)
     ? value.refs.slice(0, FULL_SITE_BLUEPRINT_LIMITS_V1.maxRefsPerSection).map((ref, index) => validateRef(ref, context, `${path}.refs[${index}]`, errors)).filter((ref): ref is FullSiteContentRefV1 => Boolean(ref))
     : undefined
-  if (value.layout !== undefined && !isValidSectionVisualLayoutPlan(value.layout, value.role as SectionRole)) errors.push(`${path}.layout invalido.`)
+  if (value.layout !== undefined && !isValidSectionVisualLayoutPlan(value.layout, value.role as SectionRole)) {
+    /*
+     * CF-3D: a WELL-FORMED layout on a role that has NO layout vocabulary at
+     * all (eg. trust) cannot have any effect -> dropped with a structured
+     * warning; the section and the blueprint survive. Everything else stays
+     * strict: malformed layouts (unknown kind/keys) on any role, and unknown
+     * or wrong-role kinds on layout-capable roles, are never mapped or guessed.
+     */
+    const inapplicable = typeof value.role === "string" && ROLE_VALUES.has(value.role as SectionRole) && !ROLE_VISUAL_LAYOUT_VOCABULARY[value.role as SectionRole]?.length && isValidSectionVisualLayoutPlan(value.layout)
+    if (inapplicable) warnings.push(`${path}.layout: inapplicable_layout_dropped; role ${value.role} no admite layout, se ignora.`)
+    else errors.push(`${path}.layout invalido.`)
+  }
   if (value.ctaIntent !== undefined && (typeof value.ctaIntent !== "string" || !CTA_INTENTS.has(value.ctaIntent))) errors.push(`${path}.ctaIntent invalido.`)
   if (value.emphasis !== undefined && (typeof value.emphasis !== "string" || !EMPHASES.has(value.emphasis))) errors.push(`${path}.emphasis invalido.`)
   if (value.relationToPrevious !== undefined && (typeof value.relationToPrevious !== "string" || !RELATIONS.has(value.relationToPrevious))) errors.push(`${path}.relationToPrevious invalido.`)
@@ -150,6 +227,8 @@ function validateSection(value: unknown, context: FullSiteCreativeGroundingConte
   const narrative = cleanText(value.narrative, FULL_SITE_BLUEPRINT_LIMITS_V1.maxNarrativeLength, `${path}.narrative`, errors)
   const mediaIntent = cleanText(value.mediaIntent, FULL_SITE_BLUEPRINT_LIMITS_V1.maxMediaIntentLength, `${path}.mediaIntent`, errors)
   if (typeof value.intent !== "string" || typeof value.role !== "string" || !SECTION_INTENTS.has(value.intent) || !ROLE_VALUES.has(value.role as SectionRole)) return null
+  const composition = validateComposition(value.composition, value.role, path, warnings, budget)
+  const copy = validateCopy(value.copy, path, warnings)
   return {
     intent: value.intent as FullSiteCreativeSectionV1["intent"],
     role: value.role as SectionRole,
@@ -162,6 +241,8 @@ function validateSection(value: unknown, context: FullSiteCreativeGroundingConte
     ...(typeof value.relationToPrevious === "string" && RELATIONS.has(value.relationToPrevious) ? { relationToPrevious: value.relationToPrevious as FullSiteCreativeSectionV1["relationToPrevious"] } : {}),
     ...(typeof value.productCardTreatment === "string" && PRODUCT_CARD_TREATMENTS.has(value.productCardTreatment) ? { productCardTreatment: value.productCardTreatment as FullSiteCreativeSectionV1["productCardTreatment"] } : {}),
     ...(typeof value.merchandisingComposition === "string" && MERCHANDISING_COMPOSITIONS.has(value.merchandisingComposition) ? { merchandisingComposition: value.merchandisingComposition as FullSiteCreativeSectionV1["merchandisingComposition"] } : {}),
+    ...(composition ? { composition } : {}),
+    ...(copy ? { copy } : {}),
   }
 }
 
@@ -194,6 +275,7 @@ export function validateFullSiteCreativeBlueprintV1(value: unknown, context: Ful
 
   const pages = []
   const semanticKeys = new Set<string>()
+  const graphBudget: GraphBudgetV1 = { page: 0, site: 0 }
   for (const [pageIndex, page] of (value.pages as unknown[]).slice(0, context.maxPages ?? FULL_SITE_BLUEPRINT_LIMITS_V1.maxPages).entries()) {
     if (!isRecord(page)) {
       warnings.push(`pages[${pageIndex}] no es objeto.`)
@@ -211,8 +293,9 @@ export function validateFullSiteCreativeBlueprintV1(value: unknown, context: Ful
       continue
     }
     semanticKeys.add(semanticKey)
+    graphBudget.page = 0
     const sections = Array.isArray(page.sections)
-      ? page.sections.slice(0, FULL_SITE_BLUEPRINT_LIMITS_V1.maxSectionsPerPage).map((section, sectionIndex) => validateSection(section, context, `pages[${pageIndex}].sections[${sectionIndex}]`, errors)).filter((section): section is FullSiteCreativeSectionV1 => Boolean(section))
+      ? page.sections.slice(0, FULL_SITE_BLUEPRINT_LIMITS_V1.maxSectionsPerPage).map((section, sectionIndex) => validateSection(section, context, `pages[${pageIndex}].sections[${sectionIndex}]`, errors, warnings, graphBudget)).filter((section): section is FullSiteCreativeSectionV1 => Boolean(section))
       : []
     if (!sections.length) {
       warnings.push(`pages[${pageIndex}] sin secciones validas.`)

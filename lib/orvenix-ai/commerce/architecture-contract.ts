@@ -1,4 +1,6 @@
 import type { SectionRole } from "@/lib/orvenix-ai/architect"
+import type { GraphSectionV1 } from "@/lib/orvenix-ai/composer/graph/contract"
+import type { CopyGuardCodeV1, CreativeCopySlotV1, CreativeCopyV1 } from "@/lib/orvenix-ai/full-site-generation/copy-guard"
 import type { SectionVisualLayoutPlan } from "@/lib/orvenix-ai/composer/visual-layout-plan"
 
 export const COMMERCE_ARCHITECTURE_PLAN_VERSION_V1 = 1
@@ -91,6 +93,12 @@ export interface CommerceArchitectureSectionV1 {
   category?: string
   layout?: SectionVisualLayoutPlan
   creativeIntent?: CommerceCreativeIntentV1
+  /** CF-3A: provider-authored CreativeCompositionGraphV1 (validated + grounded at compile time; invalid -> this section uses V1). */
+  graph?: GraphSectionV1
+  /** CF-3A: claim-guarded provider copy (only the slots that passed). */
+  creativeCopy?: CreativeCopyV1
+  /** CF-3A: slots that fell back to Orvenix copy, with the guard reason. */
+  creativeCopyFallback?: Array<{ slot: CreativeCopySlotV1; code: CopyGuardCodeV1 }>
 }
 
 export interface CommerceArchitecturePageV1 {

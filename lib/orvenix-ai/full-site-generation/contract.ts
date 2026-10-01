@@ -1,5 +1,7 @@
 import type { SectionRole } from "@/lib/orvenix-ai/architect"
 import type { SectionVisualLayoutPlan } from "@/lib/orvenix-ai/composer/visual-layout-plan"
+import type { GraphSectionV1 } from "@/lib/orvenix-ai/composer/graph/contract"
+import type { CreativeCopyV1 } from "./copy-guard"
 
 export const FULL_SITE_CREATIVE_BLUEPRINT_VERSION_V1 = 1
 export const FULL_SITE_CREATIVE_BLUEPRINT_ROLE_KEY_V1 = "full_site_creative_blueprint_v1"
@@ -79,6 +81,15 @@ export interface FullSiteCreativeSectionV1 {
   relationToPrevious?: "standard" | "continuous" | "contrast"
   productCardTreatment?: FullSiteProductCardTreatmentV1
   merchandisingComposition?: FullSiteMerchandisingCompositionV1
+  /**
+   * CF-3A: OPTIONAL provider-authored CreativeCompositionGraphV1 (the SAME
+   * internal contract -- no parallel schema). Shape-checked here; strictly
+   * validated + grounded at compile time, where an invalid graph sends only
+   * THIS section back to V1.
+   */
+  composition?: GraphSectionV1
+  /** CF-3A: OPTIONAL bounded creative copy slots; each slot is claim-guarded and falls back alone. */
+  copy?: CreativeCopyV1
 }
 
 export interface FullSiteCreativePageV1 {

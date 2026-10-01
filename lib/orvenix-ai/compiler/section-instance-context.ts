@@ -105,6 +105,7 @@ export function applySectionInstanceToContext(
     if (composition.ctaAction) context = { ...context, commerceCtaAction: composition.ctaAction }
     if (composition.omitCta) context = { ...context, instanceOmitCta: true }
     if (composition.narrativeIntent) context = { ...context, instanceNarrativeIntent: composition.narrativeIntent }
+    if (composition.creativeCopy) context = { ...context, instanceCreativeCopy: composition.creativeCopy }
     if (composition.categoryLinks?.length) context = { ...context, commerceCategoryLinks: composition.categoryLinks }
     if (composition.cartProminence && instance.role === "navigation") context = { ...context, navigationCartProminence: composition.cartProminence }
     if (composition.productCardTreatment && instance.role === "products") context = { ...context, commerceProductCardTreatment: composition.productCardTreatment }

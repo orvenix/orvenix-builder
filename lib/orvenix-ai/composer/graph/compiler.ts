@@ -44,7 +44,7 @@ const COL_START_CLASS: Record<number, string> = {
   1: "lg:col-start-1", 2: "lg:col-start-2", 3: "lg:col-start-3", 4: "lg:col-start-4", 5: "lg:col-start-5",
   6: "lg:col-start-6", 7: "lg:col-start-7", 8: "lg:col-start-8", 9: "lg:col-start-9", 10: "lg:col-start-10",
 }
-const ROW_CLASS: Record<number, string> = {
+export const GRAPH_ROW_CLASS_V1: Record<number, string> = {
   0: "grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-5",
   1: "grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8",
   2: "grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12",
@@ -70,7 +70,7 @@ const RAIL_CLASS = "flex snap-x gap-5 overflow-x-auto pb-6 pr-[12vw] [scrollbar-
 const RAIL_LEAD_CLASS = "min-w-[min(20rem,85vw)] snap-start sm:min-w-[24rem] lg:min-w-[28rem]"
 const RAIL_ITEM_CLASS = "min-w-[min(16.5rem,72vw)] snap-start sm:min-w-[18rem]"
 const GRID_ANCHOR_CLASS = "sm:col-span-2 lg:col-span-1 lg:row-span-2"
-const HEADING_SIZE_BY_WEIGHT: Record<number, string> = { 1: "2xl", 2: "3xl", 3: "4xl", 4: "5xl", 5: "6xl" }
+export const GRAPH_HEADING_SIZE_BY_WEIGHT_V1: Record<number, string> = { 1: "2xl", 2: "3xl", 3: "4xl", 4: "5xl", 5: "6xl" }
 const TEXT_ALIGN = { start: "left", center: "center", end: "right" } as const
 const COPY_STACK_CLASS = { start: "flex flex-col items-start gap-4", center: "flex flex-col items-center gap-4 text-center", end: "flex flex-col items-end gap-4 text-right" } as const
 const ACTION_CLASS = { start: "flex h-full items-end justify-start", center: "flex h-full items-end justify-center", end: "flex h-full items-end justify-end" } as const
@@ -141,6 +141,9 @@ export function resolveGraphCardTreatmentV1(input: {
 export type CompileGraphSectionInputV1 = {
   graph: GraphSectionV1
   fingerprint: string
+  /** CF-3D: present only when Orvenix normalized the authored graph (see composeSectionFromGraphV1). */
+  providerFingerprint?: string
+  normalizations?: readonly string[]
   /** Base (unsliced) context: refs index the real product facts. */
   context: SectionCompositionContext
   previousContinuity?: GraphContinuityV1
@@ -181,14 +184,18 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
     const children: string[] = []
     if (graph.role === "content") {
       const minimal = graph.narrative === "minimal-introduction"
-      children.push(kit.headingNode(nodes, "Titulo (graph)", minimal ? "Categorías" : "Explora por categoría", 2, { align: TEXT_ALIGN[align], color: textColors.heading, size: HEADING_SIZE_BY_WEIGHT[region.weight] }))
+      children.push(kit.headingNode(nodes, "Titulo (graph)", minimal ? "Categorías" : "Explora por categoría", 2, { align: TEXT_ALIGN[align], color: textColors.heading, size: GRAPH_HEADING_SIZE_BY_WEIGHT_V1[region.weight] }))
       if (!minimal && region.weight >= 2) children.push(kit.textNode(nodes, "Intro (graph)", "Elige una categoría para ver sus productos.", { align: TEXT_ALIGN[align], size: "lg", color: textColors.body }))
     } else {
-      const text = kit.commerceProductsCopy(graph.narrative ?? "product-led", sectionProducts, { title: "Productos destacados" })
-      if (anchorRef?.kind === "product" && region.weight >= 3) {
-        children.push(kit.textNode(nodes, "Etiqueta (graph)", "Producto destacado", { align: TEXT_ALIGN[align], size: "xs", color: surface?.accent ?? textColors.body, weight: "black", className: "uppercase tracking-[0.26em]" }))
+      // CF-3A: claim-guarded provider copy wins slot by slot; otherwise Orvenix's grounded canned copy.
+      const creative = context.instanceCreativeCopy
+      const canned = kit.commerceProductsCopy(graph.narrative ?? "product-led", sectionProducts, { title: "Productos destacados" })
+      const text = { title: creative?.headline ?? canned.title, intro: creative?.intro ?? canned.intro }
+      const eyebrowText = creative?.eyebrow ?? (anchorRef?.kind === "product" && region.weight >= 3 ? "Producto destacado" : undefined)
+      if (eyebrowText) {
+        children.push(kit.textNode(nodes, "Etiqueta (graph)", eyebrowText, { align: TEXT_ALIGN[align], size: "xs", color: surface?.accent ?? textColors.body, weight: "black", className: "uppercase tracking-[0.26em]" }))
       }
-      children.push(kit.headingNode(nodes, "Titulo (graph)", text.title, 2, { align: TEXT_ALIGN[align], color: textColors.heading, size: HEADING_SIZE_BY_WEIGHT[region.weight] }))
+      children.push(kit.headingNode(nodes, "Titulo (graph)", text.title, 2, { align: TEXT_ALIGN[align], color: textColors.heading, size: GRAPH_HEADING_SIZE_BY_WEIGHT_V1[region.weight] }))
       if (text.intro && region.weight >= 2) children.push(kit.textNode(nodes, "Intro (graph)", text.intro, { align: TEXT_ALIGN[align], size: "lg", color: textColors.body }))
     }
     if (region.withCta) {
@@ -284,7 +291,7 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
         ].filter(Boolean).join(" ")
         return kit.wrapperNode(nodes, `Region ${region.id}`, classes, [content])
       }).filter((id): id is string => Boolean(id))
-      return kit.wrapperNode(nodes, `${displayName} ${rowIndex + 1}`, `${ROW_CLASS[graph.whitespace]} ${hasCopy ? "lg:items-center" : "lg:items-start"}`, cells)
+      return kit.wrapperNode(nodes, `${displayName} ${rowIndex + 1}`, `${GRAPH_ROW_CLASS_V1[graph.whitespace]} ${hasCopy ? "lg:items-center" : "lg:items-start"}`, cells)
     })
     return rowIds.length === 1 ? rowIds[0] : kit.wrapperNode(nodes, `${displayName} rows`, ROWS_STACK_CLASS[graph.whitespace], rowIds)
   }
@@ -295,15 +302,16 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
     displayName: `Composicion (graph${input.preset ? `: ${input.preset}` : ""})`,
     props: {
       maxWidth: graph.edge === "bleed" ? "full" : "xl",
-      paddingY: paddingYFor(graph.beat, graph.whitespace, graph.density),
+      paddingY: graphPaddingYV1(graph.beat, graph.whitespace, graph.density),
       paddingX: "lg",
       background,
       commerceComposition: input.preset ?? "composition-graph",
       commerceVisualFinish: "pce-3c",
-      commerceSectionScale: sectionScaleFor(graph.beat, graph.density),
+      commerceSectionScale: graphSectionScaleV1(graph.beat, graph.density),
       compositionGraph: {
         version: graph.version,
         fingerprint: input.fingerprint,
+        ...(input.providerFingerprint ? { providerFingerprint: input.providerFingerprint, normalizations: [...(input.normalizations ?? [])] } : {}),
         beat: graph.beat,
         ...(input.previousContinuity ? { continuityFromPrevious: input.previousContinuity } : {}),
         ...(input.preset ? { preset: input.preset } : {}),
@@ -314,13 +322,13 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
   return { role: graph.role, rootId: root, nodes, purpose: "Composicion relacional (CreativeCompositionGraphV1)." }
 }
 
-function paddingYFor(beat: GraphBeatV1, whitespace: number, density: number): "md" | "lg" | "xl" {
+export function graphPaddingYV1(beat: GraphBeatV1, whitespace: number, density: number): "md" | "lg" | "xl" {
   if (beat === "rest" || beat === "open" || beat === "peak") return "xl"
   if (density >= 3) return "lg"
   return PADDING_Y_BY_WHITESPACE[whitespace]
 }
 
-function sectionScaleFor(beat: GraphBeatV1, density: number): "compact" | "standard" | "spacious" | "statement" {
+export function graphSectionScaleV1(beat: GraphBeatV1, density: number): "compact" | "standard" | "spacious" | "statement" {
   if (beat === "peak") return "statement"
   if (beat === "rest" || beat === "open") return "spacious"
   if (density >= 2) return "compact"

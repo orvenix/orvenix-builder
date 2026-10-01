@@ -5,6 +5,7 @@ import { buildReviewCartItems, buildVocabularyReviewTree, CF1_REVIEW_LABELS, rea
 import { ReviewCartSeeder } from "../ReviewCartSeeder";
 import { ReviewBar } from "../ReviewBar";
 import { CF2_REVIEW_VARIANTS } from "../cf2-fixtures";
+import { CF3_REVIEW_VARIANTS } from "../cf3-fixtures";
 
 /**
  * PCE-4A: DEV-ONLY interaction review -- commerce VOCABULARY page.
@@ -40,7 +41,7 @@ export default async function DevInteractionReviewVocabularyPage({
 
   return (
     <div>
-      <ReviewBar bucket={bucket} current="vocabulary" artifactVariants={[...(artifact ? Object.entries(artifact.labels) : []), ...Object.entries(CF1_REVIEW_LABELS), ...Object.entries(CF2_REVIEW_VARIANTS)]} cartPresets={[...REVIEW_CART_PRESETS]} activeCartPreset={cartPreset} />
+      <ReviewBar bucket={bucket} current="vocabulary" artifactVariants={[...(artifact ? Object.entries(artifact.labels) : []), ...Object.entries(CF1_REVIEW_LABELS), ...Object.entries(CF2_REVIEW_VARIANTS), ...Object.entries(CF3_REVIEW_VARIANTS)]} cartPresets={[...REVIEW_CART_PRESETS]} activeCartPreset={cartPreset} />
       <PublicRenderer siteId="" tree={buildVocabularyReviewTree(bucket)} activePageSlug="home" activePageName="Inicio" />
       {cartPreset ? <ReviewCartSeeder items={buildReviewCartItems(cartPreset)} /> : null}
     </div>

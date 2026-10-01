@@ -50,6 +50,17 @@ const REQUEST_FINGERPRINT_4F = "7c17ffffd3011c056c8ad4c0911640d0e8aa5fedd96d7fa9
 /** The CF-1 request fingerprint: the 4F request plus ONLY the CF-1 capability-truth manifest fields. */
 const REQUEST_FINGERPRINT_CF1 = "fecbdb391512d1f6fa9f6097bc1a52d98bfc0733b99b9dd164d89facd1243186"
 
+/** The CF-3A request fingerprint: CF-1 + ONLY the composition-graph / creative-copy capabilities. */
+const REQUEST_FINGERPRINT_CF3 = "445a7194cce542225e9484a8c093eec03d88b2b9fb4881ac8da7a525d8d41bf0"
+
+/** Reverses exactly the CF-3A manifest additions (the mock catalog has no images, so no hasImage appears) -> must equal the CF-1 request. */
+function withoutCf3GraphAuthoring(context: unknown): unknown {
+  const reverted = structuredClone(context) as { capabilities: Record<string, unknown> }
+  delete reverted.capabilities.compositionGraph
+  delete reverted.capabilities.creativeCopy
+  return reverted
+}
+
 /** Reverses exactly the CF-1 capability-truth manifest edits (key order preserved) -> must equal the accepted 4F request. */
 function withoutCf1CapabilityTruth(context: unknown): unknown {
   const reverted = structuredClone(context) as { capabilities: Record<string, unknown> & { sectionIntents: Record<string, string> } }
@@ -110,10 +121,11 @@ const SYNTHETIC: Record<string, { value: string; rule: string }> = {
 
 test("5C: current offline NovaMarket request is byte-identical to the accepted PCE-3 request and has zero findings", async () => {
   const context = await captureNovaMarketRequest()
-  const fingerprint = crypto.createHash("sha256").update(JSON.stringify(context)).digest("hex")
   // CF-1: only the capability-truth manifest fields changed; everything else is the accepted 4F request.
-  assert.equal(fingerprint, REQUEST_FINGERPRINT_CF1)
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf1CapabilityTruth(context))).digest("hex"), REQUEST_FINGERPRINT_4F)
+  // CF-3A: + ONLY the graph/copy authoring capabilities. Reverting them reproduces CF-1; reverting CF-1 too reproduces 4F.
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(context)).digest("hex"), REQUEST_FINGERPRINT_CF3)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf3GraphAuthoring(context))).digest("hex"), REQUEST_FINGERPRINT_CF1)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf1CapabilityTruth(withoutCf3GraphAuthoring(context)))).digest("hex"), REQUEST_FINGERPRINT_4F)
   assert.deepEqual(findProhibitedFullSiteRequestValuesV1(context), [])
 })
 

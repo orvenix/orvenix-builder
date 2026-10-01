@@ -27,6 +27,23 @@ import { canonicalGraphJsonV1, graphFingerprintV1 } from "./fingerprint"
 
 export type GraphSectionPositionV1 = { index: number; total: number; peaksBefore: number }
 
+/**
+ * CF-3D: the ONLY graph normalization. `continuityToNext` declares a
+ * relationship with a FOLLOWING graph section; on the page's last graph
+ * section it can have no effect, so a VALID continuity value there is
+ * dropped (recorded, never fabricated elsewhere) instead of sending the
+ * whole graph back to V1. Unknown continuity values are NOT normalized
+ * (enum_invalid stays strict), and nothing else is ever repaired.
+ */
+export type GraphNormalizationCodeV1 = "continuity_without_graph_successor_dropped"
+
+export function normalizeGraphForPositionV1(value: unknown, position?: GraphSectionPositionV1): { graph: unknown; normalizations: GraphNormalizationCodeV1[] } {
+  if (!position || position.index !== position.total - 1 || !isRecord(value) || !inList(GRAPH_CONTINUITIES_V1, value.continuityToNext)) return { graph: value, normalizations: [] }
+  const { continuityToNext: _dropped, ...rest } = value
+  void _dropped
+  return { graph: rest, normalizations: ["continuity_without_graph_successor_dropped"] }
+}
+
 export type GraphSectionValidationV1 =
   | { ok: true; graph: GraphSectionV1; fingerprint: string }
   | { ok: false; diagnostics: GraphDiagnosticV1[] }

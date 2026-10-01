@@ -507,7 +507,7 @@ function composeCredibilityStats(context: SectionCompositionContext, nodes: Reco
   const statRow = credibilityStatRow(nodes, context.credibilityStats, textColors)
   if (!statRow) return null
 
-  const heading = headingNode(nodes, "Título confianza", "Razones para confiar", 2, { align: "center", color: textColors.heading })
+  const heading = headingNode(nodes, "Título confianza", context.instanceCreativeCopy?.headline ?? "Razones para confiar", 2, { align: "center", color: textColors.heading })
   const root = add(
     nodes,
     createComposedNode({
@@ -600,7 +600,8 @@ function composeTrust(context: SectionCompositionContext = {}): ComposedSection 
       type: "heading",
       displayName: "Título confianza",
       props: {
-        text: "Razones para confiar",
+        // CF-3E: provider copy may reframe the section heading only; trust items/evidence stay Orvenix facts.
+        text: context.instanceCreativeCopy?.headline ?? "Razones para confiar",
         level: 2,
         size: "3xl",
         align: "center",
@@ -1078,10 +1079,18 @@ function composeHero(
    * or CTA labels. Absent -> byte-identical to the V2-S3 deterministic
    * baseline (S3 remains the fallback authority, never weakened).
    */
+  /*
+   * CF-3E: claim-guarded provider creative copy (section.copy) takes
+   * priority FIELD BY FIELD over every other source; each missing/rejected
+   * field keeps the existing chain unchanged. The hero's own eyebrow,
+   * title and description are the semantic slots -- nothing is invented.
+   */
+  const creative = context.instanceCreativeCopy
   const heroCopy = {
     ...deterministicHeroCopy,
-    title: context.aiHeroTitleSuggestion ?? deterministicHeroCopy.title,
-    description: context.aiHeroDescriptionSuggestion ?? deterministicHeroCopy.description,
+    eyebrow: creative?.eyebrow ?? deterministicHeroCopy.eyebrow,
+    title: creative?.headline ?? context.aiHeroTitleSuggestion ?? deterministicHeroCopy.title,
+    description: creative?.intro ?? context.aiHeroDescriptionSuggestion ?? deterministicHeroCopy.description,
   }
 
   /*
@@ -2123,8 +2132,10 @@ function composeCardGridSection(
    * nodes exactly as before.
    */
   const suppressWrapperHeading = Boolean(context.singleItemInstance)
-  const heading = suppressWrapperHeading ? null : headingNode(nodes, "Titulo " + role, copy.titleText, 2, { align: "center", color: textColors.heading })
-  const intro = suppressWrapperHeading ? null : textNode(nodes, "Intro " + role, personalizedIntro, { align: "center", size: "lg", color: textColors.body })
+  // CF-3E: features take provider copy ONLY for the section-level heading/intro (never for item facts).
+  const creative = role === "features" ? context.instanceCreativeCopy : undefined
+  const heading = suppressWrapperHeading ? null : headingNode(nodes, "Titulo " + role, creative?.headline ?? copy.titleText, 2, { align: "center", color: textColors.heading })
+  const intro = suppressWrapperHeading ? null : textNode(nodes, "Intro " + role, creative?.intro ?? personalizedIntro, { align: "center", size: "lg", color: textColors.body })
 
   /*
    * "services" is the flagship role shared between overview and catalog
@@ -2482,8 +2493,11 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
   const sectionScale = commerceSectionScaleFor(context, merchandising)
 
   const fallbackTitle = context.archetype === "overview" ? "Productos destacados" : "Catalogo"
-  const copy = commerceProductsCopy(context.instanceNarrativeIntent, selected, { title: fallbackTitle, intro: "Agrega productos al carrito para iniciar tu compra." })
-  const showHeader = !context.singleItemInstance || Boolean(context.instanceNarrativeIntent)
+  const cannedCopy = commerceProductsCopy(context.instanceNarrativeIntent, selected, { title: fallbackTitle, intro: "Agrega productos al carrito para iniciar tu compra." })
+  // CF-3A: claim-guarded provider slots replace the canned copy slot by slot.
+  const creative = context.instanceCreativeCopy
+  const copy = { title: creative?.headline ?? cannedCopy.title, intro: creative?.intro ?? cannedCopy.intro }
+  const showHeader = !context.singleItemInstance || Boolean(context.instanceNarrativeIntent) || Boolean(creative?.headline)
   const align = isSplit || merchandising === "editorial-collection" || merchandising === "alternating-story" ? "left" : "center"
   const headingSize = layoutKind === "oversized-typography" || merchandising === "editorial-collection" ? "7xl" : sectionScale === "statement" || layoutKind === "editorial-passage" || context.instanceScale === "large" || merchandising === "featured-plus-grid" ? "5xl" : undefined
   const finishLabel = isSplit && cards.length === 1
@@ -2497,7 +2511,7 @@ function composeStoreProductsSection(context: SectionCompositionContext, product
         : merchandising === "editorial-collection" || merchandising === "alternating-story"
           ? "Colección editorial"
           : "Tienda"
-  const eyebrow = showHeader ? textNode(nodes, "Etiqueta products", finishLabel, { align, size: "xs", color: storeSurface?.accent ?? textColors.body, weight: "black", className: "uppercase tracking-[0.26em]" }) : null
+  const eyebrow = showHeader ? textNode(nodes, "Etiqueta products", creative?.eyebrow ?? finishLabel, { align, size: "xs", color: storeSurface?.accent ?? textColors.body, weight: "black", className: "uppercase tracking-[0.26em]" }) : null
   const heading = showHeader ? headingNode(nodes, "Titulo products", copy.title, 2, { align, color: textColors.heading, ...(headingSize ? { size: headingSize } : {}) }) : null
   const intro = showHeader && copy.intro ? textNode(nodes, "Intro products", copy.intro, { align, size: "lg", color: textColors.body }) : null
 
@@ -2738,7 +2752,9 @@ function composeCTA(
    * businessObjective) onto the existing archetype fallback. No facts ->
    * `copy` is `ctaCopy(context.archetype)` unchanged.
    */
-  const copy = resolveCtaCopy(context, ctaCopy(context.archetype))
+  const resolved = resolveCtaCopy(context, ctaCopy(context.archetype))
+  // CF-3E: provider copy may set the heading/body only; label/href stay Orvenix-owned.
+  const copy = { ...resolved, title: context.instanceCreativeCopy?.headline ?? resolved.title, body: context.instanceCreativeCopy?.intro ?? resolved.body }
   /*
    * V2-6.2: DRAMATIC CLOSING deterministically uses the banner shape
    * (already full-width/dark/xl-padding, IDENTICAL outer shell to the
@@ -2903,8 +2919,9 @@ function applyCommerceIntentToSection(role: SectionRole, section: ComposedSectio
     if (role === "cta") {
       const copy = COMMERCE_CLOSING_COPY[context.commerceCtaAction.label]
       for (const node of Object.values(section.nodes)) {
-        if (node.displayName === "Titulo CTA") node.props = { ...node.props, text: copy.title }
-        if (node.displayName === "Texto CTA") node.props = { ...node.props, content: copy.body }
+        // CF-3E: provider heading/body win field by field over the deterministic commerce closing copy; the action stays Orvenix's.
+        if (node.displayName === "Titulo CTA") node.props = { ...node.props, text: context.instanceCreativeCopy?.headline ?? copy.title }
+        if (node.displayName === "Texto CTA") node.props = { ...node.props, content: context.instanceCreativeCopy?.intro ?? copy.body }
       }
     }
   }

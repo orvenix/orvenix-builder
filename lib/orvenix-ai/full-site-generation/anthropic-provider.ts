@@ -2,6 +2,7 @@ import { createHash } from "crypto"
 import Anthropic from "@anthropic-ai/sdk"
 import type { FullSiteCreativeBlueprintProviderV1 } from "./contract"
 import { buildFullSiteCommerceCapabilityManifestV1 } from "./capability-manifest"
+import { FULL_SITE_PROVIDER_THINKING_MODES_V1, supportsThinkingModeV1, thinkingRequestParamV1, type FullSiteProviderThinkingModeV1 } from "./thinking-support"
 
 /**
  * FULL-SITE-4A: the REAL external Full-Site Creative Architect adapter
@@ -35,6 +36,27 @@ export type FullSiteProviderFailureCodeV1 = "missing_configuration" | "timeout" 
 export type FullSiteProviderParseFailureCategoryV1 = "none" | "empty" | "parse_incomplete" | "parse_ambiguous" | "parse_invalid" | "non_object_root"
 export type FullSiteProviderCharacterClassV1 = "empty" | "object" | "array" | "quote" | "digit" | "scalar" | "fence" | "other"
 
+/**
+ * CF-3C: content-free block telemetry. Counts and lengths only -- block
+ * text, thinking text and tool input are NEVER copied. `thinkingChars` is
+ * present only when the SDK exposes thinking as a string (length only).
+ */
+export type FullSiteProviderContentBlockTelemetryV1 = {
+  total: number
+  byType: Record<string, number>
+  textChars: number
+  thinkingChars?: number
+}
+
+/** CF-3C: per-response execution telemetry for dev/test observers (never logged by the provider). */
+export type FullSiteProviderResponseTelemetryV1 = {
+  execution: { model: string; maxTokens: number; timeoutMs: number; thinkingMode: FullSiteProviderThinkingModeV1 }
+  stopReason?: string
+  inputTokens?: number
+  outputTokens?: number
+  contentBlocks: FullSiteProviderContentBlockTelemetryV1
+}
+
 export type FullSiteProviderResponseDiagnosticsV1 = {
   contentBlockCount: number
   contentBlockTypes: string[]
@@ -52,6 +74,7 @@ export type FullSiteProviderResponseDiagnosticsV1 = {
   balancedJsonStructure: boolean
   parseFailureCategory: FullSiteProviderParseFailureCategoryV1
   responseFingerprint: string
+  contentBlocks: FullSiteProviderContentBlockTelemetryV1
 }
 
 export class FullSiteProviderErrorV1 extends Error {
@@ -68,12 +91,22 @@ export interface AnthropicFullSiteCreativeProviderConfigV1 {
   apiKey?: string
   timeoutMs?: number
   maxTokens?: number
+  /**
+   * CF-3C: execution-only thinking control. Omitted / "default" -> no
+   * `thinking` field is sent (previous behavior). "disabled" -> exactly
+   * `thinking: { type: "disabled" }`, only for models verified to accept it;
+   * otherwise missing_configuration before any SDK construction.
+   */
+  thinkingMode?: FullSiteProviderThinkingModeV1
+  /** CF-3C: optional dev/test observer, called once per received response with content-free telemetry. */
+  onResponseTelemetry?: (telemetry: FullSiteProviderResponseTelemetryV1) => void
 }
 
 export type AnthropicFullSiteCreativeProviderV1 = FullSiteCreativeBlueprintProviderV1 & {
   readonly providerKey: typeof FULL_SITE_ANTHROPIC_PROVIDER_KEY_V1
   readonly modelKey: string
   readonly timeoutMs: number
+  readonly thinkingMode: FullSiteProviderThinkingModeV1
 }
 
 const MODEL_PATTERN = /^[a-z0-9][a-z0-9.-]{2,79}$/
@@ -95,6 +128,9 @@ export function buildFullSiteCreativeSystemPromptV1(): string {
   // CF-1 renderer truth: say what each choice really does.
   const merchandising = Object.entries(m.merchandisingByRole).map(([role, kinds]) => `role:"${role}": ${list(kinds as readonly string[])}`).join("; ")
   const rhythmEffects = Object.entries(m.rhythmEffects).map(([rhythm, effect]) => `${rhythm}=${effect ?? "sin efecto propio"}`).join("; ")
+  const g = m.compositionGraph
+  const regionRoles = Object.entries(g.regionRolesBySectionRole).map(([role, roles]) => `${role}: ${list(roles as readonly string[])}`).join("; ")
+  const copySlots = Object.entries(m.creativeCopy.slots).map(([slot, bounds]) => `${slot} <= ${bounds.max}`).join(", ")
   const navEffects = Object.entries(m.navigationConceptEffects).map(([concept, effect]) => `${concept}=layout ${effect.renderedLayout}, enlaces por defecto ${effect.defaultPrimaryPurposes.join("+")}`).join("; ")
   return `Eres el Director Creativo y Arquitecto de Informacion senior de Orvenix para tiendas en linea: diseñas la experiencia COMPLETA de un sitio de comercio (universo de paginas, jerarquia, secuencia de secciones, navegacion, ritmo narrativo, enfasis de productos y categorias, medios y llamadas a la accion).
 
@@ -111,7 +147,7 @@ LIMITES ESTRICTOS:
 VOCABULARIO (valores exactos):
 - page.purpose: ${list(m.pagePurposes)}; debe existir "home" y "catalog"; "category" requiere target {"kind":"category","key"}; "product_detail" requiere target {"kind":"product","index"}
 - section.intent con su role obligatorio: ${sectionIntents}
-- section.layout {"kind", "mirror"?: boolean, "rhythm"?: "compact"|"standard"|"spacious"} con kind EXACTAMENTE permitido por role: ${layouts}. Cada kind listado produce un resultado distinto; role:"${m.layoutIgnoredRoles.join('","')}" ignora layout. No inventes identificadores de layout; si una composicion deseada no existe, no la simules con otros campos: elige la opcion listada mas cercana.
+- section.layout {"kind", "mirror"?: boolean, "rhythm"?: "compact"|"standard"|"spacious"} con kind EXACTAMENTE permitido por role: ${layouts}. Cada kind listado produce un resultado distinto; role:"${m.layoutIgnoredRoles.join('","')}" ignora layout; los demas roles no llevan layout (omitelo). No inventes identificadores de layout; si una composicion deseada no existe, no la simules con otros campos: elige la opcion listada mas cercana.
 - section.refs: [{"kind":"product","index"} | {"kind":"category","key"}]
 - section.narrative y page.narrativeGoal: preferir uno de ${list(m.narrativeTokens)}
 - section.mediaIntent: preferir uno de ${list(m.mediaTokens)}
@@ -121,8 +157,23 @@ VOCABULARIO (valores exactos):
 - siteConcept.narrative: ${list(m.siteNarratives)}; siteConcept.rhythm: ${list(m.rhythms)} (efecto real: ${rhythmEffects}); siteConcept.density: ${list(m.siteDensities)}
 - navigation.concept: ${list(m.navigationConcepts)} (efecto real: ${navEffects}); navigation.primaryPurposes: lista de page.purpose; navigation.cartProminence: ${list(m.cartProminence)}
 
+DISENO RELACIONAL (section.composition): es el mecanismo PRINCIPAL para secciones donde la relacion entre sus partes define el diseno: foco vs apoyo, asimetria, copy junto a productos/medios/categorias, espacio en blanco intencional, agrupacion densa vs escasa, varias regiones, continuidad con la siguiente seccion con composition. Opcional no significa excepcional: usalo en los momentos visuales importantes de cada pagina (apertura, construccion, pico, respiro, cierre) sin aplicarlo mecanicamente a todas; una seccion realmente simple cuya estructura anterior ya expresa la relacion no lo necesita. No elijas un layout heredado cuando una relacion lo expresaria mejor, y no agregues composition solo para sumar. Disena RELACIONES, no plantillas:
+- piensa la PAGINA completa como un arco: apertura, construccion, pico focal, respiro, cierre (beat: ${list(g.beats)}; "open" solo la primera seccion con composition de la pagina, "close" solo la ultima, maximo ${g.maxPeaksPerPage} "peak", un "rest" es escaso (density <= 1), un "peak" necesita foco: un anchor o una region single-product/grounded-media con weight >= 4)
+- no todos los productos valen lo mismo: un ancla (anchor) por seccion como maximo; anchor es un OBJETO igual a una de las refs de su region, p. ej. "anchor":{"kind":"product","index":8}, nunca true/false ni texto (si la region no tiene una ref elegible, omite anchor); ninguna otra region de contenido puede pesar mas (weight ${g.weight.min}..${g.weight.max})
+- no toda seccion es encabezado+intro+grilla; no toda seccion usa todas las regiones; el espacio en blanco es una decision (whitespace ${g.whitespace.min}..${g.whitespace.max}); la densidad varia con intencion (density ${g.density.min}..${g.density.max})
+- relacion con la siguiente seccion: continuityToNext ${list(g.continuities)} (solo tiene efecto si la siguiente seccion tambien tiene composition; nunca en la ultima seccion con composition de la pagina)
+- no maximices complejidad: un negocio conservador puede ser sobrio, un sitio premium puede ser escaso, un catalogo puede ser denso. Libertad creativa no es caos.
+Forma exacta: {"version":${g.version},"role":"products"|"content" (igual al role de la seccion),"beat","density","whitespace","edge":${list(g.edges)},"continuityToNext"?,"narrative"?,"regions":[{"id":"a-z0-9-","role","span","weight","align"?:${list(g.alignments)},"whitespace"?,"density"?,"arrangement"?:${list(g.arrangements)} (solo grupos; rail solo product-group),"refs"?,"anchor"?:ref,"pinned"?:boolean (copy),"withCta"?:boolean (copy),"regions"? (solo product-group, un nivel de single-product)}]}
+- roles de region por role de seccion: ${regionRoles}; maximo ${g.maxTopLevelRegions} regiones de primer nivel, ${g.maxRegionsTotal} en total, profundidad ${g.maxDepth}
+- span = unidades de una reticula conceptual de ${g.gridUnits} (${g.span.min}..${g.span.max}); las regiones llenan filas en orden (suma <= ${g.gridUnits} por fila; lo que sobra es espacio en blanco intencional, ubicado segun align); ancho minimo legible (fraccion del ancho de la seccion): ${Object.entries(g.minReadableSpan).map(([role, span]) => `${role} ${span}`).join(", ")}
+- refs: {"kind":"product","index"} | {"kind":"category","key"} | {"kind":"product-media","index"} (solo productos con "hasImage"); single-product = 1 producto, product-group >= 2 (rail <= ${g.maxRailItems}), category-group = categorias, grounded-media = 1 product-media, copy/cta sin refs; ningun producto dos veces en la misma seccion; una category ref solo a categorias que tengan su propia pagina "category" en este blueprint; una region cta o un copy con withCta requiere que la seccion tenga ctaIntent distinto de "none" (Orvenix resuelve el destino)
+- relaciones de ejemplo (ideas, no plantillas; combina y varia): copy span 5 + product-group span 7; single-product span 8 con anchor y weight 5 + copy span 4 con withCta; una region focal escasa de span 12 (density 0-1) y despues una seccion de apoyo mas densa (density 2-3)
+- maximo ${g.maxGraphSectionsPerPage} secciones con composition por pagina y ${g.maxGraphSectionsPerSite} por sitio; omite campos opcionales cuando no aporten
+- Orvenix decide movil, orden de lectura, CSS, colores, accesibilidad, rutas, ids, precios, stock y checkout: nunca escribas px, rem, vw, colores, clases, CSS ni breakpoints. Una composition invalida hace que SOLO esa seccion use el diseno anterior.
+COPY CREATIVO (OPCIONAL, section.copy): {"eyebrow"?, "headline"?, "intro"?} con longitudes maximas ${copySlots}. Lenguaje creativo si ("Una seleccion pensada para tu dia a dia"); afirmaciones factuales no: sin numeros que no esten en el catalogo, precios, porcentajes, descuentos, envios, tiempos de entrega, garantias, calificaciones, resenas, testimonios, escasez/stock, rankings o superlativos ("el mejor", "numero 1"), certificaciones ni estadisticas. Un campo inseguro se reemplaza por el copy de Orvenix.
+
 SALIDA: responde UNICAMENTE un objeto JSON valido (sin markdown, sin comentarios, sin texto antes o despues) con esta forma:
-{"version":1,"roleKey":"full_site_creative_blueprint_v1","strategyKey":"bounded_full_site_generation_v1","siteConcept":{"narrative","rhythm","density"},"navigation":{"concept","primaryPurposes"?,"cartProminence"?},"pages":[{"purpose","target"?,"narrativeGoal"?,"density"?,"sections":[{"intent","role","refs"?,"narrative"?,"mediaIntent"?,"ctaIntent"?,"layout"?,"emphasis"?,"relationToPrevious"?,"productCardTreatment"?,"merchandisingComposition"?}]}]}
+{"version":1,"roleKey":"full_site_creative_blueprint_v1","strategyKey":"bounded_full_site_generation_v1","siteConcept":{"narrative","rhythm","density"},"navigation":{"concept","primaryPurposes"?,"cartProminence"?},"pages":[{"purpose","target"?,"narrativeGoal"?,"density"?,"sections":[{"intent","role","refs"?,"narrative"?,"mediaIntent"?,"ctaIntent"?,"layout"?,"emphasis"?,"relationToPrevious"?,"productCardTreatment"?,"merchandisingComposition"?,"composition"?,"copy"?}]}]}
 No incluyas ningun otro campo. No expliques tu razonamiento. Usa JSON compacto; si el presupuesto de salida no alcanza, reduce primero paginas internas y luego secciones, pero conserva home y catalog.`
 }
 
@@ -287,6 +338,23 @@ function scanJsonStructure(raw: string): { balancedJsonStructure: boolean; parse
   }
 }
 
+const BLOCK_TYPE_PATTERN = /^[a-z][a-z0-9_]{0,39}$/
+
+export function buildFullSiteProviderContentBlockTelemetryV1(message: AnthropicMessageLikeV1): FullSiteProviderContentBlockTelemetryV1 {
+  const content = Array.isArray(message.content) ? message.content : []
+  const byType: Record<string, number> = {}
+  let textChars = 0
+  let thinkingChars: number | undefined
+  for (const block of content) {
+    const record = isAnthropicContentBlockLike(block) ? (block as { type?: unknown; text?: unknown; thinking?: unknown }) : undefined
+    const type = typeof record?.type === "string" && BLOCK_TYPE_PATTERN.test(record.type) ? record.type : "unknown"
+    byType[type] = (byType[type] ?? 0) + 1
+    if (type === "text" && typeof record?.text === "string") textChars += record.text.length
+    if (type === "thinking" && typeof record?.thinking === "string") thinkingChars = (thinkingChars ?? 0) + record.thinking.length
+  }
+  return { total: content.length, byType, textChars, ...(thinkingChars !== undefined ? { thinkingChars } : {}) }
+}
+
 function numericToken(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.round(value) : undefined
 }
@@ -323,6 +391,7 @@ export function buildFullSiteProviderResponseDiagnosticsV1(message: AnthropicMes
     balancedJsonStructure: structure.balancedJsonStructure,
     parseFailureCategory: structure.parseFailureCategory,
     responseFingerprint: fingerprintResponseText(text),
+    contentBlocks: buildFullSiteProviderContentBlockTelemetryV1(message),
   }
 }
 
@@ -338,13 +407,19 @@ export function createAnthropicFullSiteCreativeProviderV1(config: AnthropicFullS
   const model = typeof config?.model === "string" ? config.model.trim() : ""
   const timeoutMs = clamp(config?.timeoutMs, { min: FULL_SITE_PROVIDER_TIMEOUT_LIMITS_V1.minMs, max: FULL_SITE_PROVIDER_TIMEOUT_LIMITS_V1.maxMs }, FULL_SITE_PROVIDER_TIMEOUT_LIMITS_V1.defaultMs)
   const maxTokens = clamp(config?.maxTokens, FULL_SITE_PROVIDER_MAX_TOKENS_LIMITS_V1, FULL_SITE_PROVIDER_MAX_TOKENS_LIMITS_V1.default)
+  const requestedThinking: unknown = config?.thinkingMode ?? "default"
+  const thinkingModeValid = (FULL_SITE_PROVIDER_THINKING_MODES_V1 as readonly unknown[]).includes(requestedThinking)
+  const thinkingMode = (thinkingModeValid ? requestedThinking : "default") as FullSiteProviderThinkingModeV1
 
   return {
     providerKey: FULL_SITE_ANTHROPIC_PROVIDER_KEY_V1,
     modelKey: model,
     timeoutMs,
+    thinkingMode,
     async generate(input: unknown) {
       if (!MODEL_PATTERN.test(model)) throw new FullSiteProviderErrorV1("missing_configuration")
+      // Unknown modes and explicit modes the model is not verified for fail closed (no SDK, no network).
+      if (!thinkingModeValid || !supportsThinkingModeV1(model, thinkingMode)) throw new FullSiteProviderErrorV1("missing_configuration")
       const apiKey = config.apiKey ?? process.env.ANTHROPIC_API_KEY
       if (!apiKey) throw new FullSiteProviderErrorV1("missing_configuration")
       if (!isPlainRecord(input)) throw new FullSiteProviderErrorV1("provider_error")
@@ -352,18 +427,34 @@ export function createAnthropicFullSiteCreativeProviderV1(config: AnthropicFullS
       const client = new Anthropic({ apiKey, timeout: timeoutMs, maxRetries: 0 })
       let extracted: ExtractedFullSiteProviderTextV1
       let diagnostics: FullSiteProviderResponseDiagnosticsV1 | undefined
+      const thinking = thinkingRequestParamV1(thinkingMode)
       try {
         const message = await client.messages.create({
           model,
           max_tokens: maxTokens,
           system: buildFullSiteCreativeSystemPromptV1(),
           messages: [{ role: "user", content: JSON.stringify(input) }],
+          ...(thinking ? { thinking } : {}),
         })
         extracted = extractFullSiteProviderTextV1(message)
         diagnostics = buildFullSiteProviderResponseDiagnosticsV1(message)
       } catch (error) {
         throw new FullSiteProviderErrorV1(isTimeoutLikeError(error) ? "timeout" : "provider_error")
       }
+      if (config.onResponseTelemetry) {
+        try {
+          config.onResponseTelemetry({
+            execution: { model, maxTokens, timeoutMs, thinkingMode },
+            ...(diagnostics.stopReason ? { stopReason: diagnostics.stopReason } : {}),
+            ...(diagnostics.inputTokens !== undefined ? { inputTokens: diagnostics.inputTokens } : {}),
+            ...(diagnostics.outputTokens !== undefined ? { outputTokens: diagnostics.outputTokens } : {}),
+            contentBlocks: diagnostics.contentBlocks,
+          })
+        } catch {
+          // An observer can never change the generation outcome.
+        }
+      }
+      // Fail closed on truncation even if (partial or apparently complete) text exists: never parsed.
       if (extracted.stopReason === "max_tokens") throw new FullSiteProviderErrorV1("output_truncated", diagnostics)
       if (!extracted.text) throw new FullSiteProviderErrorV1("empty_response", diagnostics)
       try {

@@ -1,5 +1,6 @@
 import type { SectionRole } from "./block-selector"
 import type { GraphSectionV1 } from "@/lib/orvenix-ai/composer/graph/contract"
+import type { CopyGuardCodeV1, CreativeCopySlotV1, CreativeCopyV1 } from "@/lib/orvenix-ai/full-site-generation/copy-guard"
 import {
   BOOKING_PRESENTATIONS,
   HERO_TREATMENTS,
@@ -177,6 +178,10 @@ export interface SectionInstanceComposition {
    * invalid graph makes THIS section fall back to the V1 path.
    */
   graph?: GraphSectionV1
+  /** CF-3A: claim-guarded provider copy slots (both graph and V1 paths render them). */
+  creativeCopy?: CreativeCopyV1
+  /** CF-3A: copy slots that fell back to Orvenix copy (recorded on the section). */
+  creativeCopyFallback?: Array<{ slot: CreativeCopySlotV1; code: CopyGuardCodeV1 }>
 }
 
 export const SECTION_INSTANCE_CART_PROMINENCES = ["none", "subtle", "prominent"] as const
@@ -353,7 +358,12 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
   if (plan.composition !== undefined) {
     if (!isPlainObject(plan.composition)) return false
     const composition = plan.composition
-    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks", "cartProminence", "productCardTreatment", "merchandisingComposition", "graph"])) return false
+    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks", "cartProminence", "productCardTreatment", "merchandisingComposition", "graph", "creativeCopy", "creativeCopyFallback"])) return false
+    if (composition.creativeCopy !== undefined) {
+      if (!isPlainObject(composition.creativeCopy) || !hasOnlyKeys(composition.creativeCopy, ["eyebrow", "headline", "intro"])) return false
+      for (const text of Object.values(composition.creativeCopy)) if (typeof text !== "string" || !text.trim() || text.length > 220 || /[<>{}`]/.test(text)) return false
+    }
+    if (composition.creativeCopyFallback !== undefined && (!Array.isArray(composition.creativeCopyFallback) || composition.creativeCopyFallback.length > 3)) return false
     // CF-2: shape-only here (bounded size); strict graph validation + section-level fallback happen at compile time.
     if (composition.graph !== undefined && (!isPlainObject(composition.graph) || JSON.stringify(composition.graph).length > 12_000)) return false
     if (composition.cartProminence !== undefined && !(SECTION_INSTANCE_CART_PROMINENCES as readonly string[]).includes(composition.cartProminence as string)) return false

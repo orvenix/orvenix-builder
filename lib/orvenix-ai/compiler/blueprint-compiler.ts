@@ -359,7 +359,7 @@ function compilePage(
       if (result.ok === false) {
         childId = createBlockSection(section, nodes, options, context)
         if (childId && nodes[childId]) {
-          nodes[childId].props = { ...nodes[childId].props, compositionGraphFallback: { reason: result.reason, codes: [...new Set(result.diagnostics.map((diagnostic) => diagnostic.code))] } }
+          nodes[childId].props = { ...nodes[childId].props, compositionGraphFallback: { reason: result.reason, codes: [...new Set(result.diagnostics.map((diagnostic) => diagnostic.code))], ...(result.normalizations.length ? { normalizations: result.normalizations } : {}) } }
         }
         previousGraph = undefined
       } else {
@@ -373,6 +373,36 @@ function compilePage(
     }
 
     if (!childId) continue
+
+    // CF-3A: record provider copy slots that fell back to Orvenix copy (structured, on the section).
+    const copyFallback = section.instance?.composition?.creativeCopyFallback
+    if (copyFallback?.length && nodes[childId]) nodes[childId].props = { ...nodes[childId].props, creativeCopyFallback: copyFallback }
+
+    /*
+     * CF-3E provenance (observed, not assumed): an accepted provider slot is
+     * "applied" only if its exact text is in THIS section's final subtree;
+     * otherwise the section had no compatible semantic slot for it. Rejected
+     * slots stay in creativeCopyFallback; every other text is Orvenix's own.
+     */
+    const creativeCopy = section.instance?.composition?.creativeCopy
+    if (creativeCopy && nodes[childId]) {
+      const texts = new Set<string>()
+      const walk = (id: string) => {
+        const node = nodes[id]
+        if (!node) return
+        for (const value of [node.props.text, node.props.content]) if (typeof value === "string") texts.add(value)
+        node.children.forEach(walk)
+      }
+      walk(childId)
+      const slots = (["eyebrow", "headline", "intro"] as const).filter((slot) => typeof creativeCopy[slot] === "string")
+      nodes[childId].props = {
+        ...nodes[childId].props,
+        creativeCopyProvenance: {
+          applied: slots.filter((slot) => texts.has(creativeCopy[slot]!)),
+          noCompatibleSlot: slots.filter((slot) => !texts.has(creativeCopy[slot]!)),
+        },
+      }
+    }
 
     children.push(childId)
 

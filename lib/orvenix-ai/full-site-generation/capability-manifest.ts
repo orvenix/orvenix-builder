@@ -18,6 +18,17 @@ import {
 } from "./contract"
 import { COMMERCE_MEDIA_INTENTS_V1, COMMERCE_NARRATIVE_INTENTS_V1 } from "./creative-intent"
 import { navigationConceptEffectsV1 } from "./navigation-concepts"
+import {
+  CREATIVE_COMPOSITION_GRAPH_VERSION_V1,
+  GRAPH_ALIGNMENTS_V1,
+  GRAPH_ARRANGEMENTS_V1,
+  GRAPH_BEATS_V1,
+  GRAPH_CONTINUITIES_V1,
+  GRAPH_EDGES_V1,
+  GRAPH_LIMITS_V1,
+  GRAPH_REGION_ROLES_BY_SECTION_ROLE_V1,
+} from "@/lib/orvenix-ai/composer/graph/contract"
+import { CREATIVE_COPY_LIMITS_V1 } from "./copy-guard"
 
 /**
  * FULL-SITE-4A: the machine-readable truth about what Orvenix can
@@ -96,6 +107,14 @@ export const FULL_SITE_RHYTHM_EFFECTS_V1: Record<(typeof FULL_SITE_RHYTHMS_V1)[n
 /** CF-1: roles whose composer ignores section.emphasis (scale). */
 export const FULL_SITE_EMPHASIS_IGNORED_ROLES_V1: readonly SectionRole[] = ["hero"]
 
+/** CF-3A: bounded provider graph authoring (output-size pressure + intentional use). */
+export const FULL_SITE_GRAPH_AUTHORING_LIMITS_V1 = {
+  maxGraphSectionsPerPage: 6,
+  maxGraphSectionsPerSite: 16,
+  /** Blueprint section roles that may carry a composition graph (the graph's role must match). */
+  graphSectionRoles: ["products", "content"] as const,
+} as const
+
 export type FullSiteCapabilityManifestV1 = ReturnType<typeof buildFullSiteCommerceCapabilityManifestV1>
 
 export function buildFullSiteCommerceCapabilityManifestV1() {
@@ -148,6 +167,42 @@ export function buildFullSiteCommerceCapabilityManifestV1() {
       categoryLinks: true,
     },
     notAvailable: ["search", "customer_accounts", "order_history", "wishlist", "shipping_calculator", "coupons", "reviews", "marketplace_sellers", "real_product_photography"] as const,
+    /**
+     * CF-3A: OPTIONAL relational composition per section, derived from the
+     * CreativeCompositionGraphV1 contract itself (no parallel schema).
+     */
+    compositionGraph: {
+      version: CREATIVE_COMPOSITION_GRAPH_VERSION_V1,
+      optional: true,
+      eligibleSectionRoles: FULL_SITE_GRAPH_AUTHORING_LIMITS_V1.graphSectionRoles,
+      regionRolesBySectionRole: GRAPH_REGION_ROLES_BY_SECTION_ROLE_V1,
+      beats: GRAPH_BEATS_V1,
+      continuities: GRAPH_CONTINUITIES_V1,
+      alignments: GRAPH_ALIGNMENTS_V1,
+      edges: GRAPH_EDGES_V1,
+      arrangements: GRAPH_ARRANGEMENTS_V1,
+      gridUnits: GRAPH_LIMITS_V1.gridUnits,
+      span: { min: GRAPH_LIMITS_V1.minSpan, max: GRAPH_LIMITS_V1.gridUnits },
+      weight: GRAPH_LIMITS_V1.weight,
+      whitespace: GRAPH_LIMITS_V1.whitespace,
+      density: GRAPH_LIMITS_V1.density,
+      minReadableSpan: GRAPH_LIMITS_V1.minReadableSpan,
+      maxTopLevelRegions: GRAPH_LIMITS_V1.maxTopLevelRegions,
+      maxDepth: GRAPH_LIMITS_V1.maxDepth,
+      maxRegionsTotal: GRAPH_LIMITS_V1.maxRegionsTotal,
+      maxRefsPerSection: GRAPH_LIMITS_V1.maxRefsPerSection,
+      maxRailItems: GRAPH_LIMITS_V1.maxRailItems,
+      maxPeaksPerPage: GRAPH_LIMITS_V1.maxPeaksPerPage,
+      maxGraphSectionsPerPage: FULL_SITE_GRAPH_AUTHORING_LIMITS_V1.maxGraphSectionsPerPage,
+      maxGraphSectionsPerSite: FULL_SITE_GRAPH_AUTHORING_LIMITS_V1.maxGraphSectionsPerSite,
+      refKinds: ["product", "category", "product-media"] as const,
+      orvenixOwned: ["mobile_layout", "dom_reading_order", "css", "colors", "accessibility", "routes_and_ids", "prices_stock_checkout"] as const,
+    },
+    /** CF-3A: OPTIONAL creative copy slots; factual claims are guarded (unsafe slot -> Orvenix copy). */
+    creativeCopy: {
+      slots: CREATIVE_COPY_LIMITS_V1,
+      forbiddenClaims: ["numbers_not_in_catalog", "prices", "percentages", "discounts", "shipping", "delivery_times", "guarantees", "ratings_reviews", "testimonials", "scarcity_stock", "superlatives_rankings", "certifications", "statistics"] as const,
+    },
   }
 }
 

@@ -15,6 +15,7 @@ import type { FullSiteContentRefV1, FullSiteCreativeBlueprintV1, FullSiteCreativ
 import { validateFullSiteCreativeBlueprintV1 } from "./validator"
 import { normalizeNarrativeIntentV1, resolveSectionCreativeIntentV1 } from "./creative-intent"
 import { DEFAULT_PRIMARY_PURPOSES_BY_CONCEPT_V1, NAVIGATION_STYLE_BY_CONCEPT_V1 } from "./navigation-concepts"
+import { attachProviderAuthoringV1, catalogGraphGroundingV1, diagnoseGraphDegeneracyV1, diagnoseProviderGraphsV1, groundedCopyTextsV1 } from "./graph-authoring"
 
 export type CommerceBlueprintAdapterResultV1 =
   | { ok: true; plan: CommerceArchitecturePlanV1; warnings: string[]; fingerprint: string }
@@ -82,6 +83,28 @@ function indexesFromRefs(refs: readonly FullSiteContentRefV1[] | undefined, prod
   })
 }
 
+/**
+ * CF-3D: a products section may express its content ONLY through its graph
+ * (refs inside regions, no section-level refs). Those are the provider's own
+ * refs for THIS section, so they become the section's products (range-checked,
+ * de-duplicated, in authored order) instead of the section being dropped. The
+ * graph itself is still validated strictly by the compiler (an invalid graph
+ * falls back to V1 with these same products). Only explicit product refs are
+ * used: anchors are never read, nothing is inferred.
+ */
+function productIndexesFromGraphRefs(composition: FullSiteCreativeSectionV1["composition"], products: readonly CommerceProductFactV1[]): number[] {
+  const refs: FullSiteContentRefV1[] = []
+  const walk = (regions: unknown) => {
+    if (!Array.isArray(regions)) return
+    for (const region of regions as Array<{ refs?: unknown; regions?: unknown }>) {
+      if (Array.isArray(region?.refs)) for (const ref of region.refs as Array<{ kind?: unknown; index?: unknown }>) if (ref?.kind === "product" && Number.isInteger(ref.index)) refs.push({ kind: "product", index: ref.index as number })
+      walk(region?.regions)
+    }
+  }
+  if (composition?.role === "products") walk(composition.regions)
+  return indexesFromRefs(refs, products, [])
+}
+
 function commerceSectionFromCreative(
   section: FullSiteCreativeSectionV1,
   products: readonly CommerceProductFactV1[],
@@ -89,8 +112,12 @@ function commerceSectionFromCreative(
   blueprint: FullSiteCreativeBlueprintV1,
   page: FullSiteCreativePageV1,
   warnings: string[],
+  path: string = section.intent,
 ): CommerceArchitectureSectionV1 | null {
-  const productIndexes = indexesFromRefs(section.refs, products, groups)
+  const sectionIndexes = indexesFromRefs(section.refs, products, groups)
+  const graphIndexes = sectionIndexes.length ? [] : productIndexesFromGraphRefs(section.composition, products)
+  if (graphIndexes.length) warnings.push(`${path}: section_products_from_graph_refs; la seccion no tiene refs propias y usa las refs de producto de su composition.`)
+  const productIndexes = sectionIndexes.length ? sectionIndexes : graphIndexes
   const categoryRef = section.refs?.find((ref): ref is Extract<FullSiteContentRefV1, { kind: "category" }> => ref.kind === "category")
   const category = categoryRef ? groups.find((group) => group.key === categoryRef.key)?.label : undefined
   // COMMERCE-3C: every accepted creative field survives as a CLOSED enum on the commerce section.
@@ -185,6 +212,10 @@ export function adaptFullSiteCreativeBlueprintToCommercePlanV1(params: {
   const pages: CommerceArchitecturePageV1[] = []
   const slugs = new Set<string>()
   const warnings = [...validation.warnings]
+  const groundedTexts = groundedCopyTextsV1(params.products)
+  const graphDiagnosticPages: Array<{ path: string; sections: Array<{ path: string; graph?: CommerceArchitectureSectionV1["graph"]; hasCtaAction?: boolean }> }> = []
+  // Category refs in a graph must be REAL destinations: categories that have their own category page.
+  const categoryPageKeys = validation.blueprint.pages.flatMap((page) => (page.purpose === "category" && page.target?.kind === "category" ? [page.target.key] : []))
   for (const page of validation.blueprint.pages) {
     if (!["home", "catalog", "category", "product_detail", "help"].includes(page.purpose)) continue
     if (page.purpose === "category" && page.target?.kind !== "category") continue
@@ -194,9 +225,20 @@ export function adaptFullSiteCreativeBlueprintToCommercePlanV1(params: {
     let slug = baseSlug
     for (let suffix = 2; slugs.has(slug); suffix += 1) slug = `${baseSlug}-${suffix}`
     const ownProduct = page.purpose === "product_detail" && page.target?.kind === "product" ? page.target.index : undefined
-    const sections = page.sections
-      .map((section) => commerceSectionFromCreative(section, params.products, groups, validation.blueprint, page, warnings))
-      .filter((section): section is CommerceArchitectureSectionV1 => Boolean(section))
+    const pageIndex = validation.blueprint.pages.indexOf(page)
+    const tracked = page.sections
+      .map((section, sectionIndex) => {
+        const path = `pages[${pageIndex}].sections[${sectionIndex}]`
+        const commerceSection = commerceSectionFromCreative(section, params.products, groups, validation.blueprint, page, warnings, path)
+        // CF-3D: never lose a provider graph silently.
+        if (!commerceSection && section.composition) warnings.push(`${path}.composition: graph_section_dropped_no_content; la seccion no tiene contenido compilable y se omite.`)
+        if (!commerceSection) return null
+        // CF-3A: optional provider graph + claim-guarded copy (each falls back alone).
+        return { path, hasCtaAction: section.ctaIntent === undefined ? undefined : section.ctaIntent !== "none", section: attachProviderAuthoringV1({ section, commerceSection, groundedTexts, path, warnings }) }
+      })
+      .filter((entry): entry is { path: string; hasCtaAction: boolean | undefined; section: CommerceArchitectureSectionV1 } => Boolean(entry))
+    graphDiagnosticPages.push({ path: `pages[${pageIndex}]`, sections: tracked.map((entry) => ({ path: entry.path, graph: entry.section.graph, ...(entry.hasCtaAction !== undefined ? { hasCtaAction: entry.hasCtaAction } : {}) })) })
+    const sections = tracked.map((entry) => entry.section)
       // A product's own detail page never lists that same product as "related".
       .map((section) => section.type === "related_products" && ownProduct !== undefined ? { ...section, productIndexes: section.productIndexes?.filter((index) => index !== ownProduct) } : section)
       .filter((section) => section.type !== "related_products" || Boolean(section.productIndexes?.length))
@@ -211,6 +253,10 @@ export function adaptFullSiteCreativeBlueprintToCommercePlanV1(params: {
       ...(page.target?.kind === "category" ? { category: groups.find((group) => group.key === (page.target as { kind: "category"; key: string }).key)?.label } : {}),
     } as CommerceArchitecturePageV1)
   }
+
+  // CF-3A: advisory graph diagnostics (the compiler re-validates and records the authoritative fallback) + degeneracy warnings.
+  warnings.push(...diagnoseProviderGraphsV1(graphDiagnosticPages, catalogGraphGroundingV1(params.products, categoryPageKeys)))
+  warnings.push(...diagnoseGraphDegeneracyV1(validation.blueprint))
 
   if (!pages.some((page) => page.purpose === "home") || !pages.some((page) => page.purpose === "catalog")) {
     return { ok: false, errors: ["commerce blueprint debe producir home y catalogo."], warnings }
