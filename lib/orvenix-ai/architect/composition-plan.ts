@@ -1,4 +1,5 @@
 import type { SectionRole } from "./block-selector"
+import type { GraphSectionV1 } from "@/lib/orvenix-ai/composer/graph/contract"
 import {
   BOOKING_PRESENTATIONS,
   HERO_TREATMENTS,
@@ -170,6 +171,12 @@ export interface SectionInstanceComposition {
   productCardTreatment?: SectionInstanceProductCardTreatment
   /** PCE-3: bounded section-level merchandising composition; renderer-owned structure only. */
   merchandisingComposition?: SectionInstanceMerchandisingComposition
+  /**
+   * CF-2: optional CreativeCompositionGraphV1 for this section. Validated
+   * (strictly, against grounding) only when the section is compiled; an
+   * invalid graph makes THIS section fall back to the V1 path.
+   */
+  graph?: GraphSectionV1
 }
 
 export const SECTION_INSTANCE_CART_PROMINENCES = ["none", "subtle", "prominent"] as const
@@ -346,7 +353,9 @@ export function isValidSectionInstancePlan(plan: unknown): plan is SectionInstan
   if (plan.composition !== undefined) {
     if (!isPlainObject(plan.composition)) return false
     const composition = plan.composition
-    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks", "cartProminence", "productCardTreatment", "merchandisingComposition"])) return false
+    if (!hasOnlyKeys(composition, ["treatment", "alignment", "scale", "mediaStrategy", "backgroundStrategy", "emphasis", "visualPrimitive", "layout", "navigationSlugs", "ctaAction", "omitCta", "narrativeIntent", "categoryLinks", "productDetailLinks", "cartProminence", "productCardTreatment", "merchandisingComposition", "graph"])) return false
+    // CF-2: shape-only here (bounded size); strict graph validation + section-level fallback happen at compile time.
+    if (composition.graph !== undefined && (!isPlainObject(composition.graph) || JSON.stringify(composition.graph).length > 12_000)) return false
     if (composition.cartProminence !== undefined && !(SECTION_INSTANCE_CART_PROMINENCES as readonly string[]).includes(composition.cartProminence as string)) return false
     if (composition.productCardTreatment !== undefined && !VALID_PRODUCT_CARD_TREATMENTS.has(composition.productCardTreatment as string)) return false
     if (composition.merchandisingComposition !== undefined && !VALID_MERCHANDISING_COMPOSITIONS.has(composition.merchandisingComposition as string)) return false

@@ -2799,6 +2799,42 @@ function composeFooter(
 }
 
 /**
+ * CF-2: ONE category card builder, shared by the V1 category row and the
+ * composition-graph compiler. `anchor` is the visual-anchor card (the V1
+ * category row's first card).
+ */
+export function categoryCardNodeV1(
+  nodes: Record<string, ComposedNode>,
+  context: SectionCompositionContext,
+  link: NonNullable<SectionCompositionContext["commerceCategoryLinks"]>[number],
+  index: number,
+  anchor: boolean,
+  surface: { storeSurface: CommerceSurfaceV1 | undefined; card: string; border: string; textColors: { heading: string; body: string } },
+): string {
+  const { storeSurface, card, border, textColors } = surface
+  const safeImage = isSafeProductMediaUrlV1(link.imageUrl) ? link.imageUrl.trim() : null
+  const media = safeImage
+    ? add(nodes, createComposedNode({ type: "image", displayName: `Imagen categoria ${index + 1}`, props: { src: safeImage, alt: link.label, className: "h-full w-full object-cover" } }))
+    : add(nodes, createComposedNode({ type: "genericWrapper", displayName: `Inicial categoria ${index + 1}`, props: { tag: "div", className: "grid h-full w-full place-items-center text-5xl font-black", style: { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC" } }, children: [textNode(nodes, `Inicial ${link.label}`, link.label.trim().slice(0, 2).toUpperCase(), { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC" })] }))
+  const mediaFrame = wrapperNode(nodes, `Media categoria ${index + 1}`, anchor ? "relative aspect-[16/10] overflow-hidden rounded-[1.55rem] bg-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] lg:aspect-[4/3]" : "relative aspect-[4/3] overflow-hidden rounded-[1.35rem] bg-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]", [media])
+  const eyebrow = textNode(nodes, `Etiqueta categoria ${index + 1}`, "Categoría", { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC", size: "xs", weight: "black", className: "uppercase tracking-[0.24em]" })
+  const title = headingNode(nodes, `Categoria ${index + 1}`, link.label, 3, { size: "xl", align: "left", color: storeSurface?.heading ?? textColors.heading })
+  const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: `Abrir categoria ${index + 1}`, props: { label: "Ver categoría", href: link.href, variant: "secondary", size: "sm" } }))
+  return add(nodes, createComposedNode({
+    type: "genericWrapper",
+    displayName: `Category card ${index + 1}`,
+    props: {
+      tag: "article",
+      className: anchor ? "group flex min-h-full flex-col gap-5 overflow-hidden rounded-[1.9rem] border p-5 shadow-[0_34px_110px_-62px_rgba(15,23,42,0.82)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_40px_130px_-66px_rgba(15,23,42,0.92)] lg:row-span-2" : "group flex min-h-full flex-col gap-4 overflow-hidden rounded-[1.45rem] border p-4 shadow-[0_22px_64px_-50px_rgba(15,23,42,0.62)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_82px_-54px_rgba(15,23,42,0.74)]",
+      commerceVisualFinish: "pce-3c",
+      dataCommerceCategoryCard: "pce-3c",
+      style: { background: card, borderColor: border },
+    },
+    children: [mediaFrame, eyebrow, title, cta],
+  }))
+}
+
+/**
  * COMMERCE-3C: a commerce discovery row. Labels are the REAL product
  * categories; every href is an Orvenix-resolved `page:<generated category
  * page>` (validated in composition-plan.ts). Replaces the generic
@@ -2815,28 +2851,7 @@ function composeCategoryLinks(context: SectionCompositionContext, links: NonNull
   const heading = headingNode(nodes, "Titulo categorias", minimal ? "Categorías" : "Explora por categoría", 2, { align: "left", color: textColors.heading, size: "5xl" })
   const intro = minimal ? null : textNode(nodes, "Intro categorias", "Elige una categoría para ver sus productos.", { align: "left", size: "lg", color: textColors.body })
   const header = wrapperNode(nodes, "Encabezado categorias", "max-w-3xl", [heading, intro].filter((id): id is string => Boolean(id)))
-  const cards = links.map((link, index) => {
-    const safeImage = isSafeProductMediaUrlV1(link.imageUrl) ? link.imageUrl.trim() : null
-    const media = safeImage
-      ? add(nodes, createComposedNode({ type: "image", displayName: `Imagen categoria ${index + 1}`, props: { src: safeImage, alt: link.label, className: "h-full w-full object-cover" } }))
-      : add(nodes, createComposedNode({ type: "genericWrapper", displayName: `Inicial categoria ${index + 1}`, props: { tag: "div", className: "grid h-full w-full place-items-center text-5xl font-black", style: { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC" } }, children: [textNode(nodes, `Inicial ${link.label}`, link.label.trim().slice(0, 2).toUpperCase(), { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC" })] }))
-    const mediaFrame = wrapperNode(nodes, `Media categoria ${index + 1}`, index === 0 ? "relative aspect-[16/10] overflow-hidden rounded-[1.55rem] bg-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] lg:aspect-[4/3]" : "relative aspect-[4/3] overflow-hidden rounded-[1.35rem] bg-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]", [media])
-    const eyebrow = textNode(nodes, `Etiqueta categoria ${index + 1}`, "Categoría", { color: storeSurface?.accent ?? context.accentColor ?? "#1794CC", size: "xs", weight: "black", className: "uppercase tracking-[0.24em]" })
-    const title = headingNode(nodes, `Categoria ${index + 1}`, link.label, 3, { size: "xl", align: "left", color: storeSurface?.heading ?? textColors.heading })
-    const cta = add(nodes, createComposedNode({ type: "ctaButton", displayName: `Abrir categoria ${index + 1}`, props: { label: "Ver categoría", href: link.href, variant: "secondary", size: "sm" } }))
-    return add(nodes, createComposedNode({
-      type: "genericWrapper",
-      displayName: `Category card ${index + 1}`,
-      props: {
-        tag: "article",
-        className: index === 0 ? "group flex min-h-full flex-col gap-5 overflow-hidden rounded-[1.9rem] border p-5 shadow-[0_34px_110px_-62px_rgba(15,23,42,0.82)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_40px_130px_-66px_rgba(15,23,42,0.92)] lg:row-span-2" : "group flex min-h-full flex-col gap-4 overflow-hidden rounded-[1.45rem] border p-4 shadow-[0_22px_64px_-50px_rgba(15,23,42,0.62)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_82px_-54px_rgba(15,23,42,0.74)]",
-        commerceVisualFinish: "pce-3c",
-        dataCommerceCategoryCard: "pce-3c",
-        style: { background: card, borderColor: border },
-      },
-      children: [mediaFrame, eyebrow, title, cta],
-    }))
-  })
+  const cards = links.map((link, index) => categoryCardNodeV1(nodes, context, link, index, index === 0, { storeSurface, card, border, textColors }))
   const gridClass = context.commerceMerchandisingComposition === "category-spotlight"
     ? "grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:auto-rows-fr"
     : context.instanceScale === "condensed"
@@ -3003,3 +3018,41 @@ function composeSectionForRole(
       return null
   }
 }
+
+/**
+ * CF-2: the composer building blocks the CreativeCompositionGraphV1 compiler
+ * reuses (same nodes, same card props, same grounded copy, same surfaces).
+ * Exported as ONE explicit kit so the graph path cannot drift from V1.
+ */
+export const COMPOSER_GRAPH_KIT_V1 = {
+  add,
+  textNode,
+  headingNode,
+  wrapperNode,
+  readableTextColorsFor,
+  commerceProductsCopy,
+  categoryCardNodeV1,
+  storeProductsBackground: STORE_PRODUCTS_SECTION_BACKGROUND,
+  /** The bound/pending product card node, with an explicit (graph-resolved) treatment. */
+  storeCardNode(
+    nodes: Record<string, ComposedNode>,
+    product: CommerceProductFactV1,
+    context: SectionCompositionContext,
+    surface: CommerceSurfaceV1 | undefined,
+    index: number,
+    treatment: SectionInstanceProductCardTreatment,
+    detailHref: string | undefined,
+    className?: string,
+  ): string | null {
+    const props = storeCardProps(product, context, surface, treatment)
+    if (!props) return null
+    return add(nodes, createComposedNode({
+      type: "store-product-card",
+      displayName: `Producto ${index + 1}: ${product.name}`,
+      props: {
+        ...(isValidProductDetailHrefV1(detailHref) ? { ...props, detailHref } : props),
+        ...(className ? { className } : {}),
+      },
+    }))
+  },
+} as const

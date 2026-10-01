@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto"
 
+import { composeSectionFromGraphV1, type GraphContinuityV1 } from "@/lib/orvenix-ai/composer/graph"
 import type {
   EditorNode,
   NodeProps,
@@ -265,6 +266,11 @@ function compilePage(
       options.creativeDirection?.pricingTreatment,
   )
 
+  // CF-2: page arc positions among this page's graph sections (arc rules are per section).
+  const graphSectionIndexes = page.sections.map((section, index) => (section.instance?.composition?.graph !== undefined ? index : -1)).filter((index) => index >= 0)
+  let graphPeaks = 0
+  let previousGraph: { sectionIndex: number; continuityToNext?: GraphContinuityV1 } | undefined
+
   for (const [sectionIndex, section] of page.sections.entries()) {
     const baseContext: SectionCompositionContext = {
         visualFamily: options.visualFamily,
@@ -331,7 +337,40 @@ function compilePage(
       ? applySectionInstanceToContext(baseContext, section.instance)
       : baseContext
 
-    const childId = createBlockSection(section, nodes, options, context)
+    let childId: string | null = null
+    const graph = section.instance?.composition?.graph
+    if (graph !== undefined) {
+      /*
+       * CF-2: a graph section resolves refs against the UNSLICED product
+       * facts, and takes Orvenix-resolved CTA/category/detail targets from
+       * its instance. Valid -> graph compiler; invalid -> THIS section
+       * alone falls back to the V1 path, with the reason recorded.
+       */
+      const composition = section.instance!.composition!
+      const result = composeSectionFromGraphV1({
+        graph,
+        expectedRole: section.role,
+        context: { ...context, products: baseContext.products },
+        position: { index: graphSectionIndexes.indexOf(sectionIndex), total: graphSectionIndexes.length, peaksBefore: graphPeaks },
+        ...(previousGraph && previousGraph.sectionIndex === sectionIndex - 1 && previousGraph.continuityToNext ? { previousContinuity: previousGraph.continuityToNext } : {}),
+        detailHrefByProductIndex: new Map((composition.productDetailLinks ?? []).map((link) => [link.productIndex, link.href])),
+        ...(composition.merchandisingComposition ? { preset: composition.merchandisingComposition } : {}),
+      })
+      if (result.ok === false) {
+        childId = createBlockSection(section, nodes, options, context)
+        if (childId && nodes[childId]) {
+          nodes[childId].props = { ...nodes[childId].props, compositionGraphFallback: { reason: result.reason, codes: [...new Set(result.diagnostics.map((diagnostic) => diagnostic.code))] } }
+        }
+        previousGraph = undefined
+      } else {
+        childId = copyComposedSection(result.section, nodes)
+        if (result.graph.beat === "peak") graphPeaks += 1
+        previousGraph = { sectionIndex, ...(result.graph.continuityToNext ? { continuityToNext: result.graph.continuityToNext } : {}) }
+      }
+    } else {
+      childId = createBlockSection(section, nodes, options, context)
+      previousGraph = undefined
+    }
 
     if (!childId) continue
 
