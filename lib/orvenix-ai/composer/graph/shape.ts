@@ -128,3 +128,20 @@ export function canonicalGraphShapeJsonV1(source: ShapeSource): string {
 export function graphShapeSignatureV1(source: ShapeSource): string {
   return graphFingerprintV1(graphShapeV1(source))
 }
+
+/**
+ * CF-4C: COARSE per-section structural token for page skeletons/arcs and
+ * composition memory: section role, beat, focal role, density band,
+ * arrangements and edge -- deliberately coarser than the shape signature
+ * (no spans/weights) so a page skeleton recognizes "the same kind of page",
+ * not only byte-identical compositions. Content-independent by construction.
+ */
+export function graphSectionTokenV1(source: ShapeSource): string {
+  const shape = graphShapeV1(source)
+  const flat: GraphShapeRegionV1[] = []
+  const walk = (regions: readonly GraphShapeRegionV1[]) => regions.forEach((region) => { flat.push(region); if (region.regions) walk(region.regions) })
+  walk(shape.regions)
+  const focal = flat.find((region) => region.focal)?.role ?? "-"
+  const arrangements = [...new Set(flat.flatMap((region) => (region.arrangement ? [region.arrangement] : [])))].sort().join("+") || "-"
+  return `${shape.role}|g|${shape.beat}|f:${focal}|d:${shape.density >= 2 ? "dense" : "sparse"}|a:${arrangements}|e:${shape.edge}`
+}

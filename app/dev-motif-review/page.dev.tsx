@@ -4,6 +4,7 @@ import { commerceCategoryKeyV1, normalizeCommercePresentationProductsV1 } from "
 import { MOTIF_ARCHETYPES_V2 } from "@/lib/orvenix-ai/design-reference/motifs/archetypes";
 import { describeMotifRelationV2, retrieveReferenceMotifsV2, type MotifRetrievalContextV2, type ReferenceMotifRegionV2 } from "@/lib/orvenix-ai/design-reference/motifs";
 import { deriveFullSiteMotifContextV1 } from "@/lib/orvenix-ai/full-site-generation/request-context";
+import { buildCf4cMemoryReviewV1 } from "./memory-fixtures";
 
 /**
  * CF-4B: DEV-ONLY motif retrieval review (excluded from production builds by
@@ -69,6 +70,29 @@ function ContextBlock({ title, context }: { title: string; context: MotifRetriev
   );
 }
 
+async function MemoryBlock() {
+  const review = await buildCf4cMemoryReviewV1();
+  const ids = (result: typeof review.withMemory) => result.selections.map((selection) => selection.motif.motifId);
+  return (
+    <section style={{ border: "2px solid #0f172a", borderRadius: 8, padding: 16, marginBottom: 24 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 700 }}>CF-4C composition memory (NovaMarket, offline synthetic owner history)</h2>
+      <p style={{ fontSize: 12 }}>History: the owner published + accepted a site whose home graph used motif A&apos;s shape. A third record belongs to another user and must be ignored.</p>
+      <pre style={{ fontSize: 11, background: "#f8fafc", padding: 8, whiteSpace: "pre-wrap" }}>{JSON.stringify({
+        provenance: review.provenance,
+        recentShapes: review.memory.recentShapeSignatures.map((shape) => shape.slice(0, 12)),
+        recentArcs: review.memory.recentPageArcSignatures.map((arc) => arc.slice(0, 12)),
+        recentSkeletons: review.memory.recentPageSkeletonSignatures.map((skeleton) => skeleton.slice(0, 12)),
+        withoutMemory: ids(review.withoutMemory),
+        withMemory: ids(review.withMemory),
+        downweighted: review.withMemory.downweightedIds,
+        crossGenerationForThatHistorySite: review.crossGeneration,
+        call3ReplayWithinSiteNovelty: review.call3Novelty,
+      }, null, 1)}</pre>
+      <ContextBlock title="NovaMarket WITH memory (soft ×0.5 on recently used shapes)" context={{ ...review.context, avoidShapeSignatures: review.memory.recentShapeSignatures }} />
+    </section>
+  );
+}
+
 export default function DevMotifReviewPage() {
   if (process.env.NODE_ENV === "production") notFound();
   const products = normalizeCommercePresentationProductsV1(buildNovaMarketNewStorePreviewInputV1().business.products) ?? [];
@@ -79,6 +103,7 @@ export default function DevMotifReviewPage() {
       <h1 style={{ fontSize: 22, fontWeight: 800 }}>CF-4B Relational motif retrieval</h1>
       <p style={{ fontSize: 13 }}>Same library, different business facts → different relational starting points. ★ = region that would carry the anchor. No provider call.</p>
       <ContextBlock title="NovaMarket (the CF-3B request facts)" context={novaMarket} />
+      <MemoryBlock />
       {Object.values(MOTIF_ARCHETYPES_V2).map((archetype) => <ContextBlock key={archetype.label} title={archetype.label} context={archetype.context} />)}
     </main>
   );

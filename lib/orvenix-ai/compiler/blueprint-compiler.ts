@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto"
 
-import { composeSectionFromGraphV1, type GraphContinuityV1 } from "@/lib/orvenix-ai/composer/graph"
+import { composeSectionFromGraphV1, type GraphContinuityV1, type GraphSectionV1 } from "@/lib/orvenix-ai/composer/graph"
+import { graphSectionTokenV1 } from "@/lib/orvenix-ai/composer/graph/shape"
 import type {
   EditorNode,
   NodeProps,
@@ -338,6 +339,7 @@ function compilePage(
       : baseContext
 
     let childId: string | null = null
+    let compiledGraph: GraphSectionV1 | undefined
     const graph = section.instance?.composition?.graph
     if (graph !== undefined) {
       /*
@@ -364,6 +366,7 @@ function compilePage(
         previousGraph = undefined
       } else {
         childId = copyComposedSection(result.section, nodes)
+        compiledGraph = result.graph
         if (result.graph.beat === "peak") graphPeaks += 1
         previousGraph = { sectionIndex, ...(result.graph.continuityToNext ? { continuityToNext: result.graph.continuityToNext } : {}) }
       }
@@ -373,6 +376,18 @@ function compilePage(
     }
 
     if (!childId) continue
+
+    /*
+     * CF-4C: a COARSE, content-independent structural token per section
+     * (role + graph beat/focal/density/arrangement/edge, or role + the V1
+     * composition actually rendered). Persisted with the plan so composition
+     * memory can derive page arcs/skeletons later -- no products, copy or ids.
+     */
+    if (nodes[childId]) {
+      const instanceComposition = section.instance?.composition
+      const v1Composition = nodes[childId].props.commerceComposition ?? instanceComposition?.layout?.kind ?? instanceComposition?.visualPrimitive ?? "standard"
+      nodes[childId].props = { ...nodes[childId].props, compositionToken: compiledGraph ? graphSectionTokenV1(compiledGraph) : `${section.role}|v1|${String(v1Composition)}` }
+    }
 
     // CF-3A: record provider copy slots that fell back to Orvenix copy (structured, on the section).
     const copyFallback = section.instance?.composition?.creativeCopyFallback

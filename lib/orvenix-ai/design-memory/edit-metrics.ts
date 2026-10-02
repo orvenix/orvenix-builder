@@ -10,6 +10,7 @@ import type {
   EditorTree,
   GlobalTheme,
 } from "@/types/editor"
+import { pageCompositionSignatureV1 } from "./composition-memory"
 
 const COPY_WEIGHT = 0.25
 const VISUAL_WEIGHT = 0.5
@@ -71,6 +72,29 @@ export interface DesignGenerationEditMetrics {
   themeChangedKeys: number
 
   editDistance: number
+
+  /** CF-4C (additive, optional): composition survival -- only for plans that carry CF-4C structure. */
+  composition?: CompositionSurvivalV1
+}
+
+/**
+ * CF-4C: per-GRAPH-SECTION survival, measured with the same id-matched
+ * node classification as the drift metrics above (no second diff system).
+ * A section survives when its root still exists and no node of its
+ * generated subtree was removed or changed STRUCTURALLY (copy/visual
+ * edits keep the composition). Pages that were removed or renamed are
+ * `unmatchedSections`, never guessed. V1 sections are reported only
+ * through the page skeleton/arc signatures.
+ */
+export interface CompositionSurvivalV1 {
+  version: 1
+  graphSections: number
+  survivingShapeSignatures: string[]
+  restructuredShapeSignatures: string[]
+  removedShapeSignatures: string[]
+  unmatchedSections: number
+  pageArcSignatures: string[]
+  pageSkeletonSignatures: string[]
 }
 
 type NodeChangeKind = "copy" | "visual" | "structural" | "none"
@@ -288,6 +312,48 @@ function findConservativeRenames(
   }
 }
 
+function initialSubtree(tree: EditorTree, id: string): EditorNode[] {
+  const node = tree.nodes[id]
+  return node ? [node, ...node.children.flatMap((child) => initialSubtree(tree, child))] : []
+}
+
+export function measureCompositionSurvivalV1(initialPlan: SiteCreationPlanV2, currentSite: CurrentDesignGenerationSite): CompositionSurvivalV1 | undefined {
+  const currentPages = new Map(currentSite.pages.map((page) => [page.slug, page]))
+  const survival: CompositionSurvivalV1 = { version: 1, graphSections: 0, survivingShapeSignatures: [], restructuredShapeSignatures: [], removedShapeSignatures: [], unmatchedSections: 0, pageArcSignatures: [], pageSkeletonSignatures: [] }
+  let structured = false
+  for (const page of initialPlan.pages) {
+    const signature = pageCompositionSignatureV1(page.tree)
+    if (!signature) continue
+    structured = true
+    if (!survival.pageArcSignatures.includes(signature.arcSignature)) survival.pageArcSignatures.push(signature.arcSignature)
+    if (!survival.pageSkeletonSignatures.includes(signature.skeletonSignature)) survival.pageSkeletonSignatures.push(signature.skeletonSignature)
+    const initialTree = stripTreeGlobalTheme(page.tree)
+    const currentTree = currentPages.get(page.slug)?.tree
+    const comparableCurrent = currentTree ? stripTreeGlobalTheme(currentTree) : undefined
+    for (const id of initialTree.nodes[initialTree.rootId]?.children ?? []) {
+      const shape = (initialTree.nodes[id]?.props?.compositionGraph as { shape?: unknown } | undefined)?.shape
+      if (typeof shape !== "string" || !/^[a-f0-9]{64}$/.test(shape)) continue
+      survival.graphSections += 1
+      if (!comparableCurrent) {
+        survival.unmatchedSections += 1
+        continue
+      }
+      if (!comparableCurrent.nodes[id]) {
+        survival.removedShapeSignatures.push(shape)
+        continue
+      }
+      const restructured = initialSubtree(initialTree, id).some((before) => {
+        const after = comparableCurrent.nodes[before.id]
+        return !after || classifyNodeChange(before, after) === "structural"
+      })
+      ;(restructured ? survival.restructuredShapeSignatures : survival.survivingShapeSignatures).push(shape)
+    }
+  }
+  if (!structured) return undefined
+  const unique = (list: string[]) => [...new Set(list)]
+  return { ...survival, survivingShapeSignatures: unique(survival.survivingShapeSignatures), restructuredShapeSignatures: unique(survival.restructuredShapeSignatures), removedShapeSignatures: unique(survival.removedShapeSignatures) }
+}
+
 export function measureDesignGenerationDrift(
   initialPlan: SiteCreationPlanV2,
   currentSite: CurrentDesignGenerationSite,
@@ -355,6 +421,7 @@ export function measureDesignGenerationDrift(
     nodesAdded += countPageNodes(page.tree)
   }
 
+  const composition = measureCompositionSurvivalV1(initialPlan, currentSite)
   const themeMetrics = countChangedThemeKeys(initialPlan.theme, currentSite.theme ?? null)
   const themeChanged = themeMetrics.changed > 0
   const weightedChanges =
@@ -394,5 +461,6 @@ export function measureDesignGenerationDrift(
     themeChangedKeys: themeMetrics.changed,
 
     editDistance: clamp01(weightedChanges / weightedCapacity),
+    ...(composition ? { composition } : {}),
   }
 }

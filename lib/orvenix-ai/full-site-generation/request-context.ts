@@ -3,6 +3,7 @@ import { isSafeProductMediaUrlV1 } from "@/lib/commerce/product-media"
 import { buildCreativeDirectorReferenceContextV1, type CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
 import { retrieveDesignReferences } from "@/lib/orvenix-ai/design-reference/retrieve"
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
+import { compositionMemoryProvenanceV1, emptyCompositionMemoryV1, type CompositionMemoryV1 } from "@/lib/orvenix-ai/design-memory/composition-memory"
 import { catalogScaleV2, retrieveReferenceMotifsV2, toProviderDesignMotifsV2, type MotifPurposeV2, type MotifRetrievalContextV2, type ProviderDesignMotifV2 } from "@/lib/orvenix-ai/design-reference/motifs"
 import {
   FULL_SITE_CREATIVE_BLUEPRINT_ROLE_KEY_V1,
@@ -96,6 +97,10 @@ export type FullSiteCreativeRequestContextV1 = {
 export type FullSiteCreativeRequestV1 = {
   context: FullSiteCreativeRequestContextV1
   grounding: FullSiteCreativeGroundingContextV1
+  /** CF-4C: Orvenix-side diagnostics, NEVER sent to the provider (the provider only sees the resulting motif selection). */
+  diagnostics: {
+    motifMemory: ReturnType<typeof compositionMemoryProvenanceV1> & { downweightedMotifIds: string[]; selectedMotifIds: string[] }
+  }
 }
 
 export class FullSiteRequestContextErrorV1 extends Error {
@@ -204,6 +209,8 @@ export function buildFullSiteCreativeRequestV1(params: {
   catalogTotalCount?: number
   /** CF-4C hook: recently used shape signatures to down-weight. */
   avoidShapeSignatures?: readonly string[]
+  /** CF-4C: the owner's derived composition memory (recency -> soft avoid). Absent -> exact CF-4B behavior. */
+  compositionMemory?: CompositionMemoryV1 | null
 }): FullSiteCreativeRequestV1 {
   const products = params.products.slice(0, FULL_SITE_REQUEST_LIMITS_V1.maxProducts)
   if (!products.length) throw new FullSiteRequestContextErrorV1("full_site_context_requires_products")
@@ -219,8 +226,11 @@ export function buildFullSiteCreativeRequestV1(params: {
     categories.set(key, entry)
   }
   const categoryList = [...categories.values()].slice(0, FULL_SITE_REQUEST_LIMITS_V1.maxCategories)
-  const motifContext = deriveFullSiteMotifContextV1({ products: params.products, categoryCount: categoryList.length, creativeDirection: params.creativeDirection, catalogTotalCount: params.catalogTotalCount, avoidShapeSignatures: params.avoidShapeSignatures })
-  const designMotifs = toProviderDesignMotifsV2(retrieveReferenceMotifsV2(motifContext).selections, motifContext.purposes)
+  const avoidShapeSignatures = [...new Set([...(params.avoidShapeSignatures ?? []), ...(params.compositionMemory?.recentShapeSignatures ?? [])])]
+  const motifContext = deriveFullSiteMotifContextV1({ products: params.products, categoryCount: categoryList.length, creativeDirection: params.creativeDirection, catalogTotalCount: params.catalogTotalCount, avoidShapeSignatures })
+  const motifResult = retrieveReferenceMotifsV2(motifContext)
+  const designMotifs = toProviderDesignMotifsV2(motifResult.selections, motifContext.purposes)
+  const memoryProvenance = compositionMemoryProvenanceV1(params.compositionMemory ?? emptyCompositionMemoryV1())
 
   const direction = params.creativeDirection
   const designDirection = direction
@@ -255,6 +265,7 @@ export function buildFullSiteCreativeRequestV1(params: {
   return {
     context,
     grounding: { productCount: products.length, categoryKeys: categoryList.map((category) => category.key), maxPages: FULL_SITE_BLUEPRINT_LIMITS_V1.maxPages },
+    diagnostics: { motifMemory: { ...memoryProvenance, downweightedMotifIds: motifResult.downweightedIds, selectedMotifIds: motifResult.selections.map((selection) => selection.motif.motifId) } },
   }
 }
 

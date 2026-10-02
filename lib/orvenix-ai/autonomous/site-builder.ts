@@ -873,7 +873,10 @@ export async function runAutonomousMultiPageSiteBuilder(
         products: fullSiteProducts,
         designReferences: retrieveFullSiteCommerceDesignReferencesV1(),
         creativeDirection: input.creativeDirection,
+        compositionMemory: input.compositionMemory,
       })
+      const memory = request.diagnostics.motifMemory
+      if (memory.sourceCount) trace.push(`Composition memory: ${memory.usableCount}/${memory.sourceCount} generaciones, ${memory.recentShapeCount} formas recientes, ${memory.downweightedMotifIds.length} motivos atenuados`)
       const generation = await generateFullSiteCreativeBlueprintV1({ provider: fullSiteProvider, requestContext: request.context, grounding: request.grounding })
       fullSiteLifecycle = generation.lifecycle
       if (generation.ok) {

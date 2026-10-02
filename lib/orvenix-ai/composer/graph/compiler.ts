@@ -15,6 +15,7 @@ import {
   type GraphSectionV1,
 } from "./contract"
 import { packGraphRowsV1 } from "./validator"
+import { graphShapeSignatureV1 } from "./shape"
 
 /**
  * CF-2: CreativeCompositionGraphV1 -> existing EditorTree node types
@@ -311,6 +312,8 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
       compositionGraph: {
         version: graph.version,
         fingerprint: input.fingerprint,
+        // CF-4C: content-independent relational shape + coarse token, persisted with the plan for composition memory.
+        shape: graphShapeSignatureV1(graph),
         ...(input.providerFingerprint ? { providerFingerprint: input.providerFingerprint, normalizations: [...(input.normalizations ?? [])] } : {}),
         beat: graph.beat,
         ...(input.previousContinuity ? { continuityFromPrevious: input.previousContinuity } : {}),

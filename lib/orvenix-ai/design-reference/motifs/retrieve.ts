@@ -69,6 +69,8 @@ export type MotifRetrievalResultV2 = {
   context: MotifRetrievalContextV2
   eligibleCount: number
   poolIds: string[]
+  /** CF-4C: eligible motifs whose shape is in avoidShapeSignatures (soft ×0.5, never excluded). */
+  downweightedIds: string[]
   selections: MotifSelectionV2[]
 }
 
@@ -155,6 +157,7 @@ export function retrieveReferenceMotifsV2(context: MotifRetrievalContextV2, opti
     context,
     eligibleCount: candidates.length,
     poolIds: pool.map((entry) => entry.motif.motifId),
+    downweightedIds: candidates.filter((entry) => context.avoidShapeSignatures?.includes(motifShapeSignatureV2(entry.motif))).map((entry) => entry.motif.motifId),
     selections: picked.map((entry) => ({ motif: entry.motif, shapeSignature: motifShapeSignatureV2(entry.motif), relevance: entry.relevance, novelty: entry.novelty, rationale: entry.rationale })),
   }
 }

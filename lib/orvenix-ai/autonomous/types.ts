@@ -1,6 +1,7 @@
 import type { CommerceProductFactV1, StoreProductRecordV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type { EditorTree } from "@/types/editor"
 import type { DesignPlannerPriorV1 } from "@/lib/orvenix-ai/design-memory/planner-prior"
+import type { CompositionMemoryV1 } from "@/lib/orvenix-ai/design-memory/composition-memory"
 import type { SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2"
 import type { SiteCreationExternalThemeAdvisoryV1 } from "@/lib/orvenix-ai/site-creation/assistance"
 import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
@@ -78,6 +79,13 @@ export interface AutonomousSiteBuilderInput {
   minimumQuality?: number
 
   designMemoryPrior?: DesignPlannerPriorV1 | null
+
+  /**
+   * CF-4C: the owner's composition memory (derived from their own recent
+   * DesignGeneration rows). Only conditions full-site motif retrieval as a
+   * soft prior; absent -> exact CF-4B behavior.
+   */
+  compositionMemory?: CompositionMemoryV1 | null
 
   externalThemeAdvisory?: SiteCreationExternalThemeAdvisoryV1 | null
 
