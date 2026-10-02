@@ -3,12 +3,13 @@ import { isSafeProductMediaUrlV1 } from "@/lib/commerce/product-media"
 import { buildCreativeDirectorReferenceContextV1, type CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-director/reference-context"
 import { retrieveDesignReferences } from "@/lib/orvenix-ai/design-reference/retrieve"
 import type { CreativeSiteDirectionV1 } from "@/lib/orvenix-ai/creative-director/contract"
+import { catalogScaleV2, retrieveReferenceMotifsV2, toProviderDesignMotifsV2, type MotifPurposeV2, type MotifRetrievalContextV2, type ProviderDesignMotifV2 } from "@/lib/orvenix-ai/design-reference/motifs"
 import {
   FULL_SITE_CREATIVE_BLUEPRINT_ROLE_KEY_V1,
   FULL_SITE_CREATIVE_BLUEPRINT_STRATEGY_KEY_V1,
   FULL_SITE_CREATIVE_BLUEPRINT_VERSION_V1,
 } from "./contract"
-import { buildFullSiteCommerceCapabilityManifestV1, FULL_SITE_BLUEPRINT_LIMITS_V1, FULL_SITE_CONTEXT_MAX_PRODUCTS_V1, type FullSiteCapabilityManifestV1 } from "./capability-manifest"
+import { buildFullSiteCommerceCapabilityManifestV1, FULL_SITE_BLUEPRINT_LIMITS_V1, FULL_SITE_COMMERCE_PAGE_PURPOSES_V1, FULL_SITE_CONTEXT_MAX_PRODUCTS_V1, type FullSiteCapabilityManifestV1 } from "./capability-manifest"
 import type { FullSiteCreativeGroundingContextV1 } from "./validator"
 
 /**
@@ -85,7 +86,10 @@ export type FullSiteCreativeRequestContextV1 = {
   business: { siteType: "ecommerce"; industry?: string; objective?: string; location?: string }
   catalog: { productCount: number; products: FullSiteRequestProductV1[]; categories: FullSiteRequestCategoryV1[] }
   capabilities: FullSiteCapabilityManifestV1
-  designReferences?: Array<Omit<CreativeDesignReferenceV1, "id">>
+  /** CF-4B: SLIM descriptive inspiration only (structure now comes from designMotifs). */
+  designReferences?: FullSiteDesignReferenceSignalV1[]
+  /** CF-4B: business-conditioned, structurally diverse, de-identified relational motifs (request-local labels A-F). */
+  designMotifs?: ProviderDesignMotifV2[]
   designDirection?: { tone?: string; density?: string; premiumCompositionTreatment?: string }
 }
 
@@ -122,10 +126,71 @@ function productContext(product: CommerceProductFactV1, index: number, compact: 
   }
 }
 
-function stripReferenceId(reference: CreativeDesignReferenceV1): Omit<CreativeDesignReferenceV1, "id"> {
-  const { id: _id, ...grammar } = reference
-  void _id
-  return structuredClone(grammar)
+/**
+ * CF-4B: what a Design Reference still contributes once motifs carry the
+ * structure -- a short descriptive signal the provider can act on
+ * (personality, density tendency, hero alignment/media, commerce traits).
+ * Dropped from the provider view: theme mode/accent/radius/shadow/contrast
+ * (Orvenix owns the theme), nav surface/position/shadow (not
+ * provider-controllable), recurring treatments the renderer cannot
+ * produce, and the retrieval diagnostics (relevanceScore,
+ * diversityReason, contributionRoles). The underlying retrieval and
+ * CreativeDesignReferenceV1 are unchanged.
+ */
+export type FullSiteDesignReferenceSignalV1 = {
+  personality: CreativeDesignReferenceV1["visualGrammar"]["designPersonality"]
+  density: CreativeDesignReferenceV1["sectionGrammar"]["density"]
+  hero: { alignment: CreativeDesignReferenceV1["heroGrammar"]["alignment"]; media: CreativeDesignReferenceV1["heroGrammar"]["mediaStrategy"] }
+  traits: CreativeDesignReferenceV1["distinctiveTraits"]
+}
+
+export function slimFullSiteDesignReferenceV1(reference: CreativeDesignReferenceV1): FullSiteDesignReferenceSignalV1 {
+  return {
+    personality: reference.visualGrammar.designPersonality,
+    density: reference.sectionGrammar.density,
+    hero: { alignment: reference.heroGrammar.alignment, media: reference.heroGrammar.mediaStrategy },
+    traits: [...reference.distinctiveTraits],
+  }
+}
+
+/**
+ * CF-4B: motif retrieval context from facts this request already has --
+ * offering kind (commerce), catalog size, category count, planned page
+ * purposes, Creative Director tone/density, description richness, grounded
+ * media. Never an industry string.
+ *
+ * Catalog size: `catalogTotalCount` when a trusted caller knows the
+ * authoritative total; otherwise the builder's normalized product facts
+ * (themselves capped at COMMERCE_FACT_LIMITS_V1.maxProducts) -- recorded
+ * as `builder_facts` so the limitation stays visible.
+ */
+export function deriveFullSiteMotifContextV1(params: {
+  products: readonly CommerceProductFactV1[]
+  categoryCount: number
+  creativeDirection?: CreativeSiteDirectionV1 | null
+  catalogTotalCount?: number
+  avoidShapeSignatures?: readonly string[]
+}): MotifRetrievalContextV2 {
+  const authoritative = typeof params.catalogTotalCount === "number" && Number.isInteger(params.catalogTotalCount) && params.catalogTotalCount >= 0
+  const count = authoritative ? params.catalogTotalCount! : params.products.length
+  const scale = catalogScaleV2(count)
+  const tone = params.creativeDirection?.tone
+  const density = params.creativeDirection?.density
+  const described = params.products.filter((product) => (product.description?.trim().length ?? 0) >= 60).length
+  return {
+    mode: "commerce",
+    ...(tone === "playful" || tone === "warm" ? { secondaryMode: "editorial" as const } : {}),
+    scale,
+    catalogCount: count,
+    catalogCountSource: authoritative ? "authoritative" : "builder_facts",
+    categoryCount: params.categoryCount,
+    purposes: [...FULL_SITE_COMMERCE_PAGE_PURPOSES_V1] as MotifPurposeV2[],
+    densityPreference: density === "compact" ? "rich" : density === "spacious" ? "sparse" : density === "standard" ? "balanced" : scale === "large" ? "rich" : scale === "small" ? "sparse" : "balanced",
+    restrained: tone === "formal" || tone === "conservative",
+    contentRichness: params.products.length && described / params.products.length >= 0.5 ? "rich" : "sparse",
+    hasGroundedMedia: params.products.some((product) => product.imageUrls?.some(isSafeProductMediaUrlV1)),
+    ...(params.avoidShapeSignatures?.length ? { avoidShapeSignatures: [...params.avoidShapeSignatures] } : {}),
+  }
 }
 
 export function buildFullSiteCreativeRequestV1(params: {
@@ -135,6 +200,10 @@ export function buildFullSiteCreativeRequestV1(params: {
   products: readonly CommerceProductFactV1[]
   designReferences?: readonly CreativeDesignReferenceV1[]
   creativeDirection?: CreativeSiteDirectionV1 | null
+  /** CF-4B: authoritative catalog total when known (else builder facts are used and recorded as such). */
+  catalogTotalCount?: number
+  /** CF-4C hook: recently used shape signatures to down-weight. */
+  avoidShapeSignatures?: readonly string[]
 }): FullSiteCreativeRequestV1 {
   const products = params.products.slice(0, FULL_SITE_REQUEST_LIMITS_V1.maxProducts)
   if (!products.length) throw new FullSiteRequestContextErrorV1("full_site_context_requires_products")
@@ -150,6 +219,8 @@ export function buildFullSiteCreativeRequestV1(params: {
     categories.set(key, entry)
   }
   const categoryList = [...categories.values()].slice(0, FULL_SITE_REQUEST_LIMITS_V1.maxCategories)
+  const motifContext = deriveFullSiteMotifContextV1({ products: params.products, categoryCount: categoryList.length, creativeDirection: params.creativeDirection, catalogTotalCount: params.catalogTotalCount, avoidShapeSignatures: params.avoidShapeSignatures })
+  const designMotifs = toProviderDesignMotifsV2(retrieveReferenceMotifsV2(motifContext).selections, motifContext.purposes)
 
   const direction = params.creativeDirection
   const designDirection = direction
@@ -164,13 +235,15 @@ export function buildFullSiteCreativeRequestV1(params: {
     const industry = safeText(params.industry, FULL_SITE_REQUEST_LIMITS_V1.maxBusinessTextLength)
     const objective = safeText(params.objective, FULL_SITE_REQUEST_LIMITS_V1.maxBusinessTextLength)
     const location = safeText(params.location, 120)
-    const references = (params.designReferences ?? []).slice(0, FULL_SITE_REQUEST_LIMITS_V1.maxDesignReferences).map(stripReferenceId)
+    const references = (params.designReferences ?? []).slice(0, FULL_SITE_REQUEST_LIMITS_V1.maxDesignReferences).map(slimFullSiteDesignReferenceV1)
     return {
       outputContract: { version: FULL_SITE_CREATIVE_BLUEPRINT_VERSION_V1, roleKey: FULL_SITE_CREATIVE_BLUEPRINT_ROLE_KEY_V1, strategyKey: FULL_SITE_CREATIVE_BLUEPRINT_STRATEGY_KEY_V1 },
       business: { siteType: "ecommerce", ...(industry ? { industry } : {}), ...(objective ? { objective } : {}), ...(location ? { location } : {}) },
       catalog: { productCount: products.length, products: products.map((product, index) => productContext(product, index, compact)), categories: categoryList },
       capabilities: buildFullSiteCommerceCapabilityManifestV1(),
       ...(references.length && !compact ? { designReferences: references } : {}),
+      // Structure survives the compact fallback; descriptive references do not.
+      ...(designMotifs.length ? { designMotifs } : {}),
       ...(designDirection && Object.keys(designDirection).length ? { designDirection } : {}),
     }
   }

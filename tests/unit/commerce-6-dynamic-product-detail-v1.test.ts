@@ -39,6 +39,7 @@ import {
 import { NOVAMARKET_PRODUCTS_V1 } from "../../lib/orvenix-ai/assisted-generation/e2e/novamarket-fixture"
 import { createDeterministicFullSiteCreativeTestingProviderV1 } from "../../lib/orvenix-ai/full-site-generation/testing-provider"
 import type { FullSiteCreativeBlueprintProviderV1 } from "../../lib/orvenix-ai/full-site-generation/contract"
+import { retrieveFullSiteCommerceDesignReferencesV1 } from "../../lib/orvenix-ai/full-site-generation/request-context"
 import { findProhibitedFullSiteRequestValuesV1 } from "../../lib/orvenix-ai/full-site-generation/request-guard"
 import { resolveProductDetailTargetV1 } from "../../lib/orvenix-ai/commerce/product-detail-target"
 import { bindProvisionedCommerceIntoPlanV1 } from "../../lib/orvenix-ai/commerce/provisioning-binding"
@@ -60,6 +61,17 @@ const REQUEST_FINGERPRINT_CF1 = "fecbdb391512d1f6fa9f6097bc1a52d98bfc0733b99b9dd
 
 /** The CF-3A request fingerprint: CF-1 + ONLY the composition-graph / creative-copy capabilities. */
 const REQUEST_FINGERPRINT_CF3 = "445a7194cce542225e9484a8c093eec03d88b2b9fb4881ac8da7a525d8d41bf0"
+
+/** The CF-4B request fingerprint: CF-3 + relational designMotifs + slim descriptive designReferences. */
+const REQUEST_FINGERPRINT_CF4B = "2b3155bb12dffe9447512042ef4726400958865dcdf84a91322bd68e78e23522"
+
+/** Reverses exactly CF-4B: drop designMotifs and restore the full pre-CF-4B reference representation (key order preserved) -> must equal the CF-3 request. */
+function withoutCf4bMotifs(context: unknown): unknown {
+  const reverted = structuredClone(context) as Record<string, unknown>
+  delete reverted.designMotifs
+  reverted.designReferences = retrieveFullSiteCommerceDesignReferencesV1().map(({ id: _id, ...grammar }) => (void _id, grammar))
+  return reverted
+}
 
 /** Reverses exactly the CF-3A manifest additions (the mock catalog has no images, so no hasImage appears) -> must equal the CF-1 request. */
 function withoutCf3GraphAuthoring(context: unknown): unknown {
@@ -231,9 +243,11 @@ test("provider request: PCE-3 fingerprint accepted, guard clean, and no runtime 
   assert.equal(dry.status, "completed")
   // CF-1: only the capability-truth manifest fields changed; everything else is the accepted 4F request.
   // CF-3A: + ONLY the graph/copy authoring capabilities. Reverting them reproduces CF-1; reverting CF-1 too reproduces 4F.
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(captured)).digest("hex"), REQUEST_FINGERPRINT_CF3)
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf3GraphAuthoring(captured))).digest("hex"), REQUEST_FINGERPRINT_CF1)
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf1CapabilityTruth(withoutCf3GraphAuthoring(captured)))).digest("hex"), REQUEST_FINGERPRINT_4F)
+  // CF-4B: + relational motifs and slim references. Reverting CF-4B reproduces CF-3; then CF-1; then 4F.
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(captured)).digest("hex"), REQUEST_FINGERPRINT_CF4B)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf4bMotifs(captured))).digest("hex"), REQUEST_FINGERPRINT_CF3)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf3GraphAuthoring(withoutCf4bMotifs(captured)))).digest("hex"), REQUEST_FINGERPRINT_CF1)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf1CapabilityTruth(withoutCf3GraphAuthoring(withoutCf4bMotifs(captured))))).digest("hex"), REQUEST_FINGERPRINT_4F)
   assert.deepEqual(findProhibitedFullSiteRequestValuesV1(captured), [])
 
   let boundRequest: unknown = null

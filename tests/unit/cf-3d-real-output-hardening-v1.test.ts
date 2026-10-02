@@ -325,7 +325,8 @@ test("graph uptake prompt: primary relational mechanism, optional != exceptional
   assert.ok(prompt.includes("span 12 (density 0-1)"))
   assert.equal(/al menos \d|minimo \d+ secciones con composition|en todas las secciones|use? graphs everywhere/i.test(prompt), false, "no quota / no use-everywhere")
   assert.equal(/OPCIONAL, por seccion: section\.composition/.test(prompt), false, "no longer framed as an exceptional escape hatch")
-  assert.ok(prompt.length < 11_000, `prompt growth stays modest (${prompt.length})`)
+  // CF-4B added the motif guidance (+~0.7k) while the request itself shrank; the prompt still stays bounded.
+  assert.ok(prompt.length < 12_000, `prompt growth stays modest (${prompt.length})`)
   assert.equal((prompt.match(/"version":1,"role"/g) ?? []).length, 1, "only the schema shape line -- no full graph templates")
 })
 
