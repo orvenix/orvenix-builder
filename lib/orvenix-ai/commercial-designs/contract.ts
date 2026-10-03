@@ -86,12 +86,23 @@ export const COMMERCIAL_FACT_KEYS_V1 = [
   "faq",
   "testimonials",
   "people",
+  // CSC-1C (generic project evidence):
+  /** At least one project fact with a title. */
+  "projects",
+  /** Any project fact OR any project-role image (heroProject/featuredProject/projectProgress/companyProof/projectGallery). */
+  "projectEvidence",
+  /** At least one documented progress image of a project. */
+  "projectProgress",
+  /** One project with a narrative (summary/description) AND its own images -- enough for a detail page. */
+  "projectDetail",
 ] as const
 
 /**
- * Semantic asset roles. Only the roles marked implemented are bound by
- * CSC-1B; the rest are reserved vocabulary for Construction/Craft (later
- * blocks) so the contract never needs a breaking change to add them.
+ * Semantic asset roles. Only the roles marked implemented may be declared
+ * by a design; the rest are reserved vocabulary for later families (Craft)
+ * so the contract never needs a breaking change to add them. CSC-1C
+ * implements the generic project-evidence roles (heroProject ...
+ * projectGallery) for any project-led business.
  */
 export const COMMERCIAL_ASSET_ROLES_V1 = [
   "hero",
@@ -108,7 +119,31 @@ export const COMMERCIAL_ASSET_ROLES_V1 = [
   "galleryPiece",
   "detailStory",
 ] as const
-export const COMMERCIAL_IMPLEMENTED_ASSET_ROLES_V1 = ["hero", "serviceImage"] as const
+export const COMMERCIAL_IMPLEMENTED_ASSET_ROLES_V1 = [
+  "hero",
+  "serviceImage",
+  "heroProject",
+  "featuredProject",
+  "projectProgress",
+  "specialtyService",
+  "companyProof",
+  "projectGallery",
+] as const
+
+/**
+ * CSC-1C: roles whose assets the resolver binds PER SECTION into the
+ * composer (a section's declared `assetRoles`, in order). `hero` and
+ * `serviceImage` keep their CSC-1B behavior (declared, not composer-bound)
+ * so the approved Servicios Locales output stays byte-identical.
+ */
+export const COMMERCIAL_SECTION_BOUND_ASSET_ROLES_V1 = [
+  "heroProject",
+  "featuredProject",
+  "projectProgress",
+  "specialtyService",
+  "companyProof",
+  "projectGallery",
+] as const
 
 export const COMMERCIAL_CONVERSION_INTENTS_V1 = ["contact", "quote", "whatsapp", "booking", "purchase"] as const
 export const COMMERCIAL_FOOTER_PRESETS_V1 = ["minimal", "standard", "rich"] as const
@@ -228,10 +263,13 @@ export function commercialDesignKeyV1(design: Pick<CommercialDesignV1, "id" | "v
 }
 
 /**
- * ARCHITECTURAL INVARIANT (captured, NOT implemented in CSC-1B): any
- * optimized derivative generated from a customer/owner-uploaded photo must
- * strip EXIF/GPS metadata before publication. CSC-1B binds only
- * already-uploaded assets by URL and generates no derivatives.
+ * ARCHITECTURAL INVARIANT (captured, NOT implemented as a product pipeline):
+ * any optimized derivative generated from a customer/owner-uploaded photo
+ * must strip EXIF/GPS metadata before publication. Customer compiles bind
+ * only already-uploaded assets by URL and generate no derivatives. CSC-1C's
+ * curated demo set (public/commercial-demo/construction) was produced
+ * offline as metadata-free WebP and is verified by tests; that one-off
+ * curation is not the customer pipeline, so this stays `false`.
  */
 export const EXIF_GPS_STRIP_REQUIREMENT_V1 = {
   requirement: "published-optimized-derivatives-strip-exif-gps",

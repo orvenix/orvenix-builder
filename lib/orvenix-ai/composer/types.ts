@@ -259,6 +259,25 @@ export interface SectionCompositionContext {
   commercialFacts?: CommercialSectionFactsV1
   /** CSC-1B: fact-derived card items that take precedence over any archetype copy (strictFacts only). */
   strictCardItems?: Array<[string, string]>
+  /** CSC-1C: the assets bound to THIS section by its declared commercial asset roles (strictFacts only). */
+  commercialSectionMedia?: CommercialSectionMediaV1
+}
+
+export type CommercialSectionAssetV1 = { src: string; alt: string; sameProjectId?: string }
+
+/**
+ * CSC-1C: per-section asset binding resolved from a commercial design's
+ * `assetRoles` + authoritative facts. Never a placeholder: a role with no
+ * supplied asset is simply absent.
+ */
+export interface CommercialSectionMediaV1 {
+  /** The project-evidence roles this section declared (even when no asset was supplied for them). */
+  declaredRoles: Array<"heroProject" | "featuredProject" | "projectProgress" | "specialtyService" | "companyProof" | "projectGallery">
+  /** First bound asset across the section's declared roles, in declared order (hero media). */
+  media?: CommercialSectionAssetV1
+  byRole: Partial<Record<"heroProject" | "featuredProject" | "projectProgress" | "specialtyService" | "companyProof" | "projectGallery", CommercialSectionAssetV1[]>>
+  /** Restricts project evidence to these project ids (a project-detail page). */
+  focusProjectIds?: string[]
 }
 
 /** CSC-1B: bounded commercial facts/intents threaded into every section of a commercial-design compile. */
@@ -270,6 +289,22 @@ export interface CommercialSectionFactsV1 {
   tagline?: string
   social?: Array<{ network: "facebook" | "instagram" | "tiktok" | "youtube" | "linkedin"; url: string }>
   faq?: Array<{ question: string; answer: string }>
+  projects?: Array<{
+    id: string
+    title: string
+    summary?: string
+    category?: string
+    location?: string
+    status?: string
+    year?: string
+    description?: string
+    /** Present only when the intake declared the progress images chronological. */
+    progressSequence?: "chronological"
+  }>
+  /** CSC-1C: internal link to the project-detail page, only when that page was compiled. */
+  projectDetailHref?: string
+  /** CSC-1C: internal link to the projects page, only when that page was compiled. */
+  projectsHref?: string
   footerPreset?: "minimal" | "standard" | "rich"
   /** Orvenix-resolved primary conversion action (closed label set, href from facts or an internal page link). */
   primaryCta?: { label: string; href: string }

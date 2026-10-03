@@ -19,6 +19,8 @@ export interface BusinessContentContext {
   /** V2-S3: real, business-supplied offerings -- same shape as SectionCompositionContext's services/products. */
   services?: Array<{ name: string; description?: string }>
   products?: Array<{ name: string; description?: string }>
+  /** CSC-1C: commercial designs resolve every CTA target from facts; content adaptation only fills undecided hrefs. */
+  preserveDecidedCtaHrefs?: boolean
 
   page?: {
     name?: string

@@ -146,6 +146,23 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     commercialDesignVersion: 1,
   },
   {
+    id: "construction",
+    name: "Construcción Premium",
+    category: "Construcción & Obra",
+    description:
+      "Sitio editorial para constructoras, remodelación y servicios de obra: proyectos con fotografías propias, avance de obra, servicios especializados, páginas internas y contacto directo para cotizar.",
+    livePath: "/templates/construction/demo",
+    accent: "#b45309",
+    gradient: "from-amber-700 to-stone-950",
+    features: ["Proyectos documentados", "Avances de obra", "Servicios especializados", "Multi-página", "Cotización directa", "Evidencia visual"],
+    purchasePriceMxn: 32000,
+    rentalPriceMxn: 1799,
+    Icon: Home,
+    preview: "/commercial-demo/construction/construction-demo-hero-md.webp",
+    commercialDesignId: "construction",
+    commercialDesignVersion: 1,
+  },
+  {
     id: "restaurante",
     name: "Restaurante Gourmet Pro",
     category: "Gastronomía & Hospitality",

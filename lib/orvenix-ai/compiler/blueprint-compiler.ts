@@ -176,6 +176,8 @@ interface CompileBlueprintOptions {
   /** CSC-1B: commercial-design mode -- threaded into every section (absent -> unchanged). */
   strictFacts?: boolean
   commercialFacts?: SectionCompositionContext["commercialFacts"]
+  /** CSC-1C: page slug -> section role -> assets bound by the commercial design (absent -> unchanged). */
+  commercialSectionMedia?: Record<string, Partial<Record<string, NonNullable<SectionCompositionContext["commercialSectionMedia"]>>>>
 }
 
 function createBlockSection(
@@ -329,6 +331,7 @@ function compilePage(
         ...(options.resolvedMediaAsset ? { resolvedMediaAsset: options.resolvedMediaAsset } : {}),
         ...(options.strictFacts ? { strictFacts: true } : {}),
         ...(options.commercialFacts ? { commercialFacts: options.commercialFacts } : {}),
+        ...(options.commercialSectionMedia?.[page.slug]?.[section.role] ? { commercialSectionMedia: options.commercialSectionMedia[page.slug]![section.role]! } : {}),
     }
 
     /*

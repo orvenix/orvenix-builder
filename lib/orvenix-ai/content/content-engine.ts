@@ -295,7 +295,9 @@ function adaptCTA(
   const isUndecidedHref = props.href === "#" || !props.href
   const hasRealWhatsapp = typeof context.whatsapp === "string" && context.whatsapp.trim().length > 0
 
-  const href = hasRealWhatsapp
+  const href = context.preserveDecidedCtaHrefs && !isUndecidedHref
+    ? props.href
+    : hasRealWhatsapp
     ? `https://wa.me/${context.whatsapp}`
     : isUndecidedHref
       ? "#contacto"

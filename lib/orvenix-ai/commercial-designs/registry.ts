@@ -1,4 +1,5 @@
 import { commercialDesignKeyV1, type CommercialDesignV1 } from "./contract"
+import { CONSTRUCTION_V1 } from "./designs/construction"
 import { SERVICIOS_LOCALES_V1 } from "./designs/servicios-locales"
 
 /**
@@ -17,7 +18,7 @@ function deepFreeze<T>(value: T): T {
   return value
 }
 
-const DESIGNS: readonly CommercialDesignV1[] = [SERVICIOS_LOCALES_V1]
+const DESIGNS: readonly CommercialDesignV1[] = [SERVICIOS_LOCALES_V1, CONSTRUCTION_V1]
 
 export const COMMERCIAL_DESIGN_REGISTRY_V1: Readonly<Record<string, CommercialDesignV1>> = deepFreeze(
   Object.fromEntries(DESIGNS.map((design) => [commercialDesignKeyV1(design), design])),

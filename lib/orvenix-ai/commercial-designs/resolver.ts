@@ -1,5 +1,5 @@
 import type { OrvenixSiteArchitecture, OrvenixSitePagePlan } from "@/lib/orvenix-ai/architect"
-import type { CommercialSectionFactsV1 } from "@/lib/orvenix-ai/composer"
+import type { CommercialSectionFactsV1, CommercialSectionMediaV1 } from "@/lib/orvenix-ai/composer"
 import {
   CREATIVE_DIRECTOR_CONTRACT_V1_VERSION,
   type CreativeDirectorPageDirectionV1,
@@ -8,7 +8,8 @@ import {
 import { getDefaultStarterEditorTree } from "@/lib/editorWebs"
 import type { SiteCreationPlanV2DesignSourceV1 } from "@/lib/orvenix-ai/site-creation/plan-v2"
 import type { GlobalTheme } from "@/types/editor"
-import type { BusinessFactAssetV1, BusinessFactsV1 } from "./business-facts"
+import type { BusinessFactAssetV1, BusinessFactsV1, BusinessProjectFactV1 } from "./business-facts"
+import { COMMERCIAL_SECTION_BOUND_ASSET_ROLES_V1 } from "./contract"
 import type {
   CommercialAssetRoleV1,
   CommercialDesignV1,
@@ -40,7 +41,19 @@ export interface ResolvedCommercialDesignV1 {
   theme: GlobalTheme
   direction: CreativeSiteDirectionV1
   commercialFacts: CommercialSectionFactsV1
-  assets: { hero?: BusinessFactAssetV1; serviceImages: BusinessFactAssetV1[]; logo?: BusinessFactAssetV1 }
+  assets: {
+    hero?: BusinessFactAssetV1
+    serviceImages: BusinessFactAssetV1[]
+    logo?: BusinessFactAssetV1
+    heroProject?: BusinessFactAssetV1
+    featuredProject: BusinessFactAssetV1[]
+    projectProgress: BusinessFactAssetV1[]
+    specialtyService?: BusinessFactAssetV1
+    companyProof: BusinessFactAssetV1[]
+    projectGallery: BusinessFactAssetV1[]
+  }
+  /** CSC-1C: per page slug -> section role -> assets bound by that section's declared asset roles. */
+  sectionMedia: Record<string, Partial<Record<CommercialSectionRoleV1, CommercialSectionMediaV1>>>
   seoBySlug: Record<string, { title: string; description: string }>
   /** Section role list per compiled page slug -- the design skeleton actually requested. */
   skeleton: Array<{ slug: string; roles: CommercialSectionRoleV1[] }>
@@ -100,12 +113,103 @@ export function hasCommercialFactV1(facts: BusinessFactsV1, key: CommercialFactK
     case "faq": return facts.faq.length > 0
     case "testimonials": return Boolean(facts.evidence.testimonials?.length)
     case "people": return Boolean(facts.evidence.people?.length)
+    case "projects": return facts.projects.length > 0
+    case "projectEvidence": return facts.projects.length > 0 || PROJECT_EVIDENCE_ROLES.some((role) => hasCommercialAssetV1(facts, role))
+    case "projectProgress": return facts.projects.some((project) => project.progressAssets.length > 0) || facts.assets.projectProgress.length > 0
+    case "projectDetail": return Boolean(projectDetailCandidateV1(facts))
   }
+}
+
+const PROJECT_EVIDENCE_ROLES: CommercialAssetRoleV1[] = ["heroProject", "featuredProject", "projectProgress", "companyProof", "projectGallery"]
+
+/** CSC-1C: the first project with a narrative AND its own images -- the only project a detail page may present. */
+export function projectDetailCandidateV1(facts: BusinessFactsV1): BusinessProjectFactV1 | undefined {
+  return facts.projects.find((project) => Boolean(project.summary || project.description) && project.assets.length + project.progressAssets.length > 0)
+}
+
+type ProjectAssetRoleV1 = (typeof COMMERCIAL_SECTION_BOUND_ASSET_ROLES_V1)[number]
+
+function uniqueAssets(assets: BusinessFactAssetV1[], max: number): BusinessFactAssetV1[] {
+  const seen = new Set<string>()
+  const out: BusinessFactAssetV1[] = []
+  for (const asset of assets) {
+    if (seen.has(asset.src)) continue
+    seen.add(asset.src)
+    out.push({ ...asset })
+    if (out.length >= max) break
+  }
+  return out
+}
+
+/**
+ * CSC-1C: one deterministic pool per project-evidence role. Explicit
+ * role assets come first; project facts contribute their own images
+ * (main images -> featured/gallery, progress images -> progress). Each
+ * asset keeps its curated sameProjectId; nothing is inferred.
+ */
+function projectAssetPools(facts: BusinessFactsV1): Record<ProjectAssetRoleV1, BusinessFactAssetV1[]> {
+  const projectMain = facts.projects.flatMap((project) => project.assets)
+  const projectProgress = facts.projects.flatMap((project) => project.progressAssets)
+  return {
+    heroProject: facts.assets.heroProject ? [{ ...facts.assets.heroProject }] : [],
+    featuredProject: uniqueAssets([...facts.assets.featuredProject, ...facts.projects.flatMap((project) => project.assets.slice(0, 1))], 6),
+    projectProgress: uniqueAssets([...facts.assets.projectProgress, ...projectProgress], 8),
+    specialtyService: facts.assets.specialtyService ? [{ ...facts.assets.specialtyService }] : [],
+    companyProof: uniqueAssets(facts.assets.companyProof, 6),
+    projectGallery: uniqueAssets([...facts.assets.projectGallery, ...projectMain], 10),
+  }
+}
+
+function isBoundRole(role: CommercialAssetRoleV1): role is ProjectAssetRoleV1 {
+  return (COMMERCIAL_SECTION_BOUND_ASSET_ROLES_V1 as readonly string[]).includes(role)
+}
+
+/**
+ * CSC-1C: bind a section's declared asset roles (in order) to supplied
+ * assets. An asset already bound earlier on the same page (an earlier
+ * section or role) is not repeated. A focused (project-detail) section only
+ * sees assets of the focused project. Sections declaring no bound role
+ * get no binding at all (their CSC-1B behavior is unchanged).
+ */
+function bindSectionMedia(
+  roles: CommercialAssetRoleV1[],
+  pools: Record<ProjectAssetRoleV1, BusinessFactAssetV1[]>,
+  focus: BusinessProjectFactV1 | undefined,
+  seen: Set<string>,
+  options: { consumeMediaOnly: boolean },
+): CommercialSectionMediaV1 | undefined {
+  const declaredRoles = roles.filter(isBoundRole)
+  if (!declaredRoles.length) return undefined
+  const byRole: CommercialSectionMediaV1["byRole"] = {}
+  let media: BusinessFactAssetV1 | undefined
+  for (const role of declaredRoles) {
+    const pool = focus
+      ? role === "projectProgress"
+        ? focus.progressAssets
+        : role === "heroProject" || role === "featuredProject" || role === "projectGallery"
+          ? focus.assets
+          : []
+      : pools[role]
+    const assets = pool.filter((asset) => !seen.has(asset.src) && asset.src !== media?.src).map((asset) => ({ ...asset }))
+    if (!assets.length) continue
+    // A hero shows only its media; any other section shows (and consumes) every bound asset.
+    if (!options.consumeMediaOnly) assets.forEach((asset) => seen.add(asset.src))
+    byRole[role] = assets
+    media ??= assets[0]
+  }
+  if (options.consumeMediaOnly && media) seen.add(media.src)
+  return { declaredRoles, ...(media ? { media } : {}), byRole, ...(focus ? { focusProjectIds: [focus.id] } : {}) }
 }
 
 export function hasCommercialAssetV1(facts: BusinessFactsV1, role: CommercialAssetRoleV1): boolean {
   if (role === "hero") return Boolean(facts.assets.hero)
   if (role === "serviceImage") return facts.assets.serviceImages.length > 0
+  if (role === "heroProject") return Boolean(facts.assets.heroProject)
+  if (role === "featuredProject") return facts.assets.featuredProject.length > 0 || facts.projects.some((project) => project.assets.length > 0)
+  if (role === "projectProgress") return facts.assets.projectProgress.length > 0 || facts.projects.some((project) => project.progressAssets.length > 0)
+  if (role === "specialtyService") return Boolean(facts.assets.specialtyService)
+  if (role === "companyProof") return facts.assets.companyProof.length > 0
+  if (role === "projectGallery") return facts.assets.projectGallery.length > 0 || facts.projects.some((project) => project.assets.length > 0 || project.progressAssets.length > 0)
   return false
 }
 
@@ -144,11 +248,35 @@ function resolvePrimaryCta(design: CommercialDesignV1, facts: BusinessFactsV1, p
   return { label: "Enviar correo", href: `mailto:${contact?.email ?? ""}` }
 }
 
+/**
+ * CSC-1C: Orvenix-authored hero copy for pages whose intent is evident from
+ * their fact requirements -- built ONLY from authoritative facts (project
+ * title/summary, business name/description/service area), never AI and
+ * never a claim. Every other page keeps the existing page-aware hero copy.
+ */
+function factHeroCopy(page: CommercialPageRecipeV1, facts: BusinessFactsV1, detailProject: BusinessProjectFactV1 | undefined): { title: string; description: string } | undefined {
+  const area = facts.serviceArea.length ? ` en ${facts.serviceArea.slice(0, 3).join(", ")}` : ""
+  if (page.requiresFacts?.includes("projectDetail") && detailProject) {
+    return { title: detailProject.title, description: detailProject.summary ?? `Proyecto de ${facts.businessName}.` }
+  }
+  if (page.slug !== "home" && page.requiresFacts?.includes("projectEvidence")) {
+    return { title: `Proyectos de ${facts.businessName}`, description: `Fotografías y datos de obras de ${facts.businessName}${area}.` }
+  }
+  if (page.slug !== "home" && page.archetype === "overview") {
+    return { title: `Conoce a ${facts.businessName}`, description: facts.description ?? `Platica tu proyecto con ${facts.businessName}${area}.` }
+  }
+  return undefined
+}
+
 function seoTitle(design: CommercialDesignV1, pageName: string, businessName: string): string {
   return design.seo.titlePattern === "business-page" ? `${businessName} · ${pageName}` : `${pageName} · ${businessName}`
 }
 
 function seoDescription(page: CommercialPageRecipeV1, facts: BusinessFactsV1): string {
+  if (page.requiresFacts?.includes("projectDetail")) {
+    const project = projectDetailCandidateV1(facts)
+    if (project) return `${project.title} · ${facts.businessName}${project.summary ? `: ${project.summary}` : "."}`
+  }
   const services = facts.services.slice(0, 3).map((service) => service.name).join(", ")
   const area = facts.serviceArea.length ? ` en ${facts.serviceArea.slice(0, 3).join(", ")}` : ""
   if (page.archetype === "conversion") return `Contacta a ${facts.businessName}${area}.`
@@ -178,6 +306,7 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
     return missing.length === 0
   })
   const pageSlugs = new Set(keptPages.map((page) => page.slug))
+  const detailProject = projectDetailCandidateV1(facts)
 
   const skeleton: ResolvedCommercialDesignV1["skeleton"] = []
   const pages: OrvenixSitePagePlan[] = keptPages.map((page) => {
@@ -204,9 +333,11 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
 
   const pageDirections: CreativeDirectorPageDirectionV1[] = keptPages.map((page) => {
     const pins = resolvePins(page, facts)
+    const heroCopy = factHeroCopy(page, facts, detailProject)
     return {
       slug: page.slug,
       narrativeGoal: "commercial-design",
+      ...(heroCopy ? { heroTitleSuggestion: heroCopy.title, heroDescriptionSuggestion: heroCopy.description } : {}),
       ...(pins.heroVariant ? { preferredHeroVariant: pins.heroVariant } : {}),
       ...(pins.heroTreatment ? { heroTreatment: pins.heroTreatment } : {}),
       ...(pins.processTreatment ? { processTreatment: pins.processTreatment } : {}),
@@ -238,6 +369,29 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
     ...(facts.tagline ? { tagline: facts.tagline } : {}),
     ...(facts.social.length ? { social: facts.social.map((entry) => ({ ...entry })) } : {}),
     ...(facts.faq.length ? { faq: facts.faq.map((entry) => ({ ...entry })) } : {}),
+    ...(facts.projects.length
+      ? {
+          projects: facts.projects.map((project) => ({
+            id: project.id,
+            title: project.title,
+            ...(project.summary ? { summary: project.summary } : {}),
+            ...(project.category ? { category: project.category } : {}),
+            ...(project.location ? { location: project.location } : {}),
+            ...(project.status ? { status: project.status } : {}),
+            ...(project.year ? { year: project.year } : {}),
+            ...(project.description ? { description: project.description } : {}),
+            ...(project.progressSequence ? { progressSequence: project.progressSequence } : {}),
+          })),
+        }
+      : {}),
+    ...(() => {
+      const projectsPage = keptPages.find((page) => page.slug !== "home" && page.requiresFacts?.includes("projectEvidence"))
+      return projectsPage ? { projectsHref: `page:${projectsPage.slug}` } : {}
+    })(),
+    ...(detailProject ? (() => {
+      const detailPage = keptPages.find((page) => page.requiresFacts?.includes("projectDetail"))
+      return detailPage ? { projectDetailHref: `page:${detailPage.slug}` } : {}
+    })() : {}),
     footerPreset: chrome.footerPreset,
     primaryCta: resolvePrimaryCta(design, facts, pageSlugs),
   }
@@ -252,7 +406,22 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
     ...(facts.location ? { location: facts.location } : {}),
   }
 
-  const seoBySlug = Object.fromEntries(keptPages.map((page) => [page.slug, { title: seoTitle(design, page.name, facts.businessName), description: seoDescription(page, facts) }]))
+  const pools = projectAssetPools(facts)
+  const sectionMedia: ResolvedCommercialDesignV1["sectionMedia"] = {}
+  for (const page of keptPages) {
+    const focus = page.requiresFacts?.includes("projectDetail") ? detailProject : undefined
+    const seenOnPage = new Set<string>()
+    for (const section of page.sections) {
+      if (!section.assetRoles?.length || !skeleton.find((entry) => entry.slug === page.slug)?.roles.includes(section.role)) continue
+      const bound = bindSectionMedia(section.assetRoles, pools, focus, seenOnPage, { consumeMediaOnly: section.role === "hero" })
+      if (bound) (sectionMedia[page.slug] ??= {})[section.role] = bound
+    }
+  }
+
+  const seoBySlug = Object.fromEntries(keptPages.map((page) => {
+    const pageTitle = page.requiresFacts?.includes("projectDetail") && detailProject ? detailProject.title : page.name
+    return [page.slug, { title: seoTitle(design, pageTitle, facts.businessName), description: seoDescription(page, facts) }]
+  }))
 
   return {
     designSource: { kind: "commercial", id: design.id, version: design.version },
@@ -264,7 +433,14 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
       ...(facts.assets.hero ? { hero: facts.assets.hero } : {}),
       serviceImages: facts.assets.serviceImages.map((asset) => ({ ...asset })),
       ...(facts.assets.logo ? { logo: facts.assets.logo } : {}),
+      ...(facts.assets.heroProject ? { heroProject: { ...facts.assets.heroProject } } : {}),
+      featuredProject: pools.featuredProject,
+      projectProgress: pools.projectProgress,
+      ...(facts.assets.specialtyService ? { specialtyService: { ...facts.assets.specialtyService } } : {}),
+      companyProof: pools.companyProof,
+      projectGallery: pools.projectGallery,
     },
+    sectionMedia,
     seoBySlug,
     skeleton,
     omissions,

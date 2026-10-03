@@ -13,6 +13,7 @@ export const WEB_IDS = [
   "devops",
   "tienda",
   "servicios-locales",
+  "construction",
   "arquitectura",
   "contabilidad",
   "viajes",
@@ -40,6 +41,7 @@ export function isEditorWebId(value: string): value is EditorWebId {
 export const ARTISAN_WEB_IDS = [
   "tienda",
   "servicios-locales",
+  "construction",
   "arquitectura",
   "contabilidad",
   "viajes",
@@ -77,6 +79,7 @@ export const WEB_LABELS: Record<EditorWebId, string> = {
   devops: "DevOps Monitor",
   tienda: "Tienda Online Pro",
   "servicios-locales": "Servicios Locales Pro",
+  construction: "Construcción Premium",
   arquitectura: "Estudio de Arquitectura",
   contabilidad: "Despacho Contable & Fiscal",
   viajes: "Agencia de Viajes Premium",
@@ -1332,6 +1335,25 @@ export const WEB_EDITOR_TREES: Record<EditorWebId, EditorTree> = {
       },
     },
   },
+  construction: createPublicPageTree({
+    id: "construction",
+    badge: "Construcción · proyectos, avances y cotización",
+    title: "Construcción Premium",
+    copy:
+      "Plantilla editable para constructoras y servicios de obra con proyectos documentados, servicios especializados, proceso y contacto para cotización.",
+    cta: "Personalizar construcción",
+    image: "/commercial-demo/construction/construction-demo-hero.webp",
+    background: "#f4f1ec",
+    text: "#14171c",
+    muted: "#4b5563",
+    accent: "#b45309",
+    servicesTitle: "Servicios y proyectos con evidencia visual",
+    servicesCopy:
+      "Edita servicios, avances de obra y páginas internas para presentar tu empresa con fotografías y datos reales.",
+    proofTitle: "El trabajo como prueba",
+    proofCopy:
+      "Muestra fotografías de tus obras, el estado de cada proyecto y los datos de contacto para recibir solicitudes de cotización.",
+  }),
   arquitectura: createPublicPageTree({
     id: "arquitectura",
     badge: "Arquitectura · portafolio, servicios y consulta",

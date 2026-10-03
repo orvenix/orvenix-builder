@@ -677,6 +677,8 @@ function businessContextForPage(params: {
   } = params
 
   return {
+    // CSC-1C: commercial designs already resolved every CTA target from facts (page links, wa.me, tel:, mailto:).
+    ...(input.commercialDesign ? { preserveDecidedCtaHrefs: true } : {}),
     name: input.business.name,
     industry: input.business.industry,
     description: input.business.description,
@@ -1081,7 +1083,8 @@ export async function runAutonomousMultiPageSiteBuilder(
       themePalette: themeColors(theme),
       ...(commerceArchitectureResult.plan ? { commerceSurfaces: true } : {}),
       businessEvidence: input.business.businessEvidence,
-      ...(commercialDesign ? { strictFacts: true, commercialFacts: commercialDesign.commercialFacts } : {}),
+      // CSC-1C: per-section asset bindings come from the design's declared asset roles (never global, never placeholders).
+      ...(commercialDesign ? { strictFacts: true, commercialFacts: commercialDesign.commercialFacts, commercialSectionMedia: commercialDesign.sectionMedia } : {}),
     },
   )
 

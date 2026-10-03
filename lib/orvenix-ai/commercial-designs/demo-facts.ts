@@ -35,6 +35,64 @@ export const DEMO_FACTS_INPUT_BY_DESIGN_V1: Readonly<Record<string, BusinessFact
       serviceImages: [{ src: "/uploads/demo-servicios-locales-servicio.webp", alt: "Servicio de ejemplo" }],
     },
   },
+  // CSC-1C: fictional sample business. Text facts are all samples; the images are
+  // metadata-free derivatives of owner-authorized project photos (demo-only prefix,
+  // rejected for customer facts). One progress sequence documents the SAME project;
+  // it is deliberately NOT declared chronological and never presented as before/after.
+  construction: {
+    businessName: "Constructora Ejemplo Norte",
+    tagline: "Sitio de ejemplo · construcción y remodelación",
+    description: "Constructora de ejemplo para mostrar el diseño Construcción Premium. Todos los datos de texto son de muestra.",
+    contact: { whatsapp: "5500000000", email: "contacto@example.com" },
+    hours: "Lunes a viernes, 9:00 a 18:00 (horario de ejemplo)",
+    serviceArea: ["Zona Metropolitana (ejemplo)", "Zona Residencial (ejemplo)"],
+    services: [
+      { name: "Construcción residencial", description: "Servicio de ejemplo: obra residencial por etapas, con registro fotográfico del avance." },
+      { name: "Remodelación integral", description: "Servicio de ejemplo: actualización de espacios interiores y exteriores." },
+      { name: "Albercas y exteriores", description: "Servicio de ejemplo: albercas, áreas exteriores y acabados." },
+      { name: "Estructura y losas", description: "Servicio de ejemplo: cimentación, armado y losas." },
+    ],
+    faq: [
+      { question: "¿Los proyectos mostrados son de un cliente real?", answer: "Es un sitio de ejemplo. Tu sitio mostrará únicamente tus datos, tus proyectos y tus fotografías." },
+      { question: "¿Puedo cambiar servicios, proyectos y fotografías?", answer: "Sí. Servicios, proyectos, contacto e imágenes salen de los datos que proporciones y se editan en el editor." },
+    ],
+    projects: [
+      {
+        id: "residencia-ejemplo",
+        title: "Residencia contemporánea (ejemplo)",
+        summary: "Proyecto de muestra: vivienda de un nivel con fachada metálica, aleros amplios y base de piedra.",
+        description: "Texto de ejemplo. Aquí cada negocio describe su proyecto con sus propias palabras: alcance, materiales y lo que el cliente necesitaba. Este diseño solo muestra la información que el negocio proporciona.",
+        category: "Construcción residencial",
+        status: "in-progress",
+        assets: [
+          { src: "/commercial-demo/construction/construction-demo-featured-lg.webp", alt: "Fachada de la residencia de ejemplo con alero y revestimiento metálico" },
+          { src: "/commercial-demo/construction/construction-demo-hero-lg.webp", alt: "Vista exterior de la residencia de ejemplo" },
+        ],
+        progressAssets: [
+          { src: "/commercial-demo/construction/construction-demo-progress-01-md.webp", alt: "Registro de obra: estructura del alero y muros" },
+          { src: "/commercial-demo/construction/construction-demo-progress-02-md.webp", alt: "Registro de obra: revestimiento de fachada" },
+          { src: "/commercial-demo/construction/construction-demo-progress-03-md.webp", alt: "Registro de obra: fachada lateral" },
+          { src: "/commercial-demo/construction/construction-demo-progress-04-md.webp", alt: "Registro de obra: andamiaje en fachada" },
+        ],
+      },
+      {
+        id: "alberca-ejemplo",
+        title: "Alberca y jardín (ejemplo)",
+        summary: "Proyecto de muestra: alberca, andadores y áreas verdes.",
+        category: "Albercas y exteriores",
+        status: "completed",
+        assets: [{ src: "/commercial-demo/construction/construction-demo-specialty-md.webp", alt: "Alberca y jardín de ejemplo" }],
+      },
+    ],
+    assets: {
+      heroProject: { src: "/commercial-demo/construction/construction-demo-hero-lg.webp", alt: "Residencia de ejemplo en obra", sameProjectId: "residencia-ejemplo" },
+      specialtyService: { src: "/commercial-demo/construction/construction-demo-specialty-md.webp", alt: "Alberca y áreas exteriores de ejemplo" },
+      companyProof: [
+        { src: "/commercial-demo/construction/construction-demo-proof-01-md.webp", alt: "Losa aligerada con armado, lista para colado" },
+        { src: "/commercial-demo/construction/construction-demo-proof-02-md.webp", alt: "Armado de acero para cimentación" },
+      ],
+    },
+  },
 }
 
 export function getDemoFactsV1(designId: string): BusinessFactsV1 | null {

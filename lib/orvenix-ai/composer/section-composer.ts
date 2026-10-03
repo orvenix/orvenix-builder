@@ -1048,6 +1048,8 @@ function resolveHeroCtaButtons(nodes: Record<string, ComposedNode>, context: Sec
   )
   const hasSecondaryTarget = Boolean(context.services?.length) || Boolean(context.products?.length)
   if (!hasSecondaryTarget) return [primary]
+  // CSC-1C: a commercial services page never links to itself.
+  if (context.strictFacts && servicesHrefV1(context) === `page:${context.pageSlug}`) return [primary]
   const secondary = add(
     nodes,
     createComposedNode({ type: "ctaButton", displayName: "CTA secundario", props: { label: "Ver servicios", href: context.strictFacts ? servicesHrefV1(context) : "#servicios", variant: "secondary", size: "lg" } }),
@@ -1211,33 +1213,37 @@ function composeHero(
     },
   )
 
-  const primary = add(
-    nodes,
-    createComposedNode({
-      type: "ctaButton",
-      displayName: "CTA principal",
-      props: {
-        label: "Solicitar informacion",
-        href: "#contacto",
-        variant: "primary",
-        size: "lg",
-      },
-    }),
-  )
-
-  const secondary = add(
-    nodes,
-    createComposedNode({
-      type: "ctaButton",
-      displayName: "CTA secundario",
-      props: {
-        label: "Ver servicios",
-        href: "#servicios",
-        variant: "secondary",
-        size: "lg",
-      },
-    }),
-  )
+  // CSC-1C: commercial (strict-facts) heroes use the fact-resolved primary action and link to services only when they exist.
+  const ctaButtons = context.strictFacts
+    ? resolveHeroCtaButtons(nodes, context)
+    : [
+        add(
+          nodes,
+          createComposedNode({
+            type: "ctaButton",
+            displayName: "CTA principal",
+            props: {
+              label: "Solicitar informacion",
+              href: "#contacto",
+              variant: "primary",
+              size: "lg",
+            },
+          }),
+        ),
+        add(
+          nodes,
+          createComposedNode({
+            type: "ctaButton",
+            displayName: "CTA secundario",
+            props: {
+              label: "Ver servicios",
+              href: "#servicios",
+              variant: "secondary",
+              size: "lg",
+            },
+          }),
+        ),
+      ]
 
   const actions = wrapperNode(
     nodes,
@@ -1245,17 +1251,19 @@ function composeHero(
     centered
       ? "flex flex-col justify-center gap-3 sm:flex-row"
       : "flex flex-col gap-3 sm:flex-row",
-    [primary, secondary],
+    ctaButtons,
   )
 
+  // CSC-1C: a commercial design binds the hero to a SUPPLIED asset of its declared roles; otherwise unchanged ("" until asset resolution).
+  const boundHeroMedia = context.strictFacts ? context.commercialSectionMedia?.media : undefined
   const image = add(
     nodes,
     createComposedNode({
       type: "image",
       displayName: "Imagen hero",
       props: {
-        src: "",
-        alt: "Imagen principal del negocio",
+        src: boundHeroMedia?.src ?? "",
+        alt: boundHeroMedia?.alt ?? "Imagen principal del negocio",
         objectFit: "cover",
         ...(immersive ? { positionMode: "free" } : {}),
       },
@@ -2039,7 +2047,8 @@ function composeCardGridSection(
   items: Array<[string, string]>,
   context: SectionCompositionContext = {},
 ): ComposedSection {
-  const baseCopy = cardGridCopy(role, context.archetype, { titleText, introText, items })
+  // CSC-1C: strict fact-derived items keep their own fact-safe heading (archetype copy may imply social proof).
+  const baseCopy = context.strictFacts && context.strictCardItems ? { titleText, introText, items } : cardGridCopy(role, context.archetype, { titleText, introText, items })
   // COMMERCE-3C: a closed narrative intent reframes a PRESENTATION products grid with the same Orvenix-owned copy table.
   const narrativeCopy = role === "products" && context.instanceNarrativeIntent && context.products?.length
     ? commerceProductsCopy(context.instanceNarrativeIntent, context.products, { title: baseCopy.titleText, intro: baseCopy.introText })
@@ -2692,7 +2701,8 @@ function composeContact(
 
   const contentChildren = [heading, copy, ...contactLineIds]
 
-  if (isConversionPage) {
+  // CSC-1C: a commercial contact page links to services only when a services page exists (never a dead anchor).
+  if (isConversionPage && !(context.strictFacts && !context.sitePages?.some((page) => page.slug === "servicios"))) {
     const secondaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto secundario", props: { label: "Ver servicios", href: context.strictFacts ? servicesHrefV1(context) : "#servicios", variant: "secondary", size: "lg" } }))
     const actions = wrapperNode(nodes, "Acciones contacto", "flex flex-col gap-3 sm:flex-row", [primaryCta, secondaryCta])
     contentChildren.push(actions)
@@ -3048,6 +3058,240 @@ function composeFactFaqV1(context: SectionCompositionContext, entries: Array<{ q
   return { role: "faq", rootId: root, nodes, purpose: "Resolver dudas reales del negocio." }
 }
 
+/* ------------------------------------------------------------------ */
+/* CSC-1C: project evidence (any project-led business).                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Closed status vocabulary -> customer-facing label. Progress is always
+ * presented as documented stages of the SAME project, never as a
+ * before/after comparison.
+ */
+const PROJECT_STATUS_LABELS_V1: Record<string, string> = {
+  planned: "Proyecto en planeación",
+  "in-progress": "Obra en proceso",
+  completed: "Proyecto concluido",
+  documented: "Proyecto documentado",
+}
+
+type CommercialProjectFactV1 = NonNullable<NonNullable<SectionCompositionContext["commercialFacts"]>["projects"]>[number]
+type CommercialAssetV1 = { src: string; alt: string; sameProjectId?: string }
+
+function projectMetaLineV1(project: CommercialProjectFactV1): string {
+  return [project.category, project.status ? PROJECT_STATUS_LABELS_V1[project.status] : undefined, project.location, project.year].filter(Boolean).join(" · ")
+}
+
+function framedImageV1(nodes: Record<string, ComposedNode>, displayName: string, asset: CommercialAssetV1, frameClassName: string): string {
+  const image = add(nodes, createComposedNode({ type: "image", displayName, props: { src: asset.src, alt: asset.alt, objectFit: "cover", positionMode: "free" } }))
+  return wrapperNode(nodes, `Marco ${displayName}`, `relative w-full overflow-hidden ${frameClassName}`, [image])
+}
+
+function projectSurfaceV1(context: SectionCompositionContext): { background: string; label: string } {
+  const palette = context.themePalette
+  const background = palette?.background && /^#[0-9a-f]{6}$/i.test(palette.background) ? palette.background : "#f7f4ef"
+  const label = palette?.secondary && hasSafeContrast(palette.secondary, background) ? palette.secondary : "#7c2d12"
+  return { background, label }
+}
+
+function sectionCtaV1(nodes: Record<string, ComposedNode>, displayName: string, action: { label: string; href: string } | undefined, variant: "primary" | "secondary" = "primary"): string | null {
+  if (!action || !isSafeCommercialHrefV1(action.href)) return null
+  return add(nodes, createComposedNode({ type: "ctaButton", displayName, props: { label: action.label, href: action.href, variant, size: "lg" } }))
+}
+
+/** Only Orvenix-resolved targets: internal page links, in-page anchors, https, tel:, mailto:. */
+function isSafeCommercialHrefV1(href: string): boolean {
+  return /^page:[a-z0-9]+(?:-[a-z0-9]+)*$/.test(href) || /^#[a-z0-9-]+$/i.test(href) || /^https:\/\/[^\s"'<>]+$/i.test(href) || /^tel:\+?[0-9]{6,15}$/.test(href) || /^mailto:[^\s"'<>]+@[^\s"'<>]+$/.test(href)
+}
+
+function sectionHeaderV1(nodes: Record<string, ComposedNode>, keyBase: string, label: string, title: string, intro: string | undefined, colors: { heading: string; body: string; label: string }, align: "left" | "center" = "left"): string {
+  const children = [
+    textNode(nodes, `Etiqueta ${keyBase}`, label, { size: "sm", weight: "bold", color: colors.label, align }),
+    headingNode(nodes, `Título ${keyBase}`, title, 2, { size: "4xl", color: colors.heading, align }),
+    ...(intro ? [textNode(nodes, `Intro ${keyBase}`, intro, { size: "lg", color: colors.body, align })] : []),
+  ]
+  return wrapperNode(nodes, `Encabezado ${keyBase}`, align === "center" ? "mx-auto max-w-3xl space-y-3 text-center" : "max-w-3xl space-y-3", children)
+}
+
+/**
+ * Featured project: large media + project facts, in an asymmetric split.
+ * Only supplied fields render; the "view project" link exists only when a
+ * project-detail page was actually compiled.
+ */
+function featuredProjectBlockV1(
+  nodes: Record<string, ComposedNode>,
+  context: SectionCompositionContext,
+  project: CommercialProjectFactV1 | undefined,
+  asset: CommercialAssetV1 | undefined,
+  options: { narrative: "summary" | "description"; link?: { label: string; href: string } },
+  colors: { heading: string; body: string; label: string },
+): string | null {
+  if (!project && !asset) return null
+  const media = asset ? framedImageV1(nodes, project ? `Imagen ${project.title}` : "Imagen proyecto destacado", asset, "aspect-[4/5] rounded-md bg-stone-300 md:aspect-auto md:min-h-[34rem]") : null
+  if (!project) return media ? wrapperNode(nodes, "Proyecto destacado", "w-full", [media]) : null
+  const meta = projectMetaLineV1(project)
+  const narrative = options.narrative === "description" ? project.description ?? project.summary : project.summary ?? project.description
+  const link = sectionCtaV1(nodes, `Enlace ${project.title}`, options.link, "secondary")
+  const text = wrapperNode(nodes, `Datos ${project.title}`, "flex flex-col justify-center gap-4 border-l-4 border-stone-900 py-2 pl-6", [
+    ...(meta ? [textNode(nodes, `Ficha ${project.title}`, meta, { size: "sm", weight: "bold", color: colors.label })] : []),
+    headingNode(nodes, `Nombre ${project.title}`, project.title, 3, { size: "3xl", weight: "extrabold", color: colors.heading }),
+    ...(narrative ? [textNode(nodes, `Descripción ${project.title}`, narrative, { size: "lg", color: colors.body })] : []),
+    ...(link ? [wrapperNode(nodes, `Acción ${project.title}`, "pt-2", [link])] : []),
+  ])
+  return wrapperNode(nodes, `Proyecto ${project.title}`, media ? "grid gap-8 md:grid-cols-[1.35fr_1fr] md:items-stretch" : "max-w-3xl", media ? [media, text] : [text], "article")
+}
+
+/** Documented stages of ONE project on a dark band; "Etapa N" only when the intake declared them chronological. */
+function progressBandV1(nodes: Record<string, ComposedNode>, assets: CommercialAssetV1[], project: CommercialProjectFactV1 | undefined): string | null {
+  if (assets.length < 2) return null
+  const chronological = project?.progressSequence === "chronological"
+  const frames = assets.slice(0, 4).map((asset, index) => {
+    const frame = framedImageV1(nodes, `Avance de obra ${index + 1}`, asset, "aspect-[3/4] rounded-sm bg-stone-800")
+    if (!chronological) return frame
+    const label = textNode(nodes, `Etapa ${index + 1}`, `Etapa ${index + 1}`, { size: "sm", weight: "bold", color: "#fde68a" })
+    return wrapperNode(nodes, `Etapa documentada ${index + 1}`, "space-y-3", [frame, label])
+  })
+  const header = wrapperNode(nodes, "Encabezado avance", "flex flex-col gap-2 md:flex-row md:items-end md:justify-between", [
+    wrapperNode(nodes, "Títulos avance", "space-y-2", [
+      textNode(nodes, "Etiqueta avance", chronological ? "Etapas del proyecto" : "Obra en proceso", { size: "sm", weight: "bold", color: "#fbbf24" }),
+      headingNode(nodes, "Título avance", project ? `Avance de obra · ${project.title}` : "Avance de obra", 3, { size: "2xl", color: "#ffffff" }),
+    ]),
+    textNode(nodes, "Nota avance", chronological ? "Registro fotográfico del mismo proyecto, en el orden en que se documentó." : "Registro fotográfico del mismo proyecto durante la obra.", { size: "sm", color: "#d6d3d1" }),
+  ])
+  const grid = wrapperNode(nodes, "Secuencia de avance", `grid gap-3 sm:grid-cols-2 ${assets.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`, frames)
+  return wrapperNode(nodes, "Avance de obra", "space-y-6 rounded-md bg-stone-900 p-5 sm:p-8", [header, grid])
+}
+
+function composeProjectEvidenceSectionV1(context: SectionCompositionContext, media: NonNullable<SectionCompositionContext["commercialSectionMedia"]>): ComposedSection | null {
+  const nodes: Record<string, ComposedNode> = {}
+  const facts = context.commercialFacts
+  const focusIds = media.focusProjectIds
+  const projects = (facts?.projects ?? []).filter((project) => project.title.trim() && (!focusIds || focusIds.includes(project.id)))
+  const isDetail = Boolean(focusIds?.length)
+  const isTeaser = !isDetail && Boolean(context.sitePages?.find((page) => page.slug === context.pageSlug)?.isHome)
+  const used = new Set<string>()
+  const take = (asset: CommercialAssetV1 | undefined) => {
+    if (asset) used.add(asset.src)
+    return asset
+  }
+  const surface = projectSurfaceV1(context)
+  const text = readableTextColorsFor(surface.background)
+  const colors = { ...text, label: surface.label }
+
+  const lead = projects[0]
+  const progressAll = media.byRole.projectProgress ?? []
+  const leadAsset = take(
+    (lead ? [...(media.byRole.featuredProject ?? []), ...(media.byRole.projectGallery ?? [])].find((asset) => asset.sameProjectId === lead.id) : undefined)
+      ?? media.byRole.featuredProject?.[0]
+      ?? media.byRole.projectGallery?.[0],
+  )
+  const progressProject = projects.find((project) => progressAll.some((asset) => asset.sameProjectId === project.id))
+  const progress = (progressProject ? progressAll.filter((asset) => asset.sameProjectId === progressProject.id) : progressAll).slice(0, 4)
+  progress.forEach((asset) => used.add(asset.src))
+
+  const blocks: string[] = []
+  if (!isDetail) {
+    const link = lead && facts?.projectDetailHref ? { label: "Ver proyecto", href: facts.projectDetailHref } : isTeaser && facts?.projectsHref ? { label: "Ver proyectos", href: facts.projectsHref } : undefined
+    const featured = featuredProjectBlockV1(nodes, context, lead, leadAsset, { narrative: "summary", ...(link ? { link } : {}) }, colors)
+    if (featured) blocks.push(featured)
+  } else if (lead?.description || lead?.summary) {
+    const narrative = [lead.summary, lead.description].filter((value, index, values): value is string => Boolean(value) && values.indexOf(value) === index)
+    const meta = projectMetaLineV1(lead)
+    blocks.push(wrapperNode(nodes, "Relato del proyecto", "grid gap-6 md:grid-cols-[0.8fr_1.2fr]", [
+      wrapperNode(nodes, "Ficha del proyecto", "space-y-2 border-t-4 border-stone-900 pt-4", [
+        textNode(nodes, "Etiqueta ficha", "Ficha del proyecto", { size: "sm", weight: "bold", color: colors.label }),
+        ...(meta ? [textNode(nodes, "Datos ficha", meta, { weight: "bold", color: colors.heading })] : []),
+      ]),
+      wrapperNode(nodes, "Narrativa del proyecto", "space-y-4", narrative.map((value, index) => textNode(nodes, `Narrativa ${index + 1}`, value, { size: "lg", color: colors.body }))),
+    ]))
+    if (leadAsset) blocks.push(framedImageV1(nodes, `Imagen ${lead.title}`, leadAsset, "aspect-[4/5] rounded-md bg-stone-300 md:aspect-[16/9]"))
+  }
+
+  const band = progressBandV1(nodes, progress, progressProject)
+  if (band) blocks.push(band)
+  else progress.forEach((asset) => used.delete(asset.src))
+
+  if (!isTeaser && !isDetail) {
+    const others = projects.slice(1, 7).map((project) => {
+      const asset = take([...(media.byRole.projectGallery ?? []), ...(media.byRole.featuredProject ?? [])].find((candidate) => candidate.sameProjectId === project.id && !used.has(candidate.src)))
+      const meta = projectMetaLineV1(project)
+      const narrative = project.summary ?? project.description
+      return wrapperNode(nodes, `Proyecto ${project.title}`, "space-y-4", [
+        ...(asset ? [framedImageV1(nodes, `Imagen ${project.title}`, asset, "aspect-[4/3] rounded-md bg-stone-300")] : []),
+        ...(meta ? [textNode(nodes, `Ficha ${project.title}`, meta, { size: "sm", weight: "bold", color: colors.label })] : []),
+        headingNode(nodes, `Nombre ${project.title}`, project.title, 3, { size: "xl", color: colors.heading }),
+        ...(narrative ? [textNode(nodes, `Resumen ${project.title}`, narrative, { color: colors.body })] : []),
+      ], "article")
+    })
+    if (others.length) blocks.push(wrapperNode(nodes, "Más proyectos", "grid gap-10 md:grid-cols-2", others))
+  }
+
+  const remaining = (isTeaser ? [] : [...(media.byRole.projectGallery ?? []), ...(media.byRole.featuredProject ?? [])])
+    .filter((asset, index, list) => !used.has(asset.src) && list.findIndex((candidate) => candidate.src === asset.src) === index)
+    .slice(0, 6)
+  if (remaining.length) {
+    blocks.push(wrapperNode(nodes, "Galería de proyecto", "grid gap-4 sm:grid-cols-2 lg:grid-cols-3", remaining.map((asset, index) => framedImageV1(nodes, `Fotografía de proyecto ${index + 1}`, asset, "aspect-[4/5] rounded-md bg-stone-300"))))
+  }
+
+  if (!blocks.length) return null
+
+  const businessName = context.businessName?.trim()
+  const header = isDetail
+    ? sectionHeaderV1(nodes, "proyecto", "Proyecto", lead ? "Detalle y avance de la obra" : "Avance de la obra", undefined, colors)
+    : isTeaser
+      ? sectionHeaderV1(nodes, "proyectos", "Proyectos", lead ? "Trabajo documentado" : "Nuestro trabajo", businessName ? `Fotografías y datos de proyectos de ${businessName}.` : undefined, colors)
+      : sectionHeaderV1(nodes, "proyectos", "Portafolio", projects.length ? "Proyectos" : "Nuestro trabajo", businessName ? `Proyectos documentados por ${businessName} con fotografías propias.` : undefined, colors)
+  const content = wrapperNode(nodes, "Contenido proyectos", "space-y-12", [header, ...blocks])
+  const root = add(nodes, createComposedNode({ type: "section", displayName: isDetail ? "Detalle de proyecto" : "Proyectos y avances", props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: surface.background }, children: [content] }))
+  return { role: "gallery", rootId: root, nodes, purpose: "Mostrar proyectos y avances reales suministrados por el negocio." }
+}
+
+/** A supplied specialty-service photograph in an editorial split, with the site's real primary action. */
+function composeSpecialtyServiceSectionV1(context: SectionCompositionContext, asset: CommercialAssetV1): ComposedSection {
+  const nodes: Record<string, ComposedNode> = {}
+  const surface = projectSurfaceV1(context)
+  const colors = { ...readableTextColorsFor("#ffffff"), label: hasSafeContrast(surface.label, "#ffffff") ? surface.label : "#7c2d12" }
+  const businessName = context.businessName?.trim()
+  const image = framedImageV1(nodes, "Imagen servicio especializado", asset, "aspect-[4/5] rounded-md bg-stone-300")
+  const cta = sectionCtaV1(nodes, "CTA servicio especializado", context.commercialFacts?.primaryCta)
+  const copy = wrapperNode(nodes, "Texto servicio especializado", "space-y-5", [
+    sectionHeaderV1(nodes, "especialidad", "Servicio especializado", "Trabajo especializado", businessName ? `Una muestra del trabajo especializado de ${businessName}. Pregunta por el alcance de tu proyecto.` : "Pregunta por el alcance de tu proyecto.", colors),
+    ...(cta ? [cta] : []),
+  ])
+  const grid = wrapperNode(nodes, "Servicio especializado", "grid gap-10 md:grid-cols-[1fr_1.1fr] md:items-center", [image, copy])
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Servicio especializado", props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: "#ffffff" }, children: [grid] }))
+  return { role: "gallery", rootId: root, nodes, purpose: "Mostrar un servicio especializado con fotografía real del negocio." }
+}
+
+/** Supplied company/craft photographs (work on site) -- no claim beyond "this is our work". */
+function composeCompanyProofSectionV1(context: SectionCompositionContext, assets: CommercialAssetV1[]): ComposedSection {
+  const nodes: Record<string, ComposedNode> = {}
+  const surface = projectSurfaceV1(context)
+  const colors = { ...readableTextColorsFor(surface.background), label: surface.label }
+  const businessName = context.businessName?.trim()
+  const frames = assets.slice(0, 4).map((asset, index) => framedImageV1(nodes, `Trabajo en obra ${index + 1}`, asset, index === 0 && assets.length > 2 ? "aspect-[4/5] rounded-md bg-stone-300 md:row-span-2 md:aspect-auto" : "aspect-[4/3] rounded-md bg-stone-300"))
+  const grid = wrapperNode(nodes, "Fotografías en obra", assets.length > 2 ? "grid gap-4 md:grid-cols-2" : "grid gap-4 sm:grid-cols-2", frames)
+  const header = sectionHeaderV1(nodes, "obra", "En obra", "Trabajo en obra", businessName ? `Fotografías del trabajo de ${businessName} en obra.` : undefined, colors)
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Trabajo en obra", props: { maxWidth: "xl", paddingY: "xl", paddingX: "lg", background: surface.background }, children: [wrapperNode(nodes, "Contenido obra", "space-y-10", [header, grid])] }))
+  return { role: "gallery", rootId: root, nodes, purpose: "Mostrar fotografías reales del trabajo del negocio." }
+}
+
+/**
+ * CSC-1C: strict gallery for a section that declared commercial asset
+ * roles. Project roles -> project evidence; otherwise specialty service or
+ * company proof. Nothing supplied -> null (the section is omitted).
+ */
+function composeCommercialGalleryV1(context: SectionCompositionContext, media: NonNullable<SectionCompositionContext["commercialSectionMedia"]>): ComposedSection | null {
+  const roles = media.declaredRoles
+  if (roles.some((role) => role === "featuredProject" || role === "projectProgress" || role === "projectGallery" || role === "heroProject")) {
+    return composeProjectEvidenceSectionV1(context, media)
+  }
+  const specialty = media.byRole.specialtyService?.[0]
+  if (roles.includes("specialtyService") && specialty) return composeSpecialtyServiceSectionV1(context, specialty)
+  const proof = media.byRole.companyProof ?? []
+  if (roles.includes("companyProof") && proof.length) return composeCompanyProofSectionV1(context, proof)
+  return null
+}
+
 /**
  * CSC-1B: the strict-facts decision for a role. `null` -> OMIT the section
  * (no real data to show); a section -> recomposed from real facts only;
@@ -3075,6 +3319,9 @@ function composeStrictFactsSectionV1(role: SectionRole, context: SectionComposit
       const entries = (context.commercialFacts?.faq ?? []).filter((entry) => entry.question.trim() && entry.answer.trim())
       return entries.length ? composeFactFaqV1(context, entries) : null
     }
+    case "gallery":
+      // CSC-1C: only a section that declared commercial asset roles; otherwise the CSC-1B path is unchanged.
+      return context.commercialSectionMedia ? composeCommercialGalleryV1(context, context.commercialSectionMedia) : undefined
     case "trust": {
       const nodes: Record<string, ComposedNode> = {}
       return composePersonTrust(context, nodes) ?? composeOrganizationTrust(context, nodes) ?? composeCredibilityStats(context, nodes) ?? null
