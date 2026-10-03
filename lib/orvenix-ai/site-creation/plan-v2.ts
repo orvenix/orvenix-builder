@@ -38,6 +38,31 @@ export interface SiteCreationPlanV2Quality {
   summary: string
 }
 
+/**
+ * CSC-1B: provenance of a plan compiled from a code-side commercial design
+ * (lib/orvenix-ai/commercial-designs). Hash-covered like the rest of the
+ * plan, so a confirmation binds to the exact design id@version. Absent for
+ * every AI/legacy plan (byte-identical to pre-CSC-1B plans).
+ */
+export interface SiteCreationPlanV2DesignSourceV1 {
+  kind: "commercial"
+  id: string
+  version: number
+}
+
+const DESIGN_SOURCE_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+export function validateSiteCreationPlanV2DesignSourceV1(value: unknown): string[] {
+  if (!isPlainRecord(value)) return ["designSource invalido."]
+  const keys = Object.keys(value).sort().join(",")
+  if (keys !== "id,kind,version") return ["designSource: claves no permitidas."]
+  const errors: string[] = []
+  if (value.kind !== "commercial") errors.push("designSource.kind invalido.")
+  if (typeof value.id !== "string" || value.id.length > 64 || !DESIGN_SOURCE_ID_RE.test(value.id)) errors.push("designSource.id invalido.")
+  if (typeof value.version !== "number" || !Number.isSafeInteger(value.version) || value.version < 1 || value.version > 9999) errors.push("designSource.version invalido.")
+  return errors
+}
+
 export interface SiteCreationPlanV2 {
   version: typeof SITE_CREATION_PLAN_V2_VERSION
   identity: SiteCreationPlanV2Identity
@@ -52,6 +77,7 @@ export interface SiteCreationPlanV2 {
    * (byte-identical to pre-COMMERCE-2A plans).
    */
   commerce?: SiteCreationPlanV2CommerceV1
+  designSource?: SiteCreationPlanV2DesignSourceV1
 }
 
 export interface SiteCreationPlanV2ValidationLimits {
@@ -533,6 +559,10 @@ export function validateSiteCreationPlanV2(
     errors.push(...validateSiteCreationPlanV2CommerceV1((value as { commerce?: unknown }).commerce))
   }
 
+  if ((value as { designSource?: unknown }).designSource !== undefined) {
+    errors.push(...validateSiteCreationPlanV2DesignSourceV1((value as { designSource?: unknown }).designSource))
+  }
+
   const canonicalJson = stableStringifyStrict(value)
   const canonicalByteLength = byteLengthFromCanonicalJson(canonicalJson)
 
@@ -641,6 +671,7 @@ export function normalizeSiteCreationPlanV2(plan: SiteCreationPlanV2): SiteCreat
       summary: normalizeRequiredText(plan.quality.summary, 360),
     },
     ...(plan.commerce ? { commerce: cloneStrictJson(plan.commerce) } : {}),
+    ...(plan.designSource ? { designSource: { kind: plan.designSource.kind, id: plan.designSource.id, version: plan.designSource.version } } : {}),
   } satisfies SiteCreationPlanV2
 
   const result = validateSiteCreationPlanV2(normalized, SITE_CREATION_PLAN_V2_DEFAULT_LIMITS)

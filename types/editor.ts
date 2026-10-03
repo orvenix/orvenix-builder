@@ -42,6 +42,14 @@ export interface AssetProvenance {
   width?: number;
   height?: number;
   dominantColor?: string;
+  /**
+   * CSC-1B: where the asset came from. "customer" = uploaded/supplied by the
+   * site owner; "demo" = sample asset for showcase/dev/tests only; "provider"
+   * = stock provider. Absent on every pre-CSC-1B node.
+   * Invariant (NOT implemented yet): published optimized derivatives of
+   * customer/owner photos must strip EXIF/GPS metadata.
+   */
+  source?: "customer" | "demo" | "provider";
 }
 
 export type ResponsiveContract = Partial<Record<Breakpoint, NodeProps>>;

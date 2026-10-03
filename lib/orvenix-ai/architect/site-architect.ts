@@ -50,7 +50,8 @@ export interface OrvenixSiteArchitecture {
   objective: string
   pages: OrvenixSitePagePlan[]
   businessName?: string
-  services?: Array<{ name: string; description?: string }>
+  /** CSC-1B: priceLabel is an authoritative customer-supplied fact (commercial designs only). */
+  services?: Array<{ name: string; description?: string; priceLabel?: string }>
   /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. */
   products?: CommerceProductFactV1[]
   location?: string

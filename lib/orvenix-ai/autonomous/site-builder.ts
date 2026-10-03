@@ -742,6 +742,7 @@ function createMultiPagePlan(params: {
   pageQuality: Array<{ slug: string; score: number }>
   warnings: string[]
   commerceProvisioning?: CommerceProvisioningPlanV1 | null
+  designSource?: SiteCreationPlanV2["designSource"]
 }): SiteCreationPlanV2 {
   const {
     input,
@@ -750,6 +751,7 @@ function createMultiPagePlan(params: {
     pageQuality,
     warnings,
     commerceProvisioning,
+    designSource,
   } = params
 
   return normalizeSiteCreationPlanV2({
@@ -787,6 +789,7 @@ function createMultiPagePlan(params: {
     },
     // COMMERCE-2A: hash-covered new-store provisioning intent (absent -> byte-identical plan).
     ...(commerceProvisioning ? { commerce: { version: 1 as const, provisioning: commerceProvisioning } } : {}),
+    ...(designSource ? { designSource } : {}),
   })
 }
 
@@ -823,6 +826,7 @@ export async function runAutonomousMultiPageSiteBuilder(
 ): Promise<AutonomousMultiPageSiteBuilderResult> {
   const trace: string[] = []
   const warnings: string[] = []
+  const commercialDesign = input.commercialDesign
   const generationGuide = buildSiteGenerationGuideContext({
     request: input.request,
     mode: "site",
@@ -852,7 +856,7 @@ export async function runAutonomousMultiPageSiteBuilder(
     ? boundProducts
     : normalizeCommercePresentationProductsV1(input.business.products)
 
-  const builtArchitecture = buildSiteArchitecture({
+  const builtArchitecture = commercialDesign?.architecture ?? buildSiteArchitecture({
     request: input.request,
     business: {
       name: input.business.name,
@@ -876,7 +880,7 @@ export async function runAutonomousMultiPageSiteBuilder(
    * Pure: no DB access here -- preview stays side-effect free.
    */
   const commerceProvisioningPlan =
-    input.commerceProvisioning?.mode === "new_store" && !boundProducts.length && builtArchitecture.siteType === "ecommerce"
+    !commercialDesign && input.commerceProvisioning?.mode === "new_store" && !boundProducts.length && builtArchitecture.siteType === "ecommerce"
       ? buildCommerceProvisioningPlanV1(builtArchitecture.products)
       : null
   const provisioningArchitecture = commerceProvisioningPlan && builtArchitecture.products
@@ -933,7 +937,7 @@ export async function runAutonomousMultiPageSiteBuilder(
       proposal: commerceProposal,
     },
   })
-  const architecture = commerceArchitectureResult.architecture
+  const architecture = commercialDesign?.architecture ?? commerceArchitectureResult.architecture
   warnings.push(...commerceArchitectureResult.warnings.map((warning) => `commerce-architecture: ${warning}`))
 
   if (commerceArchitectureResult.plan) {
@@ -966,11 +970,13 @@ export async function runAutonomousMultiPageSiteBuilder(
    */
   const groundedArchitecture = omitUngroundedTestimonialSectionsV1(architecture, input.business.businessEvidence)
 
-  const orderedArchitecture = input.creativeDirection?.pageDirections?.length
+  const effectiveCreativeDirection = commercialDesign?.direction ?? input.creativeDirection
+
+  const orderedArchitecture = effectiveCreativeDirection?.pageDirections?.length
     ? {
         ...groundedArchitecture,
         pages: groundedArchitecture.pages.map((page) => {
-          const direction = input.creativeDirection?.pageDirections.find((entry) => entry.slug === page.slug)
+          const direction = effectiveCreativeDirection?.pageDirections.find((entry) => entry.slug === page.slug)
           const defaultOrder = page.sections.map((section) => section.role)
           // A CD order may legitimately list "testimonials" (it was planned against the
           // pre-grounding recipe); drop ONLY that grounding-omitted role before the
@@ -1022,7 +1028,7 @@ export async function runAutonomousMultiPageSiteBuilder(
    * is completely unchanged (same function, same inputs, same
    * deterministic output); it simply runs earlier in the sequence.
    */
-  const theme = applySiteCreationThemeAdvisories(getStarterTheme(), input, architecture.siteType)
+  const theme = commercialDesign?.theme ?? applySiteCreationThemeAdvisories(getStarterTheme(), input, architecture.siteType)
 
   /*
    * ASSISTED-2B: the ONLY insertion point for Assisted Generation V1 into
@@ -1042,18 +1048,26 @@ export async function runAutonomousMultiPageSiteBuilder(
    * automatically falls back to `orderedArchitecture` unmodified -- see
    * architecture-bridge.ts's own safety contract, this call never throws.
    */
-  const assistedGenerationResult = await resolveAssistedSiteGenerationV1({
-    mode: input.assistedGeneration?.mode,
-    architecture: orderedArchitecture,
-    proposal: input.assistedGeneration?.proposal,
-    // ASSISTED-3B (anthropic mode only; ignored otherwise): Creative
-    // Director has ALREADY run upstream -- its validated direction is
-    // consumed here as sanitized context, never replaced.
-    creativeDirection: input.creativeDirection,
-    designReferences: input.assistedGeneration?.designReferences,
-    provider: input.assistedGeneration?.provider,
-    timeoutMs: input.assistedGeneration?.timeoutMs,
-  })
+  const assistedGenerationResult = commercialDesign
+    ? {
+        architecture: orderedArchitecture,
+        lifecycle: {
+          status: "disabled",
+          reasonCode: "commercial_design",
+        } as const,
+      }
+    : await resolveAssistedSiteGenerationV1({
+        mode: input.assistedGeneration?.mode,
+        architecture: orderedArchitecture,
+        proposal: input.assistedGeneration?.proposal,
+        // ASSISTED-3B (anthropic mode only; ignored otherwise): Creative
+        // Director has ALREADY run upstream -- its validated direction is
+        // consumed here as sanitized context, never replaced.
+        creativeDirection: effectiveCreativeDirection,
+        designReferences: input.assistedGeneration?.designReferences,
+        provider: input.assistedGeneration?.provider,
+        timeoutMs: input.assistedGeneration?.timeoutMs,
+      })
   const assistedArchitecture = assistedGenerationResult.architecture
 
   const blueprint = compileSiteBlueprint(
@@ -1061,12 +1075,13 @@ export async function runAutonomousMultiPageSiteBuilder(
     {
       preferPrimitiveComposition: input.forceFreshComposition,
       visualFamily: compositionVisualFamily,
-      creativeDirection: input.creativeDirection,
+      creativeDirection: effectiveCreativeDirection,
       accentColor: themeColors(theme).accent,
       // PCE-2: same resolved theme -> theme-derived commerce surfaces (store sections, cards, closing, footer).
       themePalette: themeColors(theme),
       ...(commerceArchitectureResult.plan ? { commerceSurfaces: true } : {}),
       businessEvidence: input.business.businessEvidence,
+      ...(commercialDesign ? { strictFacts: true, commercialFacts: commercialDesign.commercialFacts } : {}),
     },
   )
 
@@ -1085,6 +1100,7 @@ export async function runAutonomousMultiPageSiteBuilder(
     const pagePlan = architecture.pages.find(
       (item) => item.slug === page.slug,
     )
+    const pageSeo = commercialDesign?.seoBySlug[page.slug]
     const tree = applyBusinessContent(
       page.tree,
       businessContextForPage({
@@ -1097,7 +1113,13 @@ export async function runAutonomousMultiPageSiteBuilder(
     return {
       name: page.name,
       slug: page.slug,
-      tree: omitUndefinedValues(tree) as EditorTree,
+      tree: omitUndefinedValues({
+        ...tree,
+        seo: {
+          title: pageSeo?.title ?? tree.seo?.title,
+          description: pageSeo?.description ?? tree.seo?.description,
+        },
+      }) as EditorTree,
     }
   })
 
@@ -1129,14 +1151,16 @@ export async function runAutonomousMultiPageSiteBuilder(
   const aiHeroIntent = input.creativeDirection?.pageDirections?.find((direction) => direction.slug === "home")?.assetIntent
     ?? input.creativeDirection?.pageDirections?.[0]?.assetIntent
 
-  const resolvedPages = await resolveTreeImageAssets(rawPages, {
-    provider: input.assetProvider ?? createPexelsProvider(),
-    visualFamily: assetVisualFamily,
-    industry: input.business.industry,
-    services: input.business.services,
-    businessName: input.business.name,
-    ...(aiHeroIntent ? { aiHeroIntent } : {}),
-  })
+  const resolvedPages = commercialDesign
+    ? rawPages
+    : await resolveTreeImageAssets(rawPages, {
+        provider: input.assetProvider ?? createPexelsProvider(),
+        visualFamily: assetVisualFamily,
+        industry: input.business.industry,
+        services: input.business.services,
+        businessName: input.business.name,
+        ...(aiHeroIntent ? { aiHeroIntent } : {}),
+      })
   // PCE-2: commerce sites never ship an unresolved image slot -- the composition reflows instead.
   const pages = commerceArchitectureResult.plan
     ? resolvedPages.map((page) => ({ ...page, tree: collapseEmptyImageSlotsV1(page.tree) }))
@@ -1164,6 +1188,7 @@ export async function runAutonomousMultiPageSiteBuilder(
     pageQuality,
     warnings,
     commerceProvisioning: commerceProvisioningPlan,
+    designSource: commercialDesign?.designSource,
   })
   const validation = validateSiteCreationPlanV2(plan, {
     maxPages: Math.max(architecture.pages.length, 1),

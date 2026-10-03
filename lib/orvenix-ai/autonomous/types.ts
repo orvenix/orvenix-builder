@@ -18,6 +18,7 @@ import type { CreativeDesignReferenceV1 } from "@/lib/orvenix-ai/creative-direct
 import type { AssetProvider } from "@/lib/orvenix-ai/assets/types"
 import type { CommerceArchitectureResolveModeV1 } from "@/lib/orvenix-ai/commerce/architecture"
 import type { FullSiteCreativeBlueprintProviderV1, FullSiteCreativeLifecycleV1 } from "@/lib/orvenix-ai/full-site-generation/contract"
+import type { ResolvedCommercialDesignV1 } from "@/lib/orvenix-ai/commercial-designs/resolver"
 
 import type {
   RankedTemplate,
@@ -188,6 +189,14 @@ export interface AutonomousSiteBuilderInput {
      */
     provider?: FullSiteCreativeBlueprintProviderV1
   }
+
+  /**
+   * CSC-1B: trusted server-side commercial design compile seam. This is
+   * resolved by lib/orvenix-ai/commercial-designs before reaching the
+   * builder, never by a browser payload. Absent -> existing autonomous
+   * generation behavior is unchanged.
+   */
+  commercialDesign?: ResolvedCommercialDesignV1
 }
 
 export interface AutonomousSiteBuilderResult {

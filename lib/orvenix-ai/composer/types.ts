@@ -37,6 +37,8 @@ export interface SectionCompositionContext {
   services?: Array<{
     name: string
     description?: string
+    /** CSC-1B: authoritative, customer-supplied price label for this service (eg. "Desde $890"). Never invented. */
+    priceLabel?: string
   }>
   /** V2-S1: parallel optional collection to `services` -- eg. restaurant dishes, store products. COMMERCE-1: optional grounded commerce facts (see commerce/product-facts.ts). */
   products?: CommerceProductFactV1[]
@@ -244,4 +246,31 @@ export interface SectionCompositionContext {
   commerceProductDetailHrefs?: Array<string | undefined>
   /** COMMERCE-3C: this context's collection was explicitly curated by a SectionInstancePlan selection. */
   instanceSelectionApplied?: boolean
+
+  /**
+   * CSC-1B: commercial-design mode. When true, a section that would need
+   * generic/placeholder factual content is OMITTED (composeSection returns
+   * null) or recomposed from authoritative facts only -- never filled with
+   * sample contact data, sample FAQ, invented benefits or generic prices.
+   * Absent -> byte-identical pre-CSC-1B behavior for every existing caller.
+   */
+  strictFacts?: boolean
+  /** CSC-1B: authoritative business facts + chrome intents for commercial designs (closed shapes, never AI-populated). */
+  commercialFacts?: CommercialSectionFactsV1
+  /** CSC-1B: fact-derived card items that take precedence over any archetype copy (strictFacts only). */
+  strictCardItems?: Array<[string, string]>
+}
+
+/** CSC-1B: bounded commercial facts/intents threaded into every section of a commercial-design compile. */
+export interface CommercialSectionFactsV1 {
+  address?: string
+  hours?: string
+  serviceArea?: string[]
+  logoUrl?: string
+  tagline?: string
+  social?: Array<{ network: "facebook" | "instagram" | "tiktok" | "youtube" | "linkedin"; url: string }>
+  faq?: Array<{ question: string; answer: string }>
+  footerPreset?: "minimal" | "standard" | "rich"
+  /** Orvenix-resolved primary conversion action (closed label set, href from facts or an internal page link). */
+  primaryCta?: { label: string; href: string }
 }

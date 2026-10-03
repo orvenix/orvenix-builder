@@ -33,6 +33,8 @@ export interface RealTemplate {
   rentalPriceMxn: number;
   Icon: LucideIcon;
   preview: string;
+  commercialDesignId?: string;
+  commercialDesignVersion?: number;
 }
 
 export const REAL_TEMPLATES: RealTemplate[] = [
@@ -140,6 +142,8 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     rentalPriceMxn: 1199,
     Icon: Wrench,
     preview: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&h=500&fit=crop&q=80",
+    commercialDesignId: "servicios-locales",
+    commercialDesignVersion: 1,
   },
   {
     id: "restaurante",

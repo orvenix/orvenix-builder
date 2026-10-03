@@ -47,6 +47,12 @@ export interface SiteNavProps {
    */
   accent?: string;
   navLayout?: "classic" | "centered-editorial" | "split" | "overlay";
+  /**
+   * CSC-1B: the business's real logo (BrandKit / business facts). Only an
+   * https URL or an Orvenix upload path renders; anything else (or absent)
+   * falls back to the text brand mark exactly as before.
+   */
+  logoSrc?: string;
   pages?: InlineNavLink[];
   /** PCE-2: set by the store shell ONLY when the page can sell; renders the cart entry inside the nav. */
   showCart?: boolean;
@@ -167,7 +173,9 @@ export function SiteNav({
   pages,
   showCart = false,
   cartProminence,
+  logoSrc,
 }: BlockComponentProps<SiteNavProps>) {
+  const safeLogo = safeLogoSrcV1(logoSrc);
   const cartTreatment = navCartTreatment(cartProminence);
   const availablePages = useEditorStore((state) => state.availablePages);
   const storeActivePageSlug = useEditorStore((state) => state.activePageSlug);
@@ -423,6 +431,10 @@ export function SiteNav({
     <>
       <nav aria-label={title} className={`orvenix-premium-site-nav orvenix-premium-site-nav--${navLayout} ${isIntegratedChrome ? "orvenix-premium-site-nav--integrated" : ""} w-full`} style={shellStyle}>
         <div className={`orvenix-site-brand relative flex min-w-0 items-center gap-3 ${isCenteredEditorialNav ? "mx-auto flex-col text-center" : ""}`}>
+          {safeLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- customer logo URL (upload or https), rendered as-is
+            <img src={safeLogo} alt={title} className="orvenix-site-brand-logo h-12 w-auto max-w-[160px] shrink-0 object-contain" />
+          ) : (
           <span
             aria-hidden="true"
             className="orvenix-site-brand-mark relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-[18px] text-[13px] font-black shadow-[0_20px_42px_-24px_rgba(27,179,250,0.95)]"
@@ -439,6 +451,7 @@ export function SiteNav({
             <span className="absolute inset-[5px] rounded-[14px] border border-white/20 bg-white/10" />
             <span className="relative tracking-[0.12em]">{brandInitials}</span>
           </span>
+          )}
           <div className="orvenix-site-brand-copy min-w-0">
             <div style={titleStyle}>{title}</div>
             {subtitle ? <div style={titleAccentStyle}>{subtitle}</div> : null}
@@ -617,6 +630,16 @@ export function SiteNav({
  * only when the title is genuinely empty, preserving the old visual
  * identity in that edge case.
  */
+/** CSC-1B: a logo renders only from an https URL or an Orvenix upload path (never javascript:/data:/relative tricks). */
+export function safeLogoSrcV1(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const src = value.trim();
+  if (!src || src.length > 2048) return null;
+  if (/^\/uploads\/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp|gif|avif)$/i.test(src)) return src;
+  if (/^https:\/\/[^\s"'<>]+$/i.test(src)) return src;
+  return null;
+}
+
 export function deriveBrandInitials(title: string): string {
   const trimmed = title.trim();
   if (!trimmed) return "OV";

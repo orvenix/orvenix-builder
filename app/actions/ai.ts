@@ -67,6 +67,10 @@ import {
   registerAIUndoForExecutedResult,
   rollbackOrvenixAIChange,
 } from "@/lib/orvenix-ai/mutation/undo-service";
+import {
+  compileCommercialDesignV1,
+  type BusinessFactsInputV1,
+} from "@/lib/orvenix-ai/commercial-designs";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -822,6 +826,17 @@ export interface OrvenixSiteCreationActionInput {
   };
 }
 
+export interface CommercialDesignSiteCreationActionInput {
+  mode?: "preview" | "execute";
+  designId: string;
+  version: number;
+  clientAttemptKey?: string;
+  confirmed?: boolean;
+  previewId?: string;
+  expectedPreviewHash?: string;
+  facts?: BusinessFactsInputV1;
+}
+
 export type SiteCreationPreviewPageV1 = {
   slug: string;
   title: string;
@@ -1014,21 +1029,26 @@ export async function runOrvenixSiteCreationAction(
         };
       }
 
-      try {
-        await requireAIPlan(session.user.id);
-      } catch (error) {
-        return {
-          success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Actualiza tu plan para acceder a Orvenix AI.",
-        };
-      }
-
       let result: OrvenixAgentResponse;
 
       const isPlanV2Preview = hasSiteCreationPlanV2Discriminator(preview.plan);
+      const isCommercialPreview =
+        isPlanV2Preview &&
+        (preview.plan as SiteCreationPlanV2).designSource?.kind === "commercial";
+
+      if (!isCommercialPreview) {
+        try {
+          await requireAIPlan(session.user.id);
+        } catch (error) {
+          return {
+            success: false,
+            message:
+              error instanceof Error
+                ? error.message
+                : "Actualiza tu plan para acceder a Orvenix AI.",
+          };
+        }
+      }
 
       if (isPlanV2Preview) {
         const createdSite = await createDraftSiteFromPersistedPreview({
@@ -1371,6 +1391,174 @@ export async function runOrvenixSiteCreationAction(
       previewHash: preview.previewHash,
       previewPages: buildSiteCreationPreviewPages(generated.plan),
       qualityGate: qualityGatePreview,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: getSiteCreationPreviewFailureMessage(error),
+    };
+  }
+}
+
+export async function createSiteFromCommercialDesignAction(
+  input: CommercialDesignSiteCreationActionInput,
+): Promise<OrvenixSiteCreationActionResult> {
+  const mode = input.mode ?? "preview";
+  const session = await getAuthSession();
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      message: "Inicia sesión para crear un sitio con este diseño.",
+    };
+  }
+
+  if (mode === "execute") {
+    return runOrvenixSiteCreationAction({
+      mode: "execute",
+      confirmed: input.confirmed === true,
+      previewId: input.previewId,
+      expectedPreviewHash: input.expectedPreviewHash,
+      message: "Confirmar diseño comercial.",
+    });
+  }
+
+  try {
+    await requireCanCreateWebsite(session.user.id);
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Tu plan no permite crear otro sitio.",
+    };
+  }
+
+  const clientAttemptKey = input.clientAttemptKey?.trim();
+
+  if (!clientAttemptKey) {
+    return {
+      success: false,
+      message: "No se pudo identificar este intento de Preview. Intenta generar de nuevo.",
+    };
+  }
+
+  if (!input.facts) {
+    return {
+      success: false,
+      message: "Agrega los datos básicos del negocio para generar el Preview.",
+    };
+  }
+
+  try {
+    const attempt = await reserveSiteCreationPreviewAttempt({
+      userId: session.user.id,
+      clientAttemptKey,
+    });
+
+    if (attempt.status === "failed") {
+      return {
+        success: false,
+        message: "Este intento de Preview fallo. Genera uno nuevo.",
+      };
+    }
+
+    const completedPreview = await getCompletedSiteCreationPreviewForAttempt({
+      userId: session.user.id,
+      previewId: attempt.id,
+    });
+
+    if (completedPreview?.status === "completed" && hasSiteCreationPlanV2Discriminator(completedPreview.plan)) {
+      const homePage = completedPreview.plan.pages.find((page) => page.isHome);
+      if (homePage) {
+        return {
+          success: true,
+          result: {
+            ok: true,
+            action: "preview",
+            scope: "site_creation",
+            message: `Preview comercial listo: ${completedPreview.plan.pages.length} paginas preparadas para crear.`,
+            tree: homePage.tree,
+            warnings: completedPreview.plan.quality.warnings,
+          },
+          previewId: completedPreview.id,
+          previewHash: completedPreview.previewHash,
+          previewPages: buildSiteCreationPreviewPages(completedPreview.plan),
+        };
+      }
+    }
+
+    if (attempt.status !== "planning") {
+      return {
+        success: false,
+        message: "Este intento de Preview ya no puede regenerarse. Genera uno nuevo.",
+      };
+    }
+
+    const compiled = await compileCommercialDesignV1({
+      mode: "customer",
+      designId: input.designId,
+      version: input.version,
+      facts: input.facts,
+    });
+
+    const homePage = compiled.plan.pages.find((page) => page.isHome);
+    if (!homePage) {
+      await failSiteCreationPreviewAttempt({
+        userId: session.user.id,
+        previewId: attempt.id,
+        error: "COMMERCIAL_HOME_MISSING",
+      }).catch(() => false);
+
+      return {
+        success: false,
+        message: "No se pudo preparar una pagina principal valida para este diseño.",
+      };
+    }
+
+    const preview = await completeSiteCreationPreviewAttempt({
+      userId: session.user.id,
+      previewId: attempt.id,
+      previewHash: compiled.planHash,
+      request: `Diseño comercial ${compiled.design.id}@${compiled.design.version}`,
+      business: {
+        name: compiled.facts.businessName,
+        industry: compiled.resolved.architecture.industry,
+        description: compiled.facts.description,
+        location: compiled.facts.location,
+        objective: "Conseguir solicitudes de servicio",
+        services: compiled.facts.services,
+        businessEvidence: compiled.facts.evidence,
+      },
+      plan: compiled.plan,
+    });
+
+    await recordDesignGeneration({
+      userId: session.user.id,
+      request: `Diseño comercial ${compiled.design.id}@${compiled.design.version}`,
+      industry: compiled.resolved.architecture.industry,
+      siteType: compiled.resolved.architecture.siteType,
+      objective: "Conseguir solicitudes de servicio",
+      requestedStyle: "commercial-design",
+      initialPlan: compiled.plan,
+      initialPlanHash: compiled.planHash,
+      siteCreationAttemptId: preview.id,
+    });
+
+    return {
+      success: true,
+      result: {
+        ok: true,
+        action: "preview",
+        scope: "site_creation",
+        message: `Preview comercial listo: ${compiled.plan.pages.length} paginas preparadas para crear.`,
+        tree: homePage.tree,
+        warnings: compiled.plan.quality.warnings,
+      },
+      previewId: preview.id,
+      previewHash: preview.previewHash,
+      previewPages: buildSiteCreationPreviewPages(compiled.plan),
     };
   } catch (error) {
     return {

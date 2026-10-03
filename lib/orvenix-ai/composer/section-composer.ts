@@ -997,13 +997,16 @@ function composeNavigation(
    * also happened to activate.
    */
   const brandName = context.businessName?.trim() || "Nombre del negocio"
+  // CSC-1B: commercial designs show only real brand facts (logo/tagline) and the Orvenix-resolved conversion action.
+  const commercialNav = context.strictFacts ? context.commercialFacts : undefined
 
   const root = add(nodes, createComposedNode({
     type: "siteNav",
     displayName: "Menu principal",
     props: {
       title: brandName,
-      subtitle: "Sitio profesional",
+      subtitle: commercialNav ? (commercialNav.tagline ?? "") : "Sitio profesional",
+      ...(commercialNav?.logoUrl ? { logoSrc: commercialNav.logoUrl } : {}),
       labelOverrides: pages.length
         ? pages.map((page) => `${page.slug}=${page.label}`).join("\n")
         : "home=Inicio\nservicios=Servicios\nproductos=Productos\nprecios=Precios\ncontacto=Contacto",
@@ -1011,8 +1014,8 @@ function composeNavigation(
       showHome: true,
       // COMMERCE-5B: an Orvenix-resolved action (or explicit omission) replaces the legacy "#contacto" anchor.
       showCta: navigationCtaEmphasis !== "none" && !context.instanceOmitCta,
-      ctaLabel: context.commerceCtaAction?.label ?? "Contactar",
-      ctaHref: context.commerceCtaAction?.href ?? "#contacto",
+      ctaLabel: context.commerceCtaAction?.label ?? commercialNav?.primaryCta?.label ?? "Contactar",
+      ctaHref: context.commerceCtaAction?.href ?? commercialNav?.primaryCta?.href ?? "#contacto",
       layout: "row",
       justify: navLayout === "centered-editorial" ? "center" : navLayout === "split" ? "end" : "center",
       variant: navLayout === "centered-editorial" ? "minimal" : navigationLinkStyle,
@@ -1038,15 +1041,16 @@ function resolveHeroCtaButtons(nodes: Record<string, ComposedNode>, context: Sec
    */
   if (context.instanceOmitCta) return []
 
+  const commercialCta = context.strictFacts ? context.commercialFacts?.primaryCta : undefined
   const primary = add(
     nodes,
-    createComposedNode({ type: "ctaButton", displayName: "CTA principal", props: { label: "Solicitar informacion", href: "#contacto", variant: "primary", size: "lg" } }),
+    createComposedNode({ type: "ctaButton", displayName: "CTA principal", props: { label: commercialCta?.label ?? "Solicitar informacion", href: commercialCta?.href ?? "#contacto", variant: "primary", size: "lg" } }),
   )
   const hasSecondaryTarget = Boolean(context.services?.length) || Boolean(context.products?.length)
   if (!hasSecondaryTarget) return [primary]
   const secondary = add(
     nodes,
-    createComposedNode({ type: "ctaButton", displayName: "CTA secundario", props: { label: "Ver servicios", href: "#servicios", variant: "secondary", size: "lg" } }),
+    createComposedNode({ type: "ctaButton", displayName: "CTA secundario", props: { label: "Ver servicios", href: context.strictFacts ? servicesHrefV1(context) : "#servicios", variant: "secondary", size: "lg" } }),
   )
   return [primary, secondary]
 }
@@ -2064,7 +2068,7 @@ function composeCardGridSection(
    */
   const personalizedItems = role === "features" ? resolveFeatureItems(context, copy.items) : copy.items
   const personalizedIntro = role === "process" ? resolveProcessIntro(context, copy.introText) : copy.introText
-  const finalItems = realItems.length ? realItems : personalizedItems
+  const finalItems = context.strictFacts && context.strictCardItems ? context.strictCardItems : realItems.length ? realItems : personalizedItems
   const nodes: Record<string, ComposedNode> = {}
 
   /*
@@ -2653,7 +2657,22 @@ function composeContact(
   const hasRealContact = Boolean(realContact?.whatsapp || realContact?.phone || realContact?.email)
   const contactLineProps = useContrastBackground ? { color: closingTextColors.body } : {}
 
-  const contactLineIds = hasRealContact
+  const factLineIds = context.strictFacts
+    ? [
+        context.commercialFacts?.address ? textNode(nodes, "Direccion", `Dirección: ${context.commercialFacts.address}`, contactLineProps) : null,
+        context.commercialFacts?.hours ? textNode(nodes, "Horario", `Horario: ${context.commercialFacts.hours}`, contactLineProps) : null,
+        context.commercialFacts?.serviceArea?.length ? textNode(nodes, "Zona de servicio", `Zona de servicio: ${context.commercialFacts.serviceArea.join(", ")}`, contactLineProps) : null,
+      ].filter((id): id is string => Boolean(id))
+    : []
+
+  const contactLineIds = context.strictFacts
+    ? [
+        realContact?.whatsapp ? textNode(nodes, "WhatsApp", `WhatsApp: ${realContact.whatsapp}`, contactLineProps) : null,
+        realContact?.phone ? textNode(nodes, "Telefono", `Teléfono: ${realContact.phone}`, contactLineProps) : null,
+        realContact?.email ? textNode(nodes, "Correo", `Correo: ${realContact.email}`, contactLineProps) : null,
+        ...factLineIds,
+      ].filter((id): id is string => Boolean(id))
+    : hasRealContact
     ? [
         realContact?.whatsapp ? textNode(nodes, "WhatsApp", `WhatsApp: ${realContact.whatsapp}`, contactLineProps) : null,
         realContact?.phone ? textNode(nodes, "Telefono", `Telefono: ${realContact.phone}`, contactLineProps) : null,
@@ -2665,12 +2684,16 @@ function composeContact(
       ]
 
   const primaryHref = realContact?.whatsapp ? `https://wa.me/${realContact.whatsapp}` : "#"
-  const primaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto", props: { label: bookingPresentation === "booking-card" ? "Solicitar cita" : "Enviar mensaje", href: primaryHref, variant: "primary", size: "lg" } }))
+  // CSC-1B: strict mode -> the Orvenix-resolved conversion action built from real facts (never a dead "#").
+  const strictContactAction = context.strictFacts ? contactChannelActionV1(context) : undefined
+  const primaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto", props: strictContactAction
+    ? { label: strictContactAction.label, href: strictContactAction.href, variant: "primary", size: "lg" }
+    : { label: bookingPresentation === "booking-card" ? "Solicitar cita" : "Enviar mensaje", href: primaryHref, variant: "primary", size: "lg" } }))
 
   const contentChildren = [heading, copy, ...contactLineIds]
 
   if (isConversionPage) {
-    const secondaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto secundario", props: { label: "Ver servicios", href: "#servicios", variant: "secondary", size: "lg" } }))
+    const secondaryCta = add(nodes, createComposedNode({ type: "ctaButton", displayName: "Boton contacto secundario", props: { label: "Ver servicios", href: context.strictFacts ? servicesHrefV1(context) : "#servicios", variant: "secondary", size: "lg" } }))
     const actions = wrapperNode(nodes, "Acciones contacto", "flex flex-col gap-3 sm:flex-row", [primaryCta, secondaryCta])
     contentChildren.push(actions)
   } else {
@@ -2754,7 +2777,14 @@ function composeCTA(
    */
   const resolved = resolveCtaCopy(context, ctaCopy(context.archetype))
   // CF-3E: provider copy may set the heading/body only; label/href stay Orvenix-owned.
-  const copy = { ...resolved, title: context.instanceCreativeCopy?.headline ?? resolved.title, body: context.instanceCreativeCopy?.intro ?? resolved.body }
+  const strictCta = context.strictFacts ? context.commercialFacts?.primaryCta : undefined
+  const copy = {
+    ...resolved,
+    title: context.instanceCreativeCopy?.headline ?? resolved.title,
+    body: context.instanceCreativeCopy?.intro ?? resolved.body,
+    // CSC-1B: commercial designs close with the Orvenix-resolved conversion action.
+    ...(strictCta ? { label: strictCta.label, href: strictCta.href } : {}),
+  }
   /*
    * V2-6.2: DRAMATIC CLOSING deterministically uses the banner shape
    * (already full-width/dark/xl-padding, IDENTICAL outer shell to the
@@ -2803,6 +2833,9 @@ function footerNavText(
 function composeFooter(
   context: SectionCompositionContext = {},
 ): ComposedSection {
+  if (context.strictFacts && context.commercialFacts?.footerPreset) {
+    return composeCommercialFooterV1(context, context.commercialFacts.footerPreset)
+  }
   const nodes: Record<string, ComposedNode> = {}
   const brandName = context.businessName?.trim() || "Nombre del negocio"
   const brand = headingNode(nodes, "Marca footer", brandName, 3, { size: "xl", color: "#ffffff" })
@@ -2970,6 +3003,133 @@ function applyCommerceSurfaceToSection(role: SectionRole, section: ComposedSecti
   return section
 }
 
+/* ------------------------------------------------------------------ */
+/* CSC-1B: strict-facts composition (commercial designs).              */
+/* ------------------------------------------------------------------ */
+
+/** Internal link to the services page when the site has one, else the in-page anchor. */
+function servicesHrefV1(context: SectionCompositionContext): string {
+  return context.sitePages?.some((page) => page.slug === "servicios") ? "page:servicios" : "#servicios"
+}
+
+/** The real contact channel a contact section's main button opens (WhatsApp > phone > email). */
+function contactChannelActionV1(context: SectionCompositionContext): { label: string; href: string } | undefined {
+  const contact = context.businessEvidence?.contact
+  if (contact?.whatsapp) return { label: "Escribir por WhatsApp", href: `https://wa.me/${contact.whatsapp}` }
+  if (contact?.phone) return { label: "Llamar ahora", href: `tel:${contact.phone}` }
+  if (contact?.email) return { label: "Enviar correo", href: `mailto:${contact.email}` }
+  return undefined
+}
+
+/** Benefit cards derived ONLY from real facts -- never a generic promise or invented claim. */
+function commercialBenefitItemsV1(context: SectionCompositionContext): Array<[string, string]> {
+  const facts = context.commercialFacts
+  const contact = context.businessEvidence?.contact
+  const items: Array<[string, string]> = []
+  if (contact?.whatsapp) items.push(["Atención por WhatsApp", "Escríbenos y cuéntanos qué necesitas; seguimos la conversación por ese mismo canal."])
+  if (facts?.serviceArea?.length) items.push(["Zona de servicio", `Atendemos en ${facts.serviceArea.join(", ")}.`])
+  if (facts?.hours) items.push(["Horario de atención", facts.hours])
+  if ((context.services ?? []).some((service) => service.priceLabel?.trim())) items.push(["Precios de referencia", "Consulta los precios publicados de cada servicio antes de escribirnos."])
+  if (facts?.address) items.push(["Ubicación", facts.address])
+  return items.slice(0, 4)
+}
+
+function composeFactFaqV1(context: SectionCompositionContext, entries: Array<{ question: string; answer: string }>): ComposedSection {
+  const nodes: Record<string, ComposedNode> = {}
+  const textColors = readableTextColorsFor(FAQ_SECTION_BACKGROUND)
+  const heading = headingNode(nodes, "Título FAQ", "Preguntas frecuentes", 2, { size: "3xl", align: "center", color: textColors.heading })
+  const items = entries.slice(0, 8).map((entry, index) => {
+    const question = headingNode(nodes, `Pregunta ${index + 1}`, entry.question, 3, { size: "lg" })
+    const answer = textNode(nodes, `Respuesta ${index + 1}`, entry.answer)
+    return wrapperNode(nodes, `FAQ ${index + 1}`, "rounded-2xl border border-slate-200 bg-white p-5", [question, answer], "article")
+  })
+  const list = wrapperNode(nodes, "Lista FAQ", "mx-auto grid max-w-3xl gap-4", items)
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Preguntas frecuentes", props: { maxWidth: "lg", paddingY: "xl", paddingX: "lg", background: FAQ_SECTION_BACKGROUND }, children: [heading, list] }))
+  return { role: "faq", rootId: root, nodes, purpose: "Resolver dudas reales del negocio." }
+}
+
+/**
+ * CSC-1B: the strict-facts decision for a role. `null` -> OMIT the section
+ * (no real data to show); a section -> recomposed from real facts only;
+ * `undefined` -> the role's normal composer already uses only real data
+ * (or Orvenix-owned structural copy), so it runs unchanged.
+ */
+function composeStrictFactsSectionV1(role: SectionRole, context: SectionCompositionContext): ComposedSection | null | undefined {
+  switch (role) {
+    case "services":
+      return (context.services ?? []).some((service) => service.name?.trim()) ? undefined : null
+    case "products":
+      return context.products?.length ? undefined : null
+    case "pricing": {
+      const priced = (context.services ?? []).filter((service) => service.name?.trim() && service.priceLabel?.trim())
+      if (!priced.length) return null
+      const items = priced.map((service): [string, string] => [service.name.trim(), [service.priceLabel!.trim(), service.description?.trim()].filter(Boolean).join(" · ")])
+      return composeCardGridSection("pricing", "Precios de referencia", "Precios publicados por el negocio. Confirma alcance y disponibilidad al contactar.", items, { ...context, strictCardItems: items })
+    }
+    case "features": {
+      const items = commercialBenefitItemsV1(context)
+      if (items.length < 2) return null
+      return composeCardGridSection("features", "Cómo trabajamos contigo", "Información real del negocio para que sepas qué esperar.", items, { ...context, strictCardItems: items })
+    }
+    case "faq": {
+      const entries = (context.commercialFacts?.faq ?? []).filter((entry) => entry.question.trim() && entry.answer.trim())
+      return entries.length ? composeFactFaqV1(context, entries) : null
+    }
+    case "trust": {
+      const nodes: Record<string, ComposedNode> = {}
+      return composePersonTrust(context, nodes) ?? composeOrganizationTrust(context, nodes) ?? composeCredibilityStats(context, nodes) ?? null
+    }
+    case "testimonials":
+      return usableTestimonials(context).length ? undefined : null
+    case "content":
+      return null
+    default:
+      return undefined
+  }
+}
+
+/** CSC-1B: bounded footer density presets that render ONLY facts that exist. */
+function composeCommercialFooterV1(context: SectionCompositionContext, preset: "minimal" | "standard" | "rich"): ComposedSection {
+  const nodes: Record<string, ComposedNode> = {}
+  const background = "#071826"
+  const facts = context.commercialFacts
+  const contact = context.businessEvidence?.contact
+  const brandName = context.businessName?.trim() || ""
+  const brandChildren = [headingNode(nodes, "Marca footer", brandName, 3, { size: "xl", color: "#ffffff" })]
+  if (preset !== "minimal" && facts?.tagline) brandChildren.push(textNode(nodes, "Lema footer", facts.tagline, { color: "#cbd5e1" }))
+  const columns = [wrapperNode(nodes, "Marca", "space-y-2", brandChildren)]
+
+  if (preset !== "minimal") {
+    const lines = [
+      contact?.whatsapp ? textNode(nodes, "WhatsApp footer", `WhatsApp: ${contact.whatsapp}`, { color: "#e2e8f0" }) : null,
+      contact?.phone ? textNode(nodes, "Telefono footer", `Teléfono: ${contact.phone}`, { color: "#e2e8f0" }) : null,
+      contact?.email ? textNode(nodes, "Correo footer", `Correo: ${contact.email}`, { color: "#e2e8f0" }) : null,
+      ...(preset === "rich"
+        ? [
+            facts?.address ? textNode(nodes, "Direccion footer", facts.address, { color: "#cbd5e1" }) : null,
+            facts?.hours ? textNode(nodes, "Horario footer", `Horario: ${facts.hours}`, { color: "#cbd5e1" }) : null,
+            facts?.serviceArea?.length ? textNode(nodes, "Zona footer", `Zona de servicio: ${facts.serviceArea.join(", ")}`, { color: "#cbd5e1" }) : null,
+          ]
+        : []),
+    ].filter((id): id is string => Boolean(id))
+    if (lines.length) columns.push(wrapperNode(nodes, "Contacto footer", "space-y-1", lines))
+  }
+
+  if (preset === "rich" && facts?.social?.length) {
+    const links = facts.social.slice(0, 5).map((entry) => add(nodes, createComposedNode({
+      type: "ctaButton",
+      displayName: `Red social ${entry.network}`,
+      props: { label: entry.network.charAt(0).toUpperCase() + entry.network.slice(1), href: entry.url, variant: "ghost", size: "sm" },
+    })))
+    columns.push(wrapperNode(nodes, "Redes footer", "flex flex-wrap gap-2", links))
+  }
+
+  columns.push(textNode(nodes, "Links footer", footerNavText(context.sitePages), { color: "#e2e8f0" }))
+  const grid = wrapperNode(nodes, "Contenido footer", "mx-auto grid max-w-6xl gap-8 md:grid-cols-3 md:items-start", columns)
+  const root = add(nodes, createComposedNode({ type: "section", displayName: "Footer", props: { maxWidth: "full", paddingY: "lg", paddingX: "lg", background }, children: [grid] }))
+  return { role: "footer", rootId: root, nodes, purpose: "Cerrar con datos reales del negocio." }
+}
+
 export function composeSection(
   role: SectionRole,
   context: SectionCompositionContext = {},
@@ -2985,6 +3145,11 @@ function composeSectionForRole(
   role: SectionRole,
   context: SectionCompositionContext = {},
 ): ComposedSection | null {
+  if (context.strictFacts) {
+    const strict = composeStrictFactsSectionV1(role, context)
+    if (strict !== undefined) return strict
+  }
+
   switch (role) {
     case "navigation":
       return composeNavigation(context)

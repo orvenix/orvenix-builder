@@ -173,6 +173,9 @@ interface CompileBlueprintOptions {
    */
   resolvedGalleryAssets?: SectionCompositionContext["resolvedGalleryAssets"]
   resolvedMediaAsset?: SectionCompositionContext["resolvedMediaAsset"]
+  /** CSC-1B: commercial-design mode -- threaded into every section (absent -> unchanged). */
+  strictFacts?: boolean
+  commercialFacts?: SectionCompositionContext["commercialFacts"]
 }
 
 function createBlockSection(
@@ -324,6 +327,8 @@ function compilePage(
         ...(options.commerceSurfaces ? { commerceSurfaces: true } : {}),
         ...(options.resolvedGalleryAssets?.length ? { resolvedGalleryAssets: options.resolvedGalleryAssets } : {}),
         ...(options.resolvedMediaAsset ? { resolvedMediaAsset: options.resolvedMediaAsset } : {}),
+        ...(options.strictFacts ? { strictFacts: true } : {}),
+        ...(options.commercialFacts ? { commercialFacts: options.commercialFacts } : {}),
     }
 
     /*
