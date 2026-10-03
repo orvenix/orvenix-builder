@@ -4,6 +4,7 @@ import { getStorageMode } from "@/lib/storage-mode";
 import { sendWelcomeEmail } from "@/lib/email";
 import { recordReferral } from "@/lib/affiliates";
 import { serverError } from "@/lib/server-log";
+import { RATE_LIMIT_POLICIES_V1, checkRateLimitV1, rateLimitIdentityV1, rateLimitedResponseV1 } from "@/lib/security/rate-limit";
 
 function toReadableError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
@@ -30,6 +31,9 @@ function getRefCodeFromCookie(request: Request): string | null {
 }
 
 export async function POST(request: Request) {
+  const limited = await checkRateLimitV1(RATE_LIMIT_POLICIES_V1.register, rateLimitIdentityV1(request));
+  if (limited.ok === false) return rateLimitedResponseV1(limited);
+
   try {
     const body = await request.json() as { name?: string; email?: string; password?: string };
     const { name, email, password } = body;

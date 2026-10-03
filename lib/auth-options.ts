@@ -1,9 +1,14 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { getUserByEmail, roleForEmail, verifyPassword } from "@/lib/auth";
+import { resolveAuthSecretV1 } from "@/lib/auth-secret";
+import { RATE_LIMIT_POLICIES_V1, checkRateLimitV1, rateLimitIdentityV1 } from "@/lib/security/rate-limit";
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET ?? "orvenix-dev-secret",
+  // SEC-1 (SEC0-09): resolved per request; production without a configured secret fails closed.
+  get secret() {
+    return resolveAuthSecretV1();
+  },
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
@@ -16,8 +21,13 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
+        // SEC-1 (SEC0-10): bound password guessing per client + account.
+        const headers = (req?.headers ?? {}) as Record<string, string | undefined>;
+        const client = rateLimitIdentityV1({ headers: { get: (name: string) => headers[name] ?? null } });
+        const limited = await checkRateLimitV1(RATE_LIMIT_POLICIES_V1.login, `${client}|${String(credentials.email).trim().toLowerCase()}`);
+        if (!limited.ok) return null;
         const user = await getUserByEmail(credentials.email as string);
         if (!user) return null;
         const valid = verifyPassword(credentials.password as string, user.password);

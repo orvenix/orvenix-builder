@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import type { Prisma } from "@/generated/editor-prisma"
-import { getAuthSession } from "@/lib/auth-session"
 import { editorPrisma } from "@/lib/editor-db"
-import { canManageSite } from "@/lib/auth"
-import type { UserRole } from "@/lib/auth"
+import { authzErrorResponse, requireManagedSite, requireSessionUser, requireSiteVariant, type SessionUserV1 } from "@/lib/authz"
 import { requireEcommercePlan } from "@/lib/plan-guard"
 
 type Ctx = { params: Promise<{ siteId: string; productId: string; variantId: string }> }
@@ -18,9 +16,9 @@ const UpdateVariantSchema = z.object({
   attributes: z.record(z.string(), z.string()).optional(),
 })
 
-async function requireStoreAccess(siteId: string, user: { id: string; role?: string | null }) {
-  const allowed = await canManageSite(siteId, user.id, (user.role ?? "CLIENT") as UserRole)
-  if (!allowed) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 })
+async function requireStoreAccess(siteId: string, user: SessionUserV1) {
+  const site = await requireManagedSite(user, siteId)
+  if (site.ok === false) return authzErrorResponse(site)
 
   try {
     await requireEcommercePlan(user.id)
@@ -38,24 +36,21 @@ async function requireStoreAccess(siteId: string, user: { id: string; role?: str
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
-  const session = await getAuthSession()
-  if (!session?.user?.id) return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 })
+  const session = await requireSessionUser()
+  if (session.ok === false) return authzErrorResponse(session)
 
   const { siteId, productId, variantId } = await params
-  const accessError = await requireStoreAccess(siteId, session.user)
+  const accessError = await requireStoreAccess(siteId, session.value)
   if (accessError) return accessError
 
-  const variant = await editorPrisma.productVariant.findFirst({
-    where: { id: variantId, productId, product: { siteId } },
-    select: { id: true },
-  })
-  if (!variant) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 })
+  const variant = await requireSiteVariant(siteId, productId, variantId)
+  if (variant.ok === false) return authzErrorResponse(variant)
 
   const body = UpdateVariantSchema.safeParse(await req.json())
   if (!body.success) return NextResponse.json({ error: body.error.flatten() }, { status: 400 })
 
   const updated = await editorPrisma.productVariant.update({
-    where: { id: variantId },
+    where: { id: variant.value.variantId },
     data: {
       ...(body.data.sku !== undefined ? { sku: body.data.sku } : {}),
       ...(body.data.name !== undefined ? { name: body.data.name } : {}),
@@ -70,19 +65,16 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 export async function DELETE(_req: Request, { params }: Ctx) {
-  const session = await getAuthSession()
-  if (!session?.user?.id) return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 })
+  const session = await requireSessionUser()
+  if (session.ok === false) return authzErrorResponse(session)
 
   const { siteId, productId, variantId } = await params
-  const accessError = await requireStoreAccess(siteId, session.user)
+  const accessError = await requireStoreAccess(siteId, session.value)
   if (accessError) return accessError
 
-  const variant = await editorPrisma.productVariant.findFirst({
-    where: { id: variantId, productId, product: { siteId } },
-    select: { id: true },
-  })
-  if (!variant) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 })
+  const variant = await requireSiteVariant(siteId, productId, variantId)
+  if (variant.ok === false) return authzErrorResponse(variant)
 
-  await editorPrisma.productVariant.delete({ where: { id: variantId } })
+  await editorPrisma.productVariant.delete({ where: { id: variant.value.variantId } })
   return NextResponse.json({ ok: true })
 }

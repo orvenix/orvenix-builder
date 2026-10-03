@@ -1,6 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { resolveAuthSecretV1 } from "@/lib/auth-secret";
 
 function isApiRoute(pathname: string): boolean {
   return pathname.startsWith("/api/");
@@ -9,7 +10,8 @@ function isApiRoute(pathname: string): boolean {
 export default async function proxy(request: NextRequest) {
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET,
+    // SEC-1 (SEC0-09): same fail-closed resolver as NextAuth.
+    secret: resolveAuthSecretV1(),
   });
 
   if (token) {

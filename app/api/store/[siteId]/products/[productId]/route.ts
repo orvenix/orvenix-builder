@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth-session"
 import { editorPrisma } from "@/lib/editor-db"
-import { canManageSite } from "@/lib/auth"
-import type { UserRole } from "@/lib/auth"
+import { authzErrorResponse, requireManagedSite, requireSessionUser, requireSiteProduct, type SessionUserV1 } from "@/lib/authz"
 import { requireEcommercePlan } from "@/lib/plan-guard"
 import { z } from "zod"
 import type { Prisma } from "@/generated/editor-prisma"
@@ -38,9 +36,9 @@ const VariantMatrixSchema = z.object({
   limit: z.number().int().min(1).max(100).default(50),
 })
 
-async function requireStoreAccess(siteId: string, user: { id: string; role?: string | null }) {
-  const allowed = await canManageSite(siteId, user.id, (user.role ?? "CLIENT") as UserRole)
-  if (!allowed) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 })
+async function requireStoreAccess(siteId: string, user: SessionUserV1) {
+  const site = await requireManagedSite(user, siteId)
+  if (site.ok === false) return authzErrorResponse(site)
 
   try {
     await requireEcommercePlan(user.id)
@@ -59,11 +57,11 @@ async function requireStoreAccess(siteId: string, user: { id: string; role?: str
 
 // GET /api/store/[siteId]/products/[productId]
 export async function GET(_req: Request, { params }: Ctx) {
-  const session = await getAuthSession()
-  if (!session?.user?.id) return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 })
+  const session = await requireSessionUser()
+  if (session.ok === false) return authzErrorResponse(session)
 
   const { siteId, productId } = await params
-  const accessError = await requireStoreAccess(siteId, session.user)
+  const accessError = await requireStoreAccess(siteId, session.value)
   if (accessError) return accessError
 
   const product = await editorPrisma.product.findFirst({
@@ -77,55 +75,71 @@ export async function GET(_req: Request, { params }: Ctx) {
 
 // PATCH /api/store/[siteId]/products/[productId]
 export async function PATCH(req: Request, { params }: Ctx) {
-  const session = await getAuthSession()
-  if (!session?.user?.id) return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 })
+  const session = await requireSessionUser()
+  if (session.ok === false) return authzErrorResponse(session)
 
   const { siteId, productId } = await params
-  const accessError = await requireStoreAccess(siteId, session.user)
+  const accessError = await requireStoreAccess(siteId, session.value)
   if (accessError) return accessError
+
+  // SEC-1 (SEC0-01): the product must belong to the authorized site; a foreign id is NOT_FOUND.
+  const owned = await requireSiteProduct(siteId, productId)
+  if (owned.ok === false) return authzErrorResponse(owned)
 
   const body = UpdateSchema.safeParse(await req.json())
   if (!body.success) return NextResponse.json({ error: body.error.flatten() }, { status: 400 })
 
   const { media, metadata, ...rest } = body.data
-  const product = await editorPrisma.product.update({
-    where: { id: productId },
+  // The mutation itself is tenant-scoped too (id AND siteId), not only the pre-check.
+  const updated = await editorPrisma.product.updateMany({
+    where: { id: owned.value.productId, siteId },
     data: {
       ...rest,
       ...(media    ? { media:    media    as Prisma.InputJsonValue } : {}),
       ...(metadata ? { metadata: metadata as Prisma.InputJsonValue } : {}),
     },
+  })
+  if (updated.count !== 1) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 })
+
+  const product = await editorPrisma.product.findFirst({
+    where: { id: owned.value.productId, siteId },
     include: { variants: true },
   })
+  if (!product) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 })
 
   return NextResponse.json({ product })
 }
 
 // DELETE /api/store/[siteId]/products/[productId]
 export async function DELETE(_req: Request, { params }: Ctx) {
-  const session = await getAuthSession()
-  if (!session?.user?.id) return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 })
+  const session = await requireSessionUser()
+  if (session.ok === false) return authzErrorResponse(session)
 
   const { siteId, productId } = await params
-  const accessError = await requireStoreAccess(siteId, session.user)
+  const accessError = await requireStoreAccess(siteId, session.value)
   if (accessError) return accessError
 
-  const product = await editorPrisma.product.findFirst({ where: { id: productId, siteId }, select: { id: true } })
-  if (!product) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 })
+  const owned = await requireSiteProduct(siteId, productId)
+  if (owned.ok === false) return authzErrorResponse(owned)
 
-  await editorPrisma.product.delete({ where: { id: productId } })
+  const deleted = await editorPrisma.product.deleteMany({ where: { id: owned.value.productId, siteId } })
+  if (deleted.count !== 1) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 })
   return NextResponse.json({ ok: true })
 }
 
 // PUT /api/store/[siteId]/products/[productId] — añadir variante
 // Reutilizamos POST en la misma ruta con body { _action: "add_variant" }
 export async function PUT(req: Request, { params }: Ctx) {
-  const session = await getAuthSession()
-  if (!session?.user?.id) return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 })
+  const session = await requireSessionUser()
+  if (session.ok === false) return authzErrorResponse(session)
 
   const { siteId, productId } = await params
-  const accessError = await requireStoreAccess(siteId, session.user)
+  const accessError = await requireStoreAccess(siteId, session.value)
   if (accessError) return accessError
+
+  // SEC-1 (SEC0-02): ONE boundary for both branches -- prove product ∈ site before any variant write.
+  const owned = await requireSiteProduct(siteId, productId)
+  if (owned.ok === false) return authzErrorResponse(owned)
 
   const rawBody = await req.json()
   const matrixBody = VariantMatrixSchema.safeParse(rawBody)
@@ -169,7 +183,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     const variants = await editorPrisma.$transaction(
       rows.map((row) => editorPrisma.productVariant.create({
         data: {
-          productId,
+          productId: owned.value.productId,
           sku: row.sku,
           name: row.name,
           priceMxn: matrixBody.data.priceMxn,
@@ -188,7 +202,7 @@ export async function PUT(req: Request, { params }: Ctx) {
 
   const variant = await editorPrisma.productVariant.create({
     data: {
-      productId,
+      productId:        owned.value.productId,
       sku:              body.data.sku,
       name:             body.data.name,
       priceMxn:         body.data.priceMxn,

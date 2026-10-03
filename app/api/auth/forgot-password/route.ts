@@ -3,8 +3,12 @@ import { getUserByEmail } from "@/lib/auth"
 import { createResetTokenForUser } from "@/lib/reset-tokens"
 import { sendResetPasswordEmail } from "@/lib/email"
 import { serverError } from "@/lib/server-log"
+import { RATE_LIMIT_POLICIES_V1, checkRateLimitV1, rateLimitIdentityV1, rateLimitedResponseV1 } from "@/lib/security/rate-limit"
 
 export async function POST(request: Request) {
+  const limited = await checkRateLimitV1(RATE_LIMIT_POLICIES_V1.forgotPassword, rateLimitIdentityV1(request))
+  if (limited.ok === false) return rateLimitedResponseV1(limited)
+
   try {
     const body = await request.json() as { email?: string }
     const email = body.email?.trim().toLowerCase()
@@ -12,6 +16,10 @@ export async function POST(request: Request) {
     if (!email) {
       return NextResponse.json({ error: "El correo es requerido." }, { status: 400 })
     }
+
+    // Per-address bound: no mail-bombing a victim through password resets.
+    const perEmail = await checkRateLimitV1(RATE_LIMIT_POLICIES_V1.forgotPasswordEmail, email)
+    if (perEmail.ok === false) return rateLimitedResponseV1(perEmail)
 
     // Respuesta generica siempre: no revelar si el email existe.
     const user = await getUserByEmail(email)

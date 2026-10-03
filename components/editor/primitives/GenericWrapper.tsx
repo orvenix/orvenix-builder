@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { BlockComponentProps } from "@/types/editor";
+import { sanitizeHtmlV1 } from "@/lib/security/html-sanitizer";
 
 export interface GenericWrapperProps {
   originalType?: string;
@@ -29,6 +30,8 @@ export function GenericWrapper({
 }) {
 
   const tagName = SAFE_TAGS.has(originalType) ? originalType : "div";
+  // SEC-1 (SEC0-03): render boundary -- only the shared allowlisted subset reaches innerHTML.
+  const safeContent = content ? sanitizeHtmlV1(content) : "";
 
   return React.createElement(
     tagName,
@@ -40,8 +43,8 @@ export function GenericWrapper({
     React.createElement(
       React.Fragment,
       null,
-      content ? React.createElement("div", {
-        dangerouslySetInnerHTML: { __html: content },
+      safeContent ? React.createElement("div", {
+        dangerouslySetInnerHTML: { __html: safeContent },
       }) : null,
       children
     )

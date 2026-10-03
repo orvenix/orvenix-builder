@@ -2,6 +2,9 @@ import Anthropic from "@anthropic-ai/sdk"
 import { NextResponse } from "next/server"
 import { generateSectionAI } from "@/app/actions/ai"
 import { runAIGenerationJob } from "@/lib/ai/jobs"
+import { authzErrorResponse, requireManagedSite, requireSessionUser } from "@/lib/authz"
+import { requireAIPlan } from "@/lib/plan-guard"
+import { RATE_LIMIT_POLICIES_V1, checkRateLimitV1, rateLimitIdentityV1, rateLimitedResponseV1 } from "@/lib/security/rate-limit"
 
 export const runtime = "nodejs"
 
@@ -111,6 +114,22 @@ async function describeSketchWithClaude(file: File, fidelity: Fidelity, designSy
 }
 
 export async function POST(request: Request) {
+  // SEC-1 (SEC0-06): authenticated + AI plan + site ownership BEFORE any provider call or job write.
+  const session = await requireSessionUser()
+  if (session.ok === false) return authzErrorResponse(session)
+
+  try {
+    await requireAIPlan(session.value.id)
+  } catch {
+    return NextResponse.json(
+      { error: "Actualiza tu plan para acceder a Orvenix AI.", code: "PLAN_REQUIRED" },
+      { status: 403 },
+    )
+  }
+
+  const limited = await checkRateLimitV1(RATE_LIMIT_POLICIES_V1.sketchToWeb, rateLimitIdentityV1(request, session.value.id))
+  if (limited.ok === false) return rateLimitedResponseV1(limited)
+
   let formData: FormData
 
   try {
@@ -135,6 +154,11 @@ export async function POST(request: Request) {
 
   if (file.size > MAX_SIZE_BYTES) {
     return NextResponse.json({ error: "La imagen excede el tamaño máximo permitido." }, { status: 400 })
+  }
+
+  if (siteId) {
+    const site = await requireManagedSite(session.value, siteId)
+    if (site.ok === false) return authzErrorResponse(site)
   }
 
   const payload = await runAIGenerationJob(

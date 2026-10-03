@@ -1,22 +1,36 @@
 import { NextResponse } from 'next/server';
 import { createContact } from '@/lib/adminCsv';
 import { triggerAutomations } from '@/lib/automation/runtime';
+import { RATE_LIMIT_POLICIES_V1, checkRateLimitV1, rateLimitIdentityV1, rateLimitedResponseV1 } from '@/lib/security/rate-limit';
+
+// SEC-1 (SEC0-08/10): public form -> bounded fields + per-client rate limit.
+const FIELD_LIMITS = { nombre: 120, email: 254, telefono: 40, servicio: 120, presupuesto: 80, mensaje: 5000, siteId: 191 } as const;
+
+function field(body: Record<string, unknown>, key: keyof typeof FIELD_LIMITS): string {
+  const value = body[key];
+  return typeof value === 'string' ? value.trim().slice(0, FIELD_LIMITS[key]) : '';
+}
 
 export async function POST(request: Request) {
-  let body: Record<string, string>;
+  const limited = await checkRateLimitV1(RATE_LIMIT_POLICIES_V1.contact, rateLimitIdentityV1(request));
+  if (limited.ok === false) return rateLimitedResponseV1(limited);
+
+  let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('INVALID_BODY');
+    body = parsed as Record<string, unknown>;
   } catch {
     return NextResponse.json({ ok: false, message: 'Solicitud inválida.' }, { status: 400 });
   }
 
-  const nombre    = (body.nombre    ?? '').trim();
-  const email     = (body.email     ?? '').trim();
-  const telefono  = (body.telefono  ?? '').trim();
-  const servicio  = (body.servicio  ?? '').trim();
-  const presupuesto = (body.presupuesto ?? '').trim();
-  const mensaje   = (body.mensaje   ?? '').trim();
-  const siteId    = ((body.siteId ?? '') || process.env.ORVENIX_MARKETING_SITE_ID || '').trim();
+  const nombre    = field(body, 'nombre');
+  const email     = field(body, 'email');
+  const telefono  = field(body, 'telefono');
+  const servicio  = field(body, 'servicio');
+  const presupuesto = field(body, 'presupuesto');
+  const mensaje   = field(body, 'mensaje');
+  const siteId    = (field(body, 'siteId') || process.env.ORVENIX_MARKETING_SITE_ID || '').trim();
 
   // Validate required fields
   if (!nombre || !email || !mensaje) {

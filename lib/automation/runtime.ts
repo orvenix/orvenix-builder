@@ -7,6 +7,7 @@ import { isFileStorageMode } from "@/lib/storage-mode"
 import { canUseAutomations } from "@/lib/billing/plan-entitlements"
 import { getUserPlanAccess } from "@/lib/plan-guard"
 import { sendEmail } from "@/lib/email"
+import { buildAutomationEmailV1 } from "@/lib/automation/email-actions"
 import {
   getCmsWorkflowPublishedAt,
   isCmsWorkflowStatus,
@@ -263,7 +264,7 @@ async function setRecordWorkflowStatus(recordId: string, status: string) {
   })
 }
 
-async function runAutomationAction(action: AutomationAction, payload: Record<string, unknown>) {
+async function runAutomationAction(action: AutomationAction, payload: Record<string, unknown>, triggerType: AutomationTriggerType) {
   if (action.type === "append_order_note") {
     const orderId = typeof payload.orderId === "string" ? payload.orderId : ""
     const note = String(action.config?.note ?? payload.eventLabel ?? "automation")
@@ -291,31 +292,16 @@ async function runAutomationAction(action: AutomationAction, payload: Record<str
     return
   }
 
-  if (action.type === "email_admin") {
-    const to = String(action.config?.to ?? process.env.ORVENIX_ADMIN_EMAILS?.split(",")[0] ?? "").trim()
-    const subject = String(action.config?.subject ?? payload.subject ?? "Nueva automatización ejecutada").trim()
-    const html = `<div style="font-family:Arial,sans-serif"><h2>${subject}</h2><pre style="white-space:pre-wrap">${JSON.stringify(payload, null, 2)}</pre></div>`
-    if (to) {
-      await sendEmail({ to, subject, html })
-    }
-    return
-  }
-
-  if (action.type === "email_contact") {
-    const to = String(
-      action.config?.to
-      ?? payload.email
-      ?? payload.customerEmail
-      ?? ""
-    ).trim()
-    const subject = String(action.config?.subject ?? "Seguimiento de Orvenix").trim()
-    const message = String(
-      action.config?.message
-      ?? "Gracias por tu interes. Te contactaremos pronto."
-    ).trim()
-    const html = `<div style="font-family:Arial,sans-serif"><p>${message}</p></div>`
-    if (to) {
-      await sendEmail({ to, subject, html })
+  if (action.type === "email_admin" || action.type === "email_contact") {
+    // SEC-1 (SEC0-08): escaped HTML; public-trigger payload addresses are never recipients.
+    const email = buildAutomationEmailV1({
+      action,
+      triggerType,
+      payload,
+      platformAdminEmail: process.env.ORVENIX_ADMIN_EMAILS?.split(",")[0] ?? null,
+    })
+    if (email) {
+      await sendEmail(email)
     }
     return
   }
@@ -483,7 +469,7 @@ export async function triggerAutomations(
         continue
       }
       for (const action of graph.actions) {
-        await runAutomationAction(action, payload)
+        await runAutomationAction(action, payload, triggerType)
       }
       await logAutomationRun({
         id: randomUUID(),

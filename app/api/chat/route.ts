@@ -1,3 +1,7 @@
+import { NextResponse } from "next/server"
+import { getAuthSession } from "@/lib/auth-session"
+import { CHAT_MAX_BODY_BYTES_V1, normalizeChatMessagesV1 } from "@/lib/ai/chat-request"
+import { RATE_LIMIT_POLICIES_V1, checkRateLimitV1, rateLimitIdentityV1, rateLimitedResponseV1 } from "@/lib/security/rate-limit"
 import { getChatKnowledgeContext } from "@/lib/chat-knowledge"
 import { buildSiteGenerationGuideContext } from "@/lib/orvenix-ai/guidelines/site-generation-guidelines"
 
@@ -307,11 +311,32 @@ function toSseResponse(text: string): Response {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as { messages?: unknown[] } | null
-  const messages = Array.isArray(body?.messages) ? body.messages.slice(-10) : []
+  // SEC-1 (SEC0-05): bounded body, text-only turns, provider only for signed-in users.
+  const declaredLength = Number(request.headers.get("content-length") ?? "0")
+  if (Number.isFinite(declaredLength) && declaredLength > CHAT_MAX_BODY_BYTES_V1) {
+    return NextResponse.json({ error: "Mensaje demasiado largo.", code: "PAYLOAD_TOO_LARGE" }, { status: 413 })
+  }
+  const rawText = await request.text().catch(() => "")
+  if (Buffer.byteLength(rawText, "utf8") > CHAT_MAX_BODY_BYTES_V1) {
+    return NextResponse.json({ error: "Mensaje demasiado largo.", code: "PAYLOAD_TOO_LARGE" }, { status: 413 })
+  }
+  let body: { messages?: unknown } | null = null
+  try {
+    body = JSON.parse(rawText) as { messages?: unknown }
+  } catch {
+    body = null
+  }
+  const messages = normalizeChatMessagesV1(body?.messages)
+
+  const session = await getAuthSession()
+  const userId = session?.user?.id ?? null
+  const limited = await checkRateLimitV1(RATE_LIMIT_POLICIES_V1.aiChat, rateLimitIdentityV1(request, userId))
+  if (limited.ok === false) return rateLimitedResponseV1(limited)
+
   const apiKey = process.env.ANTHROPIC_API_KEY
 
-  if (!apiKey) {
+  // Anonymous visitors (marketing chatbot) get the deterministic knowledge fallback: no provider spend.
+  if (!apiKey || !userId || messages.length === 0) {
     return toSseResponse(buildFallback(lastUserMessage(messages)))
   }
 

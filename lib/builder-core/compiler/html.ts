@@ -8,6 +8,7 @@ import {
   tokenToShadow,
   tokenToSpacing,
 } from "./document"
+import { sanitizeHtmlV1 } from "../../security/html-sanitizer"
 
 export function escapeHtml(unsafe: string): string {
   return unsafe
@@ -312,7 +313,8 @@ export function renderNodeToHtml(node: EditorNode, tree: EditorTree, theme: Glob
   let innerHtml = childrenHtml
   if (!innerHtml) {
     if (node.type === "genericWrapper" && readString(node.props.content)) {
-      innerHtml = readString(node.props.content) ?? ""
+      // SEC-1 (SEC0-03): static compiler boundary uses the same shared policy.
+      innerHtml = sanitizeHtmlV1(readString(node.props.content) ?? "")
     } else if (node.props.text) innerHtml = formatRichText(node.props.text)
     else if (node.props.content) innerHtml = formatRichText(node.props.content)
     else if (node.props.label) innerHtml = escapeHtml(String(node.props.label))

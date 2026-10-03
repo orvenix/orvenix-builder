@@ -1,4 +1,5 @@
 import type { EditorNode, EditorTree } from "@/types/editor";
+import { sanitizeNodeHtmlPropsV1 } from "../lib/security/html-sanitizer";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -15,10 +16,12 @@ export function validateTree(value: unknown): EditorTree {
 
   for (const [id, rawNode] of Object.entries(rawNodes)) {
     if (!isRecord(rawNode)) continue;
+    const type = typeof rawNode.type === "string" ? rawNode.type : "generic";
     nodes[id] = {
       id,
-      type: typeof rawNode.type === "string" ? rawNode.type : "generic",
-      props: isRecord(rawNode.props) ? rawNode.props : {},
+      type,
+      // SEC-1 (SEC0-03): raw-HTML props are sanitized before any persistence/render.
+      props: isRecord(rawNode.props) ? sanitizeNodeHtmlPropsV1(type, rawNode.props) : {},
       children: Array.isArray(rawNode.children)
         ? rawNode.children.filter((child): child is string => typeof child === "string")
         : [],
