@@ -5,6 +5,7 @@ import type { EditorTree } from "@/types/editor";
 import { validateTree } from "@/types/validateTree";
 import { revalidatePath } from "next/cache";
 import { getAuthSession } from "@/lib/auth-session";
+import { readRecentCompositionMemoryV1 } from "@/lib/orvenix-ai/design-memory/composition-memory-reader";
 import { getUserPlanAccess, requireAIPlan, requireCanCreateWebsite } from "@/lib/plan-guard";
 import { canUseEcommerce } from "@/lib/billing/plan-entitlements";
 import type { SiteCreationProductInputV1 } from "@/lib/orvenix-ai/site-creation/business-normalization";
@@ -1231,6 +1232,9 @@ export async function runOrvenixSiteCreationAction(
         },
         preferredStyle,
         designMemoryPrior: designMemoryDecision.designMemoryPrior,
+        // CF-4D: owner-scoped (authenticated session only) and LAZY -- the builder invokes it only when a full-site
+        // creative provider is configured for an eligible commerce request; deterministic generation never reads it.
+        compositionMemoryLoader: () => readRecentCompositionMemoryV1({ userId: session.user.id }),
         externalThemeAdvisory,
         creativeDirection,
         forceFreshComposition: true,

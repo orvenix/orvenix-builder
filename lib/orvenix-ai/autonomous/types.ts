@@ -1,7 +1,7 @@
 import type { CommerceProductFactV1, StoreProductRecordV1 } from "@/lib/orvenix-ai/commerce/product-facts"
 import type { EditorTree } from "@/types/editor"
 import type { DesignPlannerPriorV1 } from "@/lib/orvenix-ai/design-memory/planner-prior"
-import type { CompositionMemoryV1 } from "@/lib/orvenix-ai/design-memory/composition-memory"
+import type { CompositionMemoryV1, CrossGenerationNoveltyV1, SiteCompositionNoveltyV1 } from "@/lib/orvenix-ai/design-memory/composition-memory"
 import type { SiteCreationPlanV2 } from "@/lib/orvenix-ai/site-creation/plan-v2"
 import type { SiteCreationExternalThemeAdvisoryV1 } from "@/lib/orvenix-ai/site-creation/assistance"
 import type { NormalizedSiteCreationBusinessEvidenceV1 } from "@/lib/orvenix-ai/site-creation/evidence-normalization"
@@ -86,6 +86,15 @@ export interface AutonomousSiteBuilderInput {
    * soft prior; absent -> exact CF-4B behavior.
    */
   compositionMemory?: CompositionMemoryV1 | null
+
+  /**
+   * CF-4D: LAZY owner-scoped memory loader (the action binds it to the
+   * authenticated user). Invoked ONLY inside the full-site creative branch
+   * (provider configured + eligible commerce request) -- the one place
+   * memory is causal -- so deterministic generation never reads Design
+   * Memory. Best-effort: bounded time, errors/malformed -> no memory.
+   */
+  compositionMemoryLoader?: () => Promise<CompositionMemoryV1 | null | undefined>
 
   externalThemeAdvisory?: SiteCreationExternalThemeAdvisoryV1 | null
 
@@ -229,7 +238,12 @@ export interface AutonomousMultiPageSiteBuilderResult {
    * is true when the provider's blueprint passed the generic validator but
    * the commerce adapter still rejected it (deterministic plan used).
    */
-  fullSiteCreative: { lifecycle: FullSiteCreativeLifecycleV1; commerceFallbackApplied: boolean }
+  fullSiteCreative: {
+    lifecycle: FullSiteCreativeLifecycleV1
+    commerceFallbackApplied: boolean
+    /** CF-4D: diagnostic-only structural novelty of an APPLIED provider site (never blocks, retries or mutates). */
+    novelty?: SiteCompositionNoveltyV1 & { crossGeneration?: CrossGenerationNoveltyV1 }
+  }
 
   pageQuality: Array<{
     slug: string

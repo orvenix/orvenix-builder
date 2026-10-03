@@ -107,10 +107,19 @@ export const FULL_SITE_RHYTHM_EFFECTS_V1: Record<(typeof FULL_SITE_RHYTHMS_V1)[n
 /** CF-1: roles whose composer ignores section.emphasis (scale). */
 export const FULL_SITE_EMPHASIS_IGNORED_ROLES_V1: readonly SectionRole[] = ["hero"]
 
-/** CF-3A: bounded provider graph authoring (output-size pressure + intentional use). */
+/**
+ * CF-3A: bounded provider graph authoring. The bound protects provider
+ * OUTPUT size (truncation risk), not compile cost (linear and small).
+ * CF-4D.1: site bound 16 -> 32. 16 averaged ~1.5 graphs/page on an
+ * 11-page commerce site, capping hierarchy; a graph costs ~400 chars
+ * (~120 tokens), so 32 adds ~4k tokens -- inside max_tokens 14k next to a
+ * ~6.4k-token site (call #3). Per-page 6 is unchanged; the response
+ * ceiling (120k chars), per-graph canonical cap (12k chars) and page /
+ * section caps still bound the worst case.
+ */
 export const FULL_SITE_GRAPH_AUTHORING_LIMITS_V1 = {
   maxGraphSectionsPerPage: 6,
-  maxGraphSectionsPerSite: 16,
+  maxGraphSectionsPerSite: 32,
   /** Blueprint section roles that may carry a composition graph (the graph's role must match). */
   graphSectionRoles: ["products", "content"] as const,
 } as const

@@ -54,6 +54,16 @@ const REQUEST_FINGERPRINT_CF1 = "fecbdb391512d1f6fa9f6097bc1a52d98bfc0733b99b9dd
 /** The CF-3A request fingerprint: CF-1 + ONLY the composition-graph / creative-copy capabilities. */
 const REQUEST_FINGERPRINT_CF3 = "445a7194cce542225e9484a8c093eec03d88b2b9fb4881ac8da7a525d8d41bf0"
 
+/** CF-4D.1: the truthful capability expansion (site graph budget 16 -> 32) is the ONLY request change. */
+const REQUEST_FINGERPRINT_CF4D1 = "05187d95fb0878d288a3c1d7fd5adf083c88d422a77c0337d712aec67c9f4966"
+
+/** Reverses exactly CF-4D.1 (key order preserved) -> must equal the CF-4B request. */
+function withoutCf4d1GraphBudget(context: unknown): unknown {
+  const reverted = structuredClone(context) as { capabilities: { compositionGraph: { maxGraphSectionsPerSite: number } } }
+  reverted.capabilities.compositionGraph.maxGraphSectionsPerSite = 16
+  return reverted
+}
+
 /** The CF-4B request fingerprint: CF-3 + relational designMotifs + slim descriptive designReferences. */
 const REQUEST_FINGERPRINT_CF4B = "2b3155bb12dffe9447512042ef4726400958865dcdf84a91322bd68e78e23522"
 
@@ -136,10 +146,13 @@ test("5C: current offline NovaMarket request is byte-identical to the accepted P
   // CF-1: only the capability-truth manifest fields changed; everything else is the accepted 4F request.
   // CF-3A: + ONLY the graph/copy authoring capabilities. Reverting them reproduces CF-1; reverting CF-1 too reproduces 4F.
   // CF-4B: + relational motifs and slim references. Reverting CF-4B reproduces CF-3; then CF-1; then 4F.
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(context)).digest("hex"), REQUEST_FINGERPRINT_CF4B)
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf4bMotifs(context))).digest("hex"), REQUEST_FINGERPRINT_CF3)
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf3GraphAuthoring(withoutCf4bMotifs(context)))).digest("hex"), REQUEST_FINGERPRINT_CF1)
-  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf1CapabilityTruth(withoutCf3GraphAuthoring(withoutCf4bMotifs(context))))).digest("hex"), REQUEST_FINGERPRINT_4F)
+  // CF-4D.1: + site graph budget 32. Reverting it reproduces CF-4B; then CF-3; then CF-1; then 4F.
+  const cf4b = withoutCf4d1GraphBudget(context)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(context)).digest("hex"), REQUEST_FINGERPRINT_CF4D1)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(cf4b)).digest("hex"), REQUEST_FINGERPRINT_CF4B)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf4bMotifs(cf4b))).digest("hex"), REQUEST_FINGERPRINT_CF3)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf3GraphAuthoring(withoutCf4bMotifs(cf4b)))).digest("hex"), REQUEST_FINGERPRINT_CF1)
+  assert.equal(crypto.createHash("sha256").update(JSON.stringify(withoutCf1CapabilityTruth(withoutCf3GraphAuthoring(withoutCf4bMotifs(cf4b))))).digest("hex"), REQUEST_FINGERPRINT_4F)
   assert.deepEqual(findProhibitedFullSiteRequestValuesV1(context), [])
 })
 

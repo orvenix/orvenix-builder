@@ -274,10 +274,12 @@ test("page arc D: sparse -> dense -> focal -> rest -> closing compile to intenti
   const sections = rootSections(home).filter((node) => node.props.compositionGraph)
   assert.deepEqual(sections.map((node) => (node.props.compositionGraph as { beat: string }).beat), ["open", "build", "peak", "rest", "close"])
   assert.deepEqual(sections.map((node) => node.props.commerceSectionScale), ["spacious", "compact", "statement", "spacious", "standard"])
-  assert.deepEqual(sections.map((node) => node.props.paddingY), ["xl", "lg", "xl", "xl", "lg"])
+  // CF-4D.1: the closing beat breathes like the other arc moments.
+  assert.deepEqual(sections.map((node) => node.props.paddingY), ["xl", "lg", "xl", "xl", "xl"])
   const cardsIn = (node: EditorNode): number => (node.type === "store-product-card" ? 1 : 0) + node.children.reduce((sum, id) => sum + cardsIn(home.nodes[id]), 0)
   assert.deepEqual(sections.map(cardsIn), [0, 10, 1, 0, 0], "dense build carries the information; peak focuses on one product")
-  assert.equal(new Set(sections.map((node) => node.props.maxWidth)).size, 2, "the peak bleeds")
+  // CF-4D.1: the peak bleeds; rest and close sit in a narrower measure.
+  assert.deepEqual(sections.map((node) => node.props.maxWidth), ["xl", "xl", "full", "lg", "lg"])
   // Continuity: the previous section's relation decides the Orvenix surface.
   assert.deepEqual(sections.slice(1).map((node) => (node.props.compositionGraph as { continuityFromPrevious?: string }).continuityFromPrevious), ["contrast", "continue", "bridge", "contrast"])
   assert.equal(surfaceRelationForContinuityV1("contrast", "products"), "contrast")

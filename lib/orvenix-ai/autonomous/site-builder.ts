@@ -59,6 +59,37 @@ import {
 
 import { generateFullSiteCreativeBlueprintV1 } from "@/lib/orvenix-ai/full-site-generation/orchestrator"
 import { buildFullSiteCreativeRequestV1, retrieveFullSiteCommerceDesignReferencesV1 } from "@/lib/orvenix-ai/full-site-generation/request-context"
+import { diagnoseCrossGenerationNoveltyV1, diagnoseSiteCompositionNoveltyV1, isCompositionMemoryV1, type CompositionMemoryV1 } from "@/lib/orvenix-ai/design-memory/composition-memory"
+import { motifShapeSignatureV2 } from "@/lib/orvenix-ai/design-reference/motifs"
+
+/** CF-4D: Design Memory is best-effort and must never hold up a customer's site. */
+const COMPOSITION_MEMORY_LOAD_TIMEOUT_MS_V1 = 2_000
+
+async function loadCompositionMemorySafelyV1(loader: NonNullable<AutonomousSiteBuilderInput["compositionMemoryLoader"]>, trace: string[]): Promise<CompositionMemoryV1 | undefined> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    const loaded = await Promise.race([
+      loader(),
+      new Promise<"timeout">((resolve) => { timer = setTimeout(() => resolve("timeout"), COMPOSITION_MEMORY_LOAD_TIMEOUT_MS_V1) }),
+    ])
+    if (loaded === "timeout") {
+      trace.push("Composition memory: no disponible (tiempo agotado)")
+      return undefined
+    }
+    if (loaded === null || loaded === undefined) return undefined
+    if (!isCompositionMemoryV1(loaded)) {
+      trace.push("Composition memory: no disponible (formato invalido)")
+      return undefined
+    }
+    return loaded
+  } catch {
+    // Never surface DB/internal errors: generation continues with exact no-memory behavior.
+    trace.push("Composition memory: no disponible")
+    return undefined
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
 import type { FullSiteCreativeLifecycleV1 } from "@/lib/orvenix-ai/full-site-generation/contract"
 
 import {
@@ -864,7 +895,11 @@ export async function runAutonomousMultiPageSiteBuilder(
   let commerceMode = input.commerceArchitecture?.mode
   const fullSiteProvider = input.commerceArchitecture?.provider
   const fullSiteProducts = provisioningArchitecture.products ?? []
+  let fullSiteMemory: CompositionMemoryV1 | undefined
+  let suppliedMotifShapes: string[] = []
   if (fullSiteProvider && provisioningArchitecture.siteType === "ecommerce" && fullSiteProducts.some((product) => product.variants?.length)) {
+    // CF-4D: the ONLY place composition memory is read -- where it can causally change motif selection.
+    fullSiteMemory = input.compositionMemory ?? (input.compositionMemoryLoader ? await loadCompositionMemorySafelyV1(input.compositionMemoryLoader, trace) : undefined)
     try {
       const request = buildFullSiteCreativeRequestV1({
         industry: input.business.industry,
@@ -873,8 +908,9 @@ export async function runAutonomousMultiPageSiteBuilder(
         products: fullSiteProducts,
         designReferences: retrieveFullSiteCommerceDesignReferencesV1(),
         creativeDirection: input.creativeDirection,
-        compositionMemory: input.compositionMemory,
+        compositionMemory: fullSiteMemory,
       })
+      suppliedMotifShapes = (request.context.designMotifs ?? []).map((motif) => motifShapeSignatureV2({ ...motif, sectionRole: motif.role }))
       const memory = request.diagnostics.motifMemory
       if (memory.sourceCount) trace.push(`Composition memory: ${memory.usableCount}/${memory.sourceCount} generaciones, ${memory.recentShapeCount} formas recientes, ${memory.downweightedMotifIds.length} motivos atenuados`)
       const generation = await generateFullSiteCreativeBlueprintV1({ provider: fullSiteProvider, requestContext: request.context, grounding: request.grounding })
@@ -1149,6 +1185,14 @@ export async function runAutonomousMultiPageSiteBuilder(
     `Plan V2 validado: ${validation.plan.pages.length} paginas, ${validation.byteLength} bytes`,
   )
 
+  // CF-4D: diagnostic-only structural novelty for an APPLIED provider site (no rejection, retry or mutation).
+  let novelty: AutonomousMultiPageSiteBuilderResult["fullSiteCreative"]["novelty"]
+  if (fullSiteLifecycle.status === "applied") {
+    const site = diagnoseSiteCompositionNoveltyV1(validation.plan, { suppliedMotifShapes })
+    novelty = { ...site, ...(fullSiteMemory ? { crossGeneration: diagnoseCrossGenerationNoveltyV1(validation.plan, fullSiteMemory) } : {}) }
+    trace.push(`Novelty (diagnostico): ${site.metrics.uniqueShapes} formas, ${site.metrics.uniqueSkeletons} esqueletos, ${site.warnings.length} avisos`)
+  }
+
   return {
     ok: true,
     architecture: assistedArchitecture,
@@ -1160,6 +1204,7 @@ export async function runAutonomousMultiPageSiteBuilder(
     fullSiteCreative: {
       lifecycle: fullSiteLifecycle,
       commerceFallbackApplied: fullSiteLifecycle.status === "applied" && commerceArchitectureResult.fallbackApplied,
+      ...(novelty ? { novelty } : {}),
     },
     pageQuality,
     repaired,

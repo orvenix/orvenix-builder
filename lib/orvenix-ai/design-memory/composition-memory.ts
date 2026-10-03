@@ -117,6 +117,15 @@ export type CompositionMemoryV1 = {
   survivingShapeSignatures: string[]
 }
 
+const isShapeList = (value: unknown) => Array.isArray(value) && value.length <= 64 && value.every((entry) => typeof entry === "string" && SHAPE_PATTERN.test(entry))
+
+/** CF-4D: structural guard for memory crossing an async boundary (a malformed loader result is treated as no memory). */
+export function isCompositionMemoryV1(value: unknown): value is CompositionMemoryV1 {
+  if (!isRecord(value) || value.version !== COMPOSITION_MEMORY_VERSION_V1) return false
+  if (!Number.isInteger(value.sourceCount) || !Number.isInteger(value.usableCount)) return false
+  return ["recentShapeSignatures", "observedShapeSignatures", "recentPageArcSignatures", "recentPageSkeletonSignatures", "repeatedPageSkeletonSignatures", "survivingShapeSignatures"].every((key) => isShapeList(value[key]))
+}
+
 export function emptyCompositionMemoryV1(): CompositionMemoryV1 {
   return { version: COMPOSITION_MEMORY_VERSION_V1, sourceCount: 0, usableCount: 0, recentShapeSignatures: [], observedShapeSignatures: [], recentPageArcSignatures: [], recentPageSkeletonSignatures: [], repeatedPageSkeletonSignatures: [], survivingShapeSignatures: [] }
 }

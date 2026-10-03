@@ -289,7 +289,7 @@ test("fingerprints: thinking mode and timeout are execution config -- the creati
     assert.equal(new Set(recorder.calls.map((call) => call.system)).size, 1, "system prompt unchanged")
   })
   assert.equal(new Set(fingerprints).size, 1)
-  assert.equal(fingerprints[0], "2b3155bb12dffe9447512042ef4726400958865dcdf84a91322bd68e78e23522", "creative request pin (CF-4B) unchanged by execution config")
+  assert.equal(fingerprints[0], "05187d95fb0878d288a3c1d7fd5adf083c88d422a77c0337d712aec67c9f4966", "creative request pin (CF-4D.1) unchanged by execution config")
   assert.equal(new Set(lifecycleFingerprints).size, 1)
 })
 

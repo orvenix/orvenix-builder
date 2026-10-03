@@ -105,11 +105,25 @@ export function buildGraphGroundingV1(context: SectionCompositionContext): Graph
   }
 }
 
-export function surfaceRelationForContinuityV1(previous: GraphContinuityV1 | undefined, role: GraphSectionV1["role"]): CommerceSurfaceRelationV1 {
+/**
+ * Surface relation. An explicit continuity from the previous graph section
+ * is authoritative. CF-4D.1: without one, the section's own beat/edge
+ * decide -- a "peak" or a "bleed" section reads as a full-width band
+ * ("soft") so the page arc and the contained/bleed relation are VISIBLE,
+ * not just recorded (only renderer-honored props are used).
+ */
+export function surfaceRelationForContinuityV1(previous: GraphContinuityV1 | undefined, role: GraphSectionV1["role"], own?: { beat?: GraphBeatV1; edge?: GraphSectionV1["edge"] }): CommerceSurfaceRelationV1 {
   if (previous === "contrast") return "contrast"
   if (previous === "bridge") return "soft"
   if (previous === "continue") return "continuous"
+  if (own?.beat === "peak" || own?.edge === "bleed") return "soft"
   return role === "content" ? "soft" : "continuous"
+}
+
+/** CF-4D.1: content measure per beat/edge (Section honors maxWidth): rest/close breathe in a narrower measure. */
+export function graphSectionMaxWidthV1(beat: GraphBeatV1, edge: GraphSectionV1["edge"]): "lg" | "xl" | "full" {
+  if (edge === "bleed") return "full"
+  return beat === "rest" || beat === "close" ? "lg" : "xl"
 }
 
 /**
@@ -158,7 +172,7 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
   const { graph, context } = input
   const products = context.products ?? []
   const nodes: Record<string, ComposedNode> = {}
-  const relation = surfaceRelationForContinuityV1(input.previousContinuity, graph.role)
+  const relation = surfaceRelationForContinuityV1(input.previousContinuity, graph.role, { beat: graph.beat, edge: graph.edge })
   const surface: CommerceSurfaceV1 | undefined = context.themePalette ? resolveCommerceSurfaceV1(context.themePalette, { relation }) : undefined
   const background = surface?.background ?? (relation === "contrast" ? "#020617" : graph.role === "content" ? "#ffffff" : kit.storeProductsBackground)
   const textColors = kit.readableTextColorsFor(background)
@@ -278,6 +292,15 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
       const used = row.reduce((sum, region) => sum + region.span, 0)
       const leftover = GRAPH_LIMITS_V1.gridUnits - used
       const offset = leftover <= 0 ? 0 : row[0].align === "end" ? leftover : row[0].align === "center" ? Math.floor(leftover / 2) : 0
+      /*
+       * CF-4D.1 void BETWEEN regions (existing align semantics, compiler-owned
+       * geometry): when the row is not full, its first region is not shifted
+       * and its LAST region is aligned "end", the leftover becomes a gap
+       * between them (the last cell starts at 13 - span). Mobile is one
+       * column in DOM order, so the void simply disappears.
+       */
+      const last = row[row.length - 1]
+      const trailingStart = leftover > 0 && offset === 0 && row.length > 1 && last.align === "end" ? GRAPH_LIMITS_V1.gridUnits - last.span + 1 : 0
       const hasCopy = row.some((region) => region.role === "copy")
       const cells = row.map((region, cellIndex) => {
         const effectiveSpan = (parentEffectiveSpan * region.span) / GRAPH_LIMITS_V1.gridUnits
@@ -287,6 +310,7 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
           "min-w-0",
           SPAN_CLASS[region.span],
           cellIndex === 0 && offset > 0 ? COL_START_CLASS[offset + 1] : "",
+          trailingStart && cellIndex === row.length - 1 ? COL_START_CLASS[trailingStart] : "",
           REGION_PAD_CLASS[region.whitespace ?? 0],
           region.role === "copy" && region.pinned ? "lg:sticky lg:top-24 lg:self-start" : "",
         ].filter(Boolean).join(" ")
@@ -302,7 +326,7 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
     type: "section",
     displayName: `Composicion (graph${input.preset ? `: ${input.preset}` : ""})`,
     props: {
-      maxWidth: graph.edge === "bleed" ? "full" : "xl",
+      maxWidth: graphSectionMaxWidthV1(graph.beat, graph.edge),
       paddingY: graphPaddingYV1(graph.beat, graph.whitespace, graph.density),
       paddingX: "lg",
       background,
@@ -326,7 +350,7 @@ export function compileGraphSectionV1(input: CompileGraphSectionInputV1): Compos
 }
 
 export function graphPaddingYV1(beat: GraphBeatV1, whitespace: number, density: number): "md" | "lg" | "xl" {
-  if (beat === "rest" || beat === "open" || beat === "peak") return "xl"
+  if (beat === "rest" || beat === "open" || beat === "peak" || beat === "close") return "xl"
   if (density >= 3) return "lg"
   return PADDING_Y_BY_WHITESPACE[whitespace]
 }

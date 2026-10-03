@@ -7,7 +7,7 @@ import { normalizeGraphForPositionV1, validateGraphSectionV1, type GraphNormaliz
 export * from "./contract"
 export { canonicalGraphJsonV1, graphFingerprintV1 } from "./fingerprint"
 export { normalizeGraphForPositionV1, packGraphRowsV1, validateGraphPageV1, validateGraphSectionV1, type GraphNormalizationCodeV1, type GraphSectionPositionV1, type GraphSectionValidationV1 } from "./validator"
-export { buildGraphGroundingV1, compileGraphSectionV1, resolveGraphCardTreatmentV1, surfaceRelationForContinuityV1 } from "./compiler"
+export { buildGraphGroundingV1, compileGraphSectionV1, graphSectionMaxWidthV1, resolveGraphCardTreatmentV1, surfaceRelationForContinuityV1 } from "./compiler"
 export { graphPresetForMerchandisingV1, type GraphPresetInputV1 } from "./presets"
 
 /**
