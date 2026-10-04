@@ -4,6 +4,7 @@ import { join } from "path"
 import { randomBytes } from "crypto"
 import { getAuthSession } from "@/lib/auth-session"
 import { serverError } from "@/lib/server-log"
+import { detectImageMetadataV1, sanitizeImageMetadataV1 } from "@/lib/upload-metadata"
 import {
   MAX_SIZE_BYTES,
   validateImageUploadV1,
@@ -59,6 +60,15 @@ export async function POST(request: Request) {
     }, { status: 400 })
   }
 
+  // VE-3: lo publicado en /uploads nunca conserva metadatos privados (EXIF/GPS, XMP, IPTC, comentarios).
+  const sanitized = sanitizeImageMetadataV1(buffer, validation.type.mime)
+  if (!sanitized.ok || detectImageMetadataV1(sanitized.bytes, validation.type.mime).length > 0) {
+    return NextResponse.json({
+      error: "No pudimos limpiar los datos ocultos de esta imagen. Usa una foto JPG, PNG o WebP.",
+    }, { status: 400 })
+  }
+  const cleanBytes = Buffer.from(sanitized.bytes)
+
   // Nombre aleatorio + extensión elegida por el servidor a partir del tipo verificado.
   const safeName = `${Date.now()}-${randomBytes(6).toString("hex")}${validation.type.extension}`
 
@@ -67,13 +77,13 @@ export async function POST(request: Request) {
     await mkdir(UPLOAD_DIR, { recursive: true })
 
     // Guardar archivo
-    await writeFile(join(UPLOAD_DIR, safeName), buffer)
+    await writeFile(join(UPLOAD_DIR, safeName), cleanBytes)
 
     return NextResponse.json({
       ok: true,
       url: `/uploads/${safeName}`,
       name: safeName,
-      size: buffer.length,
+      size: cleanBytes.length,
       type: validation.type.mime,
     })
   } catch (err) {

@@ -99,6 +99,16 @@ export const DynamicRenderer = memo(function DynamicRenderer({
     </MotionWrapper>
   );
 
+  /*
+   * VE-3 responsive intent "Ocultar en celular": a box-free wrapper (layout
+   * neutral above the mobile breakpoint, hidden below it). CSS media query, so
+   * it is correct at first paint and follows the website viewport (isolated
+   * editor frame or the public page). Absent prop -> markup unchanged.
+   */
+  const shownContent = !isRoot && resolvedProps.hideOnMobile === true
+    ? <div className="contents max-md:hidden">{content}</div>
+    : content;
+
   // Construir variables CSS basadas en el tema global
   const themeStyles = getRuntimeThemeStyleVars(tree.theme);
   const motionAttributes = getRuntimeMotionAttributes(tree.theme);
@@ -145,7 +155,7 @@ if (isRoot) {
 }
 
 if (mode === "edit" && id !== rootId) {
-  return <EditableNode id={id}>{content}</EditableNode>;
+  return <EditableNode id={id}>{shownContent}</EditableNode>;
 }
 
 if (mode === "preview" && resolvedProps.positionMode === "free") {
@@ -153,10 +163,10 @@ if (mode === "preview" && resolvedProps.positionMode === "free") {
     <div
       style={getRuntimeFreePositionStyle(resolvedProps, getEditorVisualStyle(resolvedProps))}
     >
-      {content}
+      {shownContent}
     </div>
   );
 }
 
-return content;
+return shownContent;
 });

@@ -6,6 +6,7 @@ import { useEditorStore } from "@/store/useEditorStore";
 import { X, Search, Image as ImageIcon, Upload, Globe, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditorAsset } from "@/types/editor";
+import { uploadEditorImageV1 } from "@/lib/editor/upload-client";
 
 const UNSPLASH_ASSETS: EditorAsset[] = [
   {
@@ -51,29 +52,26 @@ export const MediaCenter = () => {
   const [tab, setTab] = useState<"library" | "unsplash">("library");
   const [query, setQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const websiteId = useEditorStore((s) => s.websiteId);
 
-  const handleUpload = (file: File) => {
-    if (!file.type.startsWith("image/")) return;
-
+  // VE-3: uploads go through the hardened server route (validated, metadata stripped) -- never base64 in the tree.
+  const handleUpload = async (file: File) => {
+    setUploadError(null);
     setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = String(reader.result ?? "");
-      if (!url) {
-        setIsUploading(false);
-        return;
-      }
-      const asset = addAssetToLibrary({
-        url,
-        name: file.name,
-        type: "image",
-        source: "upload",
-      });
-      selectAsset(asset.url);
-      setIsUploading(false);
-    };
-    reader.onerror = () => setIsUploading(false);
-    reader.readAsDataURL(file);
+    const result = await uploadEditorImageV1(file, websiteId);
+    setIsUploading(false);
+    if (result.ok === false) {
+      setUploadError(result.error);
+      return;
+    }
+    const asset = addAssetToLibrary({
+      url: result.url,
+      name: file.name,
+      type: "image",
+      source: "upload",
+    });
+    selectAsset(asset.url);
   };
 
   const handleSelectAsset = (asset: EditorAsset) => {
@@ -152,7 +150,8 @@ export const MediaCenter = () => {
                   <span className="block text-xs font-bold text-slate-600 group-hover:text-indigo-600">
                     {isUploading ? "Cargando imagen" : "Subir imagen"}
                   </span>
-                  <span className="text-[10px] text-slate-400">JPG, PNG, SVG, WEBP</span>
+                  <span className="text-[10px] text-slate-400">JPG, PNG, WEBP</span>
+                  {uploadError && <span role="alert" className="mt-1 block text-[10px] font-semibold text-red-600">{uploadError}</span>}
                 </div>
                 <input
                   type="file"
@@ -161,7 +160,7 @@ export const MediaCenter = () => {
                   disabled={isUploading}
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file) handleUpload(file);
+                    if (file) void handleUpload(file);
                     event.currentTarget.value = "";
                   }}
                 />

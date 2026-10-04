@@ -173,7 +173,7 @@ test("VE-2 #8/9: section actions reorder, duplicate and delete with confirmation
 /* 13, 14, 15 */
 test("VE-2 #13-15: the context bar lives in the customer overlay inside the isolated viewport and disappears in preview", () => {
   const overlay = read("components/editor/selection/CustomerSelectionOverlay.tsx")
-  assert.match(overlay, /<CustomerContextBar key=\{selectedId\} selectedId=\{selectedId\} dragHandle=\{dragHandle\} \/>/)
+  assert.match(overlay, /<CustomerContextBar key=\{selectedId\} selectedId=\{selectedId\} dragHandle=\{dragHandle\}[^>]*\/>/)
   const shell = read("components/editor/client-shell/ClientShell.tsx")
   const inside = shell.slice(shell.indexOf("<IsolatedViewportFrame"), shell.indexOf("</IsolatedViewportFrame>"))
   assert.match(inside, /\{!isPreviewMode && <CustomerSelectionOverlay containerRef=\{canvasRef\} \/>\}/)
@@ -213,9 +213,11 @@ test("VE-2 navigation: only labels, brand and the menu button are editable; page
   const bar = read("components/editor/selection/CustomerContextBar.tsx")
   assert.match(bar, /labelOverrides: serializeNavLabelOverrides\(values\.labels, pageSlugs\)/)
   assert.match(bar, /const safeHref = values\.ctaHref\.trim\(\) \? validate\(values\.ctaHref\) : ctaHref/)
-  assert.doesNotMatch(bar, /hiddenSlugs|showHome|availablePages\.push/, "no route identity edits")
+  assert.doesNotMatch(bar, /showHome|setActivePageContext|availablePages\.(push|splice)/, "no route identity edits")
+  // VE-3: menu visibility is written only through the protected serializer (hiding never deletes or renames a page).
+  assert.match(bar, /hiddenSlugs: serializeHiddenNavSlugs\(values\.hidden, pageSlugs\)/)
   const navCommit = bar.slice(bar.indexOf("onSubmit={(values) => {"), bar.indexOf("setPanel(null)", bar.indexOf("onSubmit={(values) => {")))
-  assert.deepEqual([...navCommit.matchAll(/^\s+(\w+):/gm)].map((match) => match[1]), ["title", "labelOverrides", "ctaLabel", "ctaHref"], "the menu form writes only these props")
+  assert.deepEqual([...navCommit.matchAll(/^\s+(\w+):/gm)].map((match) => match[1]), ["title", "labelOverrides", "ctaLabel", "ctaHref", "hiddenSlugs"], "the menu form writes only these props")
 })
 
 /* 19, 20 */

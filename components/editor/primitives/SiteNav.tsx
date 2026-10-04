@@ -217,8 +217,10 @@ export function SiteNav({
       restoreFocus(mobileTriggerRef.current);
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    // VE-3: the nav's own document (the customer editor renders the site in an isolated frame).
+    const navDocument = mobileTriggerRef.current?.ownerDocument ?? document;
+    navDocument.addEventListener("keydown", handleKeyDown);
+    return () => navDocument.removeEventListener("keydown", handleKeyDown);
   }, [mobileOpen]);
 
   const closeMobileMenuAfterNavigation = () => {
@@ -272,7 +274,8 @@ export function SiteNav({
 
   const scrollToInlineTarget = (href: string) => {
     if (!href.startsWith("#")) return false;
-    const target = document.getElementById(href.slice(1));
+    // VE-3: resolve anchors in the nav's own document (isolated editor frame or the public page).
+    const target = (mobileTriggerRef.current?.ownerDocument ?? document).getElementById(href.slice(1));
     if (!target) return false;
     target.scrollIntoView({ behavior: "smooth", block: "start" });
     return true;

@@ -509,7 +509,10 @@ test("SiteNav mobile menu: aria state, Escape + focus return, focus entry, link 
   assert.match(effect, /getFocusableElements<HTMLElement>\(mobilePanelRef\.current\)\[0\]\?\.focus/)
   assert.match(effect, /if \(!isEscapeKey\(event\)\) return;/)
   assert.match(effect, /setMobileOpen\(false\);\s*\n\s*restoreFocus\(mobileTriggerRef\.current\);/)
-  assert.match(effect, /return \(\) => document\.removeEventListener\("keydown", handleKeyDown\)/)
+  // VE-3: the listener lives on the nav's own document (isolated editor frame), falling back to `document` on public pages.
+  assert.match(effect, /const navDocument = mobileTriggerRef\.current\?\.ownerDocument \?\? document;/)
+  assert.match(effect, /navDocument\.addEventListener\("keydown", handleKeyDown\)/)
+  assert.match(effect, /return \(\) => navDocument\.removeEventListener\("keydown", handleKeyDown\)/)
 
   const afterNav = source.slice(source.indexOf("const closeMobileMenuAfterNavigation"), source.indexOf("const currentPageSlug"))
   assert.doesNotMatch(afterNav, /focus/)

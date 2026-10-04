@@ -124,9 +124,11 @@ type Handler = (request: Request) => Promise<Response>
 
 // ---- fixtures ----------------------------------------------------------------
 
-const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52])
-const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0])
-const WEBP = new Uint8Array([...Buffer.from("RIFF"), 0x24, 0, 0, 0, ...Buffer.from("WEBPVP8 ")])
+// Complete minimal images (VE-3: the upload route strips metadata and refuses bytes it cannot parse).
+const pngChunk = (type: string, data: number[]) => [0, 0, 0, data.length, ...Buffer.from(type), ...data, 0, 0, 0, 0]
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...pngChunk("IHDR", [0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0]), ...pngChunk("IDAT", [0x78, 0x9c]), ...pngChunk("IEND", [])])
+const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xff, 0xda, 0, 8, 1, 1, 0, 0, 0x3f, 0, 0x12, 0x34, 0xff, 0xd9])
+const WEBP = new Uint8Array([...Buffer.from("RIFF"), 16, 0, 0, 0, ...Buffer.from("WEBPVP8 "), 4, 0, 0, 0, 1, 2, 3, 4])
 const GIF = new Uint8Array(Buffer.from("GIF89a\x01\x00\x01\x00", "latin1"))
 const AVIF = new Uint8Array([0, 0, 0, 0x1c, ...Buffer.from("ftypavif"), 0, 0, 0, 0])
 const HTML = new Uint8Array(Buffer.from("<html><script>alert(document.cookie)</script></html>"))

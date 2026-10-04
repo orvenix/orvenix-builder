@@ -223,7 +223,7 @@ test("PARITY C/D/E: nested click selects the node, hover is innermost, section c
   const bar = read("components/editor/selection/CustomerContextBar.tsx")
   for (const label of ["Subir sección", "Bajar sección", "Duplicar sección", "Eliminar sección", "Arrastrar sección"]) assert.ok(bar.includes(label), label)
   assert.match(overlay, /canvas\?\.sectionDragHandles\.get\(selectedId\)/)
-  assert.match(overlay, /<CustomerContextBar key=\{selectedId\} selectedId=\{selectedId\} dragHandle=\{dragHandle\} \/>/)
+  assert.match(overlay, /<CustomerContextBar key=\{selectedId\} selectedId=\{selectedId\} dragHandle=\{dragHandle\}[^>]*\/>/)
   assert.match(overlay, /pointer-events-none absolute inset-0/)
   assert.doesNotMatch(overlay, /setInterval|onMouseMove|querySelectorAll/)
 })

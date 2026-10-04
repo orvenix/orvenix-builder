@@ -5,37 +5,10 @@ import { useCallback, useEffect, useLayoutEffect, useState, type RefObject } fro
 import { isMovableSection } from "@/lib/editor/selection-model"
 import { useEditorStore } from "@/store/useEditorStore"
 
-import { EDITOR_NODE_ATTRIBUTE, useCustomerCanvas } from "./customer-canvas-context"
+import { useCustomerCanvas } from "./customer-canvas-context"
+import { measureNode, type Box } from "./measure-node"
+import { useSiblingDrag } from "./useSiblingDrag"
 import { CustomerContextBar } from "./CustomerContextBar"
-
-type Box = { top: number; left: number; width: number; height: number }
-
-/** Rendered boxes of a node: a box-free (`display: contents`) wrapper is measured through its descendants. */
-function renderedBoxes(element: Element): Element[] {
-  // The site may live in the isolated viewport frame: use the element's own window.
-  const view = element.ownerDocument.defaultView ?? window
-  if (view.getComputedStyle(element).display !== "contents") return [element]
-  return Array.from(element.children).flatMap(renderedBoxes)
-}
-
-/** Union of the node's rendered boxes, in the scroll container's content coordinates. Editor-only, never persisted. */
-function measureNode(container: HTMLElement, id: string | null): { box: Box; elements: Element[] } | null {
-  if (!id) return null
-  const element = container.querySelector(`[${EDITOR_NODE_ATTRIBUTE}="${CSS.escape(id)}"]`)
-  if (!element) return null
-  const elements = renderedBoxes(element)
-  const rects = elements.map((entry) => entry.getBoundingClientRect()).filter((rect) => rect.width > 0 || rect.height > 0)
-  if (!rects.length) return null
-  const origin = container.getBoundingClientRect()
-  const top = Math.min(...rects.map((rect) => rect.top))
-  const left = Math.min(...rects.map((rect) => rect.left))
-  const bottom = Math.max(...rects.map((rect) => rect.bottom))
-  const right = Math.max(...rects.map((rect) => rect.right))
-  return {
-    box: { top: top - origin.top + container.scrollTop, left: left - origin.left + container.scrollLeft, width: right - left, height: bottom - top },
-    elements,
-  }
-}
 
 /**
  * VE-1 editor open parity: the ONE place customer selection chrome is drawn
@@ -52,6 +25,7 @@ export function CustomerSelectionOverlay({ containerRef }: { containerRef: RefOb
   const tree = useEditorStore((s) => s.tree)
   const [boxes, setBoxes] = useState<{ selected: Box | null; hovered: Box | null; canvasWidth: number }>({ selected: null, hovered: null, canvasWidth: 0 })
   const [observed, setObserved] = useState<Element[]>([])
+  const { siblingDrag, startSiblingDrag } = useSiblingDrag(containerRef)
 
   const measure = useCallback(() => {
     const container = containerRef.current
@@ -128,9 +102,18 @@ export function CustomerSelectionOverlay({ containerRef }: { containerRef: RefOb
             onClick={(event) => event.stopPropagation()}
           >
             {/* VE-2: capability-driven context bar (key resets transient panels per selection). */}
-            <CustomerContextBar key={selectedId} selectedId={selectedId} dragHandle={dragHandle} />
+            <CustomerContextBar key={selectedId} selectedId={selectedId} dragHandle={dragHandle} onStartSiblingDrag={startSiblingDrag} />
           </div>
         </>
+      )}
+      {/* VE-3: semantic drop feedback -- an insertion line between siblings, or an explicit refusal. */}
+      {siblingDrag.active && siblingDrag.line && (
+        <div className="absolute rounded-full bg-cyan-500 shadow-[0_0_0_3px_rgba(6,182,212,0.25)]" style={{ top: siblingDrag.line.top, left: siblingDrag.line.left, width: siblingDrag.line.width, height: siblingDrag.line.height }} />
+      )}
+      {siblingDrag.active && !siblingDrag.valid && (
+        <div role="status" className="absolute rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg" style={{ top: siblingDrag.pointer.y + 14, left: siblingDrag.pointer.x + 14 }}>
+          No se puede soltar aquí
+        </div>
       )}
     </div>
   )

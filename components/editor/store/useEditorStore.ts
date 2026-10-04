@@ -15,7 +15,7 @@ import type {
   SaveStatus,
 } from "@/types/editor";
 import { shouldCoalesce, coalesce, type HistoryEntry, HISTORY_LIMIT } from "@/components/editor/history";
-import { isSafeEditorImageSrcV1 } from "@/lib/editor/context-capabilities";
+import { getProtectedReason, isSafeEditorImageSrcV1 } from "@/lib/editor/context-capabilities";
 import { editorDebug, editorError, editorWarn } from "@/components/editor/logger";
 import { validateTree } from "@/types/validateTree";
 import { applyResponsivePatch, hasResponsiveDevicePatch, pickResponsiveEditorProps, removeResponsiveDevicePatch, resolveResponsiveProps, shouldStorePatchInDevice } from "@/components/editor/responsive";
@@ -812,7 +812,8 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
     get().selectMany(ids);
   },
 
-  setEditingNode: (id: NodeId | null) => set({ editingNodeId: id }),
+  // VE-3: data-bound / commerce-authoritative content never enters inline editing, from any entry point.
+  setEditingNode: (id: NodeId | null) => set({ editingNodeId: id && getProtectedReason(get().tree.nodes[id]) ? null : id }),
   hover: (id: NodeId | null) => set({ hoveredId: id }),
   setDevice: (device: DeviceMode) => set({ currentDevice: device }),
   copyDesktopLayoutToDevice: (device: Exclude<DeviceMode, "desktop">) =>

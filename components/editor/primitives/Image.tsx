@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { useEditorStore } from "@/store/useEditorStore";
 import type { BlockComponentProps } from "@/types/editor";
+import { uploadEditorImageV1 } from "@/lib/editor/upload-client";
 
 export interface ImageProps {
   src: string;
@@ -39,19 +40,20 @@ export function Image({
   const updateNodeProps = useEditorStore((s) => s.updateNodeProps);
   const isSelected = selectedId === id;
 
-  const updateImageFromFile = (file: File) => {
-    if (!id || !file.type.startsWith("image/")) return;
+  // VE-3: the hardened server upload (validated, metadata stripped) -- never a base64 copy of the raw file.
+  const updateImageFromFile = async (file: File) => {
+    if (!id) return;
     setIsReading(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateNodeProps(id, {
-        src: String(reader.result ?? src),
-        alt: alt || file.name.replace(/\.[^.]+$/, ""),
-      });
-      setIsReading(false);
-    };
-    reader.onerror = () => setIsReading(false);
-    reader.readAsDataURL(file);
+    const result = await uploadEditorImageV1(file, useEditorStore.getState().websiteId);
+    setIsReading(false);
+    if (result.ok === false) {
+      window.alert(result.error);
+      return;
+    }
+    updateNodeProps(id, {
+      src: result.url,
+      alt: alt || file.name.replace(/\.[^.]+$/, ""),
+    });
   };
   const pathname = usePathname();
   const isFree = positionMode === "free";
@@ -76,7 +78,7 @@ export function Image({
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0];
-            if (file) updateImageFromFile(file);
+            if (file) void updateImageFromFile(file);
             event.currentTarget.value = "";
           }}
         />
@@ -118,7 +120,7 @@ export function Image({
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) updateImageFromFile(file);
+          if (file) void updateImageFromFile(file);
           event.currentTarget.value = "";
         }}
       />

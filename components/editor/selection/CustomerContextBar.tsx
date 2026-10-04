@@ -1,7 +1,7 @@
 "use client"
 
-import { AlignCenter, ChevronDown, ChevronUp, Copy, GripVertical, Image as ImageIcon, Link2, Lock, Menu, Palette, PencilLine, Trash2, Type } from "lucide-react"
-import { useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react"
+import { AlignCenter, ArrowLeftRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, GripVertical, Image as ImageIcon, Link2, Lock, Menu, PaintBucket, Palette, PencilLine, Smartphone, Trash2, Type } from "lucide-react"
+import { useState, type FormEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react"
 
 import {
   ALIGN_OPTIONS,
@@ -12,14 +12,23 @@ import {
   sanitizeCustomerHrefV1,
   serializeNavLabelOverrides,
 } from "@/lib/editor/context-capabilities"
-import { computeSectionStep } from "@/lib/editor/selection-model"
+import { computeSectionStep, getParentId } from "@/lib/editor/selection-model"
+import {
+  PROTECTED_NAV_SLUGS,
+  computeBackgroundTreatmentPatch,
+  computeCompositionSwap,
+  computeSiblingStep,
+  getStructureCapabilities,
+  parseHiddenNavSlugs,
+  serializeHiddenNavSlugs,
+} from "@/lib/editor/structure-rules"
 import { cn } from "@/lib/utils"
 import { useEditorStore } from "@/store/useEditorStore"
 import type { NodeId } from "@/types/editor"
 
 import type { SectionDragHandle } from "./customer-canvas-context"
 
-type Panel = "link" | "align" | "variant" | "alt" | "fit" | "nav" | null
+type Panel = "link" | "align" | "variant" | "alt" | "fit" | "nav" | "size" | "background" | null
 
 const PROTECTED_NOTES = {
   commerce: "Precio, inventario y SKU se editan en Productos.",
@@ -33,7 +42,15 @@ const PROTECTED_NOTES = {
  * behave exactly like any other edit. Lives in the customer overlay: never
  * part of the website markup, hidden in preview.
  */
-export function CustomerContextBar({ selectedId, dragHandle }: { selectedId: NodeId; dragHandle?: SectionDragHandle }) {
+export function CustomerContextBar({
+  selectedId,
+  dragHandle,
+  onStartSiblingDrag,
+}: {
+  selectedId: NodeId
+  dragHandle?: SectionDragHandle
+  onStartSiblingDrag?: (event: ReactPointerEvent, id: NodeId) => void
+}) {
   const tree = useEditorStore((s) => s.tree)
   const editingNodeId = useEditorStore((s) => s.editingNodeId)
   const availablePages = useEditorStore((s) => s.availablePages)
@@ -43,10 +60,12 @@ export function CustomerContextBar({ selectedId, dragHandle }: { selectedId: Nod
   const reorderChildren = useEditorStore((s) => s.reorderChildren)
   const duplicateNode = useEditorStore((s) => s.duplicateNode)
   const removeNode = useEditorStore((s) => s.removeNode)
+  const execute = useEditorStore((s) => s.execute)
   const [panel, setPanel] = useState<Panel>(null)
 
   const node = tree.nodes[selectedId]
   const capabilities = getNodeEditCapabilities(tree, selectedId)
+  const structure = getStructureCapabilities(tree, selectedId)
   const pages = availablePages.map((page) => ({ slug: page.slug, name: page.name }))
   const pageSlugs = pages.map((page) => page.slug)
   const toggle = (next: Exclude<Panel, null>) => setPanel((current) => (current === next ? null : next))
@@ -54,6 +73,29 @@ export function CustomerContextBar({ selectedId, dragHandle }: { selectedId: Nod
     // Unchanged values are not committed (no empty history entries, no false dirty state).
     const changed = Object.fromEntries(Object.entries(props).filter(([key, value]) => node?.props[key] !== value))
     if (Object.keys(changed).length) updateNodeProps(selectedId, changed)
+  }
+  const moveWithinParent = (direction: "before" | "after") => {
+    const next = computeSiblingStep(tree, selectedId, direction)
+    const parentId = next ? getParentId(tree, selectedId) : null
+    if (next && parentId) reorderChildren(parentId, next)
+  }
+  const swapComposition = () => {
+    if (!structure.split) return
+    const next = computeCompositionSwap(tree, structure.split.containerId)
+    if (next) reorderChildren(structure.split.containerId, next)
+  }
+  // One transaction (one undo): the section background and any foreground colour that would lose contrast.
+  const applyBackground = (color: string) => {
+    const patch = computeBackgroundTreatmentPatch(tree, selectedId, color)
+    if (!patch) return
+    execute(`section-background:${selectedId}`, (draft) => {
+      for (const [nodeId, props] of Object.entries(patch)) {
+        const target = draft.tree.nodes[nodeId]
+        if (!target) continue
+        target.props = { ...target.props, ...props }
+        target.version = (target.version ?? 0) + 1
+      }
+    })
   }
   const moveSection = (direction: "up" | "down") => {
     const next = computeSectionStep(tree, selectedId, direction)
@@ -100,6 +142,37 @@ export function CustomerContextBar({ selectedId, dragHandle }: { selectedId: Nod
         )}
         {capabilities.imageFit && <BarButton label="Ajuste" icon={<ImageIcon size={13} />} pressed={panel === "fit"} onClick={() => toggle("fit")} />}
         {capabilities.navigation && <BarButton label="Editar menú" icon={<Menu size={13} />} pressed={panel === "nav"} onClick={() => toggle("nav")} />}
+        {structure.sizes.length > 0 && <BarButton label="Tamaño" icon={<Type size={13} />} pressed={panel === "size"} onClick={() => toggle("size")} />}
+        {structure.split && (
+          <BarButton label={structure.split.mediaFirst ? "Imagen a la derecha" : "Imagen a la izquierda"} icon={<ArrowLeftRight size={13} />} onClick={swapComposition} />
+        )}
+        {structure.background.length > 0 && <BarButton label="Fondo" icon={<PaintBucket size={13} />} pressed={panel === "background"} onClick={() => toggle("background")} />}
+        {structure.hideOnMobile && (
+          <BarButton
+            label={node.props.hideOnMobile === true ? "Mostrar en celular" : "Ocultar en celular"}
+            icon={<Smartphone size={13} />}
+            pressed={node.props.hideOnMobile === true}
+            onClick={() => commit({ hideOnMobile: node.props.hideOnMobile !== true })}
+          />
+        )}
+        {structure.reorder && (
+          <>
+            {onStartSiblingDrag && (
+              <span
+                role="button"
+                tabIndex={-1}
+                title="Arrastra para cambiar el orden"
+                aria-label="Arrastrar para reordenar"
+                onPointerDown={(event) => onStartSiblingDrag(event, selectedId)}
+                className="grid h-8 w-8 cursor-grab touch-none place-items-center rounded-full text-cyan-100/75 transition hover:bg-white/10 hover:text-white active:cursor-grabbing"
+              >
+                <GripVertical size={13} />
+              </span>
+            )}
+            <IconButton label="Mover antes" disabled={!computeSiblingStep(tree, selectedId, "before")} onClick={() => moveWithinParent("before")}><ChevronLeft size={13} /></IconButton>
+            <IconButton label="Mover después" disabled={!computeSiblingStep(tree, selectedId, "after")} onClick={() => moveWithinParent("after")}><ChevronRight size={13} /></IconButton>
+          </>
+        )}
 
         {capabilities.section && (
           <>
@@ -135,6 +208,31 @@ export function CustomerContextBar({ selectedId, dragHandle }: { selectedId: Nod
       {panel === "align" && (
         <Popover title="Alineación">
           <Choice options={ALIGN_OPTIONS} value={String(node.props.align ?? "left")} onChange={(value) => commit({ align: value })} />
+        </Popover>
+      )}
+      {panel === "size" && (
+        <Popover title="Tamaño">
+          <Choice options={structure.sizes} value={String(node.props.size ?? "")} onChange={(value) => commit({ size: value })} />
+        </Popover>
+      )}
+      {panel === "background" && (
+        <Popover title="Fondo de la sección">
+          <div role="radiogroup" className="flex flex-wrap gap-1.5">
+            {structure.background.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={String(node.props.background ?? "").toLowerCase() === option.color.toLowerCase()}
+                onClick={() => applyBackground(option.color)}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-300 aria-checked:border-cyan-600 aria-checked:ring-1 aria-checked:ring-cyan-600"
+              >
+                <span className="h-4 w-4 rounded-full border border-slate-300" style={{ background: option.color }} aria-hidden="true" />
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">Los textos se ajustan para seguir siendo legibles.</p>
         </Popover>
       )}
       {panel === "variant" && (
@@ -181,6 +279,7 @@ export function CustomerContextBar({ selectedId, dragHandle }: { selectedId: Nod
             labels={parseNavLabelOverrides(node.props.labelOverrides)}
             ctaLabel={String(node.props.ctaLabel ?? "")}
             ctaHref={String(node.props.ctaHref ?? "")}
+            hidden={parseHiddenNavSlugs(node.props.hiddenSlugs)}
             validate={(value) => sanitizeCustomerHrefV1(value, pageSlugs)}
             onSubmit={(values) => {
               commit({
@@ -188,6 +287,7 @@ export function CustomerContextBar({ selectedId, dragHandle }: { selectedId: Nod
                 labelOverrides: serializeNavLabelOverrides(values.labels, pageSlugs),
                 ctaLabel: values.ctaLabel,
                 ctaHref: values.ctaHref,
+                hiddenSlugs: serializeHiddenNavSlugs(values.hidden, pageSlugs),
               })
               setPanel(null)
             }}
@@ -331,6 +431,7 @@ function NavForm({
   labels,
   ctaLabel,
   ctaHref,
+  hidden,
   validate,
   onSubmit,
 }: {
@@ -339,10 +440,11 @@ function NavForm({
   labels: Record<string, string>
   ctaLabel: string
   ctaHref: string
+  hidden: Set<string>
   validate: (value: string) => string | null
-  onSubmit: (values: { brand: string; labels: Record<string, string>; ctaLabel: string; ctaHref: string }) => void
+  onSubmit: (values: { brand: string; labels: Record<string, string>; ctaLabel: string; ctaHref: string; hidden: string[] }) => void
 }) {
-  const [values, setValues] = useState({ brand, labels: { ...labels }, ctaLabel, ctaHref })
+  const [values, setValues] = useState({ brand, labels: { ...labels }, ctaLabel, ctaHref, hidden: Array.from(hidden) })
   const [error, setError] = useState<string>()
   return (
     <form
@@ -361,17 +463,31 @@ function NavForm({
       </label>
       <fieldset className="flex flex-col gap-1.5">
         <legend className="text-xs text-slate-600">Nombres en el menú</legend>
-        {pages.map((page) => (
-          <input
-            key={page.slug}
-            className={INPUT}
-            aria-label={`Nombre en el menú para ${page.name}`}
-            placeholder={page.name}
-            maxLength={40}
-            value={values.labels[page.slug] ?? ""}
-            onChange={(event) => setValues({ ...values, labels: { ...values.labels, [page.slug]: event.target.value } })}
-          />
-        ))}
+        {pages.map((page) => {
+          const isProtected = PROTECTED_NAV_SLUGS.has(page.slug)
+          const shown = isProtected || !values.hidden.includes(page.slug)
+          return (
+            <div key={page.slug} className="flex items-center gap-2">
+              <input
+                className={INPUT}
+                aria-label={`Nombre en el menú para ${page.name}`}
+                placeholder={page.name}
+                maxLength={40}
+                value={values.labels[page.slug] ?? ""}
+                onChange={(event) => setValues({ ...values, labels: { ...values.labels, [page.slug]: event.target.value } })}
+              />
+              <label className="flex shrink-0 items-center gap-1 text-[11px] text-slate-600" title={isProtected ? "Esta página siempre aparece en el menú" : "Ocultar del menú no borra la página"}>
+                <input
+                  type="checkbox"
+                  checked={shown}
+                  disabled={isProtected}
+                  onChange={(event) => setValues({ ...values, hidden: event.target.checked ? values.hidden.filter((slug) => slug !== page.slug) : [...values.hidden, page.slug] })}
+                />
+                Mostrar
+              </label>
+            </div>
+          )
+        })}
       </fieldset>
       <label className="text-xs text-slate-600">
         Texto del botón del menú

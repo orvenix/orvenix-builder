@@ -65,7 +65,8 @@ test("VIEWPORT: keyboard, overlay and inline editing work in the frame document"
   assert.match(keys, /extraWindow\?\.addEventListener\("keydown", handler\)/)
   assert.match(keys, /extraWindow\?\.removeEventListener\("keydown", handler\)/)
   const overlay = read("components/editor/selection/CustomerSelectionOverlay.tsx")
-  assert.match(overlay, /element\.ownerDocument\.defaultView \?\? window/)
+  // VE-3: node measurement moved to a shared module used by the overlay and the sibling drag.
+  assert.match(read("components/editor/selection/measure-node.ts"), /element\.ownerDocument\.defaultView \?\? window/)
   assert.match(overlay, /view\?\.ResizeObserver/)
   for (const file of ["components/editor/primitives/Heading.tsx", "components/editor/primitives/Text.tsx", "components/editor/primitives/CtaButton.tsx"]) {
     const source = read(file)
