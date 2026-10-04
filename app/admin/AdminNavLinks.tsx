@@ -15,7 +15,11 @@ const navItems = [
   { href: "/admin/sitios",     label: "Sitios",     icon: Globe },
 ];
 
-export function AdminNavLinks() {
+interface AdminNavLinksProps {
+  onNavigate?: () => void;
+}
+
+export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
   const pathname = usePathname();
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -28,6 +32,7 @@ export function AdminNavLinks() {
           <Link
             key={href}
             href={href}
+            onClick={onNavigate}
             className={`admin-nav-item group relative flex items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 text-sm font-semibold transition-all duration-300 ${
               active
                 ? "border-[color:var(--glass-border-hover)] bg-[rgba(0,181,246,0.10)] text-[color:var(--accent)] shadow-lg shadow-[rgba(0,81,111,0.20)]"

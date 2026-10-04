@@ -6525,6 +6525,29 @@ body.light-mode .admin-sidebar {
   background: rgba(240, 246, 255, 0.75);
 }
 
+.admin-shell .admin-desktop-sidebar {
+  display: none !important;
+}
+
+.admin-shell .admin-mobile-header {
+  display: flex !important;
+}
+
+.admin-shell .admin-main-column {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .admin-shell .admin-desktop-sidebar {
+    display: flex !important;
+  }
+
+  .admin-shell .admin-mobile-header {
+    display: none !important;
+  }
+}
+
 .admin-shell .theme-toggle,
 .admin-shell .admin-theme-toggle {
   position: static;
