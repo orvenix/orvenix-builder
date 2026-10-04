@@ -4483,7 +4483,7 @@ body.light-mode .dashboard-shell .bg-white\/\[0\.02\],
 body.light-mode .dashboard-shell .bg-white\/\[0\.03\],
 body.light-mode .admin-shell .bg-white\/\[0\.02\],
 body.light-mode .admin-shell .bg-white\/\[0\.03\],
-body.light-mode .editor-shell-page .bg-white\/\[0\.03\] {
+body.light-mode .editor-shell-page .bg-white\/\[0\.03\]:not(.editor-render-scope *) {
   background: var(--glass) !important;
   border-color: var(--glass-border) !important;
 }
@@ -4493,7 +4493,7 @@ body.light-mode .auth-shell .text-white,
 body.light-mode .checkout-shell .text-white,
 body.light-mode .dashboard-shell .text-white,
 body.light-mode .admin-shell .text-white,
-body.light-mode .editor-shell-page .text-white {
+body.light-mode .editor-shell-page .text-white:not(.editor-render-scope *) {
   color: var(--text) !important;
 }
 
@@ -4580,8 +4580,8 @@ body.light-mode .dashboard-shell .border-white\/\[0\.09\],
 body.light-mode .admin-shell .border-white\/\[0\.06\],
 body.light-mode .admin-shell .border-white\/\[0\.07\],
 body.light-mode .admin-shell .border-white\/\[0\.08\],
-body.light-mode .editor-shell-page .border-white\/\[0\.05\],
-body.light-mode .editor-shell-page .border-white\/\[0\.08\] {
+body.light-mode .editor-shell-page .border-white\/\[0\.05\]:not(.editor-render-scope *),
+body.light-mode .editor-shell-page .border-white\/\[0\.08\]:not(.editor-render-scope *) {
   border-color: var(--glass-border) !important;
 }
 
@@ -4812,6 +4812,21 @@ body.light-mode .dashboard-shell .border-dashed {
 /* Footer del dashboard */
 body.light-mode .dashboard-shell .border-white\/\[0\.06\] {
   border-color: var(--glass-border) !important;
+}
+
+/*
+ * VE-1 editor open parity: the customer canvas frame re-establishes exactly
+ * what <body> gives a public page (see the base body rule), so the rendered
+ * site never inherits the editor shell's chrome typography/colour
+ * (eg. .editor-shell-page text-white / light-mode var(--text)).
+ */
+.editor-site-canvas {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: 0;
 }
 
 .editor-render-scope {

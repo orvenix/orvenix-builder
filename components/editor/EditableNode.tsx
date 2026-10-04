@@ -13,6 +13,8 @@ import {
 import { blockRegistry } from "@/blocks/registry";
 import { getEditorVisualStyle, resolveResponsiveProps } from "@/components/editor/responsive";
 import { useEditorExperience } from "@/components/editor/experience/ExperienceContext";
+import { getSiblingIds } from "@/lib/editor/selection-model";
+import { CustomerEditableNode } from "@/components/editor/selection/CustomerEditableNode";
 
 // Map block category → accent color
 const CATEGORY_COLORS: Record<string, string> = {
@@ -35,12 +37,26 @@ interface EditableNodeProps {
   children: React.ReactNode;
 }
 
+/**
+ * VE-1 editor open parity: the customer editor must render the site with the
+ * SAME layout geometry as preview, so customer mode uses a layout-neutral
+ * wrapper (selection chrome lives in the shared CustomerSelectionOverlay).
+ * Studio keeps its existing wrapper (free positioning, resize, toolbars).
+ */
 export const EditableNode = ({ id, children }: EditableNodeProps) => {
+  const { isClient } = useEditorExperience();
+  return isClient
+    ? <CustomerEditableNode id={id}>{children}</CustomerEditableNode>
+    : <StudioEditableNode id={id}>{children}</StudioEditableNode>;
+};
+
+const StudioEditableNode = ({ id, children }: EditableNodeProps) => {
   const { isClient, capabilities } = useEditorExperience();
-  const selectedId  = useEditorStore((s) => s.selectedId);
-  const selectedIds = useEditorStore((s) => s.selectedIds);
-  const editingNodeId = useEditorStore((s) => s.editingNodeId);
-  const hoveredId   = useEditorStore((s) => s.hoveredId);
+  // VE-1: per-node derived selection state -- hovering/selecting one node re-renders only the nodes it affects.
+  const isSelected = useEditorStore((s) => s.selectedId === id || s.selectedIds.includes(id));
+  const isPrimarySelection = useEditorStore((s) => s.selectedId === id);
+  const isEditing = useEditorStore((s) => s.editingNodeId === id);
+  const isHovered = useEditorStore((s) => s.hoveredId === id);
   const select      = useEditorStore((s) => s.select);
   const openContextMenu = useEditorStore((s) => s.openContextMenu);
   const hover       = useEditorStore((s) => s.hover);
@@ -58,12 +74,9 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
   const node        = useEditorStore((s) => s.tree.nodes[id]);
   const currentDevice = useEditorStore((s) => s.currentDevice);
   const rootId      = useEditorStore((s) => s.tree.rootId);
-  const siblings    = useEditorStore((s) => {
-    const parent = Object.values(s.tree.nodes).find((n) => n.children.includes(id));
-    return parent?.children ?? [];
-  });
+  // Parent index is derived once per tree change (cached), not rescanned per node per store update.
+  const siblings    = useEditorStore((s) => getSiblingIds(s.tree, id));
 
-  const isEditing = editingNodeId === id;
   const isLocked = Boolean(node?.locked);
   const isHidden = Boolean(node?.hidden);
   const isGrouped = typeof node?.props.groupId === "string";
@@ -74,9 +87,6 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id, disabled: isEditing || isLocked || !capabilities.allowStructureEditing });
 
-  const isSelected    = selectedId === id || selectedIds.includes(id);
-  const isPrimarySelection = selectedId === id;
-  const isHovered     = hoveredId === id;
   const isRoot        = id === rootId;
   const siblingIndex  = siblings.indexOf(id);
   const canMoveUp     = siblingIndex > 0;
@@ -202,47 +212,6 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
         </>
       )}
 
-      {/* ── Client quick actions ── */}
-      {isClient && isSelected && !isRoot && (
-        <div
-          className="absolute -top-11 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-cyan-300/20 bg-slate-950/90 p-1 text-[10px] font-black text-cyan-100 shadow-2xl shadow-black/35 backdrop-blur-xl editor-anim-fade-down"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="flex h-8 items-center gap-1.5 rounded-full px-3 transition hover:bg-cyan-300/10 hover:text-white"
-            onClick={() => !isLocked && setEditingNode(id)}
-            disabled={isLocked}
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            title="Duplicar bloque"
-            aria-label="Duplicar bloque"
-            className="grid h-8 w-8 place-items-center rounded-full text-cyan-100/75 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-            onClick={() => !isLocked && duplicateNode(id)}
-            disabled={isLocked}
-          >
-            <Copy size={13} />
-          </button>
-          <button
-            type="button"
-            title="Eliminar bloque"
-            aria-label="Eliminar bloque"
-            className="grid h-8 w-8 place-items-center rounded-full text-red-200/80 transition hover:bg-red-400/15 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-30"
-            onClick={() => {
-              if (isLocked) return;
-              const confirmed = window.confirm("Eliminar este bloque de la página?");
-              if (confirmed) removeNode(id);
-            }}
-            disabled={isLocked}
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-      )}
-
       {/* ── Floating toolbar ── */}
       {!isClient && (isSelected || isHovered) && (
         <div
@@ -279,7 +248,7 @@ export const EditableNode = ({ id, children }: EditableNodeProps) => {
 
           <div className="w-px h-4 bg-white/[0.08] mx-0.5" />
 
-          {!isRoot && (
+          {!isRoot && capabilities.allowFreePosition && (
             <ToolbarBtn
               onClick={() =>
                 !isLocked &&

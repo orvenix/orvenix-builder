@@ -9,6 +9,8 @@ const CLIENT_CAPABILITIES: EditorExperienceCapabilities = {
   allowFreePosition: false,
   allowResize: false,
   allowStructureEditing: false,
+  allowSectionReorder: true,
+  allowSelectionNavigation: true,
   allowDestructiveActions: false,
   allowDeveloperTools: false,
 }
@@ -19,6 +21,8 @@ const STUDIO_CAPABILITIES: EditorExperienceCapabilities = {
   allowFreePosition: true,
   allowResize: true,
   allowStructureEditing: true,
+  allowSectionReorder: true,
+  allowSelectionNavigation: true,
   allowDestructiveActions: true,
   allowDeveloperTools: true,
 }

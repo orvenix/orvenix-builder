@@ -88,7 +88,8 @@ export function Heading({
   useEffect(() => {
     const element = ref.current
 
-    if (!element || document.activeElement === element) {
+    // The element's own document: the customer editor renders the site inside an isolated viewport frame.
+    if (!element || element.ownerDocument.activeElement === element) {
       return
     }
 
@@ -104,11 +105,11 @@ export function Heading({
 
     element.focus()
 
-    const range = document.createRange()
+    const range = element.ownerDocument.createRange()
     range.selectNodeContents(element)
     range.collapse(false)
 
-    const selection = window.getSelection()
+    const selection = element.ownerDocument.defaultView?.getSelection()
     selection?.removeAllRanges()
     selection?.addRange(range)
   }, [isEditing])

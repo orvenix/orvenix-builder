@@ -3,8 +3,16 @@
 import { useEffect } from "react";
 import { useEditorStore } from "@/store/useEditorStore";
 import { resolveResponsiveProps } from "@/components/editor/responsive";
+import { useEditorExperience } from "@/components/editor/experience/ExperienceContext";
+import { isInteractiveKeyTarget, resolveSelectionKeyAction } from "@/lib/editor/selection-model";
 
-export function useKeyboardShortcuts() {
+/**
+ * `extraWindow`: an additional same-origin window whose key events are
+ * handled identically (VE-1: the customer editor's isolated website viewport).
+ */
+export function useKeyboardShortcuts(options: { extraWindow?: Window | null } = {}) {
+  const extraWindow = options.extraWindow ?? null;
+  const { capabilities } = useEditorExperience();
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
   const removeNode = useEditorStore((s) => s.removeNode);
@@ -25,6 +33,7 @@ export function useKeyboardShortcuts() {
   const lastCanvasPoint = useEditorStore((s) => s.lastCanvasPoint);
   const tree = useEditorStore((s) => s.tree);
   const rootId = useEditorStore((s) => s.tree.rootId);
+  const editingNodeId = useEditorStore((s) => s.editingNodeId);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -54,6 +63,34 @@ export function useKeyboardShortcuts() {
       }
 
       const mod = e.metaKey || e.ctrlKey;
+
+      /*
+       * VE-1 customer canvas: semantic selection navigation instead of
+       * low-level mutation. No x/y nudging, no keyboard delete/paste/duplicate
+       * (destructive or structural changes go through confirmed section actions).
+       */
+      if (!capabilities.allowStructureEditing) {
+        if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+        } else if (mod && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))) {
+          e.preventDefault();
+          redo();
+        } else if (e.key === "Escape" && editingNodeId && !isInteractiveKeyTarget(target)) {
+          setEditingNode(null);
+        } else if (capabilities.allowSelectionNavigation && !mod && !e.altKey && !isInteractiveKeyTarget(target)) {
+          const action = resolveSelectionKeyAction(tree, { selectedId, editingNodeId }, e.key);
+          if (action) {
+            e.preventDefault();
+            closeContextMenu();
+            if (action.type === "select") select(action.id);
+            else if (action.type === "edit") setEditingNode(action.id);
+            else select(null);
+          }
+        }
+        return;
+      }
+
       const selectedEditableIds = selectedIds.filter((id) => id !== rootId && tree.nodes[id]);
       const selectedUnlockedIds = selectedEditableIds.filter((id) => !tree.nodes[id]?.locked);
       const selectedFreeIds = expandGroupedIds(
@@ -83,7 +120,7 @@ export function useKeyboardShortcuts() {
       } else if (mod && e.key === "d") {
         e.preventDefault();
         if (selectedId && selectedId !== rootId) duplicateNode(selectedId);
-      } else if (arrowMove && selectedFreeIds.length > 0) {
+      } else if (arrowMove && capabilities.allowFreePosition && selectedFreeIds.length > 0) {
         e.preventDefault();
         moveFreeNodesByDelta(selectedFreeIds, arrowMove.x, arrowMove.y);
       } else if (
@@ -104,8 +141,15 @@ export function useKeyboardShortcuts() {
     };
 
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    extraWindow?.addEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      extraWindow?.removeEventListener("keydown", handler);
+    };
   }, [
+    extraWindow,
+    capabilities,
+    editingNodeId,
     undo,
     redo,
     removeNode,

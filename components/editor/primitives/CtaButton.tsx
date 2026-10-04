@@ -92,7 +92,8 @@ export function CtaButton({
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || document.activeElement === el) return;
+    // The element's own document: the customer editor renders the site inside an isolated viewport frame.
+    if (!el || el.ownerDocument.activeElement === el) return;
     el.textContent = label ?? "";
   }, [label]);
 
@@ -100,11 +101,12 @@ export function CtaButton({
     const el = ref.current;
     if (!el || !isEditing) return;
     el.focus();
-    const range = document.createRange();
+    const range = el.ownerDocument.createRange();
     range.selectNodeContents(el);
     range.collapse(false);
-    window.getSelection()?.removeAllRanges();
-    window.getSelection()?.addRange(range);
+    const selection = el.ownerDocument.defaultView?.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
   }, [isEditing]);
 
   return (

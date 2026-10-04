@@ -5,6 +5,7 @@ import { useEditorStore } from "@/store/useEditorStore"
 
 export function ClientPageRenderer() {
   const tree = useEditorStore((state) => state.tree)
+  const isPreviewMode = useEditorStore((state) => state.isPreviewMode)
 
   const root = tree.nodes[tree.rootId]
 
@@ -24,7 +25,8 @@ export function ClientPageRenderer() {
     )
   }
 
+  // VE-1 editor open parity: customer preview renders through the real preview path (no edit wrappers or chrome).
   return (
-    <DynamicRenderer nodeId={root.id} mode="edit" />
+    <DynamicRenderer nodeId={root.id} mode={isPreviewMode ? "preview" : "edit"} />
   )
 }
