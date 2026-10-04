@@ -15,6 +15,7 @@ import type {
   SaveStatus,
 } from "@/types/editor";
 import { shouldCoalesce, coalesce, type HistoryEntry, HISTORY_LIMIT } from "@/components/editor/history";
+import { isSafeEditorImageSrcV1 } from "@/lib/editor/context-capabilities";
 import { editorDebug, editorError, editorWarn } from "@/components/editor/logger";
 import { validateTree } from "@/types/validateTree";
 import { applyResponsivePatch, hasResponsiveDevicePatch, pickResponsiveEditorProps, removeResponsiveDevicePatch, resolveResponsiveProps, shouldStorePatchInDevice } from "@/components/editor/responsive";
@@ -1945,7 +1946,8 @@ export const useEditorStore = create<EditorState>()(subscribeWithSelector((set, 
 
   selectAsset: (url: string) => {
     const { assetPicker } = get();
-    if (assetPicker.target?.nodeId && assetPicker.target.propKey) {
+    // VE-2: only safe image sources (https, site-relative, raster base64) are ever written.
+    if (assetPicker.target?.nodeId && assetPicker.target.propKey && isSafeEditorImageSrcV1(url)) {
       get().updateNodeProps(assetPicker.target.nodeId, {
         [assetPicker.target.propKey]: url,
       });

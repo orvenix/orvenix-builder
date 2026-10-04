@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 
 import { blockRegistry } from "@/components/editor/blocks/registry"
+import { getProtectedReason } from "@/lib/editor/context-capabilities"
 import { useEditorStore } from "@/store/useEditorStore"
 import type { EditorNode } from "@/types/editor"
 
@@ -261,6 +262,8 @@ function collectEditableFields(rootId: string, nodes: Record<string, EditorNode>
   const visit = (id: string) => {
     const node = nodes[id]
     if (!node) return
+    // VE-2: commerce-authoritative and data-bound content is never hand-edited here.
+    if (getProtectedReason(node)) return
 
     if (node.type === "heading" && typeof node.props.text === "string") {
       fields.push({ node, key: "text", label: node.displayName ?? "Título", multiline: false })

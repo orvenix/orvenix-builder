@@ -137,15 +137,17 @@ export function Heading({
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === "Escape") {
           event.preventDefault()
+          // Escape cancels: restore the saved text so the blur below commits nothing.
+          if (event.key === "Escape") event.currentTarget.textContent = text ?? ""
           event.currentTarget.blur()
         }
       }}
       onBlur={(event) => {
         if (!id) return
 
-        updateNodeProps(id, {
-          text: event.currentTarget.textContent ?? "",
-        })
+        // One history entry per real change; an unchanged edit marks nothing dirty.
+        const next = event.currentTarget.textContent ?? ""
+        if (next !== (text ?? "")) updateNodeProps(id, { text: next })
 
         setEditingNode(null)
       }}

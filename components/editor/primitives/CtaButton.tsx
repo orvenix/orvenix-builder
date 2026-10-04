@@ -129,12 +129,16 @@ export function CtaButton({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === "Escape") {
           e.preventDefault();
+          // Escape cancels: restore the saved label so the blur below commits nothing.
+          if (e.key === "Escape") e.currentTarget.textContent = label ?? "";
           e.currentTarget.blur();
         }
       }}
       onBlur={(e) => {
         if (!id) return;
-        updateNodeProps(id, { label: e.currentTarget.textContent ?? "" });
+        // One history entry per real change; an unchanged edit marks nothing dirty.
+        const next = e.currentTarget.textContent ?? "";
+        if (next !== (label ?? "")) updateNodeProps(id, { label: next });
         setEditingNode(null);
       }}
       className={`

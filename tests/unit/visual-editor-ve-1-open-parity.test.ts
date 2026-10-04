@@ -219,8 +219,11 @@ test("PARITY C/D/E: nested click selects the node, hover is innermost, section c
   assert.match(onMouseOver, /event\.stopPropagation\(\)\s+if \(useEditorStore\.getState\(\)\.hoveredId !== id\) hover\(id\)/)
   assert.match(read("components/editor/client-shell/ClientShell.tsx"), /onMouseLeave=\{\(\) => useEditorStore\.getState\(\)\.hover\(null\)\}/)
   const overlay = read("components/editor/selection/CustomerSelectionOverlay.tsx")
-  for (const label of ["Subir sección", "Bajar sección", "Duplicar sección", "Eliminar sección", "Arrastrar sección"]) assert.ok(overlay.includes(label), label)
+  // VE-2: section controls render in the context bar, inside the shared overlay.
+  const bar = read("components/editor/selection/CustomerContextBar.tsx")
+  for (const label of ["Subir sección", "Bajar sección", "Duplicar sección", "Eliminar sección", "Arrastrar sección"]) assert.ok(bar.includes(label), label)
   assert.match(overlay, /canvas\?\.sectionDragHandles\.get\(selectedId\)/)
+  assert.match(overlay, /<CustomerContextBar key=\{selectedId\} selectedId=\{selectedId\} dragHandle=\{dragHandle\} \/>/)
   assert.match(overlay, /pointer-events-none absolute inset-0/)
   assert.doesNotMatch(overlay, /setInterval|onMouseMove|querySelectorAll/)
 })

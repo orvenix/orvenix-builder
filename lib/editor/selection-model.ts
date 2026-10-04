@@ -130,7 +130,10 @@ export function getNodeLabel(tree: EditorTree, id: NodeId): string {
 export const INLINE_EDITABLE_TYPES: ReadonlySet<string> = new Set(["heading", "text", "ctaButton"])
 
 export function isInlineEditable(node: EditorNode | undefined): boolean {
-  return Boolean(node && !node.locked && INLINE_EDITABLE_TYPES.has(node.type))
+  // VE-2: data-bound text shows bound values (CMS/catalog), so it is not hand-edited.
+  const bindings = node?.props._bindings
+  const isBound = Boolean(bindings && typeof bindings === "object" && Object.keys(bindings as Record<string, unknown>).length > 0)
+  return Boolean(node && !node.locked && !isBound && INLINE_EDITABLE_TYPES.has(node.type))
 }
 
 /* ------------------------------------------------------------------ */

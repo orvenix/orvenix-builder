@@ -389,7 +389,9 @@ test("VE-1 V: selection labels are human-readable Spanish, never raw block types
   const unknown = clone(tree)
   unknown.nodes["hero-copy"].type = "crm-pipeline-table"
   assert.equal(getNodeLabel(unknown, "hero-copy"), "Elemento")
-  assert.match(read("components/editor/selection/CustomerSelectionOverlay.tsx"), /getNodeLabel\(tree, selectedId\)/)
+  // VE-2: the context bar shows the capability label, which is getNodeLabel.
+  assert.match(read("lib/editor/context-capabilities.ts"), /const label = getNodeLabel\(tree, id\)/)
+  assert.match(read("components/editor/selection/CustomerContextBar.tsx"), /\{capabilities\.label\}/)
 })
 
 test("VE-1 performance: per-node selection subscriptions and cached parent index (no full-tree scans per node)", () => {

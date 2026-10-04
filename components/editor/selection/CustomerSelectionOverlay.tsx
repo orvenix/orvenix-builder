@@ -1,13 +1,12 @@
 "use client"
 
-import { ChevronDown, ChevronUp, Copy, GripVertical, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useState, type RefObject } from "react"
 
-import { computeSectionStep, getNodeLabel, isInlineEditable, isMovableSection } from "@/lib/editor/selection-model"
-import { cn } from "@/lib/utils"
+import { isMovableSection } from "@/lib/editor/selection-model"
 import { useEditorStore } from "@/store/useEditorStore"
 
 import { EDITOR_NODE_ATTRIBUTE, useCustomerCanvas } from "./customer-canvas-context"
+import { CustomerContextBar } from "./CustomerContextBar"
 
 type Box = { top: number; left: number; width: number; height: number }
 
@@ -51,11 +50,7 @@ export function CustomerSelectionOverlay({ containerRef }: { containerRef: RefOb
   const editingNodeId = useEditorStore((s) => s.editingNodeId)
   const currentDevice = useEditorStore((s) => s.currentDevice)
   const tree = useEditorStore((s) => s.tree)
-  const reorderChildren = useEditorStore((s) => s.reorderChildren)
-  const duplicateNode = useEditorStore((s) => s.duplicateNode)
-  const removeNode = useEditorStore((s) => s.removeNode)
-  const setEditingNode = useEditorStore((s) => s.setEditingNode)
-  const [boxes, setBoxes] = useState<{ selected: Box | null; hovered: Box | null }>({ selected: null, hovered: null })
+  const [boxes, setBoxes] = useState<{ selected: Box | null; hovered: Box | null; canvasWidth: number }>({ selected: null, hovered: null, canvasWidth: 0 })
   const [observed, setObserved] = useState<Element[]>([])
 
   const measure = useCallback(() => {
@@ -63,7 +58,7 @@ export function CustomerSelectionOverlay({ containerRef }: { containerRef: RefOb
     if (!container) return
     const selected = measureNode(container, selectedId)
     const hovered = hoveredId && hoveredId !== selectedId ? measureNode(container, hoveredId) : null
-    setBoxes({ selected: selected?.box ?? null, hovered: hovered?.box ?? null })
+    setBoxes({ selected: selected?.box ?? null, hovered: hovered?.box ?? null, canvasWidth: container.clientWidth })
     setObserved((previous) => {
       const next = selected?.elements ?? []
       return previous.length === next.length && previous.every((element, index) => element === next[index]) ? previous : next
@@ -105,17 +100,13 @@ export function CustomerSelectionOverlay({ containerRef }: { containerRef: RefOb
     return () => observer.disconnect()
   }, [observed, measure])
 
-  const selectedNode = selectedId ? tree.nodes[selectedId] : undefined
   const isSection = Boolean(selectedId && isMovableSection(tree, selectedId))
-  const canEdit = isInlineEditable(selectedNode) && editingNodeId !== selectedId
   const dragHandle = selectedId && isSection ? canvas?.sectionDragHandles.get(selectedId) : undefined
-  const moveSection = (direction: "up" | "down") => {
-    if (!selectedId) return
-    const next = computeSectionStep(tree, selectedId, direction)
-    if (next) reorderChildren(tree.rootId, next)
-  }
+
   const selected = boxes.selected
   const toolbarTop = selected ? (isSection ? selected.top + 12 : selected.top >= 52 ? selected.top - 48 : selected.top + selected.height + 8) : 0
+  // Keep the bar inside the canvas horizontally (it may wrap on narrow viewports).
+  const toolbarLeft = selected ? Math.max(8, Math.min(selected.left + (isSection ? 12 : 0), Math.max(8, boxes.canvasWidth - 428))) : 0
 
   return (
     <div className="pointer-events-none absolute inset-0 z-[60]" aria-hidden={!selected}>
@@ -132,74 +123,15 @@ export function CustomerSelectionOverlay({ containerRef }: { containerRef: RefOb
             style={{ top: selected.top, left: selected.left, width: selected.width, height: selected.height }}
           />
           <div
-            role="toolbar"
-            aria-label={`Acciones de ${getNodeLabel(tree, selectedId)}`}
-            className="pointer-events-auto absolute flex items-center gap-1 rounded-full border border-cyan-300/20 bg-slate-950/90 p-1 text-[10px] font-black text-cyan-100 shadow-2xl shadow-black/35 backdrop-blur-xl"
-            style={{ top: toolbarTop, left: Math.max(8, selected.left + (isSection ? 12 : 0)) }}
+            className="pointer-events-auto absolute"
+            style={{ top: toolbarTop, left: toolbarLeft }}
             onClick={(event) => event.stopPropagation()}
           >
-            <span className="px-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-200">{getNodeLabel(tree, selectedId)}</span>
-            {canEdit && (
-              <button type="button" className="flex h-8 items-center rounded-full px-3 transition hover:bg-cyan-300/10 hover:text-white" onClick={() => setEditingNode(selectedId)}>
-                Editar
-              </button>
-            )}
-            {isSection && (
-              <>
-                {dragHandle && (
-                  <span
-                    {...dragHandle.attributes}
-                    {...dragHandle.listeners}
-                    role="button"
-                    tabIndex={-1}
-                    title="Arrastra para mover la sección"
-                    aria-label="Arrastrar sección"
-                    className="grid h-8 w-8 cursor-grab place-items-center rounded-full text-cyan-100/75 transition hover:bg-white/10 hover:text-white active:cursor-grabbing"
-                  >
-                    <GripVertical size={13} />
-                  </span>
-                )}
-                <ToolbarButton label="Subir sección" disabled={!computeSectionStep(tree, selectedId, "up")} onClick={() => moveSection("up")}>
-                  <ChevronUp size={13} />
-                </ToolbarButton>
-                <ToolbarButton label="Bajar sección" disabled={!computeSectionStep(tree, selectedId, "down")} onClick={() => moveSection("down")}>
-                  <ChevronDown size={13} />
-                </ToolbarButton>
-                <ToolbarButton label="Duplicar sección" onClick={() => duplicateNode(selectedId)}>
-                  <Copy size={13} />
-                </ToolbarButton>
-                <ToolbarButton
-                  label="Eliminar sección"
-                  danger
-                  onClick={() => {
-                    if (window.confirm("¿Eliminar esta sección de la página?")) removeNode(selectedId)
-                  }}
-                >
-                  <Trash2 size={13} />
-                </ToolbarButton>
-              </>
-            )}
+            {/* VE-2: capability-driven context bar (key resets transient panels per selection). */}
+            <CustomerContextBar key={selectedId} selectedId={selectedId} dragHandle={dragHandle} />
           </div>
         </>
       )}
     </div>
-  )
-}
-
-function ToolbarButton({ label, onClick, disabled, danger, children }: { label: string; onClick: () => void; disabled?: boolean; danger?: boolean; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "grid h-8 w-8 place-items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-30",
-        danger ? "text-red-200/80 hover:bg-red-400/15 hover:text-red-100" : "text-cyan-100/75 hover:bg-white/10 hover:text-white",
-      )}
-    >
-      {children}
-    </button>
   )
 }

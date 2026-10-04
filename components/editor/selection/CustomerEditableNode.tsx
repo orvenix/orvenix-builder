@@ -7,7 +7,7 @@ import { useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } 
 import { useEditorExperience } from "@/components/editor/experience/ExperienceContext"
 import { getEditorVisualStyle, resolveResponsiveProps } from "@/components/editor/responsive"
 import { getRuntimeFreePositionStyle } from "@/lib/builder-core/runtime/rendering"
-import { isMovableSection } from "@/lib/editor/selection-model"
+import { isInlineEditable, isMovableSection } from "@/lib/editor/selection-model"
 import { useEditorStore } from "@/store/useEditorStore"
 import type { NodeId } from "@/types/editor"
 
@@ -48,7 +48,8 @@ export function CustomerEditableNode({ id, children }: { id: NodeId; children: R
     },
     onDoubleClick: (event: MouseEvent) => {
       event.stopPropagation()
-      if (!useEditorStore.getState().tree.nodes[id]?.locked) setEditingNode(id)
+      // Only plain text primitives enter inline editing (never commerce or data-bound content).
+      if (isInlineEditable(useEditorStore.getState().tree.nodes[id])) setEditingNode(id)
     },
     onContextMenu: (event: MouseEvent) => {
       event.preventDefault()

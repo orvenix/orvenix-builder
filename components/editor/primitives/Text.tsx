@@ -84,12 +84,16 @@ export function Text({
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           e.preventDefault();
+          // Escape cancels: restore the saved text so the blur below commits nothing.
+          e.currentTarget.textContent = content ?? "";
           e.currentTarget.blur();
         }
       }}
       onBlur={(e) => {
         if (!id) return;
-        updateNodeProps(id, { content: e.currentTarget.textContent ?? "" });
+        // One history entry per real change; an unchanged edit marks nothing dirty.
+        const next = e.currentTarget.textContent ?? "";
+        if (next !== (content ?? "")) updateNodeProps(id, { content: next });
         setEditingNode(null);
       }}
       className={`outline-none ${SIZE[size]} ${ALIGN[align]} ${MAX_WIDTH[maxWidth]} ${isSelected ? "cursor-text" : ""} ${isEditing ? "rounded-sm ring-2 ring-fuchsia-400/60 ring-offset-2 ring-offset-white" : ""}`}
