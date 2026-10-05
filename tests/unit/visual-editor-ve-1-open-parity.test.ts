@@ -65,7 +65,7 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 /* ------------------------------ helpers ------------------------------ */
 
 function experience(mode: EditorExperienceMode) {
-  return { mode, isClient: mode === "client", isStudio: mode === "studio", canSwitchMode: false, setMode: () => undefined, capabilities: getExperienceCapabilities(mode) }
+  return { mode, profile: mode === "studio" ? ("pro" as const) : ("simple" as const), isClient: mode === "client", isStudio: mode === "studio", canSwitchMode: false, setMode: () => undefined, capabilities: getExperienceCapabilities(mode) }
 }
 
 function render(tree: EditorTree, mode: "preview" | "edit", experienceMode: EditorExperienceMode = "client"): string {
@@ -284,4 +284,16 @@ test("PARITY Q: editor light-theme CSS cannot recolour the rendered site; the ca
     assert.ok(canvasRule.includes(declaration), `canvas: ${declaration}`)
   }
   assert.match(read("components/editor/client-shell/ClientShell.tsx"), /className="editor-site-canvas"/)
+})
+
+/* CV1-1b: the same renderer parity holds for demo-shape customer sites, empty states included. */
+test("PARITY CV1-1b: a minimal-facts @2 customer site renders identical markup in the customer editor and in preview", async () => {
+  for (const designId of ["servicios-locales", "construction"]) {
+    const compiled = await compileCommercialDesignV1({ mode: "customer", designId, version: 2, facts: { businessName: "Negocio Mínimo", contact: { phone: "5512345678" } } })
+    for (const page of compiled.plan.pages) {
+      const tree = validateTree(clone(page.tree))
+      const result = parity(tree)
+      assert.equal(result.edit, result.preview, `${designId}/${page.slug}: website markup parity`)
+    }
+  }
 })

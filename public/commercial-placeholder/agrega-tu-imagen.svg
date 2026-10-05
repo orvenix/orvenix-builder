@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Agrega tu imagen">
+  <rect width="1200" height="800" fill="#eef2f6"/>
+  <rect x="24" y="24" width="1152" height="752" rx="28" fill="none" stroke="#9aa8b8" stroke-width="4" stroke-dasharray="18 14"/>
+  <g transform="translate(600 360)" fill="none" stroke="#64748b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="-90" y="-66" width="180" height="132" rx="18"/>
+    <circle cx="-36" cy="-18" r="16"/>
+    <path d="M-80 52 L-20 -6 L22 34 L46 12 L84 50"/>
+  </g>
+  <text x="600" y="520" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="700" fill="#334155">Agrega tu imagen</text>
+  <text x="600" y="572" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="26" fill="#64748b">Este espacio no se publica hasta que subas una foto</text>
+</svg>

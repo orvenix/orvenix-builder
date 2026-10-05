@@ -83,7 +83,7 @@ export function StudioTopBar() {
         : "border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-300",
     ].join(" ")}
   >
-    {isStudio ? "Studio" : "Edición sencilla"}
+    {isStudio ? "Modo Profesional" : "Modo Simple"}
   </span>
 </div>
 

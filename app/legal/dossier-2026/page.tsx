@@ -146,7 +146,7 @@ export default function Dossier2026Page() {
 
       <section className="mk-section-alt">
         <div className="mk-container grid gap-5 lg:grid-cols-3">
-          <LegalCard title="Compra definitiva"><BulletList items={[...officialBuyout2026.rights, ...officialBuyout2026.postSale]} /></LegalCard>
+          <LegalCard title={officialBuyout2026.title}><BulletList items={[...officialBuyout2026.rights, ...officialBuyout2026.postSale]} /></LegalCard>
           <LegalCard title="SLA y backups"><BulletList items={[officialSla2026.uptime, "Ventana de mantenimiento: " + officialSla2026.maintenanceWindow, ...officialSla2026.backups]} /></LegalCard>
           <LegalCard title="Actualizaciones"><BulletList items={[...officialUpdatePolicy2026.included, ...officialUpdatePolicy2026.requiredUpgrades]} /></LegalCard>
         </div>

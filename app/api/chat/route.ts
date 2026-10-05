@@ -76,7 +76,7 @@ const FALLBACK_RESPONSES: FallbackRule[] = [
       "planes",
       "suscripcion"
     ],
-    "answer": "Los planes oficiales de Orvenix son claros para que el cliente decida rapido:\n\n- **Starter**: 15 USD/mes + IVA, para una primera web profesional.\n- **Pro**: 39 USD/mes + IVA, recomendado si quiere vender, usar IA, CRM, blog, SEO o varios sitios.\n- **Business**: 79 USD/mes + IVA, para funnels, automatizaciones y eCommerce mas avanzado.\n- **Enterprise**: cotizacion segun alcance.\n\nSi el usuario quiere crecer o vender, normalmente conviene llevarlo a **Pro**. ¿Quieres que compare Starter vs Pro para tu caso?"
+    "answer": "Los planes oficiales de Orvenix son claros para que el cliente decida rapido:\n\n- **Starter**: 15 USD/mes + IVA, para una primera web profesional.\n- **Pro**: 39 USD/mes + IVA, recomendado si quiere vender, CRM, blog, SEO o varios sitios.\n- **Business**: 79 USD/mes + IVA, para funnels, automatizaciones y eCommerce mas avanzado.\n- **Enterprise**: cotizacion segun alcance.\n\nSi el usuario quiere crecer o vender, normalmente conviene llevarlo a **Pro**. ¿Quieres que compare Starter vs Pro para tu caso?"
   },
   {
     "id": "clinic",

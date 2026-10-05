@@ -93,6 +93,91 @@ export const DEMO_FACTS_INPUT_BY_DESIGN_V1: Readonly<Record<string, BusinessFact
       ],
     },
   },
+  clinica: {
+    businessName: "Clinica Ejemplo Integral",
+    tagline: "Sitio de ejemplo · atencion medica y bienestar",
+    description: "Clinica de ejemplo para mostrar el diseño Clinica & Salud. Todos los datos son de muestra.",
+    contact: { whatsapp: "5500000000", phone: "5500000000", email: "contacto@example.com" },
+    address: "Av. Ejemplo 100, Ciudad de Mexico (direccion de ejemplo)",
+    hours: "Lunes a viernes, 8:00 a 19:00 (horario de ejemplo)",
+    serviceArea: ["Zona Centro (ejemplo)", "Zona Norte (ejemplo)", "Teleconsulta (ejemplo)"],
+    services: [
+      { name: "Consulta general", description: "Servicio de ejemplo: valoracion inicial y seguimiento del paciente." },
+      { name: "Odontologia preventiva", description: "Servicio de ejemplo: revision, limpieza y orientacion de higiene." },
+      { name: "Fisioterapia", description: "Servicio de ejemplo: evaluacion funcional y plan de rehabilitacion." },
+      { name: "Psicologia", description: "Servicio de ejemplo: acompanamiento profesional y seguimiento." },
+    ],
+    people: [
+      { name: "Dra. Ejemplo Alvarez", role: "Medicina general" },
+      { name: "Dr. Ejemplo Rios", role: "Odontologia preventiva" },
+      { name: "Lic. Ejemplo Torres", role: "Fisioterapia" },
+    ],
+    testimonials: [
+      { quote: "La informacion de este testimonio es de ejemplo; tu sitio mostrara solo opiniones que proporciones.", author: "Paciente de ejemplo", role: "Atencion general" },
+      { quote: "El flujo de cita y contacto se adapta a los datos reales de cada clinica.", author: "Paciente de ejemplo", role: "Seguimiento" },
+    ],
+    faq: [
+      { question: "¿Esta informacion medica es real?", answer: "No. Es un sitio de ejemplo; tu clinica usara unicamente la informacion que proporciones." },
+      { question: "¿Puedo cambiar especialidades, doctores y horarios?", answer: "Si. Servicios, equipo, contacto y horarios salen de tus datos y se editan en Orvenix." },
+    ],
+    assets: {
+      logo: { src: "/uploads/demo-clinica-logo.webp", alt: "Logo de ejemplo" },
+      hero: { src: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&h=900&fit=crop&q=80", alt: "Consultorio medico de ejemplo" },
+      serviceImages: [{ src: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=900&h=700&fit=crop&q=80", alt: "Atencion clinica de ejemplo" }],
+    },
+  },
+  contabilidad: {
+    businessName: "Despacho Ejemplo Fiscal",
+    tagline: "Sitio de ejemplo · contabilidad y asesoria fiscal",
+    description: "Despacho contable de ejemplo para mostrar el diseño Despacho Contable. Todos los datos son de muestra.",
+    contact: { whatsapp: "5500000000", phone: "5500000000", email: "contacto@example.com" },
+    address: "Calle Fiscal 100, Ciudad de Mexico (direccion de ejemplo)",
+    hours: "Lunes a viernes, 9:00 a 18:00 (horario de ejemplo)",
+    serviceArea: ["PyMEs (ejemplo)", "Emprendedores (ejemplo)", "Servicios profesionales (ejemplo)"],
+    services: [
+      { name: "Contabilidad mensual", description: "Servicio de ejemplo: registros, conciliaciones y reportes.", priceLabel: "Desde $0000 (ejemplo)" },
+      { name: "Declaraciones fiscales", description: "Servicio de ejemplo: preparacion y presentacion de obligaciones.", priceLabel: "Desde $0000 (ejemplo)" },
+      { name: "Nomina e IMSS", description: "Servicio de ejemplo: calculo de nomina, movimientos y reportes." },
+      { name: "Diagnostico fiscal", description: "Servicio de ejemplo: revision inicial de obligaciones y riesgos." },
+    ],
+    people: [
+      { name: "C.P. Ejemplo Morales", role: "Socio fiscal" },
+      { name: "C.P. Ejemplo Herrera", role: "Nomina e IMSS" },
+    ],
+    faq: [
+      { question: "¿Esta informacion fiscal es real?", answer: "No. Es un sitio de ejemplo; tu despacho usara solo la informacion que proporciones." },
+      { question: "¿Puedo cambiar servicios, planes y contacto?", answer: "Si. Servicios, precios, equipo y datos de contacto salen de tus datos y se editan en Orvenix." },
+    ],
+    assets: {
+      logo: { src: "/uploads/demo-contabilidad-logo.webp", alt: "Logo de ejemplo" },
+      hero: { src: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200&h=900&fit=crop&q=80", alt: "Despacho contable de ejemplo" },
+      serviceImages: [{ src: "https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=900&h=700&fit=crop&q=80", alt: "Asesoria fiscal de ejemplo" }],
+    },
+  },
+  hotel: {
+    businessName: "Hotel Ejemplo Boutique",
+    tagline: "Sitio de ejemplo · hospedaje y experiencias",
+    description: "Hotel de ejemplo para mostrar el diseño Hotel Boutique. Todos los datos son de muestra.",
+    contact: { whatsapp: "5500000000", phone: "5500000000", email: "reservas@example.com" },
+    address: "Camino Ejemplo 100, Valle de Ejemplo",
+    hours: "Check-in 15:00 · Check-out 12:00 (horario de ejemplo)",
+    serviceArea: ["Escapadas de fin de semana (ejemplo)", "Estancias romanticas (ejemplo)", "Viajes de descanso (ejemplo)"],
+    services: [
+      { name: "Suite terraza", description: "Habitacion de ejemplo con terraza privada y vista al jardin.", priceLabel: "Desde $0000 (ejemplo)" },
+      { name: "Habitacion jardin", description: "Habitacion de ejemplo con acceso cercano a areas verdes.", priceLabel: "Desde $0000 (ejemplo)" },
+      { name: "Desayuno incluido", description: "Servicio de ejemplo: desayuno preparado en sitio." },
+      { name: "Experiencia wellness", description: "Servicio de ejemplo: descanso, caminatas y rituales de bienestar." },
+    ],
+    faq: [
+      { question: "¿Este hotel existe?", answer: "No. Es un sitio de ejemplo; tu hospedaje usara unicamente la informacion que proporciones." },
+      { question: "¿Puedo cambiar habitaciones, tarifas y contacto?", answer: "Si. Habitaciones, servicios, tarifas y canales de reserva salen de tus datos y se editan en Orvenix." },
+    ],
+    assets: {
+      logo: { src: "/uploads/demo-hotel-logo.webp", alt: "Logo de ejemplo" },
+      hero: { src: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=900&fit=crop&q=80", alt: "Hotel boutique de ejemplo" },
+      serviceImages: [{ src: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=900&h=700&fit=crop&q=80", alt: "Habitacion de hotel de ejemplo" }],
+    },
+  },
 }
 
 export function getDemoFactsV1(designId: string): BusinessFactsV1 | null {

@@ -12,6 +12,8 @@ import { updateEditRequestStatusAction } from "./actions";
 import { DeleteSiteButton } from "./DeleteSiteButton";
 import { DashboardNav } from "./DashboardNav";
 import { DashboardBillingPanel } from "./DashboardBillingPanel";
+import { PendingDesignBanner } from "./PendingDesignBanner";
+import { parseDesignIntentId } from "@/lib/commercial/sales-funnel";
 import {
   Edit3, Globe, ExternalLink,
   ArrowRight, Sparkles, TrendingUp, Clock, ShieldCheck,
@@ -39,6 +41,7 @@ interface DashboardPageProps {
     session_id?: string | string[];
     sub?: string | string[];
     billing?: string | string[];
+    design?: string | string[];
   }>;
 }
 
@@ -97,6 +100,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const checkoutStatus = firstParam(resolvedSearchParams?.checkout);
   const checkoutIntent = normalizeCheckoutAction(firstParam(resolvedSearchParams?.intent));
   const checkoutSiteId = firstParam(resolvedSearchParams?.siteId);
+  // SALES-2: the chosen Orvenix design comes back from checkout as ?design=<id> (validated against the catalog).
+  const returnedDesign = parseDesignIntentId(firstParam(resolvedSearchParams?.design));
   const billingProvider = firstParam(resolvedSearchParams?.provider);
   const billingReturn = firstParam(resolvedSearchParams?.sub);
   const billingAction = firstParam(resolvedSearchParams?.billing);
@@ -217,16 +222,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[color:var(--text-secondary)] md:text-base">
                 {sites.length === 0
-                  ? "Crea tu primer sitio o activa un template inteligente para comenzar a operar desde un solo panel."
+                  ? "Elige un Diseño Orvenix, agrega los datos de tu negocio y publica tu primer sitio desde este panel."
                   : isAdmin
                     ? `Administrando ${sites.length} sitio${sites.length !== 1 ? "s" : ""} de clientes con control visual y flujos comerciales.`
                     : `Gestionando ${sites.length} sitio${sites.length !== 1 ? "s" : ""} con editor, publicación y templates inteligentes.`}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <CreateSiteWithAI commerceAvailable={Boolean(planAccess.isActive && canUseEcommerce(planAccess.plan?.id))} />
+              {/* SALES-1: Diseños Orvenix first; IA stays internal until it ships for customers. */}
               <Link
-                href="/constructor?source=blank"
+                href="/templates"
                 className="relative flex h-11 items-center gap-2 overflow-hidden rounded-2xl px-4 text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:scale-[0.98]"
                 style={{
                   background: "linear-gradient(135deg, #00b5f6 0%, #0083b3 100%)",
@@ -234,17 +239,27 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 }}
               >
                 <span className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 hover:translate-x-[100%]" />
-                <Edit3 size={16} className="relative z-10" />
-                <span className="relative z-10">Crear desde cero</span>
+                <Layers3 size={16} className="relative z-10" />
+                <span className="relative z-10">Elegir un Diseño Orvenix</span>
               </Link>
-              <Link href="/templates" className="flex h-11 items-center gap-2 rounded-2xl border border-white/[0.09] bg-white/[0.035] px-4 text-sm font-semibold text-white/60 transition-all hover:border-[#00b5f6]/25 hover:bg-[#00b5f6]/[0.08] hover:text-[#00b5f6]">
-                <Layers3 size={16} />
-                Templates
+              <Link href="/constructor?source=blank" className="flex h-11 items-center gap-2 rounded-2xl border border-white/[0.09] bg-white/[0.035] px-4 text-sm font-semibold text-white/60 transition-all hover:border-[#00b5f6]/25 hover:bg-[#00b5f6]/[0.08] hover:text-[#00b5f6]">
+                <Edit3 size={16} />
+                Crear desde cero
               </Link>
+              {isAdmin ? (
+                <CreateSiteWithAI commerceAvailable={Boolean(planAccess.isActive && canUseEcommerce(planAccess.plan?.id))} />
+              ) : (
+                <span className="flex h-11 items-center gap-2 rounded-2xl border border-white/[0.06] px-4 text-sm font-semibold text-white/35" title="Orvenix IA estará disponible próximamente">
+                  <Sparkles size={16} />
+                  Orvenix IA — Próximamente
+                </span>
+              )}
               <CreateSiteDialog />
             </div>
           </div>
         </div>
+
+        <PendingDesignBanner returnedDesign={returnedDesign} />
 
         <DashboardBillingPanel
           plan={subscription?.plan ? {
@@ -316,12 +331,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
               <h3 className="mb-2 text-2xl font-black tracking-tight text-white">Tu workspace está listo</h3>
               <p className="mx-auto mb-8 max-w-md text-sm leading-7 text-[color:var(--text-secondary)]">
-                Crea un sitio desde cero o inicia con un template inteligente para editar, comprar o rentar una web modular.
+                Elige un Diseño Orvenix: mira la demo, agrega los datos de tu negocio y tu sitio queda listo para editar y publicar.
               </p>
 
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  href="/constructor?source=blank"
+                  href="/templates"
                   className="relative flex h-11 items-center gap-2 overflow-hidden rounded-2xl px-5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:scale-[0.98]"
                   style={{
                     background: "linear-gradient(135deg, #22c55e 0%, #06b6d4 100%)",
@@ -329,17 +344,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   }}
                 >
                   <span className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 hover:translate-x-[100%]" />
-                  <Edit3 size={14} className="relative z-10" />
-                  <span className="relative z-10">Abrir editor en blanco</span>
+                  <LayoutTemplate size={14} className="relative z-10" />
+                  <span className="relative z-10">Elegir un Diseño Orvenix</span>
                   <ArrowRight size={12} className="relative z-10" />
                 </Link>
-                <CreateSiteDialog />
-                <Link href="/webs"
+                <Link href="/constructor?source=blank"
                   className="flex h-11 items-center gap-2 rounded-2xl border border-[#00b5f6]/18 bg-[#00b5f6]/[0.08] px-4 text-sm font-semibold text-[#00b5f6] transition-all hover:border-[#00b5f6]/35 hover:bg-[#00b5f6]/12">
-                  <LayoutTemplate size={13} />
-                  Ver plantillas
-                  <ArrowRight size={12} />
+                  <Edit3 size={13} />
+                  Abrir editor en blanco
                 </Link>
+                <CreateSiteDialog />
               </div>
               </div>
             </div>
@@ -393,9 +407,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {/* ── Footer links ── */}
         <div className="mt-16 flex items-center justify-between border-t border-white/[0.06] pt-8">
           <div className="flex items-center gap-4">
-            <Link href="/webs" className="flex items-center gap-1.5 text-xs text-white/20 hover:text-white/60 transition-colors">
+            <Link href="/templates" className="flex items-center gap-1.5 text-xs text-white/20 hover:text-white/60 transition-colors">
               <TrendingUp size={12} />
-              Explorar plantillas
+              Explorar Diseños Orvenix
             </Link>
           </div>
           <p className="text-[11px] text-white/15">Orvenix Editor Pro · v1.0</p>

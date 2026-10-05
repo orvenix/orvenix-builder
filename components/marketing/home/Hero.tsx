@@ -40,7 +40,7 @@ export function Hero() {
             <div className="home-hero-pill mb-5">
               <span className="mk-eyebrow-dot" aria-hidden="true" />
               <Sparkles className="h-4 w-4" aria-hidden="true" />
-              <span>Super Builder + IA para lanzar mas rapido</span>
+              <span>Diseños Orvenix listos para tu negocio</span>
             </div>
 
             <h1 className="mk-hero-title mb-5 text-orvenix-text">
@@ -50,20 +50,20 @@ export function Hero() {
             </h1>
 
             <p className="home-hero-lead mb-7 max-w-xl text-orvenix-secondary">
-              Orvenix combina sitio profesional, editor visual, templates por industria, pagos y panel privado para que tu negocio se vea listo para comprar desde el primer clic.
+              Elige un Diseño Orvenix, agrega los datos de tu negocio y recibe un sitio de varias páginas listo para editar y publicar. Lo que ves en la demo es lo que recibes.
             </p>
 
             <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href="/precios" className="mk-btn-primary home-hero-cta-primary">
-                Comenzar ahora
+              <Link href="/templates" className="mk-btn-primary home-hero-cta-primary">
+                Ver Diseños Orvenix
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-              <Link href="/webs" className="mk-btn-outline home-hero-cta-secondary">
-                Ver demostración
+              <Link href="/precios" className="mk-btn-outline home-hero-cta-secondary">
+                Ver planes
               </Link>
             </div>
 
-            <p className="home-hero-proof mb-8">Sin código · Hosting incluido · Publica cuando quieras</p>
+            <p className="home-hero-proof mb-8">Sin código · Hosting incluido · Publica cuando quieras · Orvenix IA — Próximamente</p>
 
             <div className="home-hero-trust-grid mb-8">
               {trustItems.map(({ icon: Icon, label }) => (
@@ -83,8 +83,7 @@ export function Hero() {
               ))}
             </div>
 
-            <div className="grid grid-cols-3 gap-4 pt-6 mk-divider">
-              <StatItem value="150+" label="Proyectos completados" />
+            <div className="grid grid-cols-2 gap-4 pt-6 mk-divider">
               <StatItem value="99.9%" label="Uptime objetivo" />
               <StatItem value="24h" label="Activacion guiada" />
             </div>

@@ -7,8 +7,10 @@ import type { AssetProvider } from "@/lib/orvenix-ai/assets/types"
 
 import { normalizeBusinessFactsV1, type BusinessFactsInputV1, type BusinessFactsV1 } from "./business-facts"
 import { getDemoFactsV1 } from "./demo-facts"
+import { shapeCustomerFactsToDemoV1 } from "./empty-states"
 import { getCommercialDesignV1 } from "./registry"
 import { resolveCommercialDesignV1, type ResolvedCommercialDesignV1 } from "./resolver"
+import { calculateCommercialComposedFingerprintV1 } from "./structure"
 import { validateCommercialDesignV1 } from "./validator"
 
 export type CommercialCompileModeV1 = "customer" | "demo"
@@ -36,6 +38,8 @@ export interface CommercialCompileResultV1 {
   plan: SiteCreationPlanV2
   planHash: string
   structuralFingerprint: string
+  /** CV1-1b: fingerprint of the composed page structures (see structure.ts). */
+  composedFingerprint: string
 }
 
 const DISABLED_ASSET_PROVIDER_V1: AssetProvider = {
@@ -127,7 +131,18 @@ export async function compileCommercialDesignV1(input: CommercialCompileInputV1)
     throw new Error("Los DemoFactsPack no pueden compilar un sitio real de cliente.")
   }
 
-  const resolved = resolveCommercialDesignV1(validation.design, facts)
+  /*
+   * CV1-1b: a "demo-shape" design keeps the approved demo's composition for
+   * every customer. The customer's facts are shaped to the demo's SHAPE
+   * (explicit empty states, never demo values) before resolution; the
+   * customer's real facts still drive SEO and empty-state detection.
+   */
+  const shapeToDemo = validation.design.composition?.fidelity === "demo-shape" && input.mode === "customer"
+  const demoShape = shapeToDemo ? getDemoFactsV1(validation.design.id) : null
+  if (shapeToDemo && !demoShape) throw new Error(`DemoFactsPack requerido para ${validation.design.id}@${validation.design.version}.`)
+  const compositionFacts = demoShape ? shapeCustomerFactsToDemoV1(facts, demoShape) : facts
+
+  const resolved = resolveCommercialDesignV1(validation.design, compositionFacts, demoShape ? { realFacts: facts, demoFacts: demoShape } : {})
   const request = input.mode === "demo"
     ? `Showcase demo de ${validation.design.catalog.name}.`
     : input.request?.trim() || `Crear sitio comercial ${validation.design.catalog.name} para ${facts.businessName}.`
@@ -141,7 +156,8 @@ export async function compileCommercialDesignV1(input: CommercialCompileInputV1)
       location: facts.location,
       objective: "Conseguir solicitudes de servicio",
       services: facts.services,
-      businessEvidence: facts.evidence,
+      // Shaped evidence keeps trust/testimonial positions; contact channels are never shaped.
+      businessEvidence: compositionFacts.evidence,
     },
     forceFreshComposition: true,
     minimumQuality: 55,
@@ -159,5 +175,6 @@ export async function compileCommercialDesignV1(input: CommercialCompileInputV1)
     plan: generated.plan,
     planHash: generated.planHash,
     structuralFingerprint: calculateCommercialStructuralFingerprintV1(resolved),
+    composedFingerprint: calculateCommercialComposedFingerprintV1(generated.plan.pages),
   }
 }

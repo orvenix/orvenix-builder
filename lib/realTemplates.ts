@@ -24,6 +24,7 @@ export interface RealTemplate {
   id: EditorWebId;
   name: string;
   category: string;
+  commercialCollection?: "Express" | "Profesional" | "Signature";
   description: string;
   livePath: string;
   accent: string;
@@ -57,16 +58,19 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     id: "contabilidad",
     name: "Despacho Contable & Fiscal",
     category: "Servicios Profesionales",
+    commercialCollection: "Profesional",
     description:
-      "Web profesional para despacho contable: servicios SAT/IMSS, planes, equipo certificado, proceso de onboarding, testimonios y diagnóstico fiscal gratuito.",
-    livePath: "/webs/contabilidad",
+      "Web profesional para despacho contable: servicios fiscales, planes, proceso de onboarding, equipo, preguntas frecuentes y diagnóstico inicial con los datos reales del despacho.",
+    livePath: "/templates/contabilidad/demo",
     accent: "#0d9488",
     gradient: "from-teal-600 to-cyan-900",
-    features: ["Planes con precios", "Servicios SAT/IMSS", "Equipo IMCP", "Multi-página", "Diagnóstico", "Testimonios"],
+    features: ["Planes editables", "Servicios fiscales", "Equipo real", "Multi-página", "Diagnóstico", "FAQ editable"],
     purchasePriceMxn: 28000,
     rentalPriceMxn: 1499,
     Icon: TrendingUp,
     preview: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=500&fit=crop&q=80",
+    commercialDesignId: "contabilidad",
+    commercialDesignVersion: 1,
   },
   {
     id: "viajes",
@@ -132,23 +136,25 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     id: "servicios-locales",
     name: "Servicios Locales Pro",
     category: "Negocios Locales",
+    commercialCollection: "Express",
     description:
-      "Página real para negocios de servicios locales: hero de conversión con CTA directo, tarjetas de servicio con precios, mapa de cobertura por zonas, proceso de trabajo en 4 pasos, reseñas verificadas, FAQ y botón de contacto por WhatsApp.",
-    livePath: "/webs/servicios-locales",
+      "Sitio claro y enfocado en conseguir clientes para negocios de servicio a domicilio o en sitio: servicios, proceso de trabajo, zona de servicio y contacto directo por WhatsApp. Se arma con los datos reales de tu negocio.",
+    livePath: "/templates/servicios-locales/demo",
     accent: "#0e7490",
     gradient: "from-cyan-600 to-slate-900",
-    features: ["CTA a WhatsApp directo", "Cobertura por zonas", "Servicios con precios", "Proceso 4 pasos", "Reseñas verificadas", "FAQ interactivo"],
+    features: ["CTA a WhatsApp directo", "Servicios del negocio", "Zonas de servicio", "Proceso de trabajo", "Multi-página", "Listo para celular"],
     purchasePriceMxn: 22000,
     rentalPriceMxn: 1199,
     Icon: Wrench,
     preview: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&h=500&fit=crop&q=80",
     commercialDesignId: "servicios-locales",
-    commercialDesignVersion: 1,
+    commercialDesignVersion: 2,
   },
   {
     id: "construction",
     name: "Construcción Premium",
     category: "Construcción & Obra",
+    commercialCollection: "Signature",
     description:
       "Sitio editorial para constructoras, remodelación y servicios de obra: proyectos con fotografías propias, avance de obra, servicios especializados, páginas internas y contacto directo para cotizar.",
     livePath: "/templates/construction/demo",
@@ -160,7 +166,7 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     Icon: Home,
     preview: "/commercial-demo/construction/construction-demo-hero-md.webp",
     commercialDesignId: "construction",
-    commercialDesignVersion: 1,
+    commercialDesignVersion: 2,
   },
   {
     id: "restaurante",
@@ -181,16 +187,19 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     id: "clinica",
     name: "Clínica & Salud Digital",
     category: "Healthcare & Wellness",
+    commercialCollection: "Profesional",
     description:
-      "Web médica premium con 8 especialidades presentadas en tarjetas detalladas, directorio de doctores con ratings y cédulas verificadas, proceso de atención en 4 pasos, formulario de cita online, seguros aceptados y FAQ médico expandible.",
-    livePath: "/webs/clinica",
+      "Web médica premium para clínicas y consultorios: especialidades, equipo, proceso de atención, formulario de cita, contacto directo y FAQ con información real del negocio.",
+    livePath: "/templates/clinica/demo",
     accent: "#14b8a6",
     gradient: "from-teal-600 to-cyan-900",
-    features: ["8 especialidades médicas", "Directorio de doctores", "Cita online", "Seguros aceptados", "FAQ médico", "Proceso de atención"],
+    features: ["Especialidades editables", "Equipo real", "Cita online", "Contacto directo", "FAQ médico", "Proceso de atención"],
     purchasePriceMxn: 30000,
     rentalPriceMxn: 1699,
     Icon: Activity,
     preview: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&h=500&fit=crop&q=80",
+    commercialDesignId: "clinica",
+    commercialDesignVersion: 1,
   },
   {
     id: "inmobiliaria",
@@ -271,16 +280,19 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     id: "hotel",
     name: "Hotel Boutique Luxury",
     category: "Hospitalidad & Turismo",
+    commercialCollection: "Signature",
     description:
-      "Portal hotelero de lujo para hotel boutique: galería de habitaciones seleccionables con precio por noche, servicios y amenidades, galería fotográfica interactiva, reseñas TripAdvisor y Google, FAQ de estancia y formulario de reserva directa con fechas y tipo de habitación.",
-    livePath: "/webs/hotel",
+      "Portal hotelero de lujo para hotel boutique: habitaciones, servicios, galería, tarifas orientativas, FAQ de estancia y formulario de reserva directa con los datos reales del hospedaje.",
+    livePath: "/templates/hotel/demo",
     accent: "#78716c",
     gradient: "from-stone-600 to-stone-900",
-    features: ["Habitaciones con precios", "Reserva directa con fechas", "Galería interactiva", "Reseñas TripAdvisor", "Servicios y amenidades", "Mejor precio garantizado"],
+    features: ["Habitaciones editables", "Reserva directa", "Galería visual", "Tarifas orientativas", "Servicios y amenidades", "FAQ de estancia"],
     purchasePriceMxn: 32000,
     rentalPriceMxn: 1799,
     Icon: Hotel,
     preview: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&h=500&fit=crop&q=80",
+    commercialDesignId: "hotel",
+    commercialDesignVersion: 1,
   },
   {
     id: "transporte",

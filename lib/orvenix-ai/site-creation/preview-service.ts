@@ -541,7 +541,13 @@ function buildPlanAccess(subscription: SubscriptionWithPlan, websitesUsed: numbe
   }
 }
 
-async function requireCanCreateWebsiteInTx(tx: SiteCreationTx, userId: string) {
+/**
+ * `requiresAI` is false only for an Orvenix design (a hash-verified plan whose
+ * designSource is "commercial"): creating it is deterministic, so it needs a
+ * plan that can create a site, not Orvenix AI (SALES-2). Every other plan
+ * keeps the AI requirement.
+ */
+async function requireCanCreateWebsiteInTx(tx: SiteCreationTx, userId: string, options: { requiresAI: boolean }) {
   const [subscription, websitesUsed] = await Promise.all([
     tx.subscription.findUnique({
       where: { userId },
@@ -551,7 +557,7 @@ async function requireCanCreateWebsiteInTx(tx: SiteCreationTx, userId: string) {
   ])
 
   const access = buildPlanAccess(subscription, websitesUsed)
-  if (!access.isActive || !access.plan || !canUseAI(access.plan.id)) {
+  if (options.requiresAI && (!access.isActive || !access.plan || !canUseAI(access.plan.id))) {
     throw new SiteCreationPreviewPublicError(getFeatureLimitMessage("ai"))
   }
 
@@ -792,7 +798,9 @@ export async function createDraftSiteFromPersistedPreview(params: {
         throw new SiteCreationPreviewPublicError("Este Preview ya se esta procesando. Espera unos segundos e intenta de nuevo.")
       }
 
-      const access = await requireCanCreateWebsiteInTx(tx, params.userId)
+      const access = await requireCanCreateWebsiteInTx(tx, params.userId, {
+        requiresAI: v2Plan?.designSource?.kind !== "commercial",
+      })
       const existing = await tx.editorWebsite.findUnique({
         where: { id: preview.reservedSiteId },
         select: { id: true, userId: true, published: true },

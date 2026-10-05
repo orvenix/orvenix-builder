@@ -219,9 +219,12 @@ test("CSC-1C B: registry exposes construction@1 frozen, alongside servicios-loca
 test("CSC-1C C: no second engine, renderer or compiler exists for construction", () => {
   const designFiles = readdirSync("lib/orvenix-ai/commercial-designs")
   assert.deepEqual(designFiles.filter((file) => /construction/i.test(file)), [])
-  assert.deepEqual(readdirSync("lib/orvenix-ai/commercial-designs/designs").sort(), ["construction.ts", "servicios-locales.ts"])
-  const design = readFileSync("lib/orvenix-ai/commercial-designs/designs/construction.ts", "utf8")
-  assert.doesNotMatch(design, /from "react"|tsx|createElement|function |=>/)
+  // CV1-1b: @2 versions are sibling declarative recipes, never a second engine.
+  assert.deepEqual(readdirSync("lib/orvenix-ai/commercial-designs/designs").sort(), ["clinica.ts", "construction-v2.ts", "construction.ts", "contabilidad.ts", "hotel.ts", "servicios-locales-v2.ts", "servicios-locales.ts"])
+  for (const file of ["construction.ts", "construction-v2.ts"]) {
+    const design = readFileSync(`lib/orvenix-ai/commercial-designs/designs/${file}`, "utf8")
+    assert.doesNotMatch(design, /from "react"|tsx|createElement|function |=>/, file)
+  }
   for (const route of ["app/dev-commercial-review/construction/page.tsx", "app/templates/[id]/demo/page.tsx"]) {
     const source = readFileSync(route, "utf8")
     assert.match(source, /compileCommercialDesignV1/)
@@ -657,11 +660,13 @@ test("CSC-1C AI: non-commercial builder paths are untouched by commercial-only s
 })
 
 /* 35 + catalog */
-test("CSC-1C catalog: one Construction entry resolves to construction@1 with a compiled live showcase", () => {
+test("CSC-1C catalog: one Construction entry resolves to a registered construction version with a compiled live showcase", () => {
   const template = getRealTemplate("construction")
   assert.ok(template)
   assert.equal(template.commercialDesignId, "construction")
-  assert.equal(template.commercialDesignVersion, 1)
+  // CV1-1b: the catalog sells construction@2 (design fidelity); construction@1 stays registered unchanged.
+  assert.equal(template.commercialDesignVersion, 2)
+  assert.equal(COMMERCIAL_DESIGN_REGISTRY_V1["construction@1"], CONSTRUCTION_V1)
   assert.equal(template.livePath, "/templates/construction/demo")
   assert.equal(readdirSync("app/webs").includes("construction"), false, "compiled showcases are not app/webs design references")
   assert.equal(template.preview.startsWith("/commercial-demo/construction/"), true)

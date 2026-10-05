@@ -1,3 +1,5 @@
+import { markCommercialEmptyStatesV1 } from "@/lib/orvenix-ai/commercial-designs/empty-states"
+import { annotateCommercialBusinessBindingsV1 } from "@/lib/orvenix-ai/commercial-designs/business-bindings"
 import {
   buildSiteArchitecture,
   type OrvenixSiteArchitecture,
@@ -1003,7 +1005,8 @@ export async function runAutonomousMultiPageSiteBuilder(
    * multiple times with the same inputs is safe and keeps V2-1/V2-2's
    * existing call sites completely untouched.
    */
-  const compositionVisualFamily = inferVisualFamily({
+  // CV1-1b: a commercial design that declares its composition is never re-inferred from customer text.
+  const compositionVisualFamily = commercialDesign?.composition?.visualFamily ?? inferVisualFamily({
     industry: input.business.industry,
     description: input.business.description,
     services: input.business.services,
@@ -1113,14 +1116,30 @@ export async function runAutonomousMultiPageSiteBuilder(
       }),
     )
 
+    // CV1-1b: demo-shape customer sites mark their explicit empty states (hash-covered, persisted, stripped publicly).
+    const emptySectionRoles = commercialDesign?.emptySections?.filter((entry) => entry.page === page.slug).map((entry) => entry.role)
+    const emptyMarkedTree = emptySectionRoles && commercialDesign?.composition?.fidelity === "demo-shape" && commercialDesign.markEmptyStates
+      ? markCommercialEmptyStatesV1(tree, new Set(emptySectionRoles), { emptyPage: commercialDesign.emptyPages.includes(page.slug) })
+      : tree
+    // CV1-3: bind the business data representations once, at compile (Business Fields V1).
+    const seed = commercialDesign?.composition?.fidelity === "demo-shape" ? commercialDesign.businessFieldsSeed : undefined
+    const markedTree = seed
+      ? annotateCommercialBusinessBindingsV1(emptyMarkedTree, {
+          fields: seed.fields,
+          showLogo: seed.showLogo,
+          shown: { hours: commercialDesign?.commercialFacts.hours, address: commercialDesign?.commercialFacts.address },
+          seo: pageSeo,
+        })
+      : emptyMarkedTree
+
     return {
       name: page.name,
       slug: page.slug,
       tree: omitUndefinedValues({
-        ...tree,
+        ...markedTree,
         seo: {
-          title: pageSeo?.title ?? tree.seo?.title,
-          description: pageSeo?.description ?? tree.seo?.description,
+          title: pageSeo?.title ?? markedTree.seo?.title,
+          description: pageSeo?.description ?? markedTree.seo?.description,
         },
       }) as EditorTree,
     }

@@ -17,7 +17,6 @@ const NAV_LINKS = [
   { href: '/plataforma',  label: 'Plataforma' },
   { href: '/servicios',   label: 'Servicios' },
   { href: '/precios',     label: 'Precios' },
-  { href: '/portafolio',  label: 'Portafolio' },
   { href: '/proceso',     label: 'Proceso' },
   { href: '/afiliados',   label: 'Afiliados' },
   { href: '/contacto',    label: 'Contacto' },
@@ -79,7 +78,7 @@ export function Footer() {
           <div className="footer-column">
             <h4>Plataforma</h4>
             <ul>
-              <li><Link href="/templates">Plantillas</Link></li>
+              <li><Link href="/templates">Diseños Orvenix</Link></li>
               <li><Link href="/webs">Demos SaaS</Link></li>
               <li><Link href="/register">Crear cuenta</Link></li>
               <li><Link href="/contacto">Soporte</Link></li>

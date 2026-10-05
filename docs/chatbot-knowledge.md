@@ -1,6 +1,6 @@
 # Base de conocimiento — Orvenix AI
 # Archivo generado automaticamente por npm run chatbot:refresh.
-# Ultima actualizacion: 2026-08-17T05:13:12.464Z
+# Ultima actualizacion: 2026-10-05T04:12:02.387Z
 # Fuente: docs/chatbot-knowledge.seed.json. No incluir secretos, datos de usuarios ni detalles internos.
 
 ## Principios de respuesta
@@ -41,16 +41,15 @@ Incluye:
 ### Pro
 ID: pro
 Precio: 39 USD/mes + IVA; 390 USD/ano + IVA
-La opcion recomendada para vender, usar IA, administrar varios sitios y crecer sin rehacer el sistema.
+La opcion recomendada para vender, administrar varios sitios y crecer sin rehacer el sistema.
 CTA: /precios?checkout=pro&interval=month
 Incluye:
 - Hasta 10 sitios
 - eCommerce avanzado
-- Orvenix AI
 - CRM nativo
 - Blog y SEO
-- Exportacion de codigo
 - Soporte prioritario
+- Orvenix IA: proximamente (todavia no esta disponible en ningun plan)
 
 ### Business
 ID: commerce
@@ -72,7 +71,6 @@ Para organizaciones con arquitectura dedicada, integraciones y SLA premium.
 CTA: /contacto/
 Incluye:
 - Arquitectura dedicada
-- IA personalizada
 - Integraciones ERP/API
 - eCommerce B2B
 - Gestor dedicado
@@ -83,7 +81,8 @@ Incluye:
 - El usuario puede partir de templates por industria o de un lienzo guiado.
 - El constructor se aprovecha mejor en resoluciones grandes; en pantallas pequenas puede mostrarse una experiencia adaptada o advertencia.
 - El objetivo del editor es ser simple para usuarios novatos y mas potente para clientes Pro.
-- Orvenix AI puede crear una copia editable desde templates por industria cuando el usuario pida crear, generar o armar un sitio web; requiere sesion activa y disponibilidad del plan.
+- Para crear un sitio, el cliente elige un Diseño Orvenix en /templates/, ve su demo, pulsa "Usar este diseño" y captura los datos de su negocio; recibe el diseño completo y lo edita en el editor.
+- Orvenix IA llegara proximamente; hoy no se ofrece como funcion disponible.
 
 ## Templates por industria
 
@@ -257,14 +256,15 @@ Consejo: Debe explicar rapido que hace, para quien es, como mejora el trabajo y 
 - Si el usuario esta indeciso, proponer 2 o 3 rutas concretas en vez de una respuesta generica.
 - Cuando sugiera una pagina, incluir estructura recomendada, tono visual y CTA principal.
 - Si el usuario pide algo premium, recomendar detalles de confianza, animaciones sutiles, microcopy comercial y secciones con prueba social.
-- Si el usuario pide generar un sitio, recordar que Orvenix AI puede partir de templates editables por industria cuando hay sesion activa y cupo de plan.
+- Si el usuario pide generar un sitio, llevarlo a elegir un Diseño Orvenix en /templates/.
 
 ## Reglas de recomendacion comercial
 
 - Cuando el usuario no sabe que plan elegir, recomendar Pro si quiere vender, crecer o administrar mas de un sitio.
 - Recomendar Starter si solo quiere una primera presencia profesional simple.
 - Recomendar Business si habla de automatizaciones, funnels, muchas ventas, multiples sitios o eCommerce avanzado.
-- Para dudas de alcance, integraciones o compra definitiva, enviar a /contacto/.
+- Los planes son una renta del servicio: el cliente usa su sitio mientras su plan este activo. La entrega del codigo y los archivos del sitio es parte de la Compra del sitio (por cotizacion); la plataforma, el editor, los componentes y los Diseños Orvenix base siguen siendo de Orvenix.
+- Para dudas de alcance, integraciones o compra del sitio, enviar a /contacto/.
 - Correo oficial: contacto@orvenix.com.mx.
 - Si el usuario pide crear un sitio, sugerir una industria concreta como restaurante, tienda, clinica, inmobiliaria, gimnasio, abogados, contabilidad, hotel, barberia, viajes o arquitectura.
 

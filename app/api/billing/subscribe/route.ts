@@ -10,19 +10,22 @@ import {
   retrieveStripeCustomer,
 } from "@/lib/stripe"
 import { serverError } from "@/lib/server-log"
+import { parseDesignIntentId } from "@/lib/commercial/sales-funnel"
 
 // POST /api/billing/subscribe
 // Body: { planId: "starter"|"pro"|"commerce", interval: "month"|"year" }
 export async function POST(request: Request) {
-  let body: { planId?: string; interval?: string; repairActiveSubscription?: boolean }
+  let body: { planId?: string; interval?: string; repairActiveSubscription?: boolean; designId?: unknown }
   try {
-    body = await request.json() as { planId?: string; interval?: string; repairActiveSubscription?: boolean }
+    body = await request.json() as { planId?: string; interval?: string; repairActiveSubscription?: boolean; designId?: unknown }
   } catch {
     return NextResponse.json({ error: "Body JSON invalido", code: "INVALID_JSON" }, { status: 400 })
   }
 
   try {
     const session = await getAuthSession()
+    // SALES-2: only a sellable Orvenix design id rides back on the success URL; anything else is dropped.
+    const designId = parseDesignIntentId(body.designId)?.templateId ?? null
     const result = await buildBillingSubscribeResponse({
       session,
       body,
@@ -30,7 +33,7 @@ export async function POST(request: Request) {
       findSubscription: (userId) => editorPrisma.subscription.findUnique({ where: { userId } }),
       getStripePriceId,
       isStripeConfigured,
-      createStripeCheckoutSession,
+      createStripeCheckoutSession: (checkout) => createStripeCheckoutSession({ ...checkout, designId }),
       canReplaceActiveSubscription: async (subscription) => {
         if (subscription.provider !== "stripe") return false
         if (!subscription.stripeCustomerId) return true

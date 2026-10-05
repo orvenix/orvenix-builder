@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 
 import { useEditorStore } from "@/store/useEditorStore"
+import { ExperienceModeToggle } from "@/components/editor/experience/ExperienceModeToggle"
 import { useCheckoutRegistrationFlow } from "@/hooks/useCheckoutRegistrationFlow"
 import { useState } from "react"
 import {
@@ -116,6 +117,8 @@ export function ClientTopbar() {
             {websiteId ?? "Orvenix"}
           </p>
         </div>
+
+        <ExperienceModeToggle />
       </div>
 
       <div className="hidden items-center gap-2 rounded-full border border-cyan-400/15 bg-cyan-400/[0.06] px-3 py-1.5 sm:flex">

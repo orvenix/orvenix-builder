@@ -11,8 +11,16 @@ import { formatUsd, getOfficialPlan, officialPlanComparison2026, officialPlans20
 import { editorPrisma } from '@/lib/editor-db';
 import { getAuthSession } from '@/lib/auth-session';
 import { serverWarn } from '@/lib/server-log';
+import { listCommercialCatalog, readDesignIntent } from '@/lib/commercial/sales-funnel';
+import { DesignIntentNotice } from './DesignIntentNotice';
 
 export const dynamic = "force-dynamic";
+
+// SALES-1: only sellable Orvenix designs are offered here (legacy references stay in the catalog as references).
+const COMMERCIAL_DESIGNS = listCommercialCatalog().flatMap((entry) => {
+  const template = REAL_TEMPLATES.find((item) => item.id === entry.id);
+  return template ? [{ entry, template }] : [];
+});
 
 export const metadata: Metadata = {
   title: 'Precios Orvenix — Activa tu sitio desde 15 USD/mes',
@@ -31,6 +39,7 @@ const guaranteeItems = [
   { icon: '⚡', title: 'Sin complicarte', desc: 'Paga, entra al constructor, edita lo basico y publica cuando estes listo.' },
 ];
 
+// SALES-2: the official rows already say "Orvenix IA: Próximamente" and that code delivery comes with buying the site.
 const comparisonRows = officialPlanComparison2026.map(([feature, , pro, business, enterprise]) => ({
   feature,
   orvenix: pro,
@@ -44,7 +53,8 @@ const faqItems = [
   { question: '¿Hay reembolsos?', answer: 'Los planes mensuales y add-ons ejecutados no tienen reembolso. En anual, la ventana inicial es de 7 dias naturales posteriores al primer pago, con retencion administrativa del 15%.' },
   { question: '¿Qué pasa si se atrasa un pago?', answer: 'Hay 3 dias de gracia. Despues puede suspenderse la plataforma y el sitio publico. Tras 30 dias naturales de suspension por falta de pago, los archivos pueden eliminarse del servidor.' },
   { question: '¿Qué incluye el SLA?', answer: 'Orvenix compromete 99.9% de disponibilidad mensual, soporte por severidad y backups diarios. Starter conserva historial de 7 dias; Pro y Business conservan 30 dias.' },
-  { question: '¿Puedo comprar definitivamente mi sitio?', answer: 'Si. La compra definitiva transfiere derechos patrimoniales sobre el codigo personalizado entregado, mientras Orvenix conserva sus librerias base y componentes propietarios.' },
+  { question: '¿Mi plan incluye el codigo de mi sitio?', answer: 'Los planes son una renta del servicio: puedes usar, editar y publicar tu sitio mientras tu plan este activo. La entrega del codigo y los archivos de tu sitio es parte de la Compra del sitio.' },
+  { question: '¿Puedo comprar mi sitio?', answer: 'Si, por cotizacion. La compra cubre el entregable especifico de tu sitio (codigo y archivos) con los derechos de uso y entrega que defina el acuerdo. La plataforma, el editor, el catalogo, los componentes reutilizables y los Diseños Orvenix base siguen siendo de Orvenix y el diseño base no es exclusivo.' },
 ];
 
 function toPricingPlanView(plan: (typeof officialPlans2026)[number]): PricingPlanView | null {
@@ -185,6 +195,8 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
   }
   const rawSearchParams = await searchParams;
   const autoCheckoutPlanId = firstSearchValue(rawSearchParams?.checkout) ?? null;
+  // SALES-1: "Usar este diseño" sends visitors without a plan here; keep that design in view.
+  const designTarget = readDesignIntent({ design: firstSearchValue(rawSearchParams?.design), callbackUrl: firstSearchValue(rawSearchParams?.callbackUrl) });
   const autoCheckoutInterval = firstSearchValue(rawSearchParams?.interval) === 'year' ? 'year' : 'month';
 
   const [plans, currentPlan] = await Promise.all([
@@ -220,6 +232,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
                 Pago seguro, hosting y soporte incluidos
               </span>
             </div>
+            {designTarget && <DesignIntentNotice target={designTarget} />}
           </div>
         </div>
       </section>
@@ -233,6 +246,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
         currentEndsAt={currentPlan.currentEndsAt}
         autoCheckoutPlanId={autoCheckoutPlanId}
         autoCheckoutInterval={autoCheckoutInterval}
+        designId={designTarget?.templateId ?? null}
       />
 
       {/* Trust items */}
@@ -303,9 +317,9 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
       <section className="mk-section bg-orvenix-bg">
         <div className="mk-container">
           <SectionHeader
-            tag="Suscripcion o desarrollo a medida"
+            tag="Renta o compra"
             title="Dos formas de tener tu sitio"
-            description="Elige entre usar la plataforma mensual con catalogo incluido o solicitar un desarrollo personalizado con entrega independiente."
+            description="Renta la plataforma con tu plan y usa tu sitio mientras este activo, o compra el entregable de tu sitio por cotizacion."
             center
           />
           <div className="mt-10 grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
@@ -316,7 +330,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
                 subtitle: "Desde 15 USD/mes",
                 badge: "Sin pago inicial",
                 badgeColor: "bg-[rgba(0,131,179,0.10)] text-[color:var(--accent-3)] border-[rgba(0,131,179,0.22)]",
-                desc: "Paga mes a mes y accede a la plataforma, el catalogo de diseños segun tu plan, editor visual, publicacion, hosting administrado y soporte.",
+                desc: "Paga mes a mes y accede a la plataforma, los Diseños Orvenix, el editor visual, la publicacion, el hosting administrado y el soporte. Usas tu sitio mientras tu plan este activo.",
                 pros: ["Sin pago inicial grande", "Actualizaciones automáticas", "Soporte incluido", "Cancela con 5 dias de anticipacion"],
                 cta: "Ver planes →",
                 href: "#planes",
@@ -324,12 +338,12 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
               },
               {
                 icon: "💎",
-                title: "Compra definitiva",
+                title: "Compra del sitio",
                 subtitle: "Desde 799 USD",
-                badge: "Servicio personalizado",
+                badge: "Por cotizacion",
                 badgeColor: "bg-[rgba(0,181,246,0.10)] text-[color:var(--accent)] border-[color:var(--glass-border-hover)]",
-                desc: "Solicita un desarrollo personalizado con entrega independiente. Es ideal cuando necesitas propiedad del proyecto, alcance especial o una implementacion hecha a medida.",
-                pros: ["Desde 799 USD", "Alcance definido por cotizacion", "Entrega independiente", "Acompanamiento especializado"],
+                desc: "Compra el entregable especifico de tu sitio, con su codigo y archivos, y los derechos de uso y entrega que defina el acuerdo. La plataforma, el editor, los componentes reutilizables y los Diseños Orvenix base siguen siendo de Orvenix.",
+                pros: ["Desde 799 USD", "Alcance definido por cotizacion", "Entrega del codigo y archivos de tu sitio", "Acompanamiento especializado"],
                 cta: "Solicitar cotizacion →",
                 href: "/contacto",
                 primary: true,
@@ -370,13 +384,13 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
       <section className="mk-section-alt">
         <div className="mk-container">
           <SectionHeader
-            tag="Catálogo de sitios"
-            title="Elige tu sitio por industria"
-            description="Diseños profesionales incluidos con tu suscripcion Orvenix. Elige una base por industria y ajusta textos, colores e imagenes sin tocar codigo."
+            tag="Diseños Orvenix"
+            title="Elige tu diseño"
+            description="Mira la demo, elige el diseño y créalo con los datos de tu negocio. Lo editas y publicas con tu plan Orvenix, sin tocar código."
             center
           />
           <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {REAL_TEMPLATES.slice(0, 6).map(t => {
+            {COMMERCIAL_DESIGNS.map(({ entry, template: t }) => {
               const Icon = t.Icon
               return (
                 <div key={t.id} className="rounded-2xl border border-white/8 bg-white/2 p-5 flex flex-col gap-4 hover:border-white/16 transition-all">
@@ -390,15 +404,15 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
                     </div>
                   </div>
                   <div className="rounded-lg bg-white/3 border border-white/6 py-2.5 px-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orvenix-secondary mb-1">Incluido con tu plan Orvenix</p>
-                    <p className="text-xs leading-5 text-orvenix-secondary">Disponible como punto de partida dentro de la suscripcion correspondiente.</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orvenix-secondary mb-1">{entry.collection ? `Colección ${entry.collection}` : 'Diseño Orvenix'}</p>
+                    <p className="text-xs leading-5 text-orvenix-secondary">Tu sitio conserva el diseño de la demo y se crea con los datos de tu negocio.</p>
                   </div>
                   <div className="flex gap-2 mt-auto">
-                    <Link href={t.livePath} target="_blank" rel="noopener noreferrer" className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg border border-white/10 text-[11px] font-bold text-orvenix-secondary hover:text-orvenix-text transition">
+                    <Link href={entry.demoHref} target="_blank" rel="noopener noreferrer" className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg border border-white/10 text-[11px] font-bold text-orvenix-secondary hover:text-orvenix-text transition">
                       Ver demo <ArrowRight size={11} />
                     </Link>
-                    <Link href="/templates" className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg bg-[color:var(--accent-2)] hover:bg-[color:var(--accent)] text-[11px] font-bold text-white transition">
-                      Ver catalogo <ArrowRight size={11} />
+                    <Link href={entry.startHref} className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg bg-[color:var(--accent-2)] hover:bg-[color:var(--accent)] text-[11px] font-bold text-white transition">
+                      Usar este diseño <ArrowRight size={11} />
                     </Link>
                   </div>
                 </div>
@@ -407,7 +421,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
           </div>
           <div className="text-center mt-8">
             <Link href="/templates" className="mk-btn-primary inline-flex items-center gap-2">
-              Ver todos los templates
+              Ver todos los Diseños Orvenix
               <ArrowRight size={15} />
             </Link>
           </div>

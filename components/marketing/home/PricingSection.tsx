@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { PricingCheckoutButton } from './PricingCheckoutButton';
+import { isOrvenixAiFeatureLabel, withDesignIntent } from '@/lib/commercial/sales-funnel';
 
 export interface PricingPlanView {
   id: string;
@@ -75,14 +76,20 @@ interface PricingSectionProps {
   currentEndsAt?: string | null;
   autoCheckoutPlanId?: string | null;
   autoCheckoutInterval?: BillingInterval;
+  /** SALES-2: validated Orvenix design the visitor is buying a plan for (server-parsed). */
+  designId?: string | null;
 }
 
+// SALES-2: a plan is a rental of the service, so code export is not listed as
+// a plan right (it comes with buying the site), and Orvenix IA is shown as
+// coming soon, never as included.
 function planFeatures(plan: PricingPlanView) {
-  const base = plan.features.map((label) => ({ included: true, label }));
+  const base = plan.features.map((label) => (isOrvenixAiFeatureLabel(label)
+    ? { included: false, comingSoon: true, label: 'Orvenix IA' }
+    : { included: true, comingSoon: false, label }));
   return [
-    ...base,
-    { included: plan.hasEcommerce, label: 'E-commerce integrado' },
-    { included: plan.hasExport, label: 'Exportacion de codigo limpio' },
+    ...base.filter((feature, index) => !feature.comingSoon || base.findIndex((other) => other.comingSoon) === index),
+    { included: plan.hasEcommerce, comingSoon: false, label: 'E-commerce integrado' },
   ];
 }
 
@@ -95,7 +102,7 @@ function formatDate(value: string | null | undefined) {
   });
 }
 
-export function PricingSection({ plans, currentPlanId, currentInterval, currentStatus, currentEndsAt, autoCheckoutPlanId, autoCheckoutInterval = 'month' }: PricingSectionProps) {
+export function PricingSection({ plans, currentPlanId, currentInterval, currentStatus, currentEndsAt, autoCheckoutPlanId, autoCheckoutInterval = 'month', designId = null }: PricingSectionProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
@@ -134,7 +141,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
     if (sessionStatus === 'loading') return;
 
     if (!session) {
-      const checkoutReturn = '/precios?checkout=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + (isBillingRepair ? '&billingRepair=1' : '');
+      const checkoutReturn = withDesignIntent('/precios?checkout=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + (isBillingRepair ? '&billingRepair=1' : ''), designId);
       router.replace('/register?plan=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + '&callbackUrl=' + encodeURIComponent(checkoutReturn));
       autoCheckoutStartedRef.current = true;
       return;
@@ -148,7 +155,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
         const res = await fetch('/api/billing/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planId: autoCheckoutPlanId, interval, repairActiveSubscription: isBillingRepair }),
+          body: JSON.stringify({ planId: autoCheckoutPlanId, interval, repairActiveSubscription: isBillingRepair, designId }),
         });
         const data = await res.json() as { initPoint?: string; error?: string; code?: string };
 
@@ -162,7 +169,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
             setAutoCheckoutError('La cuenta todavía tiene una suscripción activa que Stripe live no identificó como reparable. Revisa la suscripción desde admin o contacta soporte.');
             return;
           }
-          router.replace('/dashboard');
+          router.replace(withDesignIntent('/dashboard', designId));
           return;
         }
 
@@ -171,14 +178,14 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
         setAutoCheckoutError('No se pudo conectar con el checkout. Intenta desde el boton del plan.');
       }
     })();
-  }, [autoCheckoutInterval, autoCheckoutPlanId, isBillingRepair, plans, router, session, sessionStatus]);
+  }, [autoCheckoutInterval, autoCheckoutPlanId, designId, isBillingRepair, plans, router, session, sessionStatus]);
 
   return (
     <section id="planes" className="mk-section bg-orvenix-bg">
       <div className="mk-container">
         <div className="mb-8 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-orvenix-secondary md:grid-cols-3 md:p-5">
           <div><strong className="block text-orvenix-text">Quiero empezar simple</strong>Elige Starter para publicar tu primera web profesional.</div>
-          <div><strong className="block text-orvenix-text">Quiero crecer</strong>Elige Pro para vender, usar IA y administrar mas de un sitio.</div>
+          <div><strong className="block text-orvenix-text">Quiero crecer</strong>Elige Pro para vender y administrar mas de un sitio.</div>
           <div><strong className="block text-orvenix-text">Quiero operar ventas</strong>Elige Business para e-commerce, funnels y automatizacion.</div>
         </div>
         {autoCheckoutPlanId && !autoCheckoutError && (
@@ -275,6 +282,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
                     interval={annual ? 'year' : 'month'}
                     label={available ? (isBillingRepair && isCurrentPlan ? 'Activar plan en producción →' : meta.cta) : 'Configurar pagos →'}
                     repairActiveSubscription={isBillingRepair}
+                    designId={designId}
                     featured={featured}
                     unavailable={!available}
                   />
@@ -284,7 +292,12 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
                   {planFeatures(plan).map((f) => (
                     <li key={f.label} className={'flex items-start gap-2 text-sm ' + (f.included ? 'text-orvenix-text' : 'text-orvenix-muted')}>
                       <span className={'shrink-0 ' + (f.included ? 'mk-accent-text' : '')}>{f.included ? '✓' : '—'}</span>
-                      {f.label}
+                      <span>
+                        {f.label}
+                        {f.comingSoon && (
+                          <span className="ml-1.5 whitespace-nowrap rounded-full border border-white/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orvenix-secondary">Próximamente</span>
+                        )}
+                      </span>
                     </li>
                   ))}
                 </ul>

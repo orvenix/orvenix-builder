@@ -4,6 +4,9 @@ import { useCallback } from "react"
 import { Building2, Mail, MessageCircle, Palette, Phone } from "lucide-react"
 
 import { useEditorStore, type GlobalTheme } from "@/store/useEditorStore"
+import { isCommercialDesignTree } from "@/lib/editor/editor-mode-profile"
+import { readBusinessFieldsV1 } from "@/lib/commercial/business-fields"
+import { BusinessFieldsPanel } from "./BusinessFieldsPanel"
 
 interface ClientBrandPanelProps {
   embedded?: boolean
@@ -21,6 +24,15 @@ export function ClientBrandPanel({
   const theme =
     useEditorStore((state) => state.tree.globalTheme ?? state.tree.theme)
   const updateBrandKit = useEditorStore((state) => state.updateBrandKit)
+  /*
+   * CV1-2: on a site from an Orvenix design the business data lives in the
+   * page itself (header, buttons, footer). brand-kit fields are not rendered
+   * by any block, so they are replaced by an honest guide instead of
+   * pretending to change the site.
+   */
+  const isCommercialSite = useEditorStore((state) => isCommercialDesignTree(state.tree))
+  // CV1-3: sites compiled with Business Fields get real controls; older commercial sites keep the guide.
+  const hasBusinessFields = useEditorStore((state) => readBusinessFieldsV1(state.tree) !== null)
   const execute = useEditorStore((state) => state.execute)
 
   const updateContact = useCallback(
@@ -87,7 +99,19 @@ export function ClientBrandPanel({
       </header>
 
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
-        {focus !== "design" && (
+        {focus !== "design" && hasBusinessFields && (
+          <PanelSection title="Negocio" icon={Building2}>
+            <BusinessFieldsPanel />
+          </PanelSection>
+        )}
+
+        {focus !== "design" && isCommercialSite && !hasBusinessFields && (
+          <PanelSection title="Datos de tu negocio" icon={Building2}>
+            <CommercialBusinessDataGuide />
+          </PanelSection>
+        )}
+
+        {focus !== "design" && !isCommercialSite && (
           <PanelSection title="Empresa" icon={Building2}>
             <FieldLabel label="Nombre del negocio">
               <input
@@ -121,7 +145,7 @@ export function ClientBrandPanel({
           </PanelSection>
         )}
 
-        {focus !== "design" && <PanelSection title="Contacto" icon={Phone}>
+        {focus !== "design" && !isCommercialSite && <PanelSection title="Contacto" icon={Phone}>
           <FieldLabel label="Teléfono">
             <div className="relative">
               <Phone className={FIELD_ICON_CLASS} aria-hidden="true" />
@@ -440,4 +464,30 @@ function applyPaletteToNodes(
       }
     }
   })
+}
+
+const BUSINESS_DATA_STEPS: Array<{ title: string; detail: string }> = [
+  { title: "Nombre del negocio", detail: "Selecciona el menú superior y elige «Editar menú», o haz clic en el nombre del pie de página." },
+  { title: "Teléfono, WhatsApp y correo", detail: "Haz clic en la línea del pie de página para cambiar el texto, y en cada botón para cambiar su enlace («Enlace»)." },
+  { title: "Dirección y horario", detail: "Están en el pie de página. Si ves «Agrega tu horario», haz clic y escríbelo; mientras falte, no se publica." },
+  { title: "Servicios y textos", detail: "Usa la pestaña Contenido o haz clic directamente sobre cualquier texto de la página." },
+  { title: "Imágenes", detail: "Haz clic en una imagen y elige «Cambiar imagen»." },
+]
+
+function CommercialBusinessDataGuide() {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs leading-5 text-slate-400">
+        Tus datos aparecen directamente en tu sitio. Cámbialos ahí mismo, en cada página:
+      </p>
+      <ol className="space-y-2">
+        {BUSINESS_DATA_STEPS.map((step) => (
+          <li key={step.title} className="rounded-xl border border-white/[0.07] bg-white/[0.035] p-3">
+            <p className="text-xs font-bold text-slate-100">{step.title}</p>
+            <p className="mt-1 text-[11px] leading-5 text-slate-500">{step.detail}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
 }

@@ -17,6 +17,7 @@ import {
   COMMERCIAL_DESIGN_CONTRACT_VERSION_V1,
   COMMERCIAL_DESIGN_FAMILIES_V1,
   COMMERCIAL_FACT_KEYS_V1,
+  COMMERCIAL_FIDELITY_MODES_V1,
   COMMERCIAL_FONTS_V1,
   COMMERCIAL_FOOTER_PRESETS_V1,
   COMMERCIAL_IMPLEMENTED_ASSET_ROLES_V1,
@@ -28,6 +29,7 @@ import {
   COMMERCIAL_SHADOW_PRESETS_V1,
   COMMERCIAL_SITE_TYPES_V1,
   COMMERCIAL_THEME_MODES_V1,
+  COMMERCIAL_VISUAL_FAMILIES_V1,
   type CommercialDesignV1,
 } from "./contract"
 
@@ -172,7 +174,7 @@ export function validateCommercialDesignV1(value: unknown): CommercialDesignVali
 
   checkKeys(
     value,
-    ["contract", "id", "version", "family", "siteType", "catalog", "theme", "chrome", "conversion", "motif", "seo", "pages", "internalReference"],
+    ["contract", "id", "version", "family", "siteType", "catalog", "theme", "chrome", "conversion", "motif", "seo", "composition", "pages", "internalReference"],
     ["contract", "id", "version", "family", "siteType", "catalog", "theme", "chrome", "conversion", "motif", "seo", "pages", "internalReference"],
     "$",
     out,
@@ -236,6 +238,17 @@ export function validateCommercialDesignV1(value: unknown): CommercialDesignVali
   else {
     checkKeys(value.seo, ["titlePattern"], ["titlePattern"], "$.seo", out)
     checkEnum(value.seo.titlePattern, COMMERCIAL_SEO_TITLE_PATTERNS_V1, "$.seo.titlePattern", out)
+  }
+
+  if ("composition" in value) {
+    if (!isRecord(value.composition)) out.add("$.composition", "not_object")
+    else {
+      checkKeys(value.composition, ["visualFamily", "fidelity"], ["visualFamily", "fidelity"], "$.composition", out)
+      checkEnum(value.composition.visualFamily, COMMERCIAL_VISUAL_FAMILIES_V1, "$.composition.visualFamily", out)
+      checkEnum(value.composition.fidelity, COMMERCIAL_FIDELITY_MODES_V1, "$.composition.fidelity", out)
+    }
+    // A demo-shape design keeps its structure: missing facts never swap pins.
+    if (Array.isArray(value.pages) && value.pages.some((page) => isRecord(page) && "pinFallbacks" in page)) out.add("$.pages", "fidelity_forbids_pin_fallbacks")
   }
 
   if (!Array.isArray(value.pages) || value.pages.length === 0 || value.pages.length > 8) out.add("$.pages", "list_invalid")

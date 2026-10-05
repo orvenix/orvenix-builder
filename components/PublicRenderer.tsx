@@ -28,6 +28,10 @@ export function PublicRenderer({
       initialPageSlug={activePageSlug}
       initialPageName={activePageName}
       availablePages={availablePages}
+      // LAUNCH-2: visitors get a neutral placeholder until the page renders (never the editor's
+      // "Abriendo diseño en el editor..." skeleton), and never this browser's editor drafts.
+      loadingFallback={<div aria-busy="true" className="min-h-screen" />}
+      recoverLocalDraft={false}
     >
       <ViewportDeviceSync />
       <DynamicRenderer mode="preview" />

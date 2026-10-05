@@ -155,6 +155,11 @@ function slugifyPageSegment(value: string) {
   return normalized || HOME_PAGE_SLUG;
 }
 
+/** The slug a page is stored under (saving `?page=Servicios` writes the `servicios` page). */
+export function normalizeSitePageSlug(value: string) {
+  return slugifyPageSegment(value);
+}
+
 function displayNameFromSlug(slug: string) {
   if (slug === HOME_PAGE_SLUG) return HOME_PAGE_NAME;
   return slug

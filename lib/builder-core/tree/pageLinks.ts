@@ -1,3 +1,6 @@
+// Relative on purpose: export/publication tests load this module without the "@/" alias (same as types/validateTree).
+import { safeUrlV1 } from "../../security/html-sanitizer";
+
 export const INTERNAL_PAGE_LINK_PREFIX = "page:";
 
 export function isInternalPageLink(value: unknown): value is string {
@@ -73,7 +76,9 @@ export function resolveRuntimeHref(
 
   const internalSlug = parseInternalPageLink(href);
   if (!internalSlug) {
-    return href.trim();
+    // CV1-2 hard constraint: whatever editor mode wrote the link, a runtime href
+    // is only http(s)/mailto/tel or relative -- javascript:/data:/vbscript: render as "#".
+    return safeUrlV1(href) ?? "#";
   }
 
   if (mode === "export") {
@@ -108,7 +113,8 @@ export function resolveSiteNavItemTarget(
   const rawHref = typeof page.href === "string" ? page.href.trim() : "";
 
   if (rawHref && !isInternalPageLink(rawHref)) {
-    return { isPageLink: false, targetSlug: null, runtimeHref: rawHref };
+    // Same hard constraint as resolveRuntimeHref: nav items never render an unsafe scheme.
+    return { isPageLink: false, targetSlug: null, runtimeHref: safeUrlV1(rawHref) ?? "#" };
   }
 
   const targetSlug = rawHref ? parseInternalPageLink(rawHref) ?? page.slug : page.slug;

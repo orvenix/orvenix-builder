@@ -1,4 +1,5 @@
 import { safeUrlV1 } from "@/lib/security/html-sanitizer"
+import { nodeBusinessBindingsV1 } from "@/lib/commercial/business-fields"
 import type { EditorNode, EditorTree, NodeId } from "@/types/editor"
 
 import { getNodeLabel, isMovableSection } from "./selection-model"
@@ -66,10 +67,18 @@ export function isCommerceAuthoritativeNode(node: EditorNode | undefined): boole
   return COMMERCE_AUTHORITY_PROPS.some((key) => key in node.props)
 }
 
-/** Nodes whose visible values come from a data binding (CMS/catalog) instead of their own props. */
+/** Link props a Business Fields binding may own without owning the node's text. */
+const BUSINESS_LINK_PROPS = new Set(["href"])
+
+/**
+ * Nodes whose visible values come from a data binding (CMS/catalog) instead
+ * of their own props -- including CV1-3 Business Fields text bindings (the
+ * name, contact lines, navigation brand): those change in the Business panel.
+ */
 export function isDataBoundNode(node: EditorNode | undefined): boolean {
   const bindings = node?.props._bindings
-  return Boolean(bindings && typeof bindings === "object" && Object.keys(bindings as Record<string, unknown>).length > 0)
+  if (bindings && typeof bindings === "object" && Object.keys(bindings as Record<string, unknown>).length > 0) return true
+  return Object.keys(nodeBusinessBindingsV1(node)).some((prop) => !BUSINESS_LINK_PROPS.has(prop))
 }
 
 export function getProtectedReason(node: EditorNode | undefined): ProtectedReason | undefined {
@@ -91,7 +100,11 @@ export function getNodeEditCapabilities(tree: EditorTree, id: NodeId): NodeEditC
     case "text":
       return { label, text: { key: TEXT_KEY[node.type] }, align: true }
     case "ctaButton":
-      return { label, text: { key: "label" }, link: { key: "href" }, buttonVariant: true }
+      // CV1-3: a button whose link is a Business Field (WhatsApp, phone, email, social) keeps
+      // its editable label; the link itself changes from the Business panel.
+      return nodeBusinessBindingsV1(node).href
+        ? { label, text: { key: "label" }, buttonVariant: true }
+        : { label, text: { key: "label" }, link: { key: "href" }, buttonVariant: true }
     case "image":
       return { label, image: { srcKey: "src", altKey: "alt" }, imageFit: true }
     case "siteNav":
