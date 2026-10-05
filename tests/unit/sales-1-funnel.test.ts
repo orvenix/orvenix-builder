@@ -137,3 +137,9 @@ test("SALES-1 dashboard: Diseños Orvenix first, IA coming soon for customers, c
   // IA infrastructure is kept, not deleted.
   assert.match(dashboard, /import \{ CreateSiteWithAI \} from "\.\/CreateSiteWithAI"/)
 })
+
+test("SALES-1 design detail states the pages the customer receives, from the registered recipe", () => {
+  const page = read("app/templates/[id]/page.tsx")
+  assert.match(page, /getCommercialDesignV1\(template\.commercialDesignId, template\.commercialDesignVersion\)\?\.pages\.map\(\(page\) => page\.name\)/)
+  assert.match(page, /Incluye \{designPages\.length\} páginas:/)
+})

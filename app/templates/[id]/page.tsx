@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { getCommercialTemplateStart } from "@/lib/commercial/template-start";
+import { getCommercialDesignV1 } from "@/lib/orvenix-ai/commercial-designs/registry";
 import { getRealTemplate } from "@/lib/realTemplates";
 
 interface TemplatePreviewPageProps {
@@ -40,6 +41,10 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
 
   const Icon = template.Icon;
   const commercialHref = getCommercialTemplateStart(template)?.href ?? null;
+  // SALES-1: what the customer receives, straight from the registered design recipe.
+  const designPages = commercialHref
+    ? getCommercialDesignV1(template.commercialDesignId, template.commercialDesignVersion)?.pages.map((page) => page.name) ?? []
+    : [];
 
   return (
     <main className="min-h-screen bg-[#07080d] text-white">
@@ -99,6 +104,11 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
               ? "Tu copia conserva el mismo diseño de la demo: solo cambian los datos por los de tu negocio, y la editas desde tu suscripción Orvenix."
               : "Esta web se muestra como referencia visual; todavía no está disponible como copia editable."}
           </p>
+          {designPages.length > 0 && (
+            <p className="mt-4 max-w-xl text-sm leading-6 text-white/60">
+              <span className="font-bold text-white">Incluye {designPages.length} páginas:</span> {designPages.join(" · ")}
+            </p>
+          )}
 
           <div className="mt-7 grid grid-cols-2 gap-3">
             {qualitySignals.map(({ label, value, icon: SignalIcon }) => (
