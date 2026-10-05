@@ -85,7 +85,7 @@ export function Hero() {
 
             <div className="grid grid-cols-2 gap-4 pt-6 mk-divider">
               <StatItem value="99.9%" label="Uptime objetivo" />
-              <StatItem value="24h" label="Activacion guiada" />
+              <StatItem value="5" label="Diseños Orvenix" />
             </div>
           </div>
 

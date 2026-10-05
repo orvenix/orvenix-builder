@@ -9,7 +9,7 @@ interface CtaSectionProps {
 
 export function CtaSection({
   title = '¿Listo para empezar?',
-  description = 'Activa tu plataforma hoy. Nuestro equipo la deja lista en menos de 24 horas.',
+  description = 'Elige tu Diseño Orvenix y empieza a crear tu sitio.',
   buttonLabel = 'Elegir mi plan →',
   buttonHref = '/precios',
 }: CtaSectionProps) {
