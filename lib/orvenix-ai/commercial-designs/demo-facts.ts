@@ -93,6 +93,39 @@ export const DEMO_FACTS_INPUT_BY_DESIGN_V1: Readonly<Record<string, BusinessFact
       ],
     },
   },
+  clinica: {
+    businessName: "Clinica Ejemplo Integral",
+    tagline: "Sitio de ejemplo · atencion medica y bienestar",
+    description: "Clinica de ejemplo para mostrar el diseño Clinica & Salud. Todos los datos son de muestra.",
+    contact: { whatsapp: "5500000000", phone: "5500000000", email: "contacto@example.com" },
+    address: "Av. Ejemplo 100, Ciudad de Mexico (direccion de ejemplo)",
+    hours: "Lunes a viernes, 8:00 a 19:00 (horario de ejemplo)",
+    serviceArea: ["Zona Centro (ejemplo)", "Zona Norte (ejemplo)", "Teleconsulta (ejemplo)"],
+    services: [
+      { name: "Consulta general", description: "Servicio de ejemplo: valoracion inicial y seguimiento del paciente." },
+      { name: "Odontologia preventiva", description: "Servicio de ejemplo: revision, limpieza y orientacion de higiene." },
+      { name: "Fisioterapia", description: "Servicio de ejemplo: evaluacion funcional y plan de rehabilitacion." },
+      { name: "Psicologia", description: "Servicio de ejemplo: acompanamiento profesional y seguimiento." },
+    ],
+    people: [
+      { name: "Dra. Ejemplo Alvarez", role: "Medicina general" },
+      { name: "Dr. Ejemplo Rios", role: "Odontologia preventiva" },
+      { name: "Lic. Ejemplo Torres", role: "Fisioterapia" },
+    ],
+    testimonials: [
+      { quote: "La informacion de este testimonio es de ejemplo; tu sitio mostrara solo opiniones que proporciones.", author: "Paciente de ejemplo", role: "Atencion general" },
+      { quote: "El flujo de cita y contacto se adapta a los datos reales de cada clinica.", author: "Paciente de ejemplo", role: "Seguimiento" },
+    ],
+    faq: [
+      { question: "¿Esta informacion medica es real?", answer: "No. Es un sitio de ejemplo; tu clinica usara unicamente la informacion que proporciones." },
+      { question: "¿Puedo cambiar especialidades, doctores y horarios?", answer: "Si. Servicios, equipo, contacto y horarios salen de tus datos y se editan en Orvenix." },
+    ],
+    assets: {
+      logo: { src: "/uploads/demo-clinica-logo.webp", alt: "Logo de ejemplo" },
+      hero: { src: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&h=900&fit=crop&q=80", alt: "Consultorio medico de ejemplo" },
+      serviceImages: [{ src: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=900&h=700&fit=crop&q=80", alt: "Atencion clinica de ejemplo" }],
+    },
+  },
 }
 
 export function getDemoFactsV1(designId: string): BusinessFactsV1 | null {

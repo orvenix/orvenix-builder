@@ -183,7 +183,7 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     category: "Healthcare & Wellness",
     description:
       "Web médica premium con 8 especialidades presentadas en tarjetas detalladas, directorio de doctores con ratings y cédulas verificadas, proceso de atención en 4 pasos, formulario de cita online, seguros aceptados y FAQ médico expandible.",
-    livePath: "/webs/clinica",
+    livePath: "/templates/clinica/demo",
     accent: "#14b8a6",
     gradient: "from-teal-600 to-cyan-900",
     features: ["8 especialidades médicas", "Directorio de doctores", "Cita online", "Seguros aceptados", "FAQ médico", "Proceso de atención"],
@@ -191,6 +191,8 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     rentalPriceMxn: 1699,
     Icon: Activity,
     preview: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&h=500&fit=crop&q=80",
+    commercialDesignId: "clinica",
+    commercialDesignVersion: 1,
   },
   {
     id: "inmobiliaria",
