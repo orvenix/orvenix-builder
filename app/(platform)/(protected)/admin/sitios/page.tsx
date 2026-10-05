@@ -18,8 +18,13 @@ export default async function AdminSitiosPage() {
 
   const sites = await editorPrisma.editorWebsite.findMany({
     orderBy: { createdAt: "desc" },
-    include: {
-      user: { select: { email: true, name: true, role: true } },
+    select: {
+      id: true,
+      name: true,
+      published: true,
+      createdAt: true,
+      updatedAt: true,
+      user: { select: { email: true, name: true } },
     },
   })
 
