@@ -80,6 +80,11 @@ export function TemplateGrid() {
                 >
                   {template.category}
                 </span>
+                {commercialHref && (
+                  <span className="absolute left-3 top-12 rounded-full border border-cyan-200/20 bg-cyan-300/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-50/80">
+                    Diseños Orvenix · {template.commercialCollection ?? "Profesional"}
+                  </span>
+                )}
 
                 <span className="absolute bottom-3 right-3 text-4xl font-black text-white/[0.06] select-none">
                   {String(index + 1).padStart(2, "0")}
@@ -110,7 +115,7 @@ export function TemplateGrid() {
                 {commercialHref && (
                   <div className="mb-5 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-3">
                     <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100/55">
-                      Incluido con tu plan Orvenix
+                      Diseños Orvenix · {template.commercialCollection ?? "Profesional"}
                     </p>
                     <p className="mt-1 text-xs leading-5 text-white/42">
                       Usa este diseño como base, personaliza lo esencial y publícalo desde tu suscripción.

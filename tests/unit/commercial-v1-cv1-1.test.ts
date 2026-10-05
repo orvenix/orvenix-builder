@@ -96,6 +96,37 @@ test("CV1-1: commercial templates start the commercial flow; legacy templates ke
   assert.equal(getCommercialTemplateStart({ id: "servicios-locales", commercialDesignId: "servicios-locales" }), null, "a version is required")
 })
 
+test("CRG-1: first sellable collection exposes exactly five safe Diseños Orvenix", () => {
+  const expected = new Map([
+    ["servicios-locales", { version: 2, collection: "Express" }],
+    ["construction", { version: 2, collection: "Signature" }],
+    ["clinica", { version: 1, collection: "Profesional" }],
+    ["contabilidad", { version: 1, collection: "Profesional" }],
+    ["hotel", { version: 1, collection: "Signature" }],
+  ])
+  const commercial = REAL_TEMPLATES.filter((template) => template.commercialDesignId)
+  assert.deepEqual(commercial.map((template) => template.id).sort(), [...expected.keys()].sort())
+
+  for (const template of commercial) {
+    const spec = expected.get(template.id)
+    assert.ok(spec, template.id)
+    assert.equal(template.commercialDesignVersion, spec.version, template.id)
+    assert.equal(template.commercialCollection, spec.collection, template.id)
+    assert.equal(template.livePath, `/templates/${template.id}/demo`, template.id)
+    assert.equal(getCommercialTemplateStart(template)?.href, `/templates/${template.id}/comenzar`, template.id)
+    assert.ok(getCommercialDesignV1(template.commercialDesignId, template.commercialDesignVersion), template.id)
+    assert.ok(getDemoFactsV1(template.commercialDesignId), template.id)
+
+    const publicCopy = `${template.description} ${template.features.join(" ")}`
+    assert.doesNotMatch(publicCopy, /testimonios|reseñas|ratings|c[eé]dulas|certificad[oa]s?|IMCP|TripAdvisor|Google|mejor precio garantizado|seguros aceptados|8 especialidades/i, template.id)
+  }
+
+  const catalog = read("app/templates/page.tsx")
+  assert.match(catalog, /Diseños Orvenix · Express · Profesional · Signature/)
+  assert.doesNotMatch(catalog, /100%.*editables/)
+  assert.match(read("app/templates/TemplateGrid.tsx"), /Diseños Orvenix ·/)
+})
+
 test("CV1-1/1b: every 'Usar este diseño' entry point uses the shared decision; legacy templates offer no editable copy", () => {
   for (const file of ["app/templates/[id]/page.tsx", "app/templates/TemplateGrid.tsx", "app/webs/page.tsx"]) {
     const source = read(file)

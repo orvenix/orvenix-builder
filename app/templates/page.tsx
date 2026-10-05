@@ -4,10 +4,11 @@ import { REAL_TEMPLATES } from "@/lib/realTemplates";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 import { TemplateGrid } from "./TemplateGrid";
 
+const COMMERCIAL_TEMPLATE_COUNT = REAL_TEMPLATES.filter((template) => template.commercialDesignId).length;
 const STATS = [
   { value: `${REAL_TEMPLATES.length}`, label: "sitios reales" },
   { value: `${new Set(REAL_TEMPLATES.map(t => t.category)).size}`, label: "industrias" },
-  { value: "100%", label: "editables" },
+  { value: `${COMMERCIAL_TEMPLATE_COUNT}`, label: "Diseños Orvenix" },
   { value: "Next.js", label: "stack moderno" },
 ];
 
@@ -25,7 +26,7 @@ export default function TemplatesCatalogPage() {
           <div className="relative mx-auto max-w-7xl px-6">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white/50">
               <LayoutTemplate size={13} className="text-cyan-400" />
-              Catálogo de webs profesionales · Listas para producción
+              Diseños Orvenix · Express · Profesional · Signature
             </div>
 
             <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
@@ -37,7 +38,7 @@ export default function TemplatesCatalogPage() {
                   </span>
                 </h1>
                 <p className="mt-5 text-base leading-7 text-white/45 md:text-lg">
-                  Cada template es un sitio completo, funcional y editable. Elige por industria, prueba la demo en vivo y actívalo desde tu cuenta en minutos.
+                  Elige un Diseño Orvenix editable o explora referencias por industria. Los diseños activos conservan su demo al crear tu sitio y se personalizan desde tu cuenta.
                 </p>
               </div>
 

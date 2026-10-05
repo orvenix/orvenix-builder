@@ -87,7 +87,7 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
             style={{ borderColor: `${template.accent}38`, backgroundColor: `${template.accent}14`, color: template.accent }}
           >
             <Icon size={14} />
-            {commercialHref ? "Web profesional lista para cliente" : "Diseño de referencia"}
+            {commercialHref ? `Diseños Orvenix · ${template.commercialCollection ?? "Profesional"}` : "Diseño de referencia"}
           </div>
 
           <h1 className="max-w-3xl text-5xl font-black leading-[0.94] tracking-tight md:text-6xl">
@@ -171,7 +171,7 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
           <aside className="rounded-2xl border border-white/[0.1] bg-[#0c0f18] p-5">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Incluido con tu plan Orvenix</div>
+                <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30">{commercialHref ? `Diseños Orvenix · ${template.commercialCollection ?? "Profesional"}` : "Diseño de referencia"}</div>
                 <h2 className="mt-2 text-2xl font-black">{commercialHref ? "Usa este diseño con tu suscripción" : "Diseño de referencia"}</h2>
               </div>
               <div className={`grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br ${template.gradient}`}>
