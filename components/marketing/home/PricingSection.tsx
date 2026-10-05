@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { PricingCheckoutButton } from './PricingCheckoutButton';
+import { isOrvenixAiFeatureLabel } from '@/lib/commercial/sales-funnel';
 
 export interface PricingPlanView {
   id: string;
@@ -178,7 +179,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
       <div className="mk-container">
         <div className="mb-8 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-orvenix-secondary md:grid-cols-3 md:p-5">
           <div><strong className="block text-orvenix-text">Quiero empezar simple</strong>Elige Starter para publicar tu primera web profesional.</div>
-          <div><strong className="block text-orvenix-text">Quiero crecer</strong>Elige Pro para vender, usar IA y administrar mas de un sitio.</div>
+          <div><strong className="block text-orvenix-text">Quiero crecer</strong>Elige Pro para vender y administrar mas de un sitio.</div>
           <div><strong className="block text-orvenix-text">Quiero operar ventas</strong>Elige Business para e-commerce, funnels y automatizacion.</div>
         </div>
         {autoCheckoutPlanId && !autoCheckoutError && (
@@ -284,7 +285,12 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
                   {planFeatures(plan).map((f) => (
                     <li key={f.label} className={'flex items-start gap-2 text-sm ' + (f.included ? 'text-orvenix-text' : 'text-orvenix-muted')}>
                       <span className={'shrink-0 ' + (f.included ? 'mk-accent-text' : '')}>{f.included ? '✓' : '—'}</span>
-                      {f.label}
+                      <span>
+                        {f.label}
+                        {isOrvenixAiFeatureLabel(f.label) && (
+                          <span className="ml-1.5 whitespace-nowrap rounded-full border border-white/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orvenix-secondary">Próximamente</span>
+                        )}
+                      </span>
                     </li>
                   ))}
                 </ul>

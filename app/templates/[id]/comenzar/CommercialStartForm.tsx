@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, type FormEvent, type ReactNode } from "react"
+import { useEffect, useState, useTransition, type FormEvent, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Check, Eye, Loader2, PencilLine, Sparkles } from "lucide-react"
@@ -17,6 +17,7 @@ import {
   type CommercialStartField,
   type CommercialStartFormValues,
 } from "@/lib/commercial/start-flow"
+import { PENDING_DESIGN_STORAGE_KEY } from "@/lib/commercial/sales-funnel"
 
 interface CommercialStartFormProps {
   designId: string
@@ -30,6 +31,14 @@ interface CommercialStartFormProps {
 
 export function CommercialStartForm({ designId, version, templateName, summary, accent, demoHref, backHref }: CommercialStartFormProps) {
   const router = useRouter()
+  // SALES-1: the design chosen before checkout has been reached; forget the reminder.
+  useEffect(() => {
+    try {
+      window.localStorage.removeItem(PENDING_DESIGN_STORAGE_KEY)
+    } catch {
+      // ignore
+    }
+  }, [])
   const [values, setValues] = useState<CommercialStartFormValues>(EMPTY_COMMERCIAL_START_FORM)
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<CommercialStartField, string>>>({})
   const [error, setError] = useState<string | null>(null)

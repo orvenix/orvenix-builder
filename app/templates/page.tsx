@@ -3,8 +3,10 @@ import { ArrowRight, LayoutTemplate, Star } from "lucide-react";
 import { REAL_TEMPLATES } from "@/lib/realTemplates";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 import { TemplateGrid } from "./TemplateGrid";
+import { COMMERCIAL_COLLECTIONS, listCommercialCatalog } from "@/lib/commercial/sales-funnel";
 
-const COMMERCIAL_TEMPLATE_COUNT = REAL_TEMPLATES.filter((template) => template.commercialDesignId).length;
+const COMMERCIAL_CATALOG = listCommercialCatalog();
+const COMMERCIAL_TEMPLATE_COUNT = COMMERCIAL_CATALOG.length;
 const STATS = [
   { value: `${REAL_TEMPLATES.length}`, label: "sitios reales" },
   { value: `${new Set(REAL_TEMPLATES.map(t => t.category)).size}`, label: "industrias" },
@@ -54,6 +56,29 @@ export default function TemplatesCatalogPage() {
           </div>
         </section>
 
+        {/* ── SALES-1: colecciones (estilos de diseño, no planes) ── */}
+        <section aria-labelledby="colecciones-title" className="mx-auto max-w-7xl px-6 pt-14">
+          <h2 id="colecciones-title" className="text-2xl font-black text-white md:text-3xl">Tres colecciones de Diseños Orvenix</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">
+            Las colecciones describen el estilo del diseño, no tu plan. Mira la demo, elige el que mejor represente a tu negocio y personalízalo con tus datos.
+          </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {COMMERCIAL_COLLECTIONS.map((collection) => {
+              const designs = COMMERCIAL_CATALOG.filter((entry) => entry.collection === collection.id)
+              return (
+                <div key={collection.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">{collection.id}</p>
+                  <h3 className="mt-2 text-lg font-black text-white">{collection.tagline}</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/45">{collection.description}</p>
+                  {designs.length > 0 && (
+                    <p className="mt-3 text-xs text-white/35">{designs.map((entry) => entry.name).join(" · ")}</p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
         {/* ── GRID con filtro interactivo ──────────────────────── */}
         <section className="mx-auto max-w-7xl px-6 py-14">
           <TemplateGrid />
@@ -84,7 +109,7 @@ export default function TemplatesCatalogPage() {
                 href="/webs"
                 className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-6 text-sm font-bold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
               >
-                Ver demos en vivo
+                Ver referencias por industria
               </Link>
             </div>
           </div>

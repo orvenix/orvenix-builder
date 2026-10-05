@@ -11,8 +11,16 @@ import { formatUsd, getOfficialPlan, officialPlanComparison2026, officialPlans20
 import { editorPrisma } from '@/lib/editor-db';
 import { getAuthSession } from '@/lib/auth-session';
 import { serverWarn } from '@/lib/server-log';
+import { isOrvenixAiFeatureLabel, listCommercialCatalog, parseDesignStartTarget } from '@/lib/commercial/sales-funnel';
+import { DesignIntentNotice } from './DesignIntentNotice';
 
 export const dynamic = "force-dynamic";
+
+// SALES-1: only sellable Orvenix designs are offered here (legacy references stay in the catalog as references).
+const COMMERCIAL_DESIGNS = listCommercialCatalog().flatMap((entry) => {
+  const template = REAL_TEMPLATES.find((item) => item.id === entry.id);
+  return template ? [{ entry, template }] : [];
+});
 
 export const metadata: Metadata = {
   title: 'Precios Orvenix — Activa tu sitio desde 15 USD/mes',
@@ -32,7 +40,8 @@ const guaranteeItems = [
 ];
 
 const comparisonRows = officialPlanComparison2026.map(([feature, , pro, business, enterprise]) => ({
-  feature,
+  // SALES-1: Commercial V1 does not sell IA yet -- the official row stays, labelled honestly.
+  feature: isOrvenixAiFeatureLabel(feature) ? `${feature} (próximamente)` : feature,
   orvenix: pro,
   wix: business,
   agencia: enterprise,
@@ -185,6 +194,8 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
   }
   const rawSearchParams = await searchParams;
   const autoCheckoutPlanId = firstSearchValue(rawSearchParams?.checkout) ?? null;
+  // SALES-1: "Usar este diseño" sends visitors without a plan here; keep that design in view.
+  const designTarget = parseDesignStartTarget(firstSearchValue(rawSearchParams?.callbackUrl));
   const autoCheckoutInterval = firstSearchValue(rawSearchParams?.interval) === 'year' ? 'year' : 'month';
 
   const [plans, currentPlan] = await Promise.all([
@@ -220,6 +231,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
                 Pago seguro, hosting y soporte incluidos
               </span>
             </div>
+            {designTarget && <DesignIntentNotice target={designTarget} />}
           </div>
         </div>
       </section>
@@ -370,13 +382,13 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
       <section className="mk-section-alt">
         <div className="mk-container">
           <SectionHeader
-            tag="Catálogo de sitios"
-            title="Elige tu sitio por industria"
-            description="Diseños profesionales incluidos con tu suscripcion Orvenix. Elige una base por industria y ajusta textos, colores e imagenes sin tocar codigo."
+            tag="Diseños Orvenix"
+            title="Elige tu diseño"
+            description="Mira la demo, elige el diseño y créalo con los datos de tu negocio. Lo editas y publicas con tu plan Orvenix, sin tocar código."
             center
           />
           <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {REAL_TEMPLATES.slice(0, 6).map(t => {
+            {COMMERCIAL_DESIGNS.map(({ entry, template: t }) => {
               const Icon = t.Icon
               return (
                 <div key={t.id} className="rounded-2xl border border-white/8 bg-white/2 p-5 flex flex-col gap-4 hover:border-white/16 transition-all">
@@ -390,15 +402,15 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
                     </div>
                   </div>
                   <div className="rounded-lg bg-white/3 border border-white/6 py-2.5 px-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orvenix-secondary mb-1">Incluido con tu plan Orvenix</p>
-                    <p className="text-xs leading-5 text-orvenix-secondary">Disponible como punto de partida dentro de la suscripcion correspondiente.</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orvenix-secondary mb-1">{entry.collection ? `Colección ${entry.collection}` : 'Diseño Orvenix'}</p>
+                    <p className="text-xs leading-5 text-orvenix-secondary">Tu sitio conserva el diseño de la demo y se crea con los datos de tu negocio.</p>
                   </div>
                   <div className="flex gap-2 mt-auto">
-                    <Link href={t.livePath} target="_blank" rel="noopener noreferrer" className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg border border-white/10 text-[11px] font-bold text-orvenix-secondary hover:text-orvenix-text transition">
+                    <Link href={entry.demoHref} target="_blank" rel="noopener noreferrer" className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg border border-white/10 text-[11px] font-bold text-orvenix-secondary hover:text-orvenix-text transition">
                       Ver demo <ArrowRight size={11} />
                     </Link>
-                    <Link href="/templates" className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg bg-[color:var(--accent-2)] hover:bg-[color:var(--accent)] text-[11px] font-bold text-white transition">
-                      Ver catalogo <ArrowRight size={11} />
+                    <Link href={entry.startHref} className="flex-1 h-8 flex items-center justify-center gap-1 rounded-lg bg-[color:var(--accent-2)] hover:bg-[color:var(--accent)] text-[11px] font-bold text-white transition">
+                      Usar este diseño <ArrowRight size={11} />
                     </Link>
                   </div>
                 </div>
@@ -407,7 +419,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
           </div>
           <div className="text-center mt-8">
             <Link href="/templates" className="mk-btn-primary inline-flex items-center gap-2">
-              Ver todos los templates
+              Ver todos los Diseños Orvenix
               <ArrowRight size={15} />
             </Link>
           </div>

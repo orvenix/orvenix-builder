@@ -92,3 +92,48 @@ test("SALES-1 navigation points visitors at the sellable catalog", () => {
   assert.doesNotMatch(navbar, /\{ href: '\/webs'/)
   assert.match(read("components/marketing/Footer.tsx"), /<Link href="\/templates">Diseños Orvenix<\/Link>/)
 })
+
+/* ------------------------------ catalog, pricing, dashboard ------------------------------ */
+
+test("SALES-1 /templates explains the three collections as design styles, not plans", () => {
+  const page = read("app/templates/page.tsx")
+  assert.match(page, /Tres colecciones de Diseños Orvenix/)
+  assert.match(page, /Las colecciones describen el estilo del diseño, no tu plan/)
+  assert.match(page, /COMMERCIAL_COLLECTIONS\.map/)
+  assert.doesNotMatch(page, /Ver demos en vivo/)
+})
+
+test("SALES-1 /precios keeps the chosen design in view and offers only sellable designs", () => {
+  const page = read("app/precios/page.tsx")
+  assert.match(page, /parseDesignStartTarget\(firstSearchValue\(rawSearchParams\?\.callbackUrl\)\)/)
+  assert.match(page, /\{designTarget && <DesignIntentNotice target=\{designTarget\} \/>\}/)
+  assert.match(page, /listCommercialCatalog\(\)/)
+  assert.doesNotMatch(page, /REAL_TEMPLATES\.slice\(0, 6\)/)
+  assert.match(page, /href=\{entry\.startHref\}/)
+  assert.match(page, /isOrvenixAiFeatureLabel\(feature\) \? `\$\{feature\} \(próximamente\)` : feature/)
+  // Prices and checkout are untouched by SALES-1.
+  assert.match(page, /getPricingPlans\(\)/)
+  const notice = read("app/precios/DesignIntentNotice.tsx")
+  assert.match(notice, /localStorage\.setItem\(PENDING_DESIGN_STORAGE_KEY, serializePendingDesign\(target\)\)/)
+  const pricing = read("components/marketing/home/PricingSection.tsx")
+  assert.match(pricing, /isOrvenixAiFeatureLabel\(f\.label\) && \(/)
+  assert.doesNotMatch(pricing, /usar IA/)
+  assert.match(pricing, /'\/api\/billing\/subscribe'|\/api\/billing\/subscribe/)
+})
+
+test("SALES-1 dashboard: Diseños Orvenix first, IA coming soon for customers, chosen design resumed after checkout", () => {
+  const dashboard = read("app/dashboard/page.impl.tsx")
+  assert.match(dashboard, /<span className="relative z-10">Elegir un Diseño Orvenix<\/span>/)
+  assert.match(dashboard, /\{isAdmin \? \(\s*<CreateSiteWithAI/)
+  assert.match(dashboard, /Orvenix IA — Próximamente/)
+  assert.match(dashboard, /<PendingDesignBanner \/>/)
+  assert.doesNotMatch(dashboard, /href="\/webs"/)
+  assert.doesNotMatch(dashboard, /comprar o rentar/)
+  const banner = read("app/dashboard/PendingDesignBanner.tsx")
+  assert.match(banner, /useSyncExternalStore\(subscribe, readRaw, \(\) => null\)/)
+  assert.match(banner, /parsePendingDesign\(raw\)/)
+  // Reaching the design's start form fulfills the intent.
+  assert.match(read("app/templates/[id]/comenzar/CommercialStartForm.tsx"), /localStorage\.removeItem\(PENDING_DESIGN_STORAGE_KEY\)/)
+  // IA infrastructure is kept, not deleted.
+  assert.match(dashboard, /import \{ CreateSiteWithAI \} from "\.\/CreateSiteWithAI"/)
+})
