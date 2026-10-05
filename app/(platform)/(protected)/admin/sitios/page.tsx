@@ -2,6 +2,8 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getAuthSession } from "@/lib/auth-session"
 import { editorPrisma } from "@/lib/editor-db"
+import { getSitesModerationSummary, MODERATION_STATE_LABEL, type SiteModerationSummary } from "@/lib/moderation/site-moderation"
+import { ModerationActions } from "@/app/admin/sitios/ModerationActions"
 
 export const metadata = { title: "Sitios · Orvenix Admin" }
 
@@ -27,6 +29,8 @@ export default async function AdminSitiosPage() {
       user: { select: { email: true, name: true } },
     },
   })
+
+  const moderation = await getSitesModerationSummary(sites.map((site) => site.id))
 
   const totalSites = sites.length
   const publishedSites = sites.filter((site) => site.published).length
@@ -71,6 +75,7 @@ export default async function AdminSitiosPage() {
                   <th className="text-left py-3">Propietario</th>
                   <th className="text-left py-3">Email</th>
                   <th className="text-left py-3">Estado</th>
+                  <th className="text-left py-3">Moderación</th>
                   <th className="text-left py-3">Creado</th>
                   <th className="text-left py-3">Actualizado</th>
                   <th className="text-left py-3">Acciones</th>
@@ -97,6 +102,9 @@ export default async function AdminSitiosPage() {
                         {site.published ? "Publicado" : "Borrador"}
                       </span>
                     </td>
+                    <td className="py-3 align-top">
+                      <ModerationBadge status={moderation.get(site.id)} />
+                    </td>
                     <td className="py-3">{site.createdAt.toLocaleDateString("es-MX")}</td>
                     <td className="py-3">{site.updatedAt.toLocaleDateString("es-MX")}</td>
                     <td className="py-3">
@@ -108,7 +116,7 @@ export default async function AdminSitiosPage() {
                           Editor
                         </Link>
 
-                        {site.published && (
+                        {site.published && (moderation.get(site.id)?.state ?? "active") === "active" && (
                           <Link
                             href={`/p/${site.id}`}
                             target="_blank"
@@ -117,6 +125,9 @@ export default async function AdminSitiosPage() {
                             Ver sitio
                           </Link>
                         )}
+                      </div>
+                      <div className="mt-2 min-w-[220px]">
+                        <ModerationActions siteId={site.id} state={moderation.get(site.id)?.state ?? "active"} />
                       </div>
                     </td>
                   </tr>
@@ -127,6 +138,25 @@ export default async function AdminSitiosPage() {
         </section>
       </div>
     </main>
+  )
+}
+
+function ModerationBadge({ status }: { status: SiteModerationSummary | undefined }) {
+  const state = status?.state ?? "active"
+  const tone =
+    state === "terminated"
+      ? "bg-red-500/10 text-red-300"
+      : state === "suspended"
+        ? "bg-orange-500/10 text-orange-300"
+        : "bg-white/5 text-slate-300"
+  return (
+    <div className="space-y-1 max-w-[220px]">
+      <span className={`rounded-full px-3 py-1 text-xs font-bold ${tone}`}>{MODERATION_STATE_LABEL[state]}</span>
+      {status?.reason && <p className="text-xs text-slate-400 break-words">{status.reason}</p>}
+      {status?.lastWarningAt && (
+        <p className="text-xs text-amber-300">Advertido {status.lastWarningAt.toLocaleDateString("es-MX")}</p>
+      )}
+    </div>
   )
 }
 

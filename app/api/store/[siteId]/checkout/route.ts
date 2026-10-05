@@ -13,6 +13,7 @@ import {
 } from "@/lib/commerce/funnel-offer-checkout"
 import { getPublicFunnelOfferQuery } from "@/lib/commerce/funnel-offer-public"
 import { triggerAutomations } from "@/lib/automation/runtime"
+import { getSiteModerationStatus, isPubliclyBlocked } from "@/lib/moderation/site-moderation"
 import { serverError } from "@/lib/server-log"
 import { buildStoreCheckoutBaseItemsV1, StoreCheckoutSchemaV1 } from "@/lib/commerce/checkout-pricing"
 import type { Prisma } from "@/generated/editor-prisma"
@@ -69,6 +70,10 @@ const parsed = CheckoutSchema.safeParse(body);
     select: { id: true, name: true, userId: true },
   })
   if (!site?.userId) return NextResponse.json({ error: "STORE_NOT_FOUND" }, { status: 404 })
+  // ADMIN MODERATION: a suspended or terminated store takes no orders (nothing is written, no automation runs).
+  if (isPubliclyBlocked((await getSiteModerationStatus(site.id)).state)) {
+    return NextResponse.json({ error: "STORE_UNAVAILABLE", message: "Esta tienda no está disponible." }, { status: 423 })
+  }
 
   const access = await getUserPlanAccess(site.userId)
 

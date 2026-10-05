@@ -195,6 +195,47 @@ export async function sendOrderConfirmationEmail({
   })
 }
 
+// ─── Moderation warning ───────────────────────────────────────────────────────
+
+/** HTML-escapes text interpolated into an email body. */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+/**
+ * ADMIN MODERATION MINIMUM: a warning to the site owner. Every value that
+ * comes from the site, the owner or the admin is escaped; the subject is a
+ * fixed string (no header injection).
+ */
+export async function sendSiteModerationWarningEmail({
+  to,
+  ownerName,
+  siteName,
+  reason,
+}: {
+  to: string
+  ownerName: string
+  siteName: string
+  reason: string
+}) {
+  const greeting = ownerName.trim() ? `Hola ${escapeHtml(ownerName.trim())},` : "Hola,"
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#0f172a;">
+      <h2 style="margin-bottom:12px;">Aviso sobre tu sitio en Orvenix</h2>
+      <p>${greeting}</p>
+      <p>Revisamos tu sitio <strong>${escapeHtml(siteName)}</strong> y te enviamos esta advertencia:</p>
+      <blockquote style="margin:16px 0;padding:12px 16px;border-left:4px solid #f59e0b;background:#fffbeb;">${escapeHtml(reason)}</blockquote>
+      <p>Por favor corrige el contenido desde tu panel. Si no se corrige, podríamos suspender la publicación del sitio.</p>
+      <p><a href="${escapeHtml(`${APP_URL}/dashboard`)}" style="color:#0284c7;">Ir a mi panel</a></p>
+    </div>`
+  return sendEmail({ to, subject: "Aviso sobre tu sitio en Orvenix", html })
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getStatusSubject(status: EditRequestStatus, siteName: string) {

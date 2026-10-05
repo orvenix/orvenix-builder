@@ -15,6 +15,12 @@ import {
 } from "@/lib/publishedSiteArtifacts"
 
 import {
+  getSiteModerationStatus,
+  isPubliclyBlocked,
+  MODERATED_SITE_PUBLISH_MESSAGE,
+} from "@/lib/moderation/site-moderation"
+
+import {
   markDesignGenerationPublished,
   measureAndRecordDesignGenerationEditMetrics,
   refreshDesignGenerationOutcome,
@@ -47,6 +53,7 @@ export class SitePublicationError
       | "SITE_ID_REQUIRED"
       | "FORBIDDEN"
       | "SITE_NOT_FOUND"
+      | "SITE_MODERATED"
       | "SITE_PUBLISH_FAILED",
   ) {
     super(message)
@@ -166,6 +173,14 @@ export async function publishSiteForActor(
     throw new SitePublicationError(
       "No tienes permiso para publicar este sitio.",
       "FORBIDDEN",
+    )
+  }
+
+  // ADMIN MODERATION: a suspended or terminated site cannot be published by anyone until an admin reactivates it.
+  if (isPubliclyBlocked((await getSiteModerationStatus(siteId)).state)) {
+    throw new SitePublicationError(
+      MODERATED_SITE_PUBLISH_MESSAGE,
+      "SITE_MODERATED",
     )
   }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createContact } from '@/lib/adminCsv';
 import { triggerAutomations } from '@/lib/automation/runtime';
+import { getSiteModerationStatus, isPubliclyBlocked } from '@/lib/moderation/site-moderation';
 import { RATE_LIMIT_POLICIES_V1, checkRateLimitV1, rateLimitIdentityV1, rateLimitedResponseV1 } from '@/lib/security/rate-limit';
 
 // SEC-1 (SEC0-08/10): public form -> bounded fields + per-client rate limit.
@@ -45,6 +46,11 @@ export async function POST(request: Request) {
   // Honeypot (bot trap)
   if (body._gotcha) {
     return NextResponse.json({ ok: true, message: 'Solicitud recibida.' });
+  }
+
+  // ADMIN MODERATION: a suspended or terminated site's form stores nothing and triggers no automation.
+  if (siteId && isPubliclyBlocked((await getSiteModerationStatus(siteId)).state)) {
+    return NextResponse.json({ ok: false, message: 'Este sitio no está disponible.' }, { status: 423 });
   }
 
   try {

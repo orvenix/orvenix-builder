@@ -9,6 +9,7 @@ import { isAdvancedBuilderPlan } from "@/lib/pro-plan";
 import { getResolvedSitePage, listSitePages } from "@/lib/builder-core/tree/sitePages";
 import { seedProfessionalStarterPages } from "@/lib/professional-site-starter";
 import { EditorExperienceShell } from "@/components/editor/experience"
+import { getSiteModerationStatus, ownerModerationNotice } from "@/lib/moderation/site-moderation"
 
 interface EditorPageProps {
   params: Promise<{ id: string }>;
@@ -71,6 +72,9 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
   const activePageName = resolvedPage?.name ?? "Inicio";
   const activePageSlug = resolvedPage?.slug ?? "home";
   const initialServerVersion = resolvedPage?.updatedAt?.toISOString() ?? null;
+  // ADMIN MODERATION: editing and saving stay open; the notice says why publishing is not.
+  const moderation = isEditorWebId(id) ? null : await getSiteModerationStatus(id);
+  const moderationNotice = moderation ? ownerModerationNotice(moderation) : null;
 
   return (
     <EditorProvider
@@ -84,6 +88,12 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
   availablePages={availablePages}
 >
       <div className="ov-shell editor-shell-page relative flex h-screen flex-col overflow-hidden text-white">
+  {moderationNotice && (
+    <div role="alert" className="shrink-0 border-b border-red-400/30 bg-red-950/90 px-4 py-2 text-xs text-red-100">
+      <strong className="font-black">{moderationNotice.title}.</strong> {moderationNotice.body}
+      {moderation?.reason && <span className="ml-1 break-words">Motivo: {moderation.reason}</span>}
+    </div>
+  )}
   <EditorExperienceShell />
 </div>
     </EditorProvider>

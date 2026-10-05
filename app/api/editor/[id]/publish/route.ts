@@ -152,7 +152,10 @@ export async function POST(_request: Request, context: RouteContext) {
             : error.code ===
                 "SITE_NOT_FOUND"
               ? 404
-              : 500;
+              : error.code ===
+                  "SITE_MODERATED"
+                ? 423
+                : 500;
 
       return jsonError(
         error.message,

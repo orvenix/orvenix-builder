@@ -6,6 +6,7 @@ import { getUserPlanAccess } from "@/lib/plan-guard"
 import { isAdvancedBuilderPlan } from "@/lib/pro-plan"
 import { seedProfessionalStarterPages } from "@/lib/professional-site-starter"
 import { HOME_PAGE_NAME, HOME_PAGE_SLUG } from "@/lib/builder-core/tree/sitePages"
+import { getSiteModerationStatus, isPubliclyBlocked, MODERATED_SITE_DELETE_MESSAGE } from "@/lib/moderation/site-moderation"
 import type { Prisma } from "@/generated/editor-prisma";
 import type { EditorTree } from "@/types/editor";
 
@@ -224,7 +225,21 @@ export async function createSiteFromTree({
   return site;
 }
 
+/**
+ * ADMIN MODERATION: a suspended or terminated site keeps all its data
+ * (pages, orders...), so nobody can delete it from the product -- not even
+ * an admin; a definitive purge is a separate, deliberate process. Ownership
+ * is checked first so a stranger never learns another site's state.
+ */
+async function assertSiteDeletable(where: { id: string; userId?: string }) {
+  const site = await editorPrisma.editorWebsite.findFirst({ where, select: { id: true } });
+  if (site && isPubliclyBlocked((await getSiteModerationStatus(site.id)).state)) {
+    throw new Error(MODERATED_SITE_DELETE_MESSAGE);
+  }
+}
+
 export async function deleteSite(id: string, userId: string) {
+  await assertSiteDeletable({ id, userId });
   const result = await editorPrisma.editorWebsite.deleteMany({ where: { id, userId } });
 
   if (result.count === 0) {
@@ -235,6 +250,7 @@ export async function deleteSite(id: string, userId: string) {
 }
 
 export async function deleteSiteForRole(id: string, userId: string, role: UserRole) {
+  await assertSiteDeletable(role === "ADMIN" ? { id } : { id, userId });
   const result = role === "ADMIN"
     ? await editorPrisma.editorWebsite.deleteMany({ where: { id } })
     : await editorPrisma.editorWebsite.deleteMany({ where: { id, userId } });
@@ -260,11 +276,17 @@ export async function unpublishSite(id: string, userId: string) {
   });
 }
 
+/**
+ * The public gate of /p/* (home, pages, product detail). ADMIN MODERATION: a
+ * suspended or terminated site is not served, whatever its `published` flag.
+ */
 export async function getPublishedSite(id: string) {
-  return editorPrisma.editorWebsite.findFirst({
+  const site = await editorPrisma.editorWebsite.findFirst({
     where: { id, published: true },
     select: { id: true, name: true, description: true, tree: true },
   });
+  if (!site) return null;
+  return isPubliclyBlocked((await getSiteModerationStatus(site.id)).state) ? null : site;
 }
 
 export async function getSiteForRole(id: string, userId: string, role: UserRole) {

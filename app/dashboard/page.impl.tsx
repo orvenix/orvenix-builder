@@ -29,6 +29,7 @@ import { getOfficialPlanName } from "@/lib/orvenix-official-2026";
 import { listSitePages, type SitePageListItem } from "@/lib/builder-core/tree/sitePages";
 import { getUserPlanAccess } from "@/lib/plan-guard";
 import { canUseEcommerce } from "@/lib/billing/plan-entitlements";
+import { ACTIVE_MODERATION_STATUS, getSitesModerationSummary, ownerModerationNotice, type SiteModerationStatus } from "@/lib/moderation/site-moderation";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     sites.map(async (site) => [site.id, await listSitePages(site.id)] as const)
   );
   const pagesBySiteId = new Map(sitePagesEntries);
+  const moderationBySiteId = await getSitesModerationSummary(sites.map((site) => site.id));
   const editRequests = await getEditRequestsForRole(session.user.id, role);
   const subscription = await editorPrisma.subscription.findUnique({
     where: { userId: session.user.id },
@@ -383,7 +385,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {sites.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 editor-anim-fade-up">
             {sites.map((site, i) => (
-              <SiteCard key={site.id} site={site} pages={pagesBySiteId.get(site.id) ?? []} index={i} />
+              <SiteCard key={site.id} site={site} pages={pagesBySiteId.get(site.id) ?? []} index={i} moderation={moderationBySiteId.get(site.id) ?? ACTIVE_MODERATION_STATUS} />
             ))}
 
             {/* Add new card */}
@@ -555,6 +557,7 @@ function SiteCard({
   site,
   pages,
   index,
+  moderation,
 }: {
   site: {
     id: string;
@@ -566,7 +569,11 @@ function SiteCard({
   };
   pages: SitePageListItem[];
   index: number;
+  moderation: SiteModerationStatus;
 }) {
+  // ADMIN MODERATION: a suspended/terminated site is still editable, but it is not public, cannot be published and cannot be deleted.
+  const moderationNotice = ownerModerationNotice(moderation);
+  const isPublic = site.published && !moderationNotice;
   const ACCENT_COLORS = ["#38bdf8", "#22c55e", "#818cf8", "#06b6d4", "#60a5fa", "#14b8a6"];
   const accent = ACCENT_COLORS[index % ACCENT_COLORS.length];
   const pageLinks = pages.length > 0 ? pages : [{ id: null, siteId: site.id, name: "Inicio", slug: "home", isHome: true, published: site.published, source: "legacy-site-tree" as const }];
@@ -592,7 +599,7 @@ function SiteCard({
           style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)", backgroundSize: "14px 14px" }} />
 
         {/* Published badge */}
-        {site.published && (
+        {isPublic && (
           <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-[color:var(--glass-border-hover)] bg-[rgba(0,181,246,0.10)] px-2 py-1 backdrop-blur-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--accent)] editor-status-dot-live" />
             <span className="text-[10px] font-semibold text-[color:var(--accent)]">Publicado</span>
@@ -611,6 +618,14 @@ function SiteCard({
 
         {site.description && (
           <p className="mb-3 truncate text-[11px] text-white/30">{site.description}</p>
+        )}
+
+        {moderationNotice && (
+          <div role="status" className="mb-3 rounded-2xl border border-red-400/25 bg-red-500/[0.08] p-3">
+            <p className="text-xs font-black text-red-200">{moderationNotice.title}</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-red-100/75">{moderationNotice.body}</p>
+            {moderation.reason && <p className="mt-2 break-words text-[11px] text-red-100/90">Motivo: {moderation.reason}</p>}
+          </div>
         )}
 
         {site.user?.email && (
@@ -668,7 +683,7 @@ function SiteCard({
 
           <EditRequestDialog siteId={site.id} siteName={site.name} accent={accent} />
 
-          {site.published && (
+          {isPublic && (
             <Link
               href={`/p/${site.id}`}
               target="_blank"
@@ -680,7 +695,7 @@ function SiteCard({
             </Link>
           )}
 
-          {site.published && (
+          {isPublic && (
             <Link
               href={`/dashboard/analiticas/${site.id}`}
               title="Ver analíticas"
@@ -700,7 +715,7 @@ function SiteCard({
 
           <ExportDropdown siteId={site.id} />
 
-          <DeleteSiteButton siteId={site.id} siteName={site.name} />
+          {!moderationNotice && <DeleteSiteButton siteId={site.id} siteName={site.name} />}
         </div>
       </div>
     </article>
