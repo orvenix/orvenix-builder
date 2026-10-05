@@ -65,7 +65,7 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 /* ------------------------------ helpers ------------------------------ */
 
 function experience(mode: EditorExperienceMode) {
-  return { mode, isClient: mode === "client", isStudio: mode === "studio", canSwitchMode: false, setMode: () => undefined, capabilities: getExperienceCapabilities(mode) }
+  return { mode, profile: mode === "studio" ? ("pro" as const) : ("simple" as const), isClient: mode === "client", isStudio: mode === "studio", canSwitchMode: false, setMode: () => undefined, capabilities: getExperienceCapabilities(mode) }
 }
 
 function render(tree: EditorTree, mode: "preview" | "edit", experienceMode: EditorExperienceMode = "client"): string {

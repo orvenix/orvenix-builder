@@ -17,6 +17,8 @@ export interface EditorExperienceCapabilities {
 
 export interface EditorExperienceValue {
   mode: EditorExperienceMode
+  /** CV1-2: the public mode contract ("simple" = client, "pro" = studio). */
+  profile: "simple" | "pro"
   isClient: boolean
   isStudio: boolean
   canSwitchMode: boolean

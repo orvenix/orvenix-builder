@@ -12,6 +12,7 @@ import {
 import { blockRegistry } from "@/components/editor/blocks/registry"
 import { getProtectedReason } from "@/lib/editor/context-capabilities"
 import { useEditorStore } from "@/store/useEditorStore"
+import { useEditorExperience } from "@/components/editor/experience/ExperienceContext"
 import type { EditorNode } from "@/types/editor"
 
 type EditableField = {
@@ -28,6 +29,8 @@ export function ClientContentPanel() {
   const setEditingNode = useEditorStore((state) => state.setEditingNode)
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps)
   const removeNode = useEditorStore((state) => state.removeNode)
+  // CV1-2: removing a whole section is a destructive structure edit (Pro only).
+  const { capabilities } = useEditorExperience()
 
   const root = tree.nodes[tree.rootId]
   const selectedNode = selectedId ? tree.nodes[selectedId] : null
@@ -183,6 +186,7 @@ export function ClientContentPanel() {
                     </span>
                   </button>
 
+                  {capabilities.allowDestructiveActions && (
                   <button
                     type="button"
                     aria-label="Eliminar sección"
@@ -196,6 +200,7 @@ export function ClientContentPanel() {
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
+                  )}
                 </div>
               )
             })}

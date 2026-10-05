@@ -27,6 +27,7 @@ import {
 } from "@/components/editor/sidebar/AiAssistantPanel"
 
 import { useEditorStore } from "@/store/useEditorStore"
+import { isCommercialDesignTree } from "@/lib/editor/editor-mode-profile"
 import { buildEditorPageUrl } from "@/components/editor/pageNavigation"
 import { useCheckoutRegistrationFlow } from "@/hooks/useCheckoutRegistrationFlow"
 import {
@@ -49,6 +50,10 @@ type ClientPanel =
 export function ClientWorkspaceSidebar() {
   const builderTier = useEditorStore((state) => state.builderTier)
   const isPro = builderTier === "pro"
+  // CV1-2: a site from an Orvenix design keeps IA out of its critical path, and its
+  // existing pages are always reachable (navigating pages is not a plan feature).
+  const isCommercialSite = useEditorStore((state) => isCommercialDesignTree(state.tree))
+  const showPages = useEditorStore((state) => isPro || state.availablePages.length > 1)
   const [activePanel, setActivePanel] = useState<ClientPanel>("brand")
   const [showMore, setShowMore] = useState(false)
 
@@ -71,14 +76,10 @@ export function ClientWorkspaceSidebar() {
       { id: "content" as const, label: "Contenido", icon: FilePenLine },
       { id: "ai" as const, label: "Orvenix", icon: Sparkles },
       { id: "actions" as const, label: "Acciones", icon: Rocket },
-      ...(isPro
-        ? [
-            { id: "pages" as const, label: "Páginas", icon: Globe2 },
-            { id: "design" as const, label: "Diseño", icon: Palette },
-          ]
-        : []),
+      ...(showPages ? [{ id: "pages" as const, label: "Páginas", icon: Globe2 }] : []),
+      ...(isPro ? [{ id: "design" as const, label: "Diseño", icon: Palette }] : []),
     ],
-    [isPro],
+    [isPro, showPages],
   )
 
   return (
@@ -123,9 +124,9 @@ export function ClientWorkspaceSidebar() {
       <div className="min-w-0 flex-1 overflow-hidden">
         {activePanel === "brand" && <ClientBrandPanel embedded mode={isPro ? "pro" : "basic"} />}
         {activePanel === "content" && <ClientContentPanel />}
-        {activePanel === "ai" && <AiAssistantPanel />}
+        {activePanel === "ai" && (isCommercialSite ? <OrvenixAiComingSoonPanel /> : <AiAssistantPanel />)}
         {activePanel === "actions" && <ClientActionsPanel isPro={isPro} />}
-        {activePanel === "pages" && isPro && <ClientPagesPanel />}
+        {activePanel === "pages" && showPages && <ClientPagesPanel />}
         {activePanel === "design" && isPro && <ClientDesignPanel />}
         {activePanel === "advanced" && isPro && <ClientAdvancedPanel />}
       </div>
@@ -253,7 +254,7 @@ function ClientPagesPanel() {
   }
 
   return (
-    <PanelShell eyebrow="Pro" title="Páginas del sitio" description="Cambia de página sin salir del editor. El menú del sitio queda conectado.">
+    <PanelShell eyebrow="Sitio" title="Páginas del sitio" description="Cambia de página sin salir del editor. El menú del sitio queda conectado.">
       <div className="space-y-2">
         {availablePages.map((page) => {
           const active = page.slug === activePageSlug
@@ -333,6 +334,17 @@ function ClientNavButton({ label, active, onClick, children }: { label: string; 
       {children}
       <span>{label}</span>
     </button>
+  )
+}
+
+/** CV1-2: Commercial V1 does not depend on IA; the customer sees an honest placeholder, no provider call. */
+function OrvenixAiComingSoonPanel() {
+  return (
+    <PanelShell eyebrow="Orvenix IA" title="Orvenix IA — Próximamente" description="Pronto podrás pedirle cambios a Orvenix IA. Mientras tanto, edita tu sitio directamente: selecciona cualquier texto, botón o imagen.">
+      <p className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 text-xs leading-5 text-slate-400">
+        Tu diseño ya está listo para personalizarse. Usa <span className="font-bold text-slate-200">Contenido</span> para tus textos y haz clic sobre la página para cambiar botones, enlaces e imágenes.
+      </p>
+    </PanelShell>
   )
 }
 

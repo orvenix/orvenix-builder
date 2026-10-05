@@ -24,6 +24,7 @@ import {
 } from "@/lib/editor/structure-rules"
 import { cn } from "@/lib/utils"
 import { useEditorStore } from "@/store/useEditorStore"
+import { useEditorExperience } from "@/components/editor/experience/ExperienceContext"
 import type { NodeId } from "@/types/editor"
 
 import type { SectionDragHandle } from "./customer-canvas-context"
@@ -60,6 +61,8 @@ export function CustomerContextBar({
   const reorderChildren = useEditorStore((s) => s.reorderChildren)
   const duplicateNode = useEditorStore((s) => s.duplicateNode)
   const removeNode = useEditorStore((s) => s.removeNode)
+  // CV1-2: duplicating/removing sections are structural edits -- only where the mode allows them.
+  const { capabilities: modeCapabilities } = useEditorExperience()
   const execute = useEditorStore((s) => s.execute)
   const [panel, setPanel] = useState<Panel>(null)
 
@@ -191,16 +194,20 @@ export function CustomerContextBar({
             )}
             <IconButton label="Subir sección" disabled={!computeSectionStep(tree, selectedId, "up")} onClick={() => moveSection("up")}><ChevronUp size={13} /></IconButton>
             <IconButton label="Bajar sección" disabled={!computeSectionStep(tree, selectedId, "down")} onClick={() => moveSection("down")}><ChevronDown size={13} /></IconButton>
-            <IconButton label="Duplicar sección" onClick={() => duplicateNode(selectedId)}><Copy size={13} /></IconButton>
-            <IconButton
-              label="Eliminar sección"
-              danger
-              onClick={() => {
-                if (window.confirm("¿Eliminar esta sección de la página?")) removeNode(selectedId)
-              }}
-            >
-              <Trash2 size={13} />
-            </IconButton>
+            {modeCapabilities.allowStructureEditing && (
+              <IconButton label="Duplicar sección" onClick={() => duplicateNode(selectedId)}><Copy size={13} /></IconButton>
+            )}
+            {modeCapabilities.allowDestructiveActions && (
+              <IconButton
+                label="Eliminar sección"
+                danger
+                onClick={() => {
+                  if (window.confirm("¿Eliminar esta sección de la página?")) removeNode(selectedId)
+                }}
+              >
+                <Trash2 size={13} />
+              </IconButton>
+            )}
           </>
         )}
       </div>
