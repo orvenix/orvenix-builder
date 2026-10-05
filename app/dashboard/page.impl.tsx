@@ -13,6 +13,7 @@ import { DeleteSiteButton } from "./DeleteSiteButton";
 import { DashboardNav } from "./DashboardNav";
 import { DashboardBillingPanel } from "./DashboardBillingPanel";
 import { PendingDesignBanner } from "./PendingDesignBanner";
+import { parseDesignIntentId } from "@/lib/commercial/sales-funnel";
 import {
   Edit3, Globe, ExternalLink,
   ArrowRight, Sparkles, TrendingUp, Clock, ShieldCheck,
@@ -40,6 +41,7 @@ interface DashboardPageProps {
     session_id?: string | string[];
     sub?: string | string[];
     billing?: string | string[];
+    design?: string | string[];
   }>;
 }
 
@@ -98,6 +100,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const checkoutStatus = firstParam(resolvedSearchParams?.checkout);
   const checkoutIntent = normalizeCheckoutAction(firstParam(resolvedSearchParams?.intent));
   const checkoutSiteId = firstParam(resolvedSearchParams?.siteId);
+  // SALES-2: the chosen Orvenix design comes back from checkout as ?design=<id> (validated against the catalog).
+  const returnedDesign = parseDesignIntentId(firstParam(resolvedSearchParams?.design));
   const billingProvider = firstParam(resolvedSearchParams?.provider);
   const billingReturn = firstParam(resolvedSearchParams?.sub);
   const billingAction = firstParam(resolvedSearchParams?.billing);
@@ -255,7 +259,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
         </div>
 
-        <PendingDesignBanner />
+        <PendingDesignBanner returnedDesign={returnedDesign} />
 
         <DashboardBillingPanel
           plan={subscription?.plan ? {

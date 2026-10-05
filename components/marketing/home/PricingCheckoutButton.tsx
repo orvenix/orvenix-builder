@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
+import { withDesignIntent } from '@/lib/commercial/sales-funnel'
+
 interface Props {
   planId: string
   interval: 'month' | 'year'
@@ -11,9 +13,11 @@ interface Props {
   featured?: boolean
   unavailable?: boolean
   repairActiveSubscription?: boolean
+  /** SALES-2: validated Orvenix design to resume after sign-up and checkout. */
+  designId?: string | null
 }
 
-export function PricingCheckoutButton({ planId, interval, label, featured, unavailable, repairActiveSubscription }: Props) {
+export function PricingCheckoutButton({ planId, interval, label, featured, unavailable, repairActiveSubscription, designId = null }: Props) {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
@@ -31,7 +35,7 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
 
     // Si no hay sesión → registrar con el plan preseleccionado y volver al checkout
     if (!session) {
-      const checkoutReturn = "/precios?checkout=" + encodeURIComponent(planId) + "&interval=" + interval + (isBillingRepair ? "&billingRepair=1" : "")
+      const checkoutReturn = withDesignIntent("/precios?checkout=" + encodeURIComponent(planId) + "&interval=" + interval + (isBillingRepair ? "&billingRepair=1" : ""), designId)
       router.push(`/register?plan=${encodeURIComponent(planId)}&interval=${interval}&callbackUrl=${encodeURIComponent(checkoutReturn)}`)
       return
     }
@@ -41,7 +45,7 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
       const res = await fetch('/api/billing/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, interval, repairActiveSubscription: isBillingRepair }),
+        body: JSON.stringify({ planId, interval, repairActiveSubscription: isBillingRepair, designId }),
       })
       const contentType = res.headers.get('content-type') ?? ''
       const data = contentType.includes('application/json')
@@ -51,7 +55,7 @@ export function PricingCheckoutButton({ planId, interval, label, featured, unava
       if (data.initPoint) {
         window.location.href = data.initPoint
       } else if (data.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
-        router.push('/dashboard')
+        router.push(withDesignIntent('/dashboard', designId))
       } else if (data.code === 'REACTIVATE_VIA_DASHBOARD') {
         setError('Tu cancelacion ya esta programada y tu acceso sigue vigente. Reactiva o cambia el plan desde el dashboard.')
       } else if (data.code === 'STRIPE_SUBSCRIPTIONS_REQUIRED') {

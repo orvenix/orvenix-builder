@@ -105,7 +105,8 @@ test("SALES-1 /templates explains the three collections as design styles, not pl
 
 test("SALES-1 /precios keeps the chosen design in view and offers only sellable designs", () => {
   const page = read("app/precios/page.tsx")
-  assert.match(page, /parseDesignStartTarget\(firstSearchValue\(rawSearchParams\?\.callbackUrl\)\)/)
+  // SALES-2: also accepts ?design=<id>; both are validated against the sellable catalog.
+  assert.match(page, /readDesignIntent\(\{ design: firstSearchValue\(rawSearchParams\?\.design\), callbackUrl: firstSearchValue\(rawSearchParams\?\.callbackUrl\) \}\)/)
   assert.match(page, /\{designTarget && <DesignIntentNotice target=\{designTarget\} \/>\}/)
   assert.match(page, /listCommercialCatalog\(\)/)
   assert.doesNotMatch(page, /REAL_TEMPLATES\.slice\(0, 6\)/)
@@ -127,7 +128,7 @@ test("SALES-1 dashboard: Diseños Orvenix first, IA coming soon for customers, c
   assert.match(dashboard, /<span className="relative z-10">Elegir un Diseño Orvenix<\/span>/)
   assert.match(dashboard, /\{isAdmin \? \(\s*<CreateSiteWithAI/)
   assert.match(dashboard, /Orvenix IA — Próximamente/)
-  assert.match(dashboard, /<PendingDesignBanner \/>/)
+  assert.match(dashboard, /<PendingDesignBanner returnedDesign=\{returnedDesign\} \/>/)
   assert.doesNotMatch(dashboard, /href="\/webs"/)
   assert.doesNotMatch(dashboard, /comprar o rentar/)
   const banner = read("app/dashboard/PendingDesignBanner.tsx")

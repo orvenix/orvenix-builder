@@ -1,6 +1,6 @@
 "use client"
 
-import { useSyncExternalStore } from "react"
+import { useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { ArrowRight, LayoutTemplate, X } from "lucide-react"
 
@@ -28,13 +28,17 @@ function readRaw(): string | null {
 /**
  * SALES-1: after sign-up and checkout (which always land on the dashboard),
  * take the customer back to the Orvenix design they chose before paying.
+ * SALES-2: the design returned by checkout (?design=, validated on the
+ * server) wins; this browser's memory is only the fallback.
  */
-export function PendingDesignBanner() {
+export function PendingDesignBanner({ returnedDesign = null }: { returnedDesign?: { templateId: string; name: string; href: string } | null }) {
   const raw = useSyncExternalStore(subscribe, readRaw, () => null)
-  const design = parsePendingDesign(raw)
-  if (!design) return null
+  const [dismissed, setDismissed] = useState(false)
+  const design = returnedDesign ?? parsePendingDesign(raw)
+  if (!design || dismissed) return null
 
   const dismiss = () => {
+    setDismissed(true)
     try {
       window.localStorage.removeItem(PENDING_DESIGN_STORAGE_KEY)
     } catch {

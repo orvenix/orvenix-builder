@@ -81,6 +81,29 @@ export function parseDesignStartTarget(value: unknown, templates: readonly RealT
   return entry ? { templateId: entry.id, name: entry.name, href: entry.startHref } : null
 }
 
+/**
+ * SALES-2: the chosen design also travels as `?design=<id>` through pricing,
+ * sign-up and the checkout return, so the dashboard can resume it server-side
+ * without relying on browser storage. Only a sellable design id is accepted.
+ */
+export const DESIGN_INTENT_PARAM = "design"
+
+export function parseDesignIntentId(value: unknown, templates: readonly RealTemplate[] = REAL_TEMPLATES): { templateId: string; name: string; href: string } | null {
+  if (typeof value !== "string" || !/^[a-z0-9-]{1,64}$/.test(value)) return null
+  return parseDesignStartTarget(`/templates/${value}/comenzar`, templates)
+}
+
+/** The design intent of a request: `?design=<id>` or a design start page as `callbackUrl`. */
+export function readDesignIntent(params: { design?: unknown; callbackUrl?: unknown }, templates: readonly RealTemplate[] = REAL_TEMPLATES) {
+  return parseDesignIntentId(params.design, templates) ?? parseDesignStartTarget(params.callbackUrl, templates)
+}
+
+/** Appends a validated design intent to an internal path (unchanged when there is none). */
+export function withDesignIntent(path: string, designId: string | null | undefined): string {
+  if (!designId || !parseDesignIntentId(designId)) return path
+  return `${path}${path.includes("?") ? "&" : "?"}${DESIGN_INTENT_PARAM}=${encodeURIComponent(designId)}`
+}
+
 /** Browser-only memory of the design a visitor chose before buying a plan (UI convenience, not data). */
 export const PENDING_DESIGN_STORAGE_KEY = "orvenix:pending-design"
 const PENDING_DESIGN_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { PricingCheckoutButton } from './PricingCheckoutButton';
-import { isOrvenixAiFeatureLabel } from '@/lib/commercial/sales-funnel';
+import { isOrvenixAiFeatureLabel, withDesignIntent } from '@/lib/commercial/sales-funnel';
 
 export interface PricingPlanView {
   id: string;
@@ -76,6 +76,8 @@ interface PricingSectionProps {
   currentEndsAt?: string | null;
   autoCheckoutPlanId?: string | null;
   autoCheckoutInterval?: BillingInterval;
+  /** SALES-2: validated Orvenix design the visitor is buying a plan for (server-parsed). */
+  designId?: string | null;
 }
 
 // SALES-2: a plan is a rental of the service, so code export is not listed as
@@ -100,7 +102,7 @@ function formatDate(value: string | null | undefined) {
   });
 }
 
-export function PricingSection({ plans, currentPlanId, currentInterval, currentStatus, currentEndsAt, autoCheckoutPlanId, autoCheckoutInterval = 'month' }: PricingSectionProps) {
+export function PricingSection({ plans, currentPlanId, currentInterval, currentStatus, currentEndsAt, autoCheckoutPlanId, autoCheckoutInterval = 'month', designId = null }: PricingSectionProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
@@ -139,7 +141,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
     if (sessionStatus === 'loading') return;
 
     if (!session) {
-      const checkoutReturn = '/precios?checkout=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + (isBillingRepair ? '&billingRepair=1' : '');
+      const checkoutReturn = withDesignIntent('/precios?checkout=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + (isBillingRepair ? '&billingRepair=1' : ''), designId);
       router.replace('/register?plan=' + encodeURIComponent(autoCheckoutPlanId) + '&interval=' + interval + '&callbackUrl=' + encodeURIComponent(checkoutReturn));
       autoCheckoutStartedRef.current = true;
       return;
@@ -153,7 +155,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
         const res = await fetch('/api/billing/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planId: autoCheckoutPlanId, interval, repairActiveSubscription: isBillingRepair }),
+          body: JSON.stringify({ planId: autoCheckoutPlanId, interval, repairActiveSubscription: isBillingRepair, designId }),
         });
         const data = await res.json() as { initPoint?: string; error?: string; code?: string };
 
@@ -167,7 +169,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
             setAutoCheckoutError('La cuenta todavía tiene una suscripción activa que Stripe live no identificó como reparable. Revisa la suscripción desde admin o contacta soporte.');
             return;
           }
-          router.replace('/dashboard');
+          router.replace(withDesignIntent('/dashboard', designId));
           return;
         }
 
@@ -176,7 +178,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
         setAutoCheckoutError('No se pudo conectar con el checkout. Intenta desde el boton del plan.');
       }
     })();
-  }, [autoCheckoutInterval, autoCheckoutPlanId, isBillingRepair, plans, router, session, sessionStatus]);
+  }, [autoCheckoutInterval, autoCheckoutPlanId, designId, isBillingRepair, plans, router, session, sessionStatus]);
 
   return (
     <section id="planes" className="mk-section bg-orvenix-bg">
@@ -280,6 +282,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
                     interval={annual ? 'year' : 'month'}
                     label={available ? (isBillingRepair && isCurrentPlan ? 'Activar plan en producción →' : meta.cta) : 'Configurar pagos →'}
                     repairActiveSubscription={isBillingRepair}
+                    designId={designId}
                     featured={featured}
                     unavailable={!available}
                   />

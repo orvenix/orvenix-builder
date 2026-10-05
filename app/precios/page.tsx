@@ -11,7 +11,7 @@ import { formatUsd, getOfficialPlan, officialPlanComparison2026, officialPlans20
 import { editorPrisma } from '@/lib/editor-db';
 import { getAuthSession } from '@/lib/auth-session';
 import { serverWarn } from '@/lib/server-log';
-import { listCommercialCatalog, parseDesignStartTarget } from '@/lib/commercial/sales-funnel';
+import { listCommercialCatalog, readDesignIntent } from '@/lib/commercial/sales-funnel';
 import { DesignIntentNotice } from './DesignIntentNotice';
 
 export const dynamic = "force-dynamic";
@@ -196,7 +196,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
   const rawSearchParams = await searchParams;
   const autoCheckoutPlanId = firstSearchValue(rawSearchParams?.checkout) ?? null;
   // SALES-1: "Usar este diseño" sends visitors without a plan here; keep that design in view.
-  const designTarget = parseDesignStartTarget(firstSearchValue(rawSearchParams?.callbackUrl));
+  const designTarget = readDesignIntent({ design: firstSearchValue(rawSearchParams?.design), callbackUrl: firstSearchValue(rawSearchParams?.callbackUrl) });
   const autoCheckoutInterval = firstSearchValue(rawSearchParams?.interval) === 'year' ? 'year' : 'month';
 
   const [plans, currentPlan] = await Promise.all([
@@ -246,6 +246,7 @@ export default async function PreciosPage({ searchParams }: PreciosPageProps) {
         currentEndsAt={currentPlan.currentEndsAt}
         autoCheckoutPlanId={autoCheckoutPlanId}
         autoCheckoutInterval={autoCheckoutInterval}
+        designId={designTarget?.templateId ?? null}
       />
 
       {/* Trust items */}

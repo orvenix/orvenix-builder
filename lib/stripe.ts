@@ -170,15 +170,20 @@ export async function createStripeCheckoutSession(params: {
   planId: string
   interval: "month" | "year"
   priceId: string
+  /** SALES-2: Orvenix design to resume on the dashboard (already validated by the caller). */
+  designId?: string | null
 }) {
   const appUrl = getStripeAppUrl()
+  const designParam = params.designId && /^[a-z0-9-]{1,64}$/.test(params.designId)
+    ? `&design=${params.designId}`
+    : ""
   const body = new URLSearchParams({
     mode: "subscription",
     "line_items[0][price]": params.priceId,
     "line_items[0][quantity]": "1",
     customer_email: params.userEmail,
     client_reference_id: params.userId,
-    success_url: `${appUrl}/dashboard?sub=ok&provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${appUrl}/dashboard?sub=ok&provider=stripe&session_id={CHECKOUT_SESSION_ID}${designParam}`,
     cancel_url: `${appUrl}/precios?cancelled=1&provider=stripe`,
     "metadata[userId]": params.userId,
     "metadata[planId]": params.planId,

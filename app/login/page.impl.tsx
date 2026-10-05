@@ -19,6 +19,7 @@ import {
 import { ThemeToggle } from "@/components/theme/ThemeMode";
 import { useCurrentSearch } from "@/hooks/useCurrentSearch";
 import { consumePendingDesignDraft, readPendingDesignDraft } from "@/lib/pendingDesignClient";
+import { safeInternalPath } from "@/lib/security/internal-path";
 
 const FEATURES = [
   "Templates inteligentes con flujo de editar, comprar o rentar",
@@ -214,8 +215,8 @@ async function resolvePostLoginRedirect() {
 
   const params = new URLSearchParams(window.location.search);
   const pendingDesignKey = params.get("pendingDesignKey");
-  const callbackUrl = params.get("callbackUrl");
-  const returnTo = params.get("returnTo");
+  const callbackUrl = safeInternalPath(params.get("callbackUrl"));
+  const returnTo = safeInternalPath(params.get("returnTo"));
   const plan = params.get("plan");
   const interval = params.get("interval") === "year" ? "year" : "month";
 
@@ -244,8 +245,8 @@ async function resolvePostLoginRedirect() {
     }
   }
 
-  if (callbackUrl?.startsWith("/")) return callbackUrl;
+  if (callbackUrl) return callbackUrl;
   if (plan) return "/precios?checkout=" + encodeURIComponent(plan) + "&interval=" + interval;
-  if (returnTo?.startsWith("/") && returnTo !== "/editor/pending") return returnTo;
+  if (returnTo && returnTo !== "/editor/pending") return returnTo;
   return "/dashboard";
 }

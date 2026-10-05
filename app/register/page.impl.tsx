@@ -20,6 +20,7 @@ import {
 import { ThemeToggle } from "@/components/theme/ThemeMode";
 import { useCurrentSearch } from "@/hooks/useCurrentSearch";
 import { consumePendingDesignDraft, readPendingDesignDraft } from "@/lib/pendingDesignClient";
+import { safeInternalPath } from "@/lib/security/internal-path";
 
 const PERKS = [
   "Sin tarjeta de credito",
@@ -303,13 +304,13 @@ async function claimPendingDesignAfterRegister() {
 
   const params = new URLSearchParams(window.location.search);
   const pendingDesignKey = params.get("pendingDesignKey");
-  const callbackUrl = params.get("callbackUrl");
-  const returnTo = params.get("returnTo");
+  const callbackUrl = safeInternalPath(params.get("callbackUrl"));
+  const returnTo = safeInternalPath(params.get("returnTo"));
   const plan = params.get("plan");
   const interval = params.get("interval") === "year" ? "year" : "month";
 
   if (!pendingDesignKey) {
-    if (callbackUrl?.startsWith("/")) return callbackUrl;
+    if (callbackUrl) return callbackUrl;
     if (plan) return "/precios?checkout=" + encodeURIComponent(plan) + "&interval=" + interval;
     return returnTo && returnTo !== "/editor/pending" ? returnTo : "/dashboard";
   }
