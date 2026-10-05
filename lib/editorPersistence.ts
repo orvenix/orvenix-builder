@@ -18,6 +18,7 @@ import { calculateSiteCreationTreeHash } from "@/lib/orvenix-ai/site-creation/pl
 import { markDesignGenerationEdited } from "@/lib/orvenix-ai/design-memory";
 import { validateTree } from "@/types/validateTree";
 import type { EditorTree } from "@/types/editor";
+import { materializeBusinessFieldsV1, readBusinessFieldsV1 } from "@/lib/commercial/business-fields";
 
 function toPrismaJson(tree: EditorTree): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(tree)) as Prisma.InputJsonValue;
@@ -31,6 +32,24 @@ function hashPersistedTree(value: unknown) {
   } catch {
     return null;
   }
+}
+
+/**
+ * CV1-3 invariant: on a site with Business Fields, the stored HOME tree holds
+ * the authority. Whatever tree a client saves (any page, any editor mode),
+ * its bound values and replicas are re-derived from that authority, so a
+ * bound node can never keep an independent value. Legacy sites (no
+ * authority) are saved exactly as before.
+ */
+async function enforceBusinessFieldsAuthority(id: string, tree: EditorTree): Promise<EditorTree> {
+  const home = await getResolvedSitePage(id, HOME_PAGE_SLUG);
+  // Read only the authority key: a missing or malformed home tree means "no
+  // authority", never a failed save (sites without Business Fields are unaffected).
+  const homeTree = home?.tree;
+  const authority = homeTree && typeof homeTree === "object" && !Array.isArray(homeTree)
+    ? readBusinessFieldsV1(homeTree as EditorTree)
+    : null;
+  return authority ? materializeBusinessFieldsV1(tree, authority) : tree;
 }
 
 async function getPersistedTreeHash(id: string, pageSlug: string) {
@@ -85,7 +104,7 @@ export async function saveEditorTreeToDb(
   pageSlug = "home"
 ): Promise<EditorTree> {
   const previousHash = await getPersistedTreeHash(id, pageSlug);
-  const tree = validateTree(rawTree);
+  const tree = await enforceBusinessFieldsAuthority(id, validateTree(rawTree));
   const nextHash = calculateSiteCreationTreeHash(tree);
 
   // Para IDs de demo, usar el label hardcodeado; para user sites usar el nombre existente

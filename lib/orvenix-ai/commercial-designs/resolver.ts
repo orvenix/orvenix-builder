@@ -11,6 +11,8 @@ import type { GlobalTheme } from "@/types/editor"
 import type { BusinessFactAssetV1, BusinessFactsV1, BusinessProjectFactV1 } from "./business-facts"
 import { COMMERCIAL_SECTION_BOUND_ASSET_ROLES_V1 } from "./contract"
 import { COMMERCIAL_EMPTY_TEXT_V1 } from "./empty-states"
+import { businessFieldsFromFactsV1 } from "./business-bindings"
+import type { BusinessFieldsV1 } from "@/lib/commercial/business-fields"
 import type {
   CommercialAssetRoleV1,
   CommercialCompositionV1,
@@ -68,6 +70,8 @@ export interface ResolvedCommercialDesignV1 {
   emptyPages: string[]
   /** CV1-1b: true only for a shaped CUSTOMER compile -- the public demo never shows empty states. */
   markEmptyStates: boolean
+  /** CV1-3: Business Fields seed for a demo-shape CUSTOMER compile (real facts only). */
+  businessFieldsSeed?: { fields: BusinessFieldsV1; showLogo: boolean }
 }
 
 export interface ResolveCommercialDesignOptionsV1 {
@@ -499,5 +503,6 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
     emptySections,
     emptyPages,
     markEmptyStates: Boolean(options.realFacts),
+    ...(options.realFacts ? { businessFieldsSeed: { fields: businessFieldsFromFactsV1(options.realFacts), showLogo: chrome.showLogo } } : {}),
   }
 }

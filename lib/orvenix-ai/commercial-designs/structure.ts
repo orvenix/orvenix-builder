@@ -18,7 +18,7 @@ import type { EditorNode, EditorTree } from "@/types/editor"
 
 /** Content-bearing props: never part of the structure. */
 const CONTENT_PROP_RE =
-  /^(?:text|content|label|title|subtitle|eyebrow|description|alt|src|href|url|quote|author|role|name|value|price|caption|placeholder|icon|items|links|labelOverrides|logoSrc|logoUrl|ctaHref|ctaLabel|phone|email|whatsapp|address|hours|seo|creativeCopy|creativeCopyFallback|creativeCopyProvenance|compositionGraphFallback|commercialEmptyState|commercialEmptyPage|commercialDesignFidelity|productId|variantId|sku|stock)$|(?:Href|Url|Src|Label|Text|Title|Caption|Alt)$/
+  /^(?:text|content|label|title|subtitle|eyebrow|description|alt|src|href|url|quote|author|role|name|value|price|caption|placeholder|icon|items|links|labelOverrides|logoSrc|logoUrl|ctaHref|ctaLabel|phone|email|whatsapp|address|hours|seo|creativeCopy|creativeCopyFallback|creativeCopyProvenance|compositionGraphFallback|commercialEmptyState|commercialEmptyPage|commercialDesignFidelity|_businessFields|productId|variantId|sku|stock)$|(?:Href|Url|Src|Label|Text|Title|Caption|Alt)$/
 
 function structuralProps(props: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {}

@@ -240,7 +240,8 @@ test("CV1-2 Simple surface: visible mode switch, IA kept out of the commercial p
   assert.match(sidebar, /Orvenix IA — Próximamente/)
   assert.match(sidebar, /isPro \|\| state\.availablePages\.length > 1/)
   const brand = read("components/editor/experience/client/ClientBrandPanel.tsx")
-  assert.match(brand, /isCommercialSite && \(\s*<PanelSection title="Datos de tu negocio"/)
+  // CV1-3: the guide remains only for commercial sites created before Business Fields existed.
+  assert.match(brand, /isCommercialSite && !hasBusinessFields && \(\s*<PanelSection title="Datos de tu negocio"/)
   assert.match(brand, /!isCommercialSite && <PanelSection title="Contacto"/)
   // VE-4 surfaces stay untouched.
   assert.doesNotMatch(read("components/editor/sidebar/AiAssistantPanel.tsx"), /Próximamente/)

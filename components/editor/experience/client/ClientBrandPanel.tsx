@@ -5,6 +5,8 @@ import { Building2, Mail, MessageCircle, Palette, Phone } from "lucide-react"
 
 import { useEditorStore, type GlobalTheme } from "@/store/useEditorStore"
 import { isCommercialDesignTree } from "@/lib/editor/editor-mode-profile"
+import { readBusinessFieldsV1 } from "@/lib/commercial/business-fields"
+import { BusinessFieldsPanel } from "./BusinessFieldsPanel"
 
 interface ClientBrandPanelProps {
   embedded?: boolean
@@ -29,6 +31,8 @@ export function ClientBrandPanel({
    * pretending to change the site.
    */
   const isCommercialSite = useEditorStore((state) => isCommercialDesignTree(state.tree))
+  // CV1-3: sites compiled with Business Fields get real controls; older commercial sites keep the guide.
+  const hasBusinessFields = useEditorStore((state) => readBusinessFieldsV1(state.tree) !== null)
   const execute = useEditorStore((state) => state.execute)
 
   const updateContact = useCallback(
@@ -95,7 +99,13 @@ export function ClientBrandPanel({
       </header>
 
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
-        {focus !== "design" && isCommercialSite && (
+        {focus !== "design" && hasBusinessFields && (
+          <PanelSection title="Negocio" icon={Building2}>
+            <BusinessFieldsPanel />
+          </PanelSection>
+        )}
+
+        {focus !== "design" && isCommercialSite && !hasBusinessFields && (
           <PanelSection title="Datos de tu negocio" icon={Building2}>
             <CommercialBusinessDataGuide />
           </PanelSection>
