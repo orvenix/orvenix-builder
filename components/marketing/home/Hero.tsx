@@ -83,8 +83,7 @@ export function Hero() {
               ))}
             </div>
 
-            <div className="grid grid-cols-3 gap-4 pt-6 mk-divider">
-              <StatItem value="150+" label="Proyectos completados" />
+            <div className="grid grid-cols-2 gap-4 pt-6 mk-divider">
               <StatItem value="99.9%" label="Uptime objetivo" />
               <StatItem value="24h" label="Activacion guiada" />
             </div>

@@ -117,7 +117,7 @@ const PRESET_TREES: Record<ConstructorPresetId, EditorTree> = {
       "home-stat-1": {
         id: "home-stat-1",
         type: "heading",
-        props: { text: "150+ proyectos completados", level: 3, size: "xl", weight: "bold", color: "#00b5f6", align: "left" },
+        props: { text: "Diseños Orvenix editables", level: 3, size: "xl", weight: "bold", color: "#00b5f6", align: "left" },
         children: [],
         version: 1,
       },
@@ -961,7 +961,7 @@ const PRESET_TREES: Record<ConstructorPresetId, EditorTree> = {
       "process-copy": {
         id: "process-copy",
         type: "text",
-        props: { content: "Discovery, diseño, desarrollo, pruebas y soporte. Un flujo probado en más de 150 proyectos para que tu plataforma esté lista en el menor tiempo posible.", size: "lg", color: "#cbd5e1", align: "center", maxWidth: "lg" },
+        props: { content: "Discovery, diseño, desarrollo, pruebas y soporte. Un flujo claro para que tu plataforma esté lista en el menor tiempo posible.", size: "lg", color: "#cbd5e1", align: "center", maxWidth: "lg" },
         children: [],
         version: 1,
       },
@@ -1068,7 +1068,7 @@ const PRESET_TREES: Record<ConstructorPresetId, EditorTree> = {
       "portfolio-copy": {
         id: "portfolio-copy",
         type: "text",
-        props: { content: "Más de 150 proyectos entregados en múltiples industrias. Desde negocios locales hasta empresas con decenas de clientes activos en la plataforma.", size: "lg", color: "#cbd5e1", align: "center", maxWidth: "lg" },
+        props: { content: "Diseños Orvenix para múltiples industrias, desde negocios locales hasta empresas en crecimiento.", size: "lg", color: "#cbd5e1", align: "center", maxWidth: "lg" },
         children: [],
         version: 1,
       },
@@ -1090,7 +1090,7 @@ const PRESET_TREES: Record<ConstructorPresetId, EditorTree> = {
       "portfolio-stats-copy": {
         id: "portfolio-stats-copy",
         type: "text",
-        props: { content: "150+ proyectos completados · 99.9% uptime · Clientes en México, LATAM y España · 4.9/5 satisfacción promedio · Más de 5 años de experiencia en desarrollo web profesional.", size: "md", color: "#94a3b8", align: "left", maxWidth: "lg" },
+        props: { content: "99.9% uptime objetivo con SLA · Soporte segun plan · Backups diarios automaticos.", size: "md", color: "#94a3b8", align: "left", maxWidth: "lg" },
         children: [],
         version: 1,
       },

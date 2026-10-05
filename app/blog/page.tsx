@@ -17,13 +17,6 @@ export const metadata: Metadata = {
   },
 };
 
-const stats = [
-  { value: '24+', label: 'Guías publicadas' },
-  { value: '8', label: 'Temas activos' },
-  { value: '3x', label: 'Enfoque en crecimiento' },
-  { value: 'LATAM', label: 'Perspectiva regional' },
-];
-
 const categories = ['SEO', 'E-commerce', 'SaaS', 'UX', 'Conversión', 'Automatización'];
 
 const posts = [
@@ -79,19 +72,6 @@ export default function BlogPage() {
                 </span>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mk-section-alt py-12">
-        <div className="mk-container">
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="mb-2 text-4xl font-black mk-gradient-text">{stat.value}</div>
-                <div className="text-sm text-orvenix-secondary">{stat.label}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

@@ -11,7 +11,6 @@ const navLinks = [
   { href: '/servicios', label: 'Características' },
   { href: '/templates', label: 'Diseños' },
   { href: '/proceso', label: 'Proceso' },
-  { href: '/portafolio', label: 'Portafolio' },
   { href: '/precios', label: 'Precios' },
   { href: '/faq', label: 'FAQ' },
 ];

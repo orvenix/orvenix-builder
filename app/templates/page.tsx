@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, LayoutTemplate, Star } from "lucide-react";
+import { ArrowRight, LayoutTemplate } from "lucide-react";
 import { REAL_TEMPLATES } from "@/lib/realTemplates";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 import { TemplateGrid } from "./TemplateGrid";
@@ -34,9 +34,9 @@ export default function TemplatesCatalogPage() {
             <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
                 <h1 className="text-5xl font-black leading-[0.92] tracking-tight text-white md:text-7xl">
-                  Webs reales.<br />
+                  Diseños Orvenix.<br />
                   <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                    Listas para tu cliente.
+                    Listos para tu negocio.
                   </span>
                 </h1>
                 <p className="mt-5 text-base leading-7 text-white/45 md:text-lg">
@@ -87,10 +87,6 @@ export default function TemplatesCatalogPage() {
         {/* ── BOTTOM CTA ───────────────────────────────────────── */}
         <section className="border-t border-white/[0.06] bg-white/[0.015] py-16">
           <div className="mx-auto max-w-3xl px-6 text-center">
-            <div className="mb-3 inline-flex items-center gap-2 text-sm text-yellow-400/80">
-              {[...Array(5)].map((_, i) => <Star key={i} size={13} className="fill-yellow-400 text-yellow-400" />)}
-              <span className="text-white/40 text-xs ml-1">Webs reales, clientes reales</span>
-            </div>
             <h2 className="text-4xl font-black text-white md:text-5xl">
               ¿No encuentras tu industria?
             </h2>

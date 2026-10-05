@@ -15,13 +15,6 @@ const values = [
   { icon: '✅', name: 'Responsabilidad', desc: 'Cumplimos plazos, promesas y estándares de calidad en todo momento.' },
 ];
 
-const stats = [
-  { value: '150+', label: 'Proyectos completados' },
-  { value: '45+', label: 'Clientes satisfechos' },
-  { value: '10+', label: 'Años de experiencia' },
-  { value: '98%', label: 'Tasa de satisfacción' },
-];
-
 const team = [
   { name: 'Carlos Mendez', role: 'CTO / Lead Developer', initials: 'CM' },
   { name: 'Marina Gutierrez', role: 'Design Director / UI·UX', initials: 'MG' },
@@ -30,9 +23,9 @@ const team = [
 
 const timeline = [
   { year: '2015', title: 'Inicio', desc: 'Fundamos Orvenix con la misión de democratizar el acceso a soluciones digitales de alta calidad en Latinoamérica.' },
-  { year: '2017', title: 'Crecimiento', desc: 'Superamos los 30 proyectos entregados y comenzamos a trabajar con clientes internacionales.' },
+  { year: '2017', title: 'Crecimiento', desc: 'Comenzamos a trabajar con clientes internacionales.' },
   { year: '2019', title: 'Expansión', desc: 'Ampliamos nuestro equipo y lanzamos nuestra plataforma SaaS para gestión de sitios web.' },
-  { year: '2024', title: 'Presente', desc: 'Más de 150 proyectos, 45 clientes activos y presencia en México, España y Latinoamérica.' },
+  { year: '2024', title: 'Presente', desc: 'Presencia en México, España y Latinoamérica.' },
 ];
 
 export default function AboutPage() {
@@ -101,20 +94,6 @@ export default function AboutPage() {
                   <h3 className="font-bold text-orvenix-text mb-1">{v.name}</h3>
                   <p className="text-sm text-orvenix-secondary leading-relaxed">{v.desc}</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="mk-section-alt py-16">
-        <div className="mk-container">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="text-4xl font-black mk-gradient-text mb-2">{s.value}</div>
-                <div className="text-sm text-orvenix-secondary">{s.label}</div>
               </div>
             ))}
           </div>

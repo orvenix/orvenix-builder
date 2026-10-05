@@ -17,7 +17,6 @@ const NAV_LINKS = [
   { href: '/plataforma',  label: 'Plataforma' },
   { href: '/servicios',   label: 'Servicios' },
   { href: '/precios',     label: 'Precios' },
-  { href: '/portafolio',  label: 'Portafolio' },
   { href: '/proceso',     label: 'Proceso' },
   { href: '/afiliados',   label: 'Afiliados' },
   { href: '/contacto',    label: 'Contacto' },

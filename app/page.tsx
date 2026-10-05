@@ -5,8 +5,6 @@ import { Cotizador } from '@/components/marketing/home/Cotizador';
 import { PlatPromoBanner } from '@/components/marketing/home/PlatPromoBanner';
 import { Features } from '@/components/marketing/home/Features';
 import { HowToStart } from '@/components/marketing/home/HowToStart';
-import { Portfolio } from '@/components/marketing/home/Portfolio';
-import { Testimonials } from '@/components/marketing/home/Testimonials';
 import { FaqAccordion } from '@/components/marketing/sections/FaqAccordion';
 import { CtaSection } from '@/components/marketing/sections/CtaSection';
 import { SectionHeader } from '@/components/marketing/sections/SectionHeader';
@@ -71,8 +69,6 @@ export default function HomePage() {
       <PlatPromoBanner />
       <Features />
       <HowToStart />
-      <Portfolio />
-      <Testimonials />
 
       {/* FAQ */}
       <section id="faq" className="mk-section-alt">
