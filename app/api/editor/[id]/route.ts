@@ -7,6 +7,7 @@ import {
 import { getResolvedSitePage } from "@/lib/builder-core/tree/sitePages";
 import { canManageSite, type UserRole } from "@/lib/auth";
 import { isEditorWebId } from "@/lib/editorWebs";
+import { PageLimitReachedError, requireCanCreatePage } from "@/lib/plan-guard";
 import { serverDebug, serverError } from "@/lib/server-log";
 
 interface RouteContext {
@@ -199,7 +200,14 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const savedTree = await saveEditorTreeToDb(id, tree, page);
+    /*
+     * SALES-2: saving to a page that does not exist yet creates it, so the
+     * plan's page limit applies exactly as in POST /pages. Pages created with
+     * an Orvenix design are already there and are not affected.
+     */
+    const savedTree = await saveEditorTreeToDb(id, tree, page, {
+      beforeCreatePage: user.role === "ADMIN" ? undefined : () => requireCanCreatePage(id),
+    });
     const savedPage = await getResolvedSitePage(id, page);
 
     return NextResponse.json(
@@ -215,6 +223,13 @@ export async function PUT(request: Request, context: RouteContext) {
       },
     );
   } catch (error) {
+    if (error instanceof PageLimitReachedError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code, upgradeUrl: "/precios?upgrade=pages" },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
     serverError(`Error saving editor tree for ID ${id}`, error);
 
     if (error instanceof SyntaxError) {

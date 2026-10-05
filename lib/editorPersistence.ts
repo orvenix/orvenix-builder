@@ -11,6 +11,7 @@ import {
   ensureHomePage,
   getResolvedSitePage,
   getResolvedSiteTheme,
+  normalizeSitePageSlug,
   saveResolvedPageTree,
   saveResolvedSiteTheme,
 } from "@/lib/builder-core/tree/sitePages";
@@ -101,8 +102,23 @@ export async function getEditorTreeFromDb(id: string, pageSlug = "home"): Promis
 export async function saveEditorTreeToDb(
   id: string,
   rawTree: unknown,
-  pageSlug = "home"
+  pageSlug = "home",
+  options?: {
+    /**
+     * Runs before a save would create a page that does not exist yet, so the
+     * caller can apply the plan's page limit (SALES-2). Throwing aborts the
+     * save before anything is written.
+     */
+    beforeCreatePage?: () => Promise<unknown>;
+  }
 ): Promise<EditorTree> {
+  if (options?.beforeCreatePage && pageSlug !== HOME_PAGE_SLUG) {
+    const targetSlug = normalizeSitePageSlug(pageSlug);
+    if (targetSlug !== HOME_PAGE_SLUG && !(await getResolvedSitePage(id, targetSlug))) {
+      await options.beforeCreatePage();
+    }
+  }
+
   const previousHash = await getPersistedTreeHash(id, pageSlug);
   const tree = await enforceBusinessFieldsAuthority(id, validateTree(rawTree));
   const nextHash = calculateSiteCreationTreeHash(tree);
