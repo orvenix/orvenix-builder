@@ -184,16 +184,29 @@ export function materializeBusinessFieldsV1(tree: EditorTree, fields: BusinessFi
       ...(tree.brand ?? {}),
       businessName: fields.businessName,
       ...(fields.logo ? { logoUrl: fields.logo } : {}),
-      contact: {
-        ...(tree.brand?.contact ?? {}),
-        phone: fields.phone,
-        whatsapp: fields.whatsapp,
-        email: fields.email,
-        address: fields.address,
-      },
+      contact: mirrorBrandContactV1(tree.brand?.contact, fields),
       social: { ...fields.social },
     },
   } as EditorTree
+}
+
+/**
+ * LAUNCH-GATE-1: the brand contact mirrors the authority without ever holding
+ * `undefined` -- a field the customer did not give is removed, not written as
+ * undefined (the tree must stay strict JSON, or every save of that site fails
+ * while hashing it).
+ */
+function mirrorBrandContactV1(
+  current: NonNullable<EditorTree["brand"]>["contact"] | undefined,
+  fields: BusinessFieldsV1,
+): NonNullable<NonNullable<EditorTree["brand"]>["contact"]> {
+  const contact: Record<string, unknown> = { ...(current ?? {}) }
+  for (const key of ["phone", "whatsapp", "email", "address"] as const) {
+    const value = fields[key]
+    if (value === undefined) delete contact[key]
+    else contact[key] = value
+  }
+  return contact as NonNullable<NonNullable<EditorTree["brand"]>["contact"]>
 }
 
 /** How many bound representations each field has in a tree. */
