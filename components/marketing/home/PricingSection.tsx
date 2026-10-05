@@ -78,12 +78,16 @@ interface PricingSectionProps {
   autoCheckoutInterval?: BillingInterval;
 }
 
+// SALES-2: a plan is a rental of the service, so code export is not listed as
+// a plan right (it comes with buying the site), and Orvenix IA is shown as
+// coming soon, never as included.
 function planFeatures(plan: PricingPlanView) {
-  const base = plan.features.map((label) => ({ included: true, label }));
+  const base = plan.features.map((label) => (isOrvenixAiFeatureLabel(label)
+    ? { included: false, comingSoon: true, label: 'Orvenix IA' }
+    : { included: true, comingSoon: false, label }));
   return [
-    ...base,
-    { included: plan.hasEcommerce, label: 'E-commerce integrado' },
-    { included: plan.hasExport, label: 'Exportacion de codigo limpio' },
+    ...base.filter((feature, index) => !feature.comingSoon || base.findIndex((other) => other.comingSoon) === index),
+    { included: plan.hasEcommerce, comingSoon: false, label: 'E-commerce integrado' },
   ];
 }
 
@@ -287,7 +291,7 @@ export function PricingSection({ plans, currentPlanId, currentInterval, currentS
                       <span className={'shrink-0 ' + (f.included ? 'mk-accent-text' : '')}>{f.included ? '✓' : '—'}</span>
                       <span>
                         {f.label}
-                        {isOrvenixAiFeatureLabel(f.label) && (
+                        {f.comingSoon && (
                           <span className="ml-1.5 whitespace-nowrap rounded-full border border-white/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orvenix-secondary">Próximamente</span>
                         )}
                       </span>

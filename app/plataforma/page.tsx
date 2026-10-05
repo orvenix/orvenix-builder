@@ -35,7 +35,7 @@ const plans = [
     name: 'Pro',
     price: '39 USD',
     period: '/mes + IVA',
-    desc: 'La opcion recomendada para vender, usar IA, administrar varios sitios y crecer sin rehacer tu sistema.',
+    desc: 'La opcion recomendada para vender, administrar varios sitios y crecer sin rehacer tu sistema.',
     cta: 'Activar Pro',
     ctaHref: '/precios?checkout=pro&interval=month',
     featured: true,

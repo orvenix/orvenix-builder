@@ -350,7 +350,7 @@ const PRESET_TREES: Record<ConstructorPresetId, EditorTree> = {
       "home-plan-pro-desc": {
         id: "home-plan-pro-desc",
         type: "text",
-        props: { content: "Todo lo de Starter + hasta 10 sitios, IA, CRM, eCommerce, SEO y exportacion.", size: "sm", color: "#cbd5e1", align: "left" },
+        props: { content: "Todo lo de Starter + hasta 10 sitios, CRM, eCommerce y SEO.", size: "sm", color: "#cbd5e1", align: "left" },
         children: [],
         version: 1,
       },
@@ -1005,7 +1005,7 @@ const PRESET_TREES: Record<ConstructorPresetId, EditorTree> = {
       "process-guarantees-copy": {
         id: "process-guarantees-copy",
         type: "text",
-        props: { content: "Condiciones oficiales 2026 · Uptime 99.9% con SLA · Soporte segun plan · Compra definitiva disponible · Backups diarios automaticos.", size: "md", color: "#94a3b8", align: "left", maxWidth: "lg" },
+        props: { content: "Condiciones oficiales 2026 · Uptime 99.9% con SLA · Soporte segun plan · Compra del sitio por cotizacion · Backups diarios automaticos.", size: "md", color: "#94a3b8", align: "left", maxWidth: "lg" },
         children: [],
         version: 1,
       },

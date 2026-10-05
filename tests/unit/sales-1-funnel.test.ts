@@ -110,13 +110,14 @@ test("SALES-1 /precios keeps the chosen design in view and offers only sellable 
   assert.match(page, /listCommercialCatalog\(\)/)
   assert.doesNotMatch(page, /REAL_TEMPLATES\.slice\(0, 6\)/)
   assert.match(page, /href=\{entry\.startHref\}/)
-  assert.match(page, /isOrvenixAiFeatureLabel\(feature\) \? `\$\{feature\} \(próximamente\)` : feature/)
+  // SALES-2: the official comparison row itself now reads "Orvenix IA: Próximamente".
+  assert.match(read("lib/orvenix-official-2026.ts"), /\["Orvenix IA", "Próximamente"/)
   // Prices and checkout are untouched by SALES-1.
   assert.match(page, /getPricingPlans\(\)/)
   const notice = read("app/precios/DesignIntentNotice.tsx")
   assert.match(notice, /localStorage\.setItem\(PENDING_DESIGN_STORAGE_KEY, serializePendingDesign\(target\)\)/)
   const pricing = read("components/marketing/home/PricingSection.tsx")
-  assert.match(pricing, /isOrvenixAiFeatureLabel\(f\.label\) && \(/)
+  assert.match(pricing, /isOrvenixAiFeatureLabel\(label\)/)
   assert.doesNotMatch(pricing, /usar IA/)
   assert.match(pricing, /'\/api\/billing\/subscribe'|\/api\/billing\/subscribe/)
 })

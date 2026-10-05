@@ -31,7 +31,7 @@ const faqItems = [
   },
   {
     question: '¿De quién es el contenido de mi sitio?',
-    answer: 'Tu marca, logo, fotografías y textos son tuyos. Salvo compra definitiva, la plataforma, la arquitectura y el software base siguen siendo propiedad de Orvenix.',
+    answer: 'Tu marca, logo, fotografías y textos son tuyos. Con tu plan rentas el servicio: usas tu sitio mientras esté activo. Si compras tu sitio, recibes el entregable específico de tu sitio según el acuerdo; la plataforma, el editor, los componentes reutilizables y los Diseños Orvenix base siguen siendo de Orvenix.',
   },
   {
     question: '¿Por donde empiezo si no se que plan elegir?',
@@ -55,7 +55,7 @@ const faqItems = [
   },
   {
     question: '¿Puedo pedir ayuda para personalizar mi sitio?',
-    answer: 'Si. Puedes usar la plataforma por tu cuenta o contactar al equipo para ajustes, migraciones, integraciones, compra definitiva o un alcance Enterprise.',
+    answer: 'Si. Puedes usar la plataforma por tu cuenta o contactar al equipo para ajustes, migraciones, integraciones, la compra de tu sitio o un alcance Enterprise.',
   },
   {
     question: '¿Donde veo precios, impuestos y condiciones completas?',

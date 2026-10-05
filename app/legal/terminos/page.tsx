@@ -83,6 +83,9 @@ export default function TerminosPage() {
                 Una vez completado el pago íntegro del proyecto, los derechos sobre el diseño y código desarrollado específicamente para tu proyecto te son transferidos. Esto incluye archivos de diseño, código fuente y activos digitales creados durante el proyecto.
               </p>
               <p className="text-orvenix-secondary leading-relaxed mb-4">
+                Los planes de la plataforma son una renta del servicio: puedes usar tu sitio mientras tu plan esté activo. La compra de un sitio cubre el entregable específico de ese sitio según su acuerdo. En ningún caso se transfieren la plataforma Orvenix, el editor, el catálogo, los componentes reutilizables ni los Diseños Orvenix base, que no son exclusivos.
+              </p>
+              <p className="text-orvenix-secondary leading-relaxed mb-4">
                 Los componentes, librerías y frameworks de código abierto utilizados se rigen por sus propias licencias. Orvenix se reserva el derecho de exhibir el trabajo realizado en nuestro portafolio, salvo acuerdo de confidencialidad explícito.
               </p>
               <p className="text-orvenix-secondary leading-relaxed">

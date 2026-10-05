@@ -13,7 +13,7 @@ export const officialCompanyIntro = {
   whatIs: [
     "Orvenix es una plataforma y ecosistema integral de infraestructura, software y diseno digital de ultima generacion.",
     "Resuelve en un solo entorno la presencia en linea, la automatizacion comercial y la escalabilidad operativa de negocios modernos.",
-    "Integra diseno visual, infraestructura cloud elastica, inteligencia artificial, funnels, eCommerce y CRM nativo para eliminar la fragmentacion tecnologica.",
+    "Integra diseno visual, infraestructura cloud elastica, funnels, eCommerce y CRM nativo para eliminar la fragmentacion tecnologica. Orvenix IA llegara proximamente.",
   ],
   howItWorks: [
     "Opera como Software e Infraestructura Gestionada como Servicio (Managed SaaS).",
@@ -47,7 +47,7 @@ export const officialPlans2026 = [
     stripeEnvAlias: "STARTER",
     features: [
       "1 sitio institucional",
-      "Hasta 5 paginas o secciones",
+      "Hasta 5 paginas o secciones (los Diseños Orvenix se entregan completos)",
       "Editor visual completo",
       "SSL gratuito con renovacion automatica",
       "Hosting administrado premium",
@@ -55,8 +55,6 @@ export const officialPlans2026 = [
     ],
     limitations: [
       "No incluye eCommerce",
-      "No incluye integraciones IA avanzadas",
-      "No incluye exportacion de codigo fuente",
       "No incluye automatizaciones complejas de funnels",
       "Cambios mayores de estructura se cotizan por separado",
     ],
@@ -64,7 +62,7 @@ export const officialPlans2026 = [
   {
     id: "pro",
     name: "Pro",
-    audience: "Negocios en crecimiento que necesitan varios sitios, tienda, CRM, blog, SEO e inteligencia artificial.",
+    audience: "Negocios en crecimiento que necesitan varios sitios, tienda, CRM, blog y SEO.",
     monthlyUsd: 39,
     monthlyVatUsd: 6.24,
     monthlyTotalUsd: 45.24,
@@ -78,11 +76,10 @@ export const officialPlans2026 = [
     features: [
       "Hasta 10 sitios independientes",
       "eCommerce avanzado sin comision transaccional de Orvenix",
-      "Orvenix AI para copy, optimizacion, traduccion y analisis",
       "CRM nativo completo",
       "Blog profesional y herramientas SEO",
-      "Exportacion de codigo en formatos estandar",
       "Soporte prioritario",
+      "Orvenix IA — Próximamente",
     ],
     limitations: [],
   },
@@ -126,10 +123,10 @@ export const officialPlans2026 = [
     stripeEnvAlias: "ENTERPRISE",
     features: [
       "Arquitectura dedicada a medida",
-      "IA personalizada o API dedicada",
       "Integraciones ERP, CRM externo y sistemas corporativos",
       "eCommerce B2B y flujos complejos",
       "SLA premium y gestor dedicado",
+      "Orvenix IA — Próximamente",
     ],
     limitations: ["Se cotiza segun proyecto, alcance tecnico y nivel de soporte requerido."],
   },
@@ -137,14 +134,14 @@ export const officialPlans2026 = [
 
 export const officialPlanComparison2026 = [
   ["Numero de sitios web", "1", "10", "Ilimitados / avanzado", "A medida / dedicado"],
-  ["Paginas internas", "Hasta 5", "Ilimitadas", "Ilimitadas", "Ilimitadas"],
+  ["Paginas internas", "Hasta 5 (Diseño Orvenix completo)", "Ilimitadas", "Ilimitadas", "Ilimitadas"],
   ["Editor visual", "Si", "Si", "Si", "Si"],
-  ["IA corporativa", "No", "Estandar", "Avanzada", "Personalizada / API dedicada"],
+  ["Orvenix IA", "Próximamente", "Próximamente", "Próximamente", "Próximamente"],
   ["eCommerce", "No", "Si", "Multi-moneda", "B2B / arquitectura compleja"],
   ["CRM integrado y leads", "Basico", "Completo", "Automatizado", "Integracion ERP externa"],
   ["Funnels", "No", "Hasta 5", "Ilimitados", "Ilimitados"],
   ["SEO y blog", "Basico", "Avanzado", "Avanzado", "Estrategia a medida"],
-  ["Exportacion de codigo y datos", "No", "Si", "Si", "Si"],
+  ["Entrega del codigo del sitio", "Con compra del sitio", "Con compra del sitio", "Con compra del sitio", "Con compra del sitio"],
   ["Infraestructura", "1 dominio", "Multi-dominio", "Multi-dominio", "Infraestructura dedicada"],
   ["Soporte", "Email 48 hrs", "Prioritario 24 hrs", "Omnicanal urgente", "SLA premium / gestor dedicado"],
 ] as const
@@ -179,12 +176,18 @@ export const officialGeneralTerms2026 = {
   ],
 } as const
 
+/*
+ * SALES-2: renting (any plan) is a right to use the service while it is
+ * active. Buying covers the specific deliverable of the customer's site, as
+ * defined in its agreement -- never Orvenix itself, its tools, its reusable
+ * components or the base Orvenix designs. Not a final contract text.
+ */
 export const officialBuyout2026 = {
-  title: "Compra definitiva de software y sitio",
+  title: "Compra del sitio",
   rights: [
-    "Tras el pago total, el cliente recibe derechos patrimoniales perpetuos, universales e irrevocables sobre el codigo personalizado entregado.",
-    "El cliente puede modificar, revender, duplicar o licenciar el desarrollo personalizado sin regalias adicionales.",
-    "Orvenix conserva derechos morales, librerias base y componentes propietarios no transferidos expresamente.",
+    "La compra cubre el entregable especifico del sitio del cliente: su codigo y archivos, con los derechos de uso y entrega que defina el acuerdo correspondiente.",
+    "La plataforma Orvenix, el editor, el catalogo, los componentes reutilizables y los Diseños Orvenix base no se transfieren y siguen siendo propiedad de Orvenix.",
+    "Los Diseños Orvenix base no son exclusivos: Orvenix puede seguir ofreciendolos a otros clientes, y la compra no da derecho a revender, duplicar o licenciar el diseño base.",
   ],
   postSale: [
     "El cliente puede conservar la infraestructura de Orvenix mediante un plan de hosting y mantenimiento a medida.",
@@ -212,7 +215,7 @@ export const officialContractClauses2026 = [
   { title: "Objeto", body: "Orvenix presta desarrollo digital, hosting, acceso a software, herramientas IA y soporte conforme al plan contratado, sus limites y especificaciones." },
   { title: "Contraprestacion y pago", body: "El cliente paga por adelantado las cuotas mensuales o anuales vigentes, mas IVA y cargos adicionales aceptados." },
   { title: "Vigencia y renovacion", body: "La vigencia corresponde al periodo contratado y se renueva automaticamente salvo aviso de no renovacion conforme a condiciones generales." },
-  { title: "Propiedad intelectual y contenidos", body: "El cliente declara contar con derechos sobre sus materiales. Salvo compra definitiva, la plataforma, arquitectura y software base siguen siendo propiedad de Orvenix." },
+  { title: "Propiedad intelectual y contenidos", body: "El cliente declara contar con derechos sobre sus materiales, que siguen siendo suyos. La plataforma, arquitectura, editor, software base, componentes reutilizables y Diseños Orvenix base son propiedad de Orvenix, tambien despues de una compra del sitio, que cubre solo el entregable especifico definido en su acuerdo." },
   { title: "Limitacion de responsabilidad", body: "Orvenix no responde por lucro cesante, interrupcion de negocio, danos indirectos, perdida de datos por mal uso, ataques externos o eventos fuera del SLA." },
   { title: "Jurisdiccion", body: "Las partes se someten a la legislacion mexicana y a los tribunales competentes de Monterrey, Nuevo Leon." },
 ] as const
@@ -237,7 +240,7 @@ export const officialUpdatePolicy2026 = {
     "Nuevas secciones o landing pages que excedan el limite del plan contratado.",
   ],
   requiredUpgrades: [
-    "Starter requiere upgrade a Pro al necesitar una sexta pagina interna.",
+    "Starter requiere upgrade a Pro para agregar paginas por encima de su limite de 5; las paginas del Diseño Orvenix inicial se entregan completas.",
     "Starter requiere upgrade a Pro para carrito, inventario, pasarela de pago o checkout.",
     "Starter requiere upgrade a Pro para administrar un segundo sitio independiente.",
     "Tráfico recurrente que comprometa un nodo compartido puede requerir Business o Enterprise.",

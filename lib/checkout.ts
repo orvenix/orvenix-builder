@@ -18,11 +18,11 @@ export function normalizeCheckoutAction(value: string | null | undefined): Check
 export function getCheckoutCopy(action: CheckoutAction) {
   return action === "buy"
     ? {
-        title: "Compra de propiedad total",
+        title: "Compra del sitio",
         badge: "Compra unica",
         cta: "Confirmar compra",
         description:
-          "Obtienes el sitio en tu cuenta con propiedad total del entregable y exportacion de codigo habilitada.",
+          "Obtienes el entregable de tu sitio en tu cuenta con la exportacion de su codigo habilitada. La plataforma y el diseño base siguen siendo de Orvenix.",
         summary:
           "Proceso listo para conectar con Stripe o MercadoPago en el siguiente paso.",
       }

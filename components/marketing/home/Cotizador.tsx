@@ -17,7 +17,7 @@ const guideCards = [
     icon: Layers,
     eyebrow: 'Crecimiento comercial',
     title: 'Quiero vender y captar leads',
-    signal: 'Tienda, CRM, blog, SEO, exportacion y varios sitios.',
+    signal: 'Tienda, CRM, blog, SEO y varios sitios.',
     outcome: 'Revisa Pro',
     featured: true,
   },
@@ -108,7 +108,7 @@ export function Cotizador() {
 
           <div className="mt-5 rounded-[24px] border p-5 text-center" style={{ background: 'rgba(0,181,246,0.06)', borderColor: 'rgba(0,181,246,0.20)' }}>
             <p className="text-sm leading-7" style={{ color: 'var(--text-secondary)' }}>
-              Enterprise, compra definitiva, migraciones e integraciones se revisan por alcance. Si quieres ver condiciones completas y activar un plan, continua en precios.
+              Enterprise, compra del sitio, migraciones e integraciones se revisan por alcance. Si quieres ver condiciones completas y activar un plan, continua en precios.
             </p>
             <div className="mt-4 flex flex-col justify-center gap-2 sm:flex-row">
               <Link href="/precios#planes" className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black transition hover:-translate-y-0.5" style={{ background: 'var(--accent-gradient)', color: '#fff' }}>
