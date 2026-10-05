@@ -202,10 +202,15 @@ test("CV1-3 unbound content is never touched, even when it contains the same tex
   const result = update(pages, { businessName: "Fontaneria Lopez", phone: "8100000000" })
   const after = result.pages.find((page) => page.isHome)!.tree
   assert.equal(after.nodes[extraId].props.content, "Llámanos al 8187654321 · Plomeria Hernandez")
-  // Prose generated around the name is design content too.
-  const prose = Object.values(after.nodes).filter((node) => typeof node.props.content === "string" && (node.props.content as string).includes("Conoce más sobre Plomeria Hernandez"))
-  assert.equal(prose.length, 1)
-  assert.equal(BUSINESS_FIELDS_PROP in prose[0].props, false)
+  // Prose generated around the name is design content too: any text that MENTIONS the
+  // original name without BEING it stays unbound and unchanged (independent of the exact copy).
+  const before = pages.find((page) => page.isHome)!.tree
+  const mentions = Object.entries(before.nodes).filter(([, node]) => ["text", "content"].some((key) => typeof node.props[key] === "string" && (node.props[key] as string).includes("Plomeria Hernandez") && node.props[key] !== "Plomeria Hernandez"))
+  assert.ok(mentions.length > 0)
+  for (const [id, node] of mentions) {
+    assert.equal(BUSINESS_FIELDS_PROP in node.props, false, id)
+    assert.deepEqual(after.nodes[id].props, node.props, id)
+  }
 })
 
 test("CV1-3 legacy: a site without an authority is never reinterpreted", () => {
