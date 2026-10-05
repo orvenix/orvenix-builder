@@ -59,7 +59,7 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     category: "Servicios Profesionales",
     description:
       "Web profesional para despacho contable: servicios SAT/IMSS, planes, equipo certificado, proceso de onboarding, testimonios y diagnóstico fiscal gratuito.",
-    livePath: "/webs/contabilidad",
+    livePath: "/templates/contabilidad/demo",
     accent: "#0d9488",
     gradient: "from-teal-600 to-cyan-900",
     features: ["Planes con precios", "Servicios SAT/IMSS", "Equipo IMCP", "Multi-página", "Diagnóstico", "Testimonios"],
@@ -67,6 +67,8 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     rentalPriceMxn: 1499,
     Icon: TrendingUp,
     preview: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=500&fit=crop&q=80",
+    commercialDesignId: "contabilidad",
+    commercialDesignVersion: 1,
   },
   {
     id: "viajes",

@@ -126,6 +126,34 @@ export const DEMO_FACTS_INPUT_BY_DESIGN_V1: Readonly<Record<string, BusinessFact
       serviceImages: [{ src: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=900&h=700&fit=crop&q=80", alt: "Atencion clinica de ejemplo" }],
     },
   },
+  contabilidad: {
+    businessName: "Despacho Ejemplo Fiscal",
+    tagline: "Sitio de ejemplo · contabilidad y asesoria fiscal",
+    description: "Despacho contable de ejemplo para mostrar el diseño Despacho Contable. Todos los datos son de muestra.",
+    contact: { whatsapp: "5500000000", phone: "5500000000", email: "contacto@example.com" },
+    address: "Calle Fiscal 100, Ciudad de Mexico (direccion de ejemplo)",
+    hours: "Lunes a viernes, 9:00 a 18:00 (horario de ejemplo)",
+    serviceArea: ["PyMEs (ejemplo)", "Emprendedores (ejemplo)", "Servicios profesionales (ejemplo)"],
+    services: [
+      { name: "Contabilidad mensual", description: "Servicio de ejemplo: registros, conciliaciones y reportes.", priceLabel: "Desde $0000 (ejemplo)" },
+      { name: "Declaraciones fiscales", description: "Servicio de ejemplo: preparacion y presentacion de obligaciones.", priceLabel: "Desde $0000 (ejemplo)" },
+      { name: "Nomina e IMSS", description: "Servicio de ejemplo: calculo de nomina, movimientos y reportes." },
+      { name: "Diagnostico fiscal", description: "Servicio de ejemplo: revision inicial de obligaciones y riesgos." },
+    ],
+    people: [
+      { name: "C.P. Ejemplo Morales", role: "Socio fiscal" },
+      { name: "C.P. Ejemplo Herrera", role: "Nomina e IMSS" },
+    ],
+    faq: [
+      { question: "¿Esta informacion fiscal es real?", answer: "No. Es un sitio de ejemplo; tu despacho usara solo la informacion que proporciones." },
+      { question: "¿Puedo cambiar servicios, planes y contacto?", answer: "Si. Servicios, precios, equipo y datos de contacto salen de tus datos y se editan en Orvenix." },
+    ],
+    assets: {
+      logo: { src: "/uploads/demo-contabilidad-logo.webp", alt: "Logo de ejemplo" },
+      hero: { src: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200&h=900&fit=crop&q=80", alt: "Despacho contable de ejemplo" },
+      serviceImages: [{ src: "https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=900&h=700&fit=crop&q=80", alt: "Asesoria fiscal de ejemplo" }],
+    },
+  },
 }
 
 export function getDemoFactsV1(designId: string): BusinessFactsV1 | null {
