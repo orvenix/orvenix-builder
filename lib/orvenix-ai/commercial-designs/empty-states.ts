@@ -220,13 +220,16 @@ export function isHiddenCommercialPageV1(tree: EditorTree): boolean {
  *  - a marked empty-state section is hidden while anything in it is still empty,
  *  - any other empty-state node is removed,
  *  - a button pointing at a hidden page (`page:<slug>`) is removed,
+ *  - a site navigation item pointing at a hidden page is removed (SiteNav renders its inline `pages`),
  *  - a container left without children by that removal is removed too.
  * Trees without empty states are returned unchanged (by reference).
  */
 export function stripCommercialEmptyStatesV1(tree: EditorTree, options: { hiddenPageSlugs?: ReadonlySet<string> } = {}): EditorTree {
   const hiddenPageHrefs = new Set([...(options.hiddenPageSlugs ?? [])].map((slug) => `page:${slug}`))
   const linksHiddenPage = (node: EditorNode) => node.type === "ctaButton" && hiddenPageHrefs.has(String(node.props.href ?? ""))
-  if (!Object.values(tree.nodes).some((node) => isCommercialEmptyNodeV1(node) || node.props[COMMERCIAL_EMPTY_SECTION_PROP_V1] === true || linksHiddenPage(node))) return tree
+  const navItemLinksHiddenPage = (item: unknown) => hiddenPageHrefs.has(String((item as { href?: unknown } | null)?.href ?? ""))
+  const navLinksHiddenPage = (node: EditorNode) => node.type === "siteNav" && Array.isArray(node.props.pages) && node.props.pages.some(navItemLinksHiddenPage)
+  if (!Object.values(tree.nodes).some((node) => isCommercialEmptyNodeV1(node) || node.props[COMMERCIAL_EMPTY_SECTION_PROP_V1] === true || linksHiddenPage(node) || navLinksHiddenPage(node))) return tree
 
   const keptChildren = new Map<string, string[]>()
   const dropped = new Set<string>()
@@ -260,7 +263,10 @@ export function stripCommercialEmptyStatesV1(tree: EditorTree, options: { hidden
   const nodes: Record<string, EditorNode> = {}
   for (const [id, node] of Object.entries(tree.nodes)) {
     if (removed.has(id)) continue
-    nodes[id] = keptChildren.has(id) ? { ...node, children: keptChildren.get(id)! } : node
+    const kept = keptChildren.has(id) ? { ...node, children: keptChildren.get(id)! } : node
+    nodes[id] = navLinksHiddenPage(kept)
+      ? { ...kept, props: { ...kept.props, pages: (kept.props.pages as unknown[]).filter((item) => !navItemLinksHiddenPage(item)) } }
+      : kept
   }
   return { ...tree, nodes }
 }
