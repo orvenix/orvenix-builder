@@ -162,7 +162,7 @@ export function OrvenixBuilderShowcase() {
               </div>
 
               <div className="hidden space-y-3 md:block">
-                <InsightCard icon={<Wand2 size={15} />} label="IA" value="Crea base editable" />
+                <InsightCard icon={<Wand2 size={15} />} label="Orvenix IA" value="Próximamente" />
                 <InsightCard icon={<BarChart3 size={15} />} label="Conversion" value="CTA visible" />
                 <InsightCard icon={<Globe2 size={15} />} label="Publicacion" value="Enlace activo" />
                 <div className="rounded-3xl border border-[#1BB3FA]/14 bg-[#061426]/62 p-4">

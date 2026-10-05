@@ -16,7 +16,7 @@ const guideCards = [
     planId: 'pro',
     icon: Layers,
     eyebrow: 'Crecimiento comercial',
-    title: 'Quiero vender, captar leads y usar IA',
+    title: 'Quiero vender y captar leads',
     signal: 'Tienda, CRM, blog, SEO, exportacion y varios sitios.',
     outcome: 'Revisa Pro',
     featured: true,
