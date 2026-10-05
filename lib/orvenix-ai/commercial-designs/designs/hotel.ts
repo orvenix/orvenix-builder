@@ -1,0 +1,116 @@
+import type { CommercialDesignV1 } from "../contract"
+
+/**
+ * CV1-6: Hotel V1 (hotel@1) -- native hospitality design for boutique hotels,
+ * villas and lodging businesses. It keeps booking/contact conversion and room
+ * offerings inside the existing CommercialDesignV1 pipeline.
+ */
+export const HOTEL_V1: CommercialDesignV1 = {
+  contract: 1,
+  id: "hotel",
+  version: 1,
+  family: "hospitality",
+  siteType: "business",
+  catalog: {
+    name: "Hotel Boutique",
+    summary: "Sitio inmersivo para hotel boutique, villas o hospedaje: habitaciones, experiencia, servicios, tarifas orientativas y reserva directa.",
+    businessFit: ["Hotel boutique", "Villas", "Hospedaje rural", "Bed & breakfast", "Glamping", "Suites"],
+    styleLabels: ["Hospitality", "Reserva directa", "Visual", "Premium"],
+  },
+  theme: {
+    mode: "light",
+    colors: { primary: "#92400E", secondary: "#1F2937", background: "#FBF7F0", text: "#111827", accent: "#D97706" },
+    fontHeading: "Playfair Display",
+    fontBody: "Inter",
+    radius: "soft",
+    shadow: "soft",
+  },
+  chrome: {
+    density: "spacious",
+    navigationSurfaceStyle: "glass",
+    navigationContainment: "integrated",
+    navigationLinkStyle: "minimal",
+    navigationCtaEmphasis: "prominent",
+    trustTreatment: "standard",
+    pricingTreatment: "standard",
+    footerPreset: "rich",
+    showLogo: true,
+  },
+  conversion: { primary: ["booking", "whatsapp", "contact"] },
+  motif: "none",
+  seo: { titlePattern: "page-business" },
+  composition: { visualFamily: "hospitality", fidelity: "demo-shape" },
+  pages: [
+    {
+      slug: "home",
+      name: "Inicio",
+      archetype: "overview",
+      pins: { heroVariant: "immersive", heroTreatment: "standard", processTreatment: "numbered", sectionToneStrategy: "contrast-led" },
+      sections: [
+        { role: "navigation" },
+        { role: "hero", assetRoles: ["hero"] },
+        { role: "services", requiresFacts: ["services"] },
+        { role: "gallery", requiresAssets: ["serviceImage"], assetRoles: ["serviceImage"] },
+        { role: "features" },
+        { role: "pricing", requiresFacts: ["servicePrices"] },
+        { role: "cta" },
+        { role: "footer" },
+      ],
+    },
+    {
+      slug: "habitaciones",
+      name: "Habitaciones",
+      archetype: "catalog",
+      requiresFacts: ["services"],
+      pins: { heroVariant: "centered", sectionToneStrategy: "soft-rhythm" },
+      sections: [
+        { role: "navigation" },
+        { role: "hero" },
+        { role: "services" },
+        { role: "pricing", requiresFacts: ["servicePrices"] },
+        { role: "gallery", requiresAssets: ["serviceImage"], assetRoles: ["serviceImage"] },
+        { role: "cta" },
+        { role: "footer" },
+      ],
+    },
+    {
+      slug: "experiencia",
+      name: "Experiencia",
+      archetype: "overview",
+      pins: { heroVariant: "centered", processTreatment: "numbered", sectionToneStrategy: "contrast-led" },
+      sections: [
+        { role: "navigation" },
+        { role: "hero" },
+        { role: "features" },
+        { role: "process" },
+        { role: "faq", requiresFacts: ["faq"] },
+        { role: "cta" },
+        { role: "footer" },
+      ],
+    },
+    {
+      slug: "reservar",
+      name: "Reservar",
+      archetype: "conversion",
+      pins: { heroVariant: "centered", processTreatment: "numbered" },
+      sections: [
+        { role: "navigation" },
+        { role: "hero" },
+        { role: "process" },
+        { role: "contact" },
+        { role: "footer" },
+      ],
+    },
+    {
+      slug: "contacto",
+      name: "Contacto",
+      archetype: "conversion",
+      sections: [
+        { role: "navigation" },
+        { role: "contact" },
+        { role: "footer" },
+      ],
+    },
+  ],
+  internalReference: "Referencia visual interna: app/webs/hotel",
+}

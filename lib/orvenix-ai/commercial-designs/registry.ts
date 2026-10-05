@@ -3,6 +3,7 @@ import { CLINICA_V1 } from "./designs/clinica"
 import { CONTABILIDAD_V1 } from "./designs/contabilidad"
 import { CONSTRUCTION_V1 } from "./designs/construction"
 import { CONSTRUCTION_V2 } from "./designs/construction-v2"
+import { HOTEL_V1 } from "./designs/hotel"
 import { SERVICIOS_LOCALES_V1 } from "./designs/servicios-locales"
 import { SERVICIOS_LOCALES_V2 } from "./designs/servicios-locales-v2"
 
@@ -23,7 +24,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 // CV1-1b: @2 versions add declared composition + demo-shape fidelity; @1 stays for provenance and its own tests.
-const DESIGNS: readonly CommercialDesignV1[] = [SERVICIOS_LOCALES_V1, CONSTRUCTION_V1, SERVICIOS_LOCALES_V2, CONSTRUCTION_V2, CLINICA_V1, CONTABILIDAD_V1]
+const DESIGNS: readonly CommercialDesignV1[] = [SERVICIOS_LOCALES_V1, CONSTRUCTION_V1, SERVICIOS_LOCALES_V2, CONSTRUCTION_V2, CLINICA_V1, CONTABILIDAD_V1, HOTEL_V1]
 
 export const COMMERCIAL_DESIGN_REGISTRY_V1: Readonly<Record<string, CommercialDesignV1>> = deepFreeze(
   Object.fromEntries(DESIGNS.map((design) => [commercialDesignKeyV1(design), design])),

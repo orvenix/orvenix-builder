@@ -154,6 +154,30 @@ export const DEMO_FACTS_INPUT_BY_DESIGN_V1: Readonly<Record<string, BusinessFact
       serviceImages: [{ src: "https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=900&h=700&fit=crop&q=80", alt: "Asesoria fiscal de ejemplo" }],
     },
   },
+  hotel: {
+    businessName: "Hotel Ejemplo Boutique",
+    tagline: "Sitio de ejemplo · hospedaje y experiencias",
+    description: "Hotel de ejemplo para mostrar el diseño Hotel Boutique. Todos los datos son de muestra.",
+    contact: { whatsapp: "5500000000", phone: "5500000000", email: "reservas@example.com" },
+    address: "Camino Ejemplo 100, Valle de Ejemplo",
+    hours: "Check-in 15:00 · Check-out 12:00 (horario de ejemplo)",
+    serviceArea: ["Escapadas de fin de semana (ejemplo)", "Estancias romanticas (ejemplo)", "Viajes de descanso (ejemplo)"],
+    services: [
+      { name: "Suite terraza", description: "Habitacion de ejemplo con terraza privada y vista al jardin.", priceLabel: "Desde $0000 (ejemplo)" },
+      { name: "Habitacion jardin", description: "Habitacion de ejemplo con acceso cercano a areas verdes.", priceLabel: "Desde $0000 (ejemplo)" },
+      { name: "Desayuno incluido", description: "Servicio de ejemplo: desayuno preparado en sitio." },
+      { name: "Experiencia wellness", description: "Servicio de ejemplo: descanso, caminatas y rituales de bienestar." },
+    ],
+    faq: [
+      { question: "¿Este hotel existe?", answer: "No. Es un sitio de ejemplo; tu hospedaje usara unicamente la informacion que proporciones." },
+      { question: "¿Puedo cambiar habitaciones, tarifas y contacto?", answer: "Si. Habitaciones, servicios, tarifas y canales de reserva salen de tus datos y se editan en Orvenix." },
+    ],
+    assets: {
+      logo: { src: "/uploads/demo-hotel-logo.webp", alt: "Logo de ejemplo" },
+      hero: { src: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=900&fit=crop&q=80", alt: "Hotel boutique de ejemplo" },
+      serviceImages: [{ src: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=900&h=700&fit=crop&q=80", alt: "Habitacion de hotel de ejemplo" }],
+    },
+  },
 }
 
 export function getDemoFactsV1(designId: string): BusinessFactsV1 | null {

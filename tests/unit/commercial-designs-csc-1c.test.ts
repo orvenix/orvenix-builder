@@ -220,7 +220,7 @@ test("CSC-1C C: no second engine, renderer or compiler exists for construction",
   const designFiles = readdirSync("lib/orvenix-ai/commercial-designs")
   assert.deepEqual(designFiles.filter((file) => /construction/i.test(file)), [])
   // CV1-1b: @2 versions are sibling declarative recipes, never a second engine.
-  assert.deepEqual(readdirSync("lib/orvenix-ai/commercial-designs/designs").sort(), ["clinica.ts", "construction-v2.ts", "construction.ts", "contabilidad.ts", "servicios-locales-v2.ts", "servicios-locales.ts"])
+  assert.deepEqual(readdirSync("lib/orvenix-ai/commercial-designs/designs").sort(), ["clinica.ts", "construction-v2.ts", "construction.ts", "contabilidad.ts", "hotel.ts", "servicios-locales-v2.ts", "servicios-locales.ts"])
   for (const file of ["construction.ts", "construction-v2.ts"]) {
     const design = readFileSync(`lib/orvenix-ai/commercial-designs/designs/${file}`, "utf8")
     assert.doesNotMatch(design, /from "react"|tsx|createElement|function |=>/, file)

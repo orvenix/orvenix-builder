@@ -277,7 +277,7 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     category: "Hospitalidad & Turismo",
     description:
       "Portal hotelero de lujo para hotel boutique: galería de habitaciones seleccionables con precio por noche, servicios y amenidades, galería fotográfica interactiva, reseñas TripAdvisor y Google, FAQ de estancia y formulario de reserva directa con fechas y tipo de habitación.",
-    livePath: "/webs/hotel",
+    livePath: "/templates/hotel/demo",
     accent: "#78716c",
     gradient: "from-stone-600 to-stone-900",
     features: ["Habitaciones con precios", "Reserva directa con fechas", "Galería interactiva", "Reseñas TripAdvisor", "Servicios y amenidades", "Mejor precio garantizado"],
@@ -285,6 +285,8 @@ export const REAL_TEMPLATES: RealTemplate[] = [
     rentalPriceMxn: 1799,
     Icon: Hotel,
     preview: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&h=500&fit=crop&q=80",
+    commercialDesignId: "hotel",
+    commercialDesignVersion: 1,
   },
   {
     id: "transporte",

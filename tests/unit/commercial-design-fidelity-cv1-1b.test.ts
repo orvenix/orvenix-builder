@@ -106,7 +106,7 @@ function demoStrings(designId: string): string[] {
 
 test("CV1-1b contract: fidelity designs validate with declared composition; legacy @1 designs are unchanged", () => {
   assert.ok(FIDELITY_DESIGNS.length >= 2)
-  assert.deepEqual(FIDELITY_DESIGNS.map((design) => `${design.id}@${design.version}`).sort(), ["clinica@1", "construction@2", "contabilidad@1", "servicios-locales@2"])
+  assert.deepEqual(FIDELITY_DESIGNS.map((design) => `${design.id}@${design.version}`).sort(), ["clinica@1", "construction@2", "contabilidad@1", "hotel@1", "servicios-locales@2"])
   for (const design of FIDELITY_DESIGNS) {
     assert.equal(validateCommercialDesignV1(design).ok, true, design.id)
     assert.equal(Object.isFrozen(design), true)
