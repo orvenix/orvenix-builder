@@ -28,7 +28,7 @@ const pillars = [
   {
     icon: '🛡️',
     title: 'Control de acceso estricto',
-    desc: 'Autenticación de dos factores, roles y permisos granulares en cada cuenta. Solo tú y quienes tú autorices tienen acceso.',
+    desc: 'Cada cuenta accede únicamente a sus propios sitios y las contraseñas se guardan con hash seguro.',
   },
 ];
 
@@ -37,17 +37,12 @@ const compliance = [
   'Tus datos son tuyos — puedes exportarlos o eliminarlos en cualquier momento',
   'Derechos ARCO (Acceso, Rectificación, Cancelación, Oposición)',
   'No vendemos ni compartimos datos con terceros sin tu consentimiento',
-  'Contratos de procesamiento con todos nuestros proveedores de infraestructura',
   'Notificación de incidentes de seguridad en menos de 72 horas',
 ];
 
 const infraRows = [
   { feature: 'Protocolo SSL/TLS', value: 'TLS 1.3' },
-  { feature: 'Ubicación de servidores', value: 'CDMX / Guadalajara' },
   { feature: 'Backups', value: 'Diarios — 30 días de retención' },
-  { feature: 'Firewall de aplicaciones (WAF)', value: 'Activo' },
-  { feature: 'SLA de disponibilidad', value: '99.9% uptime garantizado' },
-  { feature: 'Autenticación 2FA', value: 'Incluida en todos los planes' },
   { feature: 'CDN', value: 'Cloudflare — global' },
 ];
 

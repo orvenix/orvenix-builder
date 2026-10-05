@@ -17,11 +17,11 @@ export function PlatPromoBanner() {
             <span className="mk-promo-badge">✦ Nuevo</span>
             <h2 className="mk-promo-title">Plataforma Orvenix</h2>
             <p className="mk-promo-desc">
-              Sitio web + panel privado + gestión de clientes + almacenamiento en la nube.{' '}
+              Diseño profesional + editor simple + hosting y SSL.{' '}
               <strong>Todo en un solo sistema.</strong>
             </p>
             <div className="mk-promo-pills">
-              {['🌐 Sitio profesional', '🔐 Panel privado', '☁️ Almacenamiento', '👥 Gestión de clientes'].map((p) => (
+              {['🌐 Sitio profesional', '🎨 Diseños Orvenix', '✏️ Editor simple', '🔒 Hosting y SSL'].map((p) => (
                 <span key={p} className="mk-promo-pill">{p}</span>
               ))}
             </div>

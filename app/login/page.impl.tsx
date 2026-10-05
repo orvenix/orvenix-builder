@@ -23,8 +23,8 @@ import { safeInternalPath } from "@/lib/security/internal-path";
 
 const FEATURES = [
   "Templates inteligentes con flujo de editar, comprar o rentar",
-  "Panel privado con sitios, publicaciones y clientes",
-  "Editor visual, IA y despliegue en un solo entorno",
+  "Panel privado con tus sitios y publicaciones",
+  "Editor visual y publicación en un solo entorno · Orvenix IA — Próximamente",
 ];
 
 export default function LoginPage() {

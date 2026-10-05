@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import path from "node:path"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 
 const read = (file: string) => readFileSync(path.join(process.cwd(), file), "utf8")
 
@@ -45,6 +45,14 @@ test("SALES-2: public commercial surfaces carry no unverifiable counters, rating
 test("SALES-2: the landing no longer renders the fictional testimonials or case studies", () => {
   const home = read("app/page.tsx")
   assert.doesNotMatch(home, /<Testimonials|<Portfolio|home\/Testimonials|home\/Portfolio/)
+  assert.equal(existsSync(path.join(process.cwd(), "components/marketing/home/Testimonials.tsx")), false)
+})
+
+test("LAUNCH-COPY: no simulated live-activity toast on any marketing page", () => {
+  // It showed invented events ("Alguien en Monterrey activó el Plan Pro") on every MarketingLayout page.
+  assert.doesNotMatch(read("components/marketing/MarketingLayout.tsx"), /SocialProofToast/)
+  assert.equal(existsSync(path.join(process.cwd(), "components/marketing/SocialProofToast.tsx")), false)
+  assert.doesNotMatch(read("app/globals.css"), /social-proof-toast/)
 })
 
 test("SALES-2: the fabricated portfolio page sends visitors to the Orvenix designs and is out of the navigation", () => {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Download, FileText, Scale, ShieldCheck } from "lucide-react"
+import { FileText, Scale, ShieldCheck } from "lucide-react"
 import { MarketingLayout } from "@/components/marketing/MarketingLayout"
 import {
   formatUsd,
@@ -58,9 +58,8 @@ export default function Dossier2026Page() {
               {officialDocument2026.subtitle}. Ambito: {officialDocument2026.scope}. Version {officialDocument2026.version}.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link href={officialDocument2026.pdfPath} className="mk-btn-primary inline-flex items-center gap-2" target="_blank" rel="noopener noreferrer">
-                <Download size={16} /> Descargar PDF
-              </Link>
+              {/* LAUNCH-COPY: the PDF predates the current terms; its public link is withdrawn until it is reissued. */}
+              <p className="inline-flex items-center text-sm text-orvenix-secondary">Documento comercial en actualización.</p>
               <Link href="/precios#planes" className="mk-btn-outline inline-flex items-center gap-2">
                 <FileText size={16} /> Ver planes
               </Link>

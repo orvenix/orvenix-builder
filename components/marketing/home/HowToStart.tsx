@@ -3,14 +3,8 @@ import { SectionHeader } from '../sections/SectionHeader';
 const steps = [
   { num: '01', title: 'Elige tu plan', description: 'Selecciona el plan que se ajuste al tamaño de tu negocio. Puedes escalar en cualquier momento.' },
   { num: '02', title: 'Crea tu cuenta', description: 'Registra tu empresa en minutos. Sin contratos largos ni papeleos. Solo datos básicos.' },
-  { num: '03', title: 'Tu panel listo', description: 'En menos de 24h tu panel privado está activo con tu dominio, tu logo y tu marca.' },
-  { num: '04', title: 'Opera y crece', description: 'Invita clientes, sube archivos y gestiona proyectos. Soporte incluido desde el primer día.' },
-];
-
-const integrations = [
-  '💳 Stripe', '📧 Gmail', '📅 Google Calendar', '📊 Google Analytics',
-  '🔗 Zapier', '💬 WhatsApp', '📦 Dropbox', '🔧 Slack',
-  '🌐 Cloudflare', '🔒 Auth0', '💰 PayPal', '📱 Push Notifications',
+  { num: '03', title: 'Crea tu sitio', description: 'Elige tu Diseño Orvenix y escribe los datos de tu negocio: tu sitio se crea con todas las páginas del diseño.' },
+  { num: '04', title: 'Edita y publica', description: 'Ajusta textos e imágenes en el editor y publica cuando quieras. Soporte incluido desde el primer día.' },
 ];
 
 export function HowToStart() {
@@ -43,18 +37,6 @@ export function HowToStart() {
               <p className="text-sm leading-relaxed text-orvenix-secondary">{s.description}</p>
             </div>
           ))}
-        </div>
-
-        <div className="mt-16 pt-12 mk-divider">
-          <p className="mk-section-tag mb-6">Integraciones</p>
-          <h3 className="text-xl font-bold mb-6 text-orvenix-text">
-            Conecta con las herramientas que ya usas
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {integrations.map((item) => (
-              <span key={item} className="mk-integration-pill">{item}</span>
-            ))}
-          </div>
         </div>
       </div>
     </section>

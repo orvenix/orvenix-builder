@@ -142,7 +142,7 @@ export const officialPlanComparison2026 = [
   ["Funnels", "No", "Hasta 5", "Ilimitados", "Ilimitados"],
   ["SEO y blog", "Basico", "Avanzado", "Avanzado", "Estrategia a medida"],
   ["Entrega del codigo del sitio", "Con compra del sitio", "Con compra del sitio", "Con compra del sitio", "Con compra del sitio"],
-  ["Infraestructura", "1 dominio", "Multi-dominio", "Multi-dominio", "Infraestructura dedicada"],
+  ["Infraestructura", "Hosting, SSL y dominio propio con asistencia de Orvenix", "Hosting, SSL y dominio propio con asistencia de Orvenix", "Hosting, SSL y dominio propio con asistencia de Orvenix", "Infraestructura dedicada"],
   ["Soporte", "Email 48 hrs", "Prioritario 24 hrs", "Omnicanal urgente", "SLA premium / gestor dedicado"],
 ] as const
 

@@ -49,7 +49,7 @@ const guarantees = [
   {
     icon: '🔒',
     title: 'Seguridad Primero',
-    desc: 'SSL, WAF, backups automáticos y prácticas de seguridad desde el día uno. Tu plataforma y la de tus usuarios siempre protegidas.',
+    desc: 'SSL, backups automáticos y prácticas de seguridad desde el día uno. Tu plataforma y la de tus usuarios siempre protegidas.',
   },
 ];
 

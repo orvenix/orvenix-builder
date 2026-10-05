@@ -3,7 +3,6 @@ import { Footer } from './Footer';
 import { WhatsAppFloat } from './WhatsAppFloat';
 import { GlobalEffects } from './GlobalEffects';
 import { BackToTop } from './BackToTop';
-import { SocialProofToast } from './SocialProofToast';
 
 interface MarketingLayoutProps {
   children: React.ReactNode;
@@ -21,7 +20,6 @@ export function MarketingLayout({ children }: MarketingLayoutProps) {
       <Footer />
       <WhatsAppFloat />
       <BackToTop />
-      <SocialProofToast />
       <GlobalEffects />
     </div>
   );

@@ -30,9 +30,9 @@ const PERKS = [
 ];
 
 const REGISTER_FEATURES = [
-  "Panel privado listo para clientes, sitios y publicaciones",
+  "Panel privado listo para tus sitios y publicaciones",
   "Flujo continuo desde plantilla hasta checkout interno",
-  "Editor visual con IA y publicacion desde una sola plataforma",
+  "Editor visual y publicación desde una sola plataforma · Orvenix IA — Próximamente",
 ];
 
 export default function RegisterPage() {

@@ -11,13 +11,13 @@ import { SectionHeader } from '@/components/marketing/sections/SectionHeader';
 
 export const metadata: Metadata = {
   title: 'Orvenix — Plataforma SaaS para tu Negocio Digital',
-  description: 'Orvenix — Plataforma SaaS todo-en-uno para negocios digitales. Web profesional + panel privado + gestión de clientes + almacenamiento. Desde 15 USD/mes + IVA.',
+  description: 'Orvenix — Diseños Orvenix: sitios profesionales por industria con editor visual, hosting y SSL incluidos. Desde 15 USD/mes + IVA.',
   manifest: '/manifest.json',
   openGraph: {
     type: 'website',
     url: 'https://orvenix.com.mx/',
     title: 'Orvenix — Plataforma SaaS para tu Negocio Digital',
-    description: 'SaaS todo-en-uno: sitio web, panel privado, clientes y almacenamiento. Sin instalar nada. Activo en 24h.',
+    description: 'Elige un Diseño Orvenix, escribe los datos de tu negocio, edita y publica. Hosting y SSL incluidos. Sin instalar nada.',
     images: ['/img/logo-main.png'],
   },
 };
