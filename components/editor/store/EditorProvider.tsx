@@ -22,6 +22,14 @@ interface EditorProviderProps {
   initialPageName?: string;
   initialServerVersion?: string | null;
   availablePages?: SitePageListItem[];
+  /**
+   * LAUNCH-2: shown while the store initializes. The editor keeps its own
+   * skeleton; public pages pass a neutral one so visitors never see editor
+   * chrome or internal copy.
+   */
+  loadingFallback?: ReactNode;
+  /** LAUNCH-2: public pages render the published tree, never this browser's editor drafts. */
+  recoverLocalDraft?: boolean;
 }
 
 const EMPTY_SITE_PAGES: SitePageListItem[] = [];
@@ -36,6 +44,8 @@ export function EditorProvider({
   initialPageName = "Inicio",
   initialServerVersion = null,
   availablePages = EMPTY_SITE_PAGES,
+  loadingFallback,
+  recoverLocalDraft = true,
 }: EditorProviderProps) {
   const initialize = useEditorStore((s) => s.initialize);
   const setUserRole = useEditorStore((s) => s.setUserRole);
@@ -63,12 +73,10 @@ export function EditorProvider({
     try {
       setUserRole(initialUserRole);
       setBuilderTier(initialBuilderTier);
-      const recovery = inspectSavedTreeRecovery(
-        websiteId,
-        initialPageSlug,
-        initialServerVersion,
-      );
-      const recoveredTree = recovery.status === "recovered" ? recovery.tree : null;
+      const recovery = recoverLocalDraft
+        ? inspectSavedTreeRecovery(websiteId, initialPageSlug, initialServerVersion)
+        : null;
+      const recoveredTree = recovery?.status === "recovered" ? recovery.tree : null;
       const shouldIgnoreStaleDraft =
         Boolean(recoveredTree) &&
         isArtisanEditableTree(initialTree) &&
@@ -123,10 +131,13 @@ export function EditorProvider({
   initialTree,
   initialUserRole,
   initialize,
+  recoverLocalDraft,
   setBuilderTier,
   setUserRole,
   websiteId,
 ]);
+
+  if (!isReady && loadingFallback !== undefined) return <>{loadingFallback}</>;
 
   if (!isReady) {
     return (
