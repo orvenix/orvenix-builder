@@ -1,5 +1,5 @@
 import type { OrvenixSiteArchitecture, OrvenixSitePagePlan } from "@/lib/orvenix-ai/architect"
-import type { CommercialSectionFactsV1, CommercialSectionMediaV1 } from "@/lib/orvenix-ai/composer"
+import { countCommercialBenefitItemsV1, type CommercialSectionFactsV1, type CommercialSectionMediaV1 } from "@/lib/orvenix-ai/composer"
 import {
   CREATIVE_DIRECTOR_CONTRACT_V1_VERSION,
   type CreativeDirectorPageDirectionV1,
@@ -10,8 +10,10 @@ import type { SiteCreationPlanV2DesignSourceV1 } from "@/lib/orvenix-ai/site-cre
 import type { GlobalTheme } from "@/types/editor"
 import type { BusinessFactAssetV1, BusinessFactsV1, BusinessProjectFactV1 } from "./business-facts"
 import { COMMERCIAL_SECTION_BOUND_ASSET_ROLES_V1 } from "./contract"
+import { COMMERCIAL_EMPTY_TEXT_V1 } from "./empty-states"
 import type {
   CommercialAssetRoleV1,
+  CommercialCompositionV1,
   CommercialDesignV1,
   CommercialFactKeyV1,
   CommercialPagePinsV1,
@@ -58,6 +60,37 @@ export interface ResolvedCommercialDesignV1 {
   /** Section role list per compiled page slug -- the design skeleton actually requested. */
   skeleton: Array<{ slug: string; roles: CommercialSectionRoleV1[] }>
   omissions: CommercialOmissionV1[]
+  /** CV1-1b: the design's declared compositional context (absent on @1 designs). */
+  composition?: CommercialCompositionV1
+  /** CV1-1b: sections kept only as explicit empty states (the customer's REAL facts do not fill them yet). */
+  emptySections: Array<{ page: string; role: CommercialSectionRoleV1 }>
+  /** CV1-1b: pages whose page-level facts the customer has not provided yet (kept as empty states, hidden publicly). */
+  emptyPages: string[]
+  /** CV1-1b: true only for a shaped CUSTOMER compile -- the public demo never shows empty states. */
+  markEmptyStates: boolean
+}
+
+export interface ResolveCommercialDesignOptionsV1 {
+  /**
+   * CV1-1b: the customer's own facts when `facts` was shaped to the demo
+   * (empty states added). Structure follows `facts`; SEO and empty-state
+   * detection follow `realFacts`, so placeholders never reach metadata.
+   */
+  realFacts?: BusinessFactsV1
+  /** CV1-1b: the approved demo's facts -- read for SHAPE only (eg. how many benefit cards), never for values. */
+  demoFacts?: BusinessFactsV1
+}
+
+function benefitCount(facts: BusinessFactsV1): number {
+  return countCommercialBenefitItemsV1({
+    commercialFacts: {
+      ...(facts.address ? { address: facts.address } : {}),
+      ...(facts.hours ? { hours: facts.hours } : {}),
+      ...(facts.serviceArea.length ? { serviceArea: facts.serviceArea } : {}),
+    },
+    businessEvidence: facts.evidence,
+    services: facts.services,
+  })
 }
 
 const SECTION_PURPOSES: Record<CommercialSectionRoleV1, string> = {
@@ -297,8 +330,11 @@ function buildTheme(design: CommercialDesignV1): GlobalTheme {
   }
 }
 
-export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: BusinessFactsV1): ResolvedCommercialDesignV1 {
+export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: BusinessFactsV1, options: ResolveCommercialDesignOptionsV1 = {}): ResolvedCommercialDesignV1 {
   const omissions: CommercialOmissionV1[] = []
+  const realFacts = options.realFacts ?? facts
+  const emptySections: ResolvedCommercialDesignV1["emptySections"] = []
+  const emptyPages: string[] = []
 
   const keptPages = design.pages.filter((page) => {
     const missing = (page.requiresFacts ?? []).filter((key) => !hasCommercialFactV1(facts, key))
@@ -322,6 +358,17 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
       return true
     })
     skeleton.push({ slug: page.slug, roles })
+    if (options.realFacts) {
+      const pageIsEmpty = (page.requiresFacts ?? []).some((key) => !hasCommercialFactV1(realFacts, key))
+      if (pageIsEmpty) emptyPages.push(page.slug)
+      for (const section of sections) {
+        if (section.role === "navigation" || section.role === "footer") continue
+        const sectionIsEmpty =
+          (section.requiresFacts ?? []).some((key) => !hasCommercialFactV1(realFacts, key)) ||
+          (section.requiresAssets ?? []).some((role) => !hasCommercialAssetV1(realFacts, role))
+        if (pageIsEmpty || sectionIsEmpty) emptySections.push({ page: page.slug, role: section.role })
+      }
+    }
     return {
       name: page.name,
       slug: page.slug,
@@ -394,6 +441,9 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
     })() : {}),
     footerPreset: chrome.footerPreset,
     primaryCta: resolvePrimaryCta(design, facts, pageSlugs),
+    ...(options.demoFacts
+      ? { emptyBenefit: { slots: benefitCount(options.demoFacts), title: COMMERCIAL_EMPTY_TEXT_V1.benefitTitle, description: COMMERCIAL_EMPTY_TEXT_V1.benefitDescription } }
+      : {}),
   }
 
   const architecture: OrvenixSiteArchitecture = {
@@ -418,9 +468,10 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
     }
   }
 
+  const realDetailProject = projectDetailCandidateV1(realFacts)
   const seoBySlug = Object.fromEntries(keptPages.map((page) => {
-    const pageTitle = page.requiresFacts?.includes("projectDetail") && detailProject ? detailProject.title : page.name
-    return [page.slug, { title: seoTitle(design, pageTitle, facts.businessName), description: seoDescription(page, facts) }]
+    const pageTitle = page.requiresFacts?.includes("projectDetail") && realDetailProject ? realDetailProject.title : page.name
+    return [page.slug, { title: seoTitle(design, pageTitle, realFacts.businessName), description: seoDescription(page, realFacts) }]
   }))
 
   return {
@@ -444,5 +495,9 @@ export function resolveCommercialDesignV1(design: CommercialDesignV1, facts: Bus
     seoBySlug,
     skeleton,
     omissions,
+    ...(design.composition ? { composition: { ...design.composition } } : {}),
+    emptySections,
+    emptyPages,
+    markEmptyStates: Boolean(options.realFacts),
   }
 }

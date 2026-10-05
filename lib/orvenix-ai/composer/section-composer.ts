@@ -1610,8 +1610,8 @@ function realOfferingItems(
   ])
 }
 
-/** Guardrail (V2-3 Section 12): fancy asymmetric/editorial treatments only make sense for a small, curated item count -- long real-service lists fall back to the safe grid automatically instead of producing an oversized featured card or a very long editorial scroll. */
-const STRUCTURAL_TREATMENT_MAX_ITEMS = 6
+/** Guardrail (V2-3 Section 12): fancy asymmetric/editorial treatments only make sense for a small, curated item count -- long real-service lists fall back to the safe grid automatically instead of producing an oversized featured card or a very long editorial scroll. Exported for CV1-1b: demo-shape commercial designs keep their lists within this range. */
+export const STRUCTURAL_TREATMENT_MAX_ITEMS = 6
 
 function cardsLayout(
   nodes: Record<string, ComposedNode>,
@@ -3041,7 +3041,19 @@ function commercialBenefitItemsV1(context: SectionCompositionContext): Array<[st
   if (facts?.hours) items.push(["Horario de atención", facts.hours])
   if ((context.services ?? []).some((service) => service.priceLabel?.trim())) items.push(["Precios de referencia", "Consulta los precios publicados de cada servicio antes de escribirnos."])
   if (facts?.address) items.push(["Ubicación", facts.address])
-  return items.slice(0, 4)
+  const benefits = items.slice(0, COMMERCIAL_BENEFIT_MAX_ITEMS_V1)
+  const empty = facts?.emptyBenefit
+  if (empty) while (benefits.length < Math.min(empty.slots, COMMERCIAL_BENEFIT_MAX_ITEMS_V1)) benefits.push([empty.title, empty.description])
+  return benefits
+}
+
+const COMMERCIAL_BENEFIT_MAX_ITEMS_V1 = 4
+
+/** CV1-1b: how many fact-backed benefit cards a set of commercial facts yields (no empty states). */
+export function countCommercialBenefitItemsV1(context: Pick<SectionCompositionContext, "commercialFacts" | "businessEvidence" | "services">): number {
+  const { emptyBenefit: _ignored, ...facts } = context.commercialFacts ?? {}
+  void _ignored
+  return commercialBenefitItemsV1({ ...context, commercialFacts: facts }).length
 }
 
 function composeFactFaqV1(context: SectionCompositionContext, entries: Array<{ question: string; answer: string }>): ComposedSection {

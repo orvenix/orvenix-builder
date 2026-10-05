@@ -3,6 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { PublicRenderer } from "@/components/PublicRenderer"
+import { getCommercialTemplateStart } from "@/lib/commercial/template-start"
 import { compileCommercialDesignV1, getCommercialDesignV1, getDemoFactsV1 } from "@/lib/orvenix-ai/commercial-designs"
 import { getRealTemplate } from "@/lib/realTemplates"
 
@@ -34,6 +35,7 @@ export default async function CommercialTemplateDemoPage({
   const compiled = await compileCommercialDesignV1({ mode: "demo", designId, version })
   const page = compiled.plan.pages.find((entry) => entry.slug === requestedPage) ?? compiled.plan.pages[0]
   const basePath = `/templates/${encodeURIComponent(template.id)}/demo`
+  const startHref = getCommercialTemplateStart(template)?.href ?? `/templates/${encodeURIComponent(template.id)}`
   // An empty site id keeps the demo's internal links inert; pages are switched from the bar below.
   const availablePages = compiled.plan.pages.map((entry) => ({
     id: entry.slug,
@@ -59,7 +61,8 @@ export default async function CommercialTemplateDemoPage({
             {entry.name}
           </Link>
         ))}
-        <Link href={`/templates/${encodeURIComponent(template.id)}`} className="ml-auto rounded-md border border-white/20 px-2.5 py-1 text-xs font-semibold text-white/80 hover:bg-white/10">
+        {/* _top: the demo is also embedded as an iframe on the template page. */}
+        <Link href={startHref} target="_top" className="ml-auto rounded-md border border-white/20 px-2.5 py-1 text-xs font-semibold text-white/80 hover:bg-white/10">
           Usar este diseño
         </Link>
       </nav>

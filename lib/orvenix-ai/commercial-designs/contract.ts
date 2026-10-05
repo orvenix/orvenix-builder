@@ -240,6 +240,30 @@ export interface CommercialCatalogPresentationV1 {
   styleLabels: string[]
 }
 
+/**
+ * CV1-1b: visual families the composer knows (lib/orvenix-ai/theme/visual-direction.ts).
+ * Kept as a closed list here so the strict validator never imports theme code.
+ */
+export const COMMERCIAL_VISUAL_FAMILIES_V1 = ["health", "hospitality", "creative", "commerce", "professional"] as const
+
+/**
+ * CV1-1b design fidelity: "demo-shape" means the customer site keeps the
+ * EXACT composition of the approved demo. Missing customer facts become
+ * explicit empty states (empty-states.ts) instead of removing sections,
+ * pages or switching hero variants; demo VALUES never reach a customer.
+ */
+export const COMMERCIAL_FIDELITY_MODES_V1 = ["demo-shape"] as const
+
+/**
+ * CV1-1b: every input that can change a design's visual/compositional
+ * identity, declared by the design itself. When present, the builder never
+ * re-infers it from customer text (description, services, ...).
+ */
+export interface CommercialCompositionV1 {
+  visualFamily: (typeof COMMERCIAL_VISUAL_FAMILIES_V1)[number]
+  fidelity: (typeof COMMERCIAL_FIDELITY_MODES_V1)[number]
+}
+
 export interface CommercialDesignV1 {
   contract: typeof COMMERCIAL_DESIGN_CONTRACT_VERSION_V1
   id: string
@@ -252,6 +276,8 @@ export interface CommercialDesignV1 {
   conversion: CommercialConversionV1
   motif: (typeof COMMERCIAL_MOTIFS_V1)[number]
   seo: { titlePattern: (typeof COMMERCIAL_SEO_TITLE_PATTERNS_V1)[number] }
+  /** CV1-1b: absent on @1 designs (inferred context + fact-driven degradation, unchanged). */
+  composition?: CommercialCompositionV1
   pages: CommercialPageRecipeV1[]
   /** INTERNAL design-reference note (never shown to customers, never copied into trees). */
   internalReference: string

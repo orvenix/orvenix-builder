@@ -2,19 +2,19 @@ import Link from "next/link"
 import Image from "next/image"
 import type { CSSProperties } from "react"
 import { ArrowRight, Edit3 } from "lucide-react"
-import { selfEditTemplateAction } from "@/app/templates/actions"
 import { MarketingLayout } from "@/components/marketing/MarketingLayout"
 import { WEB_CATALOG } from "@/app/webs/catalog"
+import { getCommercialTemplateStart } from "@/lib/commercial/template-start"
 import { REAL_TEMPLATES } from "@/lib/realTemplates"
 
 export default function WebsHub() {
   const categories = Array.from(new Set(WEB_CATALOG.map((app) => app.category)))
   const slugCategory = (category: string) => category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-  const editableTemplateIds = new Set<string>(REAL_TEMPLATES.map((template) => template.id))
+  const editableTemplates = new Map(REAL_TEMPLATES.map((template) => [template.id as string, template]))
   const heroStats = [
     [String(WEB_CATALOG.length), "páginas reales"],
     ["10", "flujos activos"],
-    [String(editableTemplateIds.size), "editables"],
+    [String(editableTemplates.size), "editables"],
   ]
 
   return (
@@ -70,7 +70,11 @@ export default function WebsHub() {
         <section id="catalogo" className="webs-grid" aria-label="Catálogo de webs">
           {WEB_CATALOG.map((app, i) => {
             const Icon = app.Icon
-            const isEditableTemplate = editableTemplateIds.has(app.id)
+            const editableTemplate = editableTemplates.get(app.id)
+            const isEditableTemplate = Boolean(editableTemplate)
+            // Commercial designs show their compiled demo and start the commercial flow.
+            const commercialStart = getCommercialTemplateStart(editableTemplate)
+            const demoHref = commercialStart && editableTemplate ? editableTemplate.livePath : app.href
             return (
               <article
                 key={app.id}
@@ -125,7 +129,7 @@ export default function WebsHub() {
                     ))}
                   </div>
 
-                  {isEditableTemplate && (
+                  {commercialStart && (
                     <div className="mb-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-2.5">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100/55">Incluido con tu plan Orvenix</p>
                       <p className="mt-1 text-xs leading-5 text-white/42">Activalo desde tu suscripcion y personalizalo en el editor visual.</p>
@@ -134,21 +138,21 @@ export default function WebsHub() {
 
                   <div className="webs-actions">
                     <Link
-                      href={app.href}
+                      href={demoHref}
                       className="webs-demo-action"
                     >
-                      {isEditableTemplate ? "Ver demo" : "Ver página real"}
+                      {commercialStart ? "Ver demo" : "Ver referencia"}
                       <ArrowRight size={14} />
                     </Link>
                     {isEditableTemplate ? (
-                      <>
-                        <form action={selfEditTemplateAction.bind(null, app.id)}>
-                          <button type="submit" className="webs-edit-action">
-                            <Edit3 size={14} />
-                            Usar este diseño
-                          </button>
-                        </form>
-                      </>
+                      commercialStart ? (
+                        <Link href={commercialStart.href} className="webs-edit-action">
+                          <Edit3 size={14} />
+                          Usar este diseño
+                        </Link>
+                      ) : (
+                        <span className="webs-real-page-note">Diseño de referencia</span>
+                      )
                     ) : (
                       <Link href={app.href} className="webs-real-page-note">
                         Página real

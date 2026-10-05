@@ -5,8 +5,8 @@ import type { CSSProperties } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowUpRight, ArrowRight, Edit3, CheckCircle } from "lucide-react"
+import { getCommercialTemplateStart } from "@/lib/commercial/template-start"
 import { REAL_TEMPLATES } from "@/lib/realTemplates"
-import { selfEditTemplateAction } from "./actions"
 
 const CATEGORIES = ["Todos", ...Array.from(new Set(REAL_TEMPLATES.map(t => t.category)))]
 
@@ -44,6 +44,7 @@ export function TemplateGrid() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {visible.map((template, index) => {
           const Icon = template.Icon
+          const commercialHref = getCommercialTemplateStart(template)?.href ?? null
           return (
             <article
               key={template.id}
@@ -106,14 +107,16 @@ export function TemplateGrid() {
                   ))}
                 </div>
 
-                <div className="mb-5 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100/55">
-                    Incluido con tu plan Orvenix
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-white/42">
-                    Usa este diseño como base, personaliza lo esencial y publícalo desde tu suscripción.
-                  </p>
-                </div>
+                {commercialHref && (
+                  <div className="mb-5 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100/55">
+                      Incluido con tu plan Orvenix
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-white/42">
+                      Usa este diseño como base, personaliza lo esencial y publícalo desde tu suscripción.
+                    </p>
+                  </div>
+                )}
 
                 {/* Acciones */}
                 <div className="mt-auto flex flex-wrap gap-2 mb-2">
@@ -131,18 +134,22 @@ export function TemplateGrid() {
                     className="flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition hover:opacity-80"
                     style={{ borderColor: `${template.accent}35`, backgroundColor: `${template.accent}12`, color: template.accent }}
                   >
-                    Demo
+                    {commercialHref ? "Demo" : "Referencia"}
                     <ArrowRight size={12} />
                   </Link>
                 </div>
 
                 <div className="flex gap-2">
-                  <form action={selfEditTemplateAction.bind(null, template.id)} className="flex-1">
-                    <button type="submit" className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500">
+                  {commercialHref ? (
+                    <Link href={commercialHref} className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500">
                       <Edit3 size={12} />
                       Usar este diseño
-                    </button>
-                  </form>
+                    </Link>
+                  ) : (
+                    <span className="flex min-h-9 flex-1 items-center justify-center rounded-xl border border-white/10 px-3 text-center text-[11px] font-semibold text-white/40">
+                      Diseño de referencia · aún no disponible como copia editable
+                    </span>
+                  )}
                 </div>
               </div>
             </article>

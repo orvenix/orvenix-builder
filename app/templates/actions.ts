@@ -4,6 +4,7 @@ import { getAuthSession } from "@/lib/auth-session";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSiteFromTree } from "@/lib/auth";
+import { getCommercialTemplateStart } from "@/lib/commercial/template-start";
 import { createEditRequest } from "@/lib/editRequests";
 import { getEditorTreeForWeb, isEditorWebId, WEB_LABELS, type EditorWebId } from "@/lib/editorWebs";
 import { getRealTemplate } from "@/lib/realTemplates";
@@ -60,6 +61,10 @@ export async function editTemplateAction(templateId: string) {
 }
 
 export async function selfEditTemplateAction(templateId: string) {
+  // CV1-1: commercial designs never fall back to the generic single-page copy.
+  const commercialStart = getCommercialTemplateStart(getRealTemplate(templateId));
+  if (commercialStart) redirect(commercialStart.href);
+
   await intelligentTemplateAction(templateId, "edit");
 }
 

@@ -308,4 +308,10 @@ export interface CommercialSectionFactsV1 {
   footerPreset?: "minimal" | "standard" | "rich"
   /** Orvenix-resolved primary conversion action (closed label set, href from facts or an internal page link). */
   primaryCta?: { label: string; href: string }
+  /**
+   * CV1-1b (demo-shape designs only): keep the approved demo's number of
+   * "how we work" benefit cards; positions the customer's facts cannot fill
+   * yet get this explicit empty state instead of shrinking the section.
+   */
+  emptyBenefit?: { slots: number; title: string; description: string }
 }

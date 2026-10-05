@@ -11,8 +11,9 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
+import type { ReactNode } from "react";
+import { getCommercialTemplateStart } from "@/lib/commercial/template-start";
 import { getRealTemplate } from "@/lib/realTemplates";
-import { selfEditTemplateAction } from "../actions";
 
 interface TemplatePreviewPageProps {
   params: Promise<{ id: string }>;
@@ -38,6 +39,7 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
   if (!template) notFound();
 
   const Icon = template.Icon;
+  const commercialHref = getCommercialTemplateStart(template)?.href ?? null;
 
   return (
     <main className="min-h-screen bg-[#07080d] text-white">
@@ -65,14 +67,15 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-bold text-white/55 transition hover:bg-white/[0.06] hover:text-white"
             >
               <Eye size={14} />
-              Abrir web real
+              {commercialHref ? "Ver demo" : "Ver referencia"}
             </Link>
-            <form action={selfEditTemplateAction.bind(null, template.id)}>
-              <button className="inline-flex h-9 items-center gap-2 rounded-lg bg-indigo-600 px-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500">
-                <Edit3 size={14} />
-                Editar
-              </button>
-            </form>
+            <UseTemplateAction
+              commercialHref={commercialHref}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-indigo-600 px-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500"
+            >
+              <Edit3 size={14} />
+              Editar
+            </UseTemplateAction>
           </div>
         </div>
       </header>
@@ -84,14 +87,17 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
             style={{ borderColor: `${template.accent}38`, backgroundColor: `${template.accent}14`, color: template.accent }}
           >
             <Icon size={14} />
-            Web profesional lista para cliente
+            {commercialHref ? "Web profesional lista para cliente" : "Diseño de referencia"}
           </div>
 
           <h1 className="max-w-3xl text-5xl font-black leading-[0.94] tracking-tight md:text-6xl">
             {template.name}
           </h1>
           <p className="mt-5 max-w-xl text-base leading-8 text-white/52">
-            {template.description} Esta versión se presenta como una solución comercial completa: vista real, edición visual y personalización desde tu suscripción Orvenix.
+            {template.description}{" "}
+            {commercialHref
+              ? "Tu copia conserva el mismo diseño de la demo: solo cambian los datos por los de tu negocio, y la editas desde tu suscripción Orvenix."
+              : "Esta web se muestra como referencia visual; todavía no está disponible como copia editable."}
           </p>
 
           <div className="mt-7 grid grid-cols-2 gap-3">
@@ -105,19 +111,20 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <form action={selfEditTemplateAction.bind(null, template.id)}>
-              <button className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-5 text-sm font-black text-slate-950 transition hover:bg-white/90">
-                <Edit3 size={16} />
-                Usar este diseño
-              </button>
-            </form>
+            <UseTemplateAction
+              commercialHref={commercialHref}
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-5 text-sm font-black text-slate-950 transition hover:bg-white/90"
+            >
+              <Edit3 size={16} />
+              Usar este diseño
+            </UseTemplateAction>
             <Link
               href={template.livePath}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-5 text-sm font-black text-white/72 transition hover:bg-white/[0.08] hover:text-white"
             >
-              Ver web completa
+              {commercialHref ? "Ver demo completa" : "Ver referencia"}
               <ArrowUpRight size={16} />
             </Link>
           </div>
@@ -165,7 +172,7 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Incluido con tu plan Orvenix</div>
-                <h2 className="mt-2 text-2xl font-black">Usa este diseño con tu suscripción</h2>
+                <h2 className="mt-2 text-2xl font-black">{commercialHref ? "Usa este diseño con tu suscripción" : "Diseño de referencia"}</h2>
               </div>
               <div className={`grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br ${template.gradient}`}>
                 <Icon size={22} />
@@ -173,12 +180,13 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
             </div>
 
             <div className="grid gap-3">
-              <form action={selfEditTemplateAction.bind(null, template.id)}>
-                <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-left font-black text-slate-950 transition hover:bg-white/90">
-                  <Edit3 size={16} />
-                  Usar este diseño
-                </button>
-              </form>
+              <UseTemplateAction
+                  commercialHref={commercialHref}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-left font-black text-slate-950 transition hover:bg-white/90"
+              >
+                <Edit3 size={16} />
+                Usar este diseño
+              </UseTemplateAction>
               <Link href="/precios" className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/15">
                 Ver planes Orvenix
                 <ArrowUpRight size={16} />
@@ -192,6 +200,39 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
         </div>
       </section>
     </main>
+  );
+}
+
+/**
+ * CV1-1b: "Usar este diseño" exists only for a real CommercialDesign (the
+ * copy is the same composition as the demo). A legacy template is a visual
+ * reference: no action promises an editable copy of it.
+ */
+function UseTemplateAction({
+  commercialHref,
+  className,
+  children,
+}: {
+  commercialHref: string | null;
+  className: string;
+  children: ReactNode;
+}) {
+  if (commercialHref) {
+    return (
+      <Link href={commercialHref} className={className}>
+        {children}
+      </Link>
+    );
+  }
+
+  return <LegacyReferenceNote />;
+}
+
+function LegacyReferenceNote() {
+  return (
+    <span className="inline-flex min-h-9 items-center rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/45">
+      Diseño de referencia · aún no disponible como copia editable
+    </span>
   );
 }
 
